@@ -130,3 +130,41 @@
 @media (prefers-reduced-motion: reduce) {
   .rp-profile { transition: none; }
 }
+
+.rp-person { position:relative; isolation:isolate; }
+.rp-person>.rp-profile,.rp-score,.rp-record { position:relative; z-index:1; }
+.rp-aura { position:absolute; z-index:0; top:17px; left:50%; width:132px; height:132px; transform:translateX(-50%); pointer-events:none; color:#9983bb; }
+.rp-halo { position:absolute; inset:-14px; border-radius:50%; background:radial-gradient(circle,#c9b4e04d,transparent 66%); animation:rp-breathe 6s ease-in-out infinite; }
+.rp-orbit { position:absolute; inset:8px; border:1px solid #c4acd54d; border-radius:50%; box-shadow:0 0 17px #c8b4df1c; animation:rp-orbit-turn 35s linear infinite; }
+.rp-orbit:after { content:''; position:absolute; inset:7px; border:1px dashed #cbb6dc55; border-radius:50%; }
+.rp-feather { position:absolute; top:12px; width:37px; height:76px; }
+.rp-feather-left { left:-15px; transform:rotate(-28deg); }
+.rp-feather-right { right:-15px; transform:scaleX(-1) rotate(-28deg); }
+.rp-spark { position:absolute; width:14px; height:14px; stroke-width:1.2; opacity:.6; animation:rp-spark-glow 5s ease-in-out infinite; }
+.rp-spark-left { left:1px; top:4px; }.rp-spark-right { right:-1px; top:66px; width:10px; height:10px; animation-delay:2.5s; }
+.rp-metal-1 .rp-aura { color:#be9851; width:153px; height:153px; top:14px; }
+.rp-metal-1 .rp-halo { background:radial-gradient(circle,#efd79059 0%,#d2b7e32e 42%,transparent 69%); }
+.rp-metal-1 .rp-orbit { border-color:#dab96869; box-shadow:0 0 21px #dcc08026; }
+.rp-metal-1 .rp-orbit:after { border-color:#c7a3d452; }
+.rp-metal-1 .rp-crown { filter:drop-shadow(0 0 5px #d8b05070); }
+.rp-metal-2 .rp-aura { color:#9c9db9; }.rp-metal-2 .rp-halo { background:radial-gradient(circle,#c6cde04d,#cfbce125 43%,transparent 66%); }
+.rp-metal-3 .rp-aura { color:#bd957d; }.rp-metal-3 .rp-halo { background:radial-gradient(circle,#dfbba047,#c7b0da21 43%,transparent 66%); }
+@keyframes rp-breathe { 0%,100% { opacity:.65; transform:scale(.95); } 50% { opacity:1; transform:scale(1.05); } }
+@keyframes rp-orbit-turn { to { transform:rotate(360deg); } }
+@keyframes rp-spark-glow { 0%,100% { opacity:.3; } 50% { opacity:.8; } }
+@media(max-width:600px) {
+ .rp-root { margin-top:14px; padding-top:12px; }
+ .rp-aura { width:103px; height:103px; top:13px; }
+ .rp-metal-1 .rp-aura { width:115px; height:115px; top:11px; }
+ .rp-feather { width:27px; height:61px; top:10px; }.rp-feather-left { left:-8px; }.rp-feather-right { right:-8px; }
+ .rp-orbit { inset:8px; }.rp-spark-left { left:6px; }.rp-spark-right { right:1px; top:53px; }
+}
+@media(prefers-reduced-motion:reduce) { .rp-halo,.rp-orbit,.rp-spark { animation:none; }.rp-halo { opacity:.85; }.rp-spark { opacity:.55; } }
+
+/* Reserve the same podium geometry while monthly/yearly data is loading. */
+.rp-root { position:relative; }
+.rp-stage { min-height:410px; }
+.rp-person { box-sizing:border-box; height:250px; }
+.rp-name { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; max-height:2.8em; overflow:hidden; }
+.rp-empty-status { position:absolute; top:45px; left:16px; right:16px; margin:0; text-align:center; color:#9686a8; font-size:13px; }
+@media(max-width:600px) { .rp-stage { min-height:358px; }.rp-person { height:214px; }.rp-empty-status { top:38px; font-size:12px; } }

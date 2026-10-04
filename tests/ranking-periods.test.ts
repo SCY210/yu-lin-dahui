@@ -15,8 +15,8 @@ function match(id:string,at:string,a=21,b=10,teams=[['A','B'],['C','D']]):Match 
  return {id,eventId:'event',roundId:'round',courtId:'court',a:teams[0],b:teams[1],status:'complete',start,end:start+60000,scoreA:a,scoreB:b,monthly:true,elo:true,locked:false,enteredBy:'account',games:[{a,b}]};
 }
 
-test('修仙境界边界保持原五级 Elo 门槛，与积分排名分开',()=>{
- for(const [rating,realm] of [[899.999,'炼气'],[900,'筑基'],[1049.999,'筑基'],[1050,'金丹'],[1199.999,'金丹'],[1200,'元婴'],[1399.999,'元婴'],[1400,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
+test('修仙境界采用更紧凑五级门槛，与积分排名分开',()=>{
+ for(const [rating,realm] of [[899.999,'炼气'],[900,'筑基'],[1031.999,'筑基'],[1032,'金丹'],[1099.999,'金丹'],[1100,'元婴'],[1179.999,'元婴'],[1180,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
  const s=fixture();s.matches.push(match('loss','2026-06-01T13:00:00Z',10,21));
  const before=structuredClone(s.players);
  assert.equal(leaderboard(s,'2026-06')[0].playerId,'C');

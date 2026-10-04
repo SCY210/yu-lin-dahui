@@ -1,3 +1,4 @@
+import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import type {State,Event,Settlement,Mode,Exemption} from './types';
 type Q={n:bigint;d:bigint};
 const q=(n:number|bigint,d:number|bigint=1):Q=>({n:BigInt(n),d:BigInt(d)});
@@ -9,7 +10,7 @@ function allocateQ(total:number,weights:Record<string,Q>){const entries=Object.e
 export function ballCents(c:{pricing:string;cents:number;tubeCount:number;used:number}){return c.pricing==='tube'?Number((BigInt(c.cents)*BigInt(c.used)*BigInt(2)+BigInt(c.tubeCount))/(BigInt(c.tubeCount)*BigInt(2))):c.pricing==='unit'?c.cents*c.used:c.cents}
 export function bookingCents(b:{pricing:string;cents:number;start:number;end:number}){return b.pricing==='total'?b.cents:Math.round(b.cents*(b.end-b.start)/3600000)}
 export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,'id'|'version'|'created'|'reason'|'confirmed'>{
- const spans=s.attendance.filter(a=>a.eventId===e.id).map(a=>({...a,end:Math.min(a.end??Math.min(now,e.end),e.end),start:Math.max(a.start,e.start)})).filter(a=>a.end>a.start);
+ const spans=attendanceForEvent(s,e).map(a=>({...a,end:Math.min(a.end??Math.min(now,e.end),e.end,...(usesAutomaticAttendance(e)?[now]:[])),start:Math.max(a.start,e.start)})).filter(a=>a.end>a.start);
  const ids=[...new Set(spans.map(a=>a.playerId))].sort(); const minutes=(id:string)=>spans.filter(a=>a.playerId===id).reduce((t,a)=>t+(a.end-a.start)/60000,0);
  const bills=ids.map(playerId=>({playerId,court:0,ball:0,other:0,total:0,minutes:minutes(playerId)}));
  const detail:Settlement['detail']=[];let total=0,subsidy=0,unallocated=0;

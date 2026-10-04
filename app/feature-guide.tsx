@@ -1,15 +1,15 @@
 'use client';
 
 import {useId, useState} from 'react';
-import {Info, X} from 'lucide-react';
+import {CircleAlert, Info, X} from 'lucide-react';
 import {Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from '@/components/ui/dialog';
 import {getFeatureGuide, guideLabels, guideTopics, type GuideTopic} from '@/lib/feature-guides';
 import type {Rules} from '@/lib/domain/types';
 
-export type FeatureGuideProps = {topic:GuideTopic; rules?:Rules; label?:string};
+export type FeatureGuideProps = {topic:GuideTopic; rules?:Rules; label?:string; iconOnly?:boolean};
 
 /** A contextual entry to the same searchable-by-topic explanation dialog. */
-export default function FeatureGuide({topic, rules, label='功能说明'}:FeatureGuideProps) {
+export default function FeatureGuide({topic, rules, label='功能说明', iconOnly=false}:FeatureGuideProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<GuideTopic>(topic);
   const selectId = useId();
@@ -21,8 +21,8 @@ export default function FeatureGuide({topic, rules, label='功能说明'}:Featur
   }
   return <Dialog open={open} onOpenChange={show}>
     <DialogTrigger asChild>
-      <button type="button" aria-label={guideLabels[topic]+'：'+label} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[var(--border)] bg-white px-3 py-1.5 text-sm font-medium text-[var(--primary)] transition-colors hover:bg-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
-        <Info aria-hidden="true" className="size-4 shrink-0"/><span>{label}</span>
+      <button type="button" aria-label={iconOnly?'功能说明':guideLabels[topic]+'：'+label} title={iconOnly?'功能说明':undefined} className={"inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[var(--border)] bg-white text-sm font-medium text-[var(--primary)] transition-colors hover:bg-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] "+(iconOnly?'size-11 p-0':'px-3 py-1.5')}>
+        {iconOnly?<CircleAlert aria-hidden="true" className="size-5"/>:<><Info aria-hidden="true" className="size-4 shrink-0"/><span>{label}</span></>}
       </button>
     </DialogTrigger>
     <DialogContent showCloseButton={false} className="feature-guide-panel flex max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-[640px] flex-col gap-4 overflow-hidden rounded-[20px] border-[var(--border)] bg-white p-5 text-[var(--foreground)] sm:max-w-[640px] sm:p-6">

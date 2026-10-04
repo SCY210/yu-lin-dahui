@@ -1,4 +1,5 @@
 import {winner,points,tier} from './social';
+import {cultivationProgress} from './cultivation';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
 export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return hi<=r.ceiling&&((hi===r.target&&lo<=hi-r.lead)||(hi>r.target&&hi<r.ceiling&&hi-lo===r.lead)||(hi===r.ceiling&&lo>=r.ceiling-r.lead&&lo<hi))}
 export function replayRating(s:State){for(const p of s.players){p.rating=p.initialRating;p.ratedGames=0}const changes:{matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string}[]=[];
@@ -6,7 +7,7 @@ export function replayRating(s:State){for(const p of s.players){p.rating=p.initi
  s.ratingChanges=changes.map(c=>({...c,id:c.matchId+':'+c.playerId,k:s.seasons.find(x=>x.id===month(s.matches.find(m=>m.id===c.matchId)!.start!))?.rules.k??s.settings.rules.k}));return changes;
 }
 export function leaderboard(s:State,season:string){const rules=s.seasons.find(x=>x.id===season)?.rules??s.settings.rules;
- const rows=s.players.filter(p=>p.enabled).map(p=>{const all=s.matches.filter(m=>m.status==='complete'&&m.start&&month(m.start)===season&&[...m.a,...m.b].includes(p.id));const eligible=all.filter(m=>m.monthly).sort((a,b)=>a.start!-b.start!||a.id.localeCompare(b.id));const scored=rules.cap?eligible.slice(0,rules.cap):eligible;let wins=0,margin=0;for(const m of scored){const isA=m.a.includes(p.id);const my=points(m,isA?'a':'b'),op=points(m,isA?'b':'a');if(winner(m)===(isA?'a':'b'))wins++;margin+=my-op}return {playerId:p.id,name:p.name,rating:p.rating,realm:tier(p.rating),provisional:p.ratedGames<10,total:all.length,games:scored.length,wins,losses:scored.length-wins,points:wins*rules.win+(scored.length-wins)*rules.loss,rate:scored.length?wins/scored.length:0,margin:scored.length?margin/scored.length:0,qualified:true,rank:0}}).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
+ const rows=s.players.filter(p=>p.enabled).map(p=>{const all=s.matches.filter(m=>m.status==='complete'&&m.start&&month(m.start)===season&&[...m.a,...m.b].includes(p.id));const eligible=all.filter(m=>m.monthly).sort((a,b)=>a.start!-b.start!||a.id.localeCompare(b.id));const scored=rules.cap?eligible.slice(0,rules.cap):eligible;let wins=0,margin=0;for(const m of scored){const isA=m.a.includes(p.id);const my=points(m,isA?'a':'b'),op=points(m,isA?'b':'a');if(winner(m)===(isA?'a':'b'))wins++;margin+=my-op}return {playerId:p.id,name:p.name,rating:p.rating,realm:tier(p.rating),cultivation:cultivationProgress(p.rating),provisional:p.ratedGames<10,total:all.length,games:scored.length,wins,losses:scored.length-wins,points:wins*rules.win+(scored.length-wins)*rules.loss,rate:scored.length?wins/scored.length:0,margin:scored.length?margin/scored.length:0,qualified:true,rank:0}}).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
 
@@ -30,7 +31,7 @@ export function annualLeaderboard(s:State, year:number) {
    wins+=monthlyWins;
    score+=monthlyWins*rules.win+(scored.length-monthlyWins)*rules.loss;
   }
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:tier(p.rating),provisional:p.ratedGames<10,total:all.length,games,wins,losses:games-wins,points:score,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:tier(p.rating),cultivation:cultivationProgress(p.rating),provisional:p.ratedGames<10,total:all.length,games,wins,losses:games-wins,points:score,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});
  return rows;

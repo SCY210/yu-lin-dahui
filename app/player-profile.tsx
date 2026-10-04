@@ -1,4 +1,5 @@
 'use client';
+import RealmProgress from './realm-progress';
 
 import {useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
@@ -43,7 +44,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
     choice('level', '自评水平', [['beginner','萌新'], ['intermediate','进阶'], ['advanced','高手']]),
-    optional('style', (isOwn ? '我的打法' : 'TA的打法')+'（最多300字）'),
+    optional('style', (isOwn ? '我的打法' : '这位球友的打法')+'（最多300字）'),
     optional('racket', '战拍品牌 / 型号（最多120字）'),
     optional('strings', '拍线品牌 / 型号（最多120字）'),
     {...number('tensionMin','穿线磅数范围 · 最低（磅）'),optional:true,step:'any',min:1,max:80},
@@ -61,6 +62,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
           <span className="pp-tier">{state.tier || '暂无境界'}{state.provisional ? ' · 暂定' : ''}</span>
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
+        <RealmProgress value={state.cultivation}/>
       </div>
       <div className="pp-header-actions">
         {canEdit && <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>}
@@ -77,11 +79,11 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
         <Fact label="自评水平" value={levels[p.profile?.level]}/>
       </dl>
-      <div className="pp-style"><span>{isOwn ? '我的打法' : 'TA的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
+      <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section>
 
     <section className="pp-section" aria-label="装备信息">
-      <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : 'TA的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
+      <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : '这位球友的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
       <dl className="pp-facts pp-equipment-facts">
         <Fact label="战拍品牌 / 型号" value={profile.racket}/>
         <Fact label="拍线品牌 / 型号" value={profile.strings}/>

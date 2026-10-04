@@ -38,3 +38,24 @@ test('administrators retain all drafts and previews without exposing storage obj
  assert.equal(v.events.length,3);assert.equal(v.drafts.length,3);assert.equal(v.accounts.length,2);
  assert.ok(v.photos.every(p=>!('key' in p)));
 });
+
+test('future default attendance stays planned: no elapsed fees, available players or invented arrival personality',()=>{
+ const {s,me,start}=fixture();s.registrations.push({id:'own-reg',eventId:'own',playerId:'self',sequence:1,status:'confirmed',arrival:start,departure:start+3600000,note:'',cancelRequested:false,registeredAt:start-7200000,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
+ const v=projectClubState(s,me,'2026-10',2026,start-3600000);
+ assert.equal(v.events.find(e=>e.id==='own')!.attendanceMode,'automatic');
+ assert.equal(v.attendance.find(a=>a.eventId==='own')!.start,start);
+ assert.equal(v.attendance.find(a=>a.eventId==='own')!.source,'automatic');
+ assert.equal(v.rotationPlans.own.players,0);assert.equal(v.drafts[0].bills.length,0);
+ const personality=v.social.personality.find(p=>p.playerId==='self')!;assert.equal(personality.early,0);assert.equal(personality.onTime,0);
+ assert.equal(s.events.find(e=>e.id==='own')!.attendanceMode,undefined);assert.equal(s.attendance.length,0);
+});
+
+test('planned automatic arrivals do not become arrival personality after their start, while historical manual records remain',()=>{
+ const {s,me,start}=fixture();const automatic=s.events.find(e=>e.id==='open')!;automatic.attendanceMode='automatic';
+ s.registrations.push({id:'open-reg',eventId:'open',playerId:'self',sequence:1,status:'confirmed',arrival:start,departure:start+3600000,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
+ const old={...automatic,id:'historical',start:start-7200000,end:start-3600000,status:'ended' as const,attendanceMode:undefined};s.events.push(old);
+ s.attendance.push({id:'actual-old',eventId:old.id,playerId:'self',start:old.start,end:old.end,state:'left'});
+ const v=projectClubState(s,me,'2026-10',2026,start+1800000),personality=v.social.personality.find(p=>p.playerId==='self')!;
+ assert.equal(personality.onTime,1);assert.equal(personality.early,0);
+ assert.equal(v.events.find(e=>e.id===old.id)!.attendanceMode,undefined);assert.deepEqual(s.attendance,[{id:'actual-old',eventId:old.id,playerId:'self',start:old.start,end:old.end,state:'left'}]);
+});

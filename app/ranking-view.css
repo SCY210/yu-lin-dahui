@@ -1,24 +1,3 @@
-.rv-heading { align-items: start; }
-.rv-controls { flex-wrap: wrap; justify-content: flex-end; }
-.rv-period-switch { display: inline-flex; gap: 4px; padding: 4px; margin: 2px 0 20px; border: 1px solid #e3ddef; border-radius: 14px; background: #f1edf8; }
-.rv-period-switch button { min-height: 44px; padding: 9px 23px; border: 0; border-radius: 10px; background: transparent; color: #756a8b; font-weight: 650; }
-.rv-period-switch button[aria-pressed=true] { background: #fff; color: #5e3eb1; box-shadow: 0 2px 6px #4030520a; }
-.rv-period-switch button:focus-visible,.rv-year-picker button:focus-visible,.rv-year-picker select:focus-visible { outline: 3px solid #8d71c6; outline-offset: 2px; }
-.rv-year-picker { display: flex; align-items: center; padding: 2px; border: 1px solid #ddd6ec; border-radius: 12px; background: white; }
-.rv-year-picker button { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 9px; background: transparent; color: #716386; }
-.rv-year-picker button:hover { background: #f2eef9; }
-.rv-year-picker label { display: flex; align-items: center; gap: 5px; padding-left: 8px; color: #685180; }
-.rv-year-picker select { min-height: 40px; border: 0; background: transparent; color: #504062; font-weight: 600; padding: 5px 8px; }
-.rv-realm-card { padding: 19px 22px; border: 1px solid #ded5ed; border-radius: 18px; background: linear-gradient(120deg,#fbf9fe,#f2edf9); }
-.rv-realm-intro { display: flex; align-items: center; gap: 11px; color: #76559b; }
-.rv-realm-intro>div { flex: 1; min-width: 0; }
-.rv-realm-intro strong { color: #554066; font-size: 16px; }
-.rv-realm-intro p { margin: 4px 0 0; color: #80708d; font-size: 13px; line-height: 1.65; }
-.rv-realm-ladder { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
-.rv-realm-level { display: grid; gap: 4px; padding: 12px; border: 1px solid #ded6ec; border-radius: 12px; background: #ffffffc9; }
-.rv-realm-level>span { font-size: 10px; letter-spacing: 1.5px; opacity: .55; }
-.rv-realm-level>strong { font-size: 17px; }
-.rv-realm-level>small { font-size: 11px; color: #8b7b97; line-height: 1.6; }
 .rv-realm-0 { color: #81768f; }.rv-realm-1 { color: #72669b; }.rv-realm-2 { color: #735698; }.rv-realm-3 { color: #634a9e; }.rv-realm-4 { color: #713a9c; }
 .rv-realm-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
 .rv-realm-badge { display: inline-block; border: 1px solid #ded2ed; background: #f5effa; border-radius: 6px; padding: 1px 7px; font-size: 12px; line-height: 1.6; font-weight: 600; }
@@ -28,4 +7,40 @@
 .rv-calculation summary { margin-top: 12px; cursor: pointer; color: #745394; font-weight: 600; padding: 5px 0; }
 .rv-year-rules { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 20px; margin-top: 10px; }
 .rv-year-rules>div { display: grid; grid-template-columns: 32px 1fr 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid #ebe5f1; }.rv-year-rules b { color: #6f5c80; }
-@media(max-width:600px) { .rv-controls { justify-content: flex-start; }.rv-realm-card { padding: 16px 13px; }.rv-realm-intro { flex-wrap: wrap; gap: 8px; }.rv-realm-intro>svg { display: none; }.rv-realm-intro>div { flex-basis: 60%; }.rv-realm-ladder { gap: 5px; }.rv-realm-level { padding: 8px 5px; }.rv-realm-level>strong { font-size: 15px; }.rv-realm-level>small { font-size: 10px; }.rv-calculation { padding: 16px 14px; }.rv-year-rules { grid-template-columns: 1fr; }.rv-period-switch { margin-top: 10px; } }
+
+.rv-heading { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px 20px; margin-bottom:10px; }
+.rv-title { min-width:0; }
+.rv-title h1 { margin-bottom:0; white-space:nowrap; }
+.rv-period-switch { display:inline-flex; gap:3px; padding:4px; border:1px solid #e3ddef; border-radius:14px; background:#f1edf8; justify-self:end; }
+.rv-period-switch button { min-height:44px; padding:8px 19px; border:0; border-radius:10px; background:transparent; color:#756a8b; font-weight:650; white-space:nowrap; }
+.rv-period-switch button[aria-pressed=true] { background:#fff; color:#5e3eb1; box-shadow:0 2px 6px #4030520a; }
+.rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker select:focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
+.rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px minmax(0,1fr); align-items:center; gap:10px; min-height:48px; }
+.rv-controls>button { justify-self:end; white-space:nowrap; }
+.rv-controls .rv-date-picker { box-sizing:border-box; display:grid; grid-template-columns:30px minmax(0,1fr) 30px; width:208px; height:48px; padding:3px; gap:0; flex-shrink:0; }
+.rv-date-picker .month-arrow { width:30px; height:40px; min-height:0; padding:0; }
+.rv-date-picker .month-current { box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:5px; width:100%; height:40px; min-width:0; padding:0 3px; white-space:nowrap; font-size:15px; line-height:1; }
+.rv-date-picker .month-current svg { flex-shrink:0; width:18px; height:18px; }
+.rv-date-picker .month-current span { white-space:nowrap; }
+.rv-date-picker select { box-sizing:border-box; display:block; appearance:none; min-width:0; width:100%; height:40px; margin:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:center; cursor:pointer; border-radius:5px; }
+.rv-progress { display:flex; align-items:center; flex-wrap:wrap; gap:5px 7px; margin-top:6px; color:#8a739b; font-size:11px; line-height:1.4; }
+.rv-progress-track { width:64px; height:4px; border-radius:4px; background:#ede4f4; overflow:hidden; }
+.rv-progress-track>span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#c5a4d6,#9675b9); }
+@media(max-width:600px) {
+ .rv-heading { gap:10px; margin-top:18px; }
+ .rv-title h1 { font-size:24px; line-height:1.25; }
+ .rv-title .eyebrow { font-size:8px; letter-spacing:1px; margin-bottom:5px; }
+ .rv-period-switch { padding:3px; border-radius:11px; }
+ .rv-period-switch button { padding:7px 12px; font-size:12px; min-height:44px; border-radius:8px; }
+ .rv-controls { grid-template-columns:168px minmax(0,1fr); gap:8px; }
+ .rv-controls .rv-date-picker { width:168px; grid-template-columns:28px minmax(0,1fr) 28px; }
+ .rv-date-picker .month-arrow { width:28px; }
+ .rv-date-picker .month-current { font-size:14px; gap:4px; padding:0; }
+ .rv-controls>button { padding-left:7px; padding-right:7px; font-size:12px; gap:4px; }
+ .rv-controls>button svg { width:14px; height:14px; }
+ .rv-progress { font-size:10px; gap:4px; }
+ .rv-progress-track { width:44px; }
+ .rv-calculation { padding:16px 14px; }
+ .rv-year-rules { grid-template-columns:1fr; }
+}
+@media(max-width:350px) { .rv-title h1 { font-size:21px; }.rv-period-switch button { padding-left:9px; padding-right:9px; }.rv-provisional { font-size:10px; }.rv-progress-track { width:32px; } }

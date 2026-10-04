@@ -1,0 +1,8 @@
+.signup-member-line{gap:14px;min-width:0}
+.signup-identity{position:relative;display:inline-flex;flex:0 0 44px;align-items:center;justify-content:center}
+.signup-identity .signup-avatar{width:44px;height:44px;font-size:19px;object-fit:cover;border:1px solid #ded7ef}
+.signup-position{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border:2px solid #fff;border-radius:20px;background:#eee9fb;color:#5e478e;font-size:10px;font-weight:700;line-height:1}
+.signup-member-line>.grow{min-width:0;flex:1 1 0;overflow-wrap:anywhere}
+.signup-member-line>.grow strong,.signup-member-line>.grow small,.signup-member-line>.grow .warning{overflow-wrap:anywhere}
+.signup-member-line .compact{flex-shrink:0}
+@media(max-width:600px){.signup-member-line{gap:12px;align-items:flex-start}.signup-member-line .compact{width:100%;gap:6px;padding-top:2px;justify-content:flex-end}.signup-member-line .compact button{min-height:44px}.signup-member-line>.grow{min-width:0}.signup-member-line p{font-size:13px;line-height:1.6;margin:4px 0}}

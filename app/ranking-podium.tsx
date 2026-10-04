@@ -1,7 +1,7 @@
 'use client';
 
 import {useId} from 'react';
-import {Crown} from 'lucide-react';
+import {Crown,Sparkles} from 'lucide-react';
 import {Avatar} from './social-hub';
 import './ranking-podium.css';
 
@@ -32,13 +32,20 @@ function Medal({rank}: {rank: number}) {
   </svg>;
 }
 
+function Feather({side}:{side:'left'|'right'}) {
+  return <svg className={`rp-feather rp-feather-${side}`} viewBox="0 0 48 96" aria-hidden="true" focusable="false">
+    <path d="M24 88C12 67 6 38 26 7c17 24 16 48-2 81Z" fill="currentColor" opacity=".12"/>
+    <path d="M24 88c-1-27 1-53 2-75M24 70 12 48m13 9 13-18M25 43 16 26m10 4 7-12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity=".65"/>
+  </svg>;
+}
+
 /** The supplied rows retain their domain ranks, including competition ties. */
-export default function RankingPodium({leaders, players, onProfile}: any) {
+export default function RankingPodium({leaders, rankingRows, players, onProfile, loading=false}: any) {
   const podium = (leaders ?? []).slice(0, 3);
-  if (!podium.length) return null;
   const slots = ['center', 'left', 'right'];
 
-  return <section className="rp-root" aria-label="积分领奖台">
+  return <section className="rp-root" aria-label="积分领奖台" aria-busy={loading}>
+    {!podium.length&&<p className="rp-empty-status" role={loading?'status':undefined}>{loading?'正在读取排名…':'等待球友登台'}</p>}
     <div className="rp-stage">
       {slots.map((slot, index) => {
         const row = podium[index];
@@ -47,7 +54,7 @@ export default function RankingPodium({leaders, players, onProfile}: any) {
           <div className="rp-pedestal"><span aria-hidden="true">—</span></div>
         </div>;
         const player = (players ?? []).find((p: any) => p.id === row.playerId) ?? {name: row.name};
-        const tied = podium.filter((r: any) => r.rank === row.rank).length > 1;
+        const tied = (rankingRows??podium).filter((r: any) => r.rank === row.rank).length > 1;
         const title = row.rank === 1 ? '冠军' : row.rank === 2 ? '亚军' : row.rank === 3 ? '季军' : `第 ${row.rank} 名`;
         const rankLabel = `${tied ? '并列' : ''}${title}`;
         const info = <>
@@ -57,6 +64,7 @@ export default function RankingPodium({leaders, players, onProfile}: any) {
         </>;
         return <article key={row.playerId} className={`rp-slot rp-${slot} rp-metal-${row.rank}`} aria-label={`${row.name}，${rankLabel}，${row.points} 积分`}>
           <div className="rp-person">
+            <div className="rp-aura" aria-hidden="true"><span className="rp-halo"/><span className="rp-orbit"/><Feather side="left"/><Feather side="right"/><Sparkles className="rp-spark rp-spark-left"/><Sparkles className="rp-spark rp-spark-right"/></div>
             {onProfile ? <button type="button" className="rp-profile" onClick={() => onProfile(row.playerId)} aria-label={`查看${row.name}的球员档案`}>{info}</button> : <div className="rp-profile rp-profile-static">{info}</div>}
             <div className="rp-score"><b>{row.points}</b><span>积分</span></div>
             <p className="rp-record">{row.wins}胜 <span>·</span> {row.losses}负</p>
