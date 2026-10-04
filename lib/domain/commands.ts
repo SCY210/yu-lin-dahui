@@ -5,6 +5,7 @@ import {calculateSettlement} from './money';
 import {validScore,replayRating} from './ranking';
 import {applySocial,memberSocialActions} from './social-commands';
 import {decorateMatch} from './play';
+import {findVenue} from '../venues';
 const id=()=>crypto.randomUUID();const text=z.string().trim().min(1).max(150),pid=z.string().min(1).max(100),time=z.number().int().min(0),cents=z.number().int().min(0).max(100000000),reason=z.string().trim().min(1).max(500),mode=z.enum(['equal','duration','interval']);
 const rulesSchema=z.object({win:z.number().int().min(0).max(100),loss:z.number().int().min(0).max(100),minimum:z.number().int().min(0).max(500),cap:z.number().int().min(0).max(500),target:z.number().int().min(1).max(100),ceiling:z.number().int().min(1).max(150),lead:z.number().int().min(1).max(10),k:z.number().min(1).max(128),algorithm:z.literal('doubles-elo-v1')});
 export async function digest(v:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))).map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -13,7 +14,7 @@ const schemas:Record<string,z.ZodTypeAny>={
  profile:z.object({name:text}),friend:z.object({name:text}),
  event:z.object({title:text,start:time,end:time,venue:text,address:z.string().max(300),capacity:z.number().int().min(1).max(500),signupDeadline:time,cancelDeadline:time,note:z.string().max(2000),status:z.enum(['draft','open']),bookings:z.array(z.object({name:text,start:time,end:time,pricing:z.enum(['hourly','total']),cents})).min(1).max(20)}),
  eventStatus:z.object({eventId:pid,status:z.enum(['draft','open','locked','live','ended','cancelled'])}),
- eventEdit:z.object({eventId:pid,title:text,venue:text,address:z.string().max(300),capacity:z.number().int().min(4).max(60),signupDeadline:time,cancelDeadline:time,note:z.string().max(2000),reason}),
+ eventEdit:z.object({eventId:pid,title:text,venue:text,address:z.string().max(300),capacity:z.number().int().min(1).max(500),signupDeadline:time,cancelDeadline:time,note:z.string().max(2000),reason}),
  booking:z.object({eventId:pid,name:text,start:time,end:time,pricing:z.enum(['hourly','total']),cents,reason}),bookingEdit:z.object({bookingId:pid,name:text,start:time,end:time,pricing:z.enum(['hourly','total']),cents,reason}),
  register:z.object({eventId:pid,playerId:pid,arrival:time,departure:time,note:z.string().max(500)}),cancel:z.object({eventId:pid,playerId:pid,reason}),
  moveQueue:z.object({eventId:pid,playerId:pid,beforePlayerId:pid,reason}),
@@ -30,7 +31,7 @@ const schemas:Record<string,z.ZodTypeAny>={
  settings:z.object({name:text,invite:z.string().min(8).max(100),rules:rulesSchema}),rating:z.object({playerId:pid,value:z.number().min(0).max(4000),enabled:z.boolean(),reason}),demo:z.object({}),role:z.object({accountId:pid,role:z.enum(['admin','member']),reason}),
  historyPreview:z.object({season:z.string().regex(/^\d{4}-\d{2}$/),rules:rulesSchema}),historyRules:z.object({season:z.string().regex(/^\d{4}-\d{2}$/),rules:rulesSchema,reason}),
 };
-export async function apply(s:State,a:Account,action:string,input:unknown,now:number){authorized(a,action);if(await applySocial(s,a,action,input,now))return null;const schema=schemas[action];if(!schema)fail('未知操作');const p=schema.parse(input) as any;const before=['score','void','historyRules','rating','attendanceEdit'].includes(action)?{matches:structuredClone(s.matches.filter(m=>m.id===p.matchId)),attendance:structuredClone(s.attendance.filter(a=>a.id===p.attendanceId)),seasons:structuredClone(s.seasons.filter(x=>x.id===p.season)),players:structuredClone(s.players.filter(x=>x.id===p.playerId))}:undefined;
+export async function apply(s:State,a:Account,action:string,input:unknown,now:number){authorized(a,action);if(await applySocial(s,a,action,input,now))return null;const schema=schemas[action];if(!schema)fail('未知操作');const p=schema.parse(input) as any;if(['event','eventEdit'].includes(action)){const venue=findVenue(p.venue);if(venue){p.venue=venue.name;p.address=venue.address}}const before=['score','void','historyRules','rating','attendanceEdit'].includes(action)?{matches:structuredClone(s.matches.filter(m=>m.id===p.matchId)),attendance:structuredClone(s.attendance.filter(a=>a.id===p.attendanceId)),seasons:structuredClone(s.seasons.filter(x=>x.id===p.season)),players:structuredClone(s.players.filter(x=>x.id===p.playerId))}:undefined;
  const event=(e:string)=>s.events.find(x=>x.id===e)??fail('活动不存在');const player=(p:string)=>s.players.find(x=>x.id===p)??fail('参赛者不存在');const own=(p:string)=>{if(a.role!=='admin'&&player(p).ownerId!==a.id)fail('403: 只能管理自己及自己代报的朋友')};const reg=(e:string,p:string)=>s.registrations.find(r=>r.eventId===e&&r.playerId===p)??fail('未找到报名');const round=(r:string)=>s.rounds.find(x=>x.id===r)??fail('轮次不存在');
  if(action==='profile')player(a.playerId).name=p.name;
  else if(action==='friend')s.players.push({id:id(),ownerId:a.id,name:p.name,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'新成员默认初值'});

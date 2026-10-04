@@ -103,3 +103,5 @@ node tests/api.mjs
 
 
 
+
+球馆选择与地图入口详见 [VENUES.md](docs/VENUES.md)。
