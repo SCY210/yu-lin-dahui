@@ -35,7 +35,7 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 
 账号与密码为登录入口，由管理员在后台创建球友账号；不需要邮箱，也不开放自行注册。原账号在“我的 → 设置账号和密码”迁移并保留原档案与权限。新账号为普通成员，管理员可为已有球友档案开通登录，或重置忘记的密码。详见 [ACCOUNT_LOGIN.md](docs/ACCOUNT_LOGIN.md)。
 
-当前 Sites 外层入口保留原访问范围；在明确授权改为公开登录入口前，没有 ChatGPT 账号的朋友仍无法直接进入。群内数据继续由服务器登录与成员权限保护。忘记密码由群管理员重置。
+网站已按群主明确授权公开登录入口。朋友直接打开网址，用管理员创建的账号和密码登录，不需要 ChatGPT 账号。群内数据继续由服务器登录与成员权限保护，匿名访客不能读取活动、费用、照片或创建账号。忘记密码由群管理员重置。
 
 开发模式的官方预览辅助器仅在回环地址模拟 `Seedy` 身份；线上构建不含该模拟登录。开发与内置测试服务都绑定127.0.0.1，不应暴露到公网。生产必须经 Sites 身份分发层，不要直接暴露信任身份头的 Worker。
 
@@ -112,3 +112,4 @@ node tests/api.mjs
 最新排行榜规则：所有启用球友同榜、无最低场数门槛，并展示头像，详见 [RANKING.md](docs/RANKING.md)。
 
 最新活动入口和界面说明见 [ACTIVITY_UI.md](docs/ACTIVITY_UI.md)。
+功能说明入口已加入首页、排名、活动各页签、球友圈、相册和账号管理。积分公式、段位门槛、称号口径和15个主题详见 [FEATURE_GUIDES.md](docs/FEATURE_GUIDES.md)。装饰图的内置imagegen提示词及项目路径见 [VISUAL_ASSETS.md](docs/VISUAL_ASSETS.md)。
