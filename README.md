@@ -1,3 +1,4 @@
+社群扩展使用说明： [SOCIAL_FEATURES.md](docs/SOCIAL_FEATURES.md)。
 # 当前费用范围
 根据最新要求，费用仅计算并展示每个人付多少，已移除待付/已付状态、付款确认与退款流程。历史数据库中的付款记录为兼容保留，新接口不再创建或展示；无需删除生产数据或执行迁移。
 
@@ -14,10 +15,11 @@ npm ci --prefer-offline --no-audit --no-fund
 node scripts/run-framework.mjs build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_handy_freak.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_absent_zuras.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_salty_leo.sql
 node scripts/run-framework.mjs dev
 ```
 
-打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移只在新数据库执行一次。当前工作区的两个迁移已执行，不要重复执行。
+打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移只在新数据库执行一次。当前工作区的三个迁移已执行，不要重复执行。
 Windows 若 npm 包装脚本失效，本环境已验证的安装命令为：
 
 ```powershell
@@ -52,7 +54,7 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 
 ## 数据与算法
 
-16张关系表分开保存账号、参赛者、活动、预约、报名、出勤、轮次、比赛、费用、结算、付款、赛季、Rating变化和日志；业务详细字段采用各记录的JSON载荷。外键及唯一索引保护报名、结算版本和写入修订号。
+20张关系表分开保存账号、参赛者、活动、预约、报名、出勤、轮次、比赛、费用、结算、付款、赛季、Rating变化和日志；业务详细字段采用各记录的JSON载荷。外键及唯一索引保护报名、结算版本和写入修订号。
 
 每次写入采用 D1 原子 batch，首先插入唯一修订号及幂等键，再只保存发生变化的记录。并发抢报失败的一方读取最新数据并重新计算，最多重试5次；管理员修改必须携带当前修订号，过期写入返回409。接口逐次验证身份、角色及参赛者所有权，并校验同源请求。成员可以查看群内活动的每人分摊结果；不跟踪付款、欠款或退款状态，未加入者不返回名单和活动，草稿活动及其子记录对普通成员不可见。
 
@@ -73,7 +75,7 @@ node scripts/test.mjs
 node scripts/run-framework.mjs build
 ```
 
-已运行：21项算法测试、14项真实本地API验收、服务停止再启动的持久化验证。另检查390px首页/接龙/费用页、朋友档案保存与WebMCP成功/失败路径。详细结果见 `docs/TEST_RESULTS.md`。
+已运行：34项算法测试；初版14项真实本地API验收、新增社群10组真实API验收、服务停止再启动的持久化验证。另检查390px首页/接龙/费用页、朋友档案保存与WebMCP成功/失败路径。详细结果见 `docs/TEST_RESULTS.md`。
 
 API测试需要一个专用、空的本地数据库。在独立测试checkout中初始化上述迁移，启动下方仅本机测试服务，再在第二个终端运行测试：
 
@@ -94,7 +96,10 @@ node tests/api.mjs
 
 已打通：创建活动→正式/候补报名→自动递补→签到/暂停/签退→双打草稿/交换/锁定/发布→开赛前计分确认→比分→月榜/Rating→分项AA/豁免/补贴→结算版本，展示每人分摊金额；包括历史修正、权限、审计、JSON导出和手机底部导航。
 
-尚未实现：头像文件上传、活动整体改期的联动编辑（目前可修改标题/球馆/容量/截止/备注，以及各预约时段）。三局两胜界面、聊天、支付接口、库存和多群平台按本次要求不在第一版。时段球费调整表单一次支持两段，更多时段用独立耗球记录，后台数据结构支持多段。
+尚未实现：活动整体改期的联动编辑（目前可修改标题/球馆/容量/截止/备注，以及各预约时段）。已新增三局两胜、头像上传及社群功能，详见 docs/SOCIAL_FEATURES.md。聊天、支付接口、库存和多群平台仍不在范围内。时段球费调整表单一次支持两段，更多时段用独立耗球记录，后台数据结构支持多段。
 
 受环境与交付边界限制：本次只发布所有者私有受众，真实成员分享权限需所有者在Sites设置；未在生产数据库执行模拟数据验收，未做真实支付或大规模负载测试。小群场景每次读取得到一致的完整群数据，历史特别多时应进一步分页与限制日志加载。
+
+
+
 

@@ -1,4 +1,8 @@
 -- ONLY for the dedicated local fictional acceptance database. Never run remotely.
+DELETE FROM challenges;
+DELETE FROM tagVotes;
+DELETE FROM awardVotes;
+DELETE FROM photos;
 DELETE FROM audits;
 DELETE FROM ratingChanges;
 DELETE FROM seasons;
@@ -15,3 +19,4 @@ DELETE FROM players;
 DELETE FROM accounts;
 DELETE FROM settings;
 DELETE FROM commits;
+

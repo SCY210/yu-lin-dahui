@@ -16,3 +16,7 @@ export const payments=sqliteTable('payments',{id:text('id').primaryKey(),eventId
 export const seasons=sqliteTable('seasons',{id:text('id').primaryKey(),payload:payload()});
 export const audits=sqliteTable('audits',{id:text('id').primaryKey(),payload:payload()});
 export const ratingChanges=sqliteTable('ratingChanges',{id:text('id').primaryKey(),payload:payload()});
+export const challenges=sqliteTable('challenges',{id:text('id').primaryKey(),payload:payload()});
+export const tagVotes=sqliteTable('tagVotes',{id:text('id').primaryKey(),payload:payload()});
+export const awardVotes=sqliteTable('awardVotes',{id:text('id').primaryKey(),payload:payload()});
+export const photos=sqliteTable('photos',{id:text('id').primaryKey(),payload:payload()});
