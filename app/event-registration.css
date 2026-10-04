@@ -10,3 +10,7 @@
 .signup-name-link:hover{color:#7251a6}
 .signup-avatar-link:focus-visible,.signup-name-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px}
 @media(max-width:600px){.signup-member-line{gap:12px;align-items:flex-start}.signup-member-line .compact{width:100%;gap:6px;padding-top:2px;justify-content:flex-end}.signup-member-line .compact button{min-height:44px}.signup-member-line>.grow{min-width:0}.signup-member-line p{font-size:13px;line-height:1.6;margin:4px 0}}
+.event-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.event-toolbar button{min-height:44px}
+.event-trash>summary{min-height:44px;font-weight:600}
+.event-trash .grow{min-width:0;overflow-wrap:anywhere}

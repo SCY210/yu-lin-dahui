@@ -13,5 +13,5 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
 }
 
 export function canCastAwardVote(s:VotingState,e:Event,a:Account,now=Date.now()):boolean{
- return e.status!=='cancelled'&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
+ return e.deletedAt===undefined&&e.status!=='cancelled'&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
 }

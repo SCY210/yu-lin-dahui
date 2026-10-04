@@ -5,7 +5,7 @@ export function usesAutomaticAttendance(e:Event){return e.attendanceMode==='auto
 // This marker is persisted once on rollout. Ended activities keep their original records.
 export function enableDefaultAttendance(s:State,now:number){
  let changed=false;
- for(const e of s.events)if(!e.attendanceMode&&!['ended','cancelled'].includes(e.status)&&e.end>now){e.attendanceMode='automatic';changed=true}
+ for(const e of s.events)if(e.deletedAt===undefined&&!e.attendanceMode&&!['ended','cancelled'].includes(e.status)&&e.end>now){e.attendanceMode='automatic';changed=true}
  return changed;
 }
 
@@ -34,8 +34,8 @@ export function attendanceForEvent(s:State,e:Event):Attendance[]{
 
 // Use only on a projection clone: do not persist virtual records as actual rows.
 export function applyDefaultAttendance(s:State){
- const ids=new Set(s.events.filter(usesAutomaticAttendance).map(e=>e.id));
- const derived=s.events.filter(usesAutomaticAttendance).flatMap(e=>attendanceForEvent(s,e));
+ const ids=new Set(s.events.filter(e=>e.deletedAt===undefined&&usesAutomaticAttendance(e)).map(e=>e.id));
+ const derived=s.events.filter(e=>e.deletedAt===undefined&&usesAutomaticAttendance(e)).flatMap(e=>attendanceForEvent(s,e));
  s.attendance=[...s.attendance.filter(a=>!ids.has(a.eventId)),...derived];
  return s;
 }

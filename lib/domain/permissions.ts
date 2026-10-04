@@ -4,7 +4,7 @@ export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Even
  return account.role==='admin'||event.creatorId===account.id;
 }
 
-const eventActions=new Set(['eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','settle','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','settle','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
@@ -18,6 +18,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
  if(!canManageEvent(a,event))fail('403: 只能管理自己创建的活动');
+ if(event.deletedAt!==undefined&&!['deleteEvent','restoreEvent'].includes(action))fail('活动已删除，请先恢复活动');
  return true;
 }
 
