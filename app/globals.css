@@ -74,6 +74,8 @@ button:focus-visible,a:focus-visible{outline:3px solid #9185eb66;outline-offset:
 .date-box b{font-size:30px;font-weight:650;letter-spacing:-1px}
 .date-box span{font-size:12px;letter-spacing:.2px}
 .date-box small{font-size:11px;line-height:1.5;color:#9287b0;margin-top:2px}
+.pp-rank-avatar-link{display:flex;align-items:center;justify-content:center;width:46px;min-height:46px;border:0;padding:0;border-radius:50%;background:transparent}.pp-rank-avatar-link:hover{box-shadow:0 0 0 3px #e5dff7}.pp-rank-avatar-link:focus-visible{outline:3px solid #9185eb66;outline-offset:3px}
+@media(max-width:600px){.leaderboard-row{grid-template-columns:21px 44px minmax(0,1fr) auto}.pp-rank-avatar-link{width:44px;min-height:44px}}
 .feature-guide-panel .feature-guide-done{color:#fff!important;background:linear-gradient(160deg,#6557e2,#5146d8);border:1px solid #5146d8;border-radius:12px;box-shadow:0 3px 8px #5146d820;font-size:15px;min-height:46px}.feature-guide-panel .feature-guide-done:hover{background:linear-gradient(160deg,#6e60e9,#493ac7);box-shadow:0 5px 13px #5146d830}
 .event-info h3{font-weight:650}
 .event-info .row>.badge{border:0;padding:3px 9px;background:#f0eefb;color:#6b6088;min-height:0}
