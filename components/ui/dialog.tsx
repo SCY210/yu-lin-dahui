@@ -6,10 +6,12 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useDialogHistory } from "@/lib/client/club-navigation-react"
 
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  useDialogHistory(!!props.open, props.onOpenChange)
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 

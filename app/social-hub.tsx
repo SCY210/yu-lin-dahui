@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 import {ArrowLeft,ArrowUpRight,UsersRound} from 'lucide-react';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {styleTags} from '../lib/domain/social';
@@ -9,11 +9,10 @@ import FeatureGuide from './feature-guide';
 import PlayerProfile from './player-profile';
 import './player-list.css';
 export function Avatar({p,size=''}:any){const [failedId,setFailedId]=useState<string|null>(null);const name:string=p?.name??'球友';return p?.avatarId&&p.avatarId!==failedId?<img className={'avatar '+size} src={'/api/photos/'+p.avatarId} alt={name+'的头像'} loading="lazy" onError={()=>setFailedId(p.avatarId)}/>:<span className={'avatar '+size} aria-label={name+'的默认头像'}>{Array.from(name)[0]??'球'}</span>}
-export default function SocialHub({ctx,year,initialPlayerId}:any){
+export default function SocialHub({ctx,year,initialPlayerId,activeTab='players',onTabChange,onPlayerSelect,onBackToPlayers}:any){
  const {data,name,admin,open,send}=ctx;
- const [requestedTab,setTab]=useState('players');
- const tab=requestedTab==='annual'?'players':requestedTab;
- const [selected,setSelected]=useState<string|null>(initialPlayerId||null);
+ const tab=activeTab==='annual'?'players':activeTab;
+ const selected=initialPlayerId||null;
  const [centerId,setCenterId]=useState(data.me.playerId||data.players[0]?.id||'');
  const [relation,setRelation]=useState('partners');
  const p=selected?data.players.find((player:any)=>player.id===selected):null;
@@ -21,10 +20,9 @@ export default function SocialHub({ctx,year,initialPlayerId}:any){
  const center=data.players.find((player:any)=>player.id===centerId)??data.players[0];
  const centerStats=data.social.stats.find((row:any)=>row.playerId===center?.id)??{partners:[],opponents:[]};
  const roster=data.players.filter((player:any)=>player.enabled);
- const openPlayer=(id:string)=>{setSelected(id);setTab('players');window.scrollTo({top:0,behavior:'smooth'})};
- const returnToPlayers=()=>{setSelected(null);setTab('players');window.scrollTo({top:0,behavior:'smooth'})};
- useEffect(()=>{setSelected(initialPlayerId||null);if(initialPlayerId)setTab('players')},[initialPlayerId]);
- const changeTab=(value:string)=>{setTab(value==='annual'?'players':value);setSelected(null)};
+ const openPlayer=(id:string)=>onPlayerSelect(id);
+ const returnToPlayers=()=>onBackToPlayers();
+ const changeTab=(value:string)=>onTabChange(value==='annual'?'players':value);
  const relationRow=(r:any,challenge=false)=><div className="relation-row" key={r.playerId}><button type="button" className="ghost pl-relation-link" onClick={()=>openPlayer(r.playerId)}>{name(r.playerId)}</button><span>{r.wins}胜 {r.losses}负 · {r.games}场 · {Math.round(r.rate*100)}%</span>{challenge&&selected===data.me.playerId&&r.losses>0&&<button className="secondary" onClick={()=>send('challenge',{targetId:r.playerId})}>发起复仇</button>}</div>; const highlight=(title:string,r:any)=><section className="mini-stat"><span>{title}</span><strong>{r?name(r.playerId):'样本不足'}</strong><small>{r?`${r.wins}胜${r.losses}负 · ${Math.round(r.rate*100)}%`:'至少3场有效交手 / 组队'}</small></section>;
  return <div className="pl-hub">
  {p?<header className="pl-detail-heading"><button type="button" className="pl-back" onClick={returnToPlayers}><ArrowLeft size={18} aria-hidden="true"/>返回球友列表</button><div><p className="eyebrow">PLAYER PROFILE</p><h1>球员档案</h1></div></header>:<><div className="heading"><div><p className="eyebrow">COURT CONNECTIONS</p><h1>球场上的故事。</h1></div><img className="racket-art" src="/crossed-rackets.png" width={1312} height={1199} alt="" aria-hidden="true"/></div><Tabs value={tab==='annual'?'players':tab} onValueChange={changeTab}><TabsList className="social-tabs">{[['players','球友'],['network','关系图'],['challenges','复仇局'],['funny','趣味榜']].map(([v,l])=><TabsTrigger key={v} value={v}>{l}</TabsTrigger>)}</TabsList></Tabs><div className="feature-actions">{tab==='players'&&<><FeatureGuide rules={data.settings.rules} topic="rating" label="段位说明"/><FeatureGuide rules={data.settings.rules} topic="state" label="状态值"/></>}{!p&&tab==='network'&&<FeatureGuide rules={data.settings.rules} topic="partners" label="关系图说明"/>}{!p&&tab==='challenges'&&<FeatureGuide rules={data.settings.rules} topic="challenges" label="复仇规则"/>}{!p&&tab==='funny'&&<FeatureGuide rules={data.settings.rules} topic="titles" label="趣味称号规则"/>}</div></>}

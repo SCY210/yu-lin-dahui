@@ -5,10 +5,12 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useDialogHistory } from "@/lib/client/club-navigation-react"
 
 function AlertDialog({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
+  useDialogHistory(!!props.open, props.onOpenChange)
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 

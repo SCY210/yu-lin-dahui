@@ -1,0 +1,59 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {ClubNavigation,clubRouteUrl,homeRoute,normalizeRoute,readClubRoute,type NavigationPort} from '../lib/client/club-navigation';
+
+function browser(href='https://club.example/',state:unknown=null){
+ const entries=[{href,state}],moves:number[]=[];let index=0,scroll=0;
+ const port:NavigationPort={href:()=>entries[index].href,state:()=>entries[index].state,push:(state,url)=>{entries.splice(index+1);entries.push({state,href:new URL(url,entries[index].href).href});index++},replace:(state,url)=>{entries[index]={state,href:new URL(url,entries[index].href).href}},go:delta=>{moves.push(delta)},scrollY:()=>scroll,scrollTo:y=>{scroll=y}};
+ const navigation=new ClubNavigation(port,'member-A','session-one');
+ const flush=(controller=navigation)=>{const delta=moves.shift();assert.notEqual(delta,undefined);index+=delta!;assert.ok(index>=0&&index<entries.length);controller.pop(port.state())};
+ const back=(controller=navigation)=>{port.go(-1);flush(controller)},forward=(controller=navigation)=>{port.go(1);flush(controller)};
+ return {navigation,port,entries,moves,flush,back,forward,setScroll:(y:number)=>{scroll=y},get scroll(){return scroll}};
+}
+
+test('initial page only replaces the existing entry; repeated navigation does not add duplicates',()=>{
+ const b=browser();assert.equal(b.entries.length,1);assert.equal(b.moves.length,0);
+ b.navigation.navigate({page:'home'});assert.equal(b.entries.length,1);
+ b.navigation.navigate({page:'ranking'});b.navigation.navigate({page:'ranking'});assert.equal(b.entries.length,2);
+});
+test('browser back and forward restore activities, detail and event tabs without pushing',()=>{
+ const b=browser();b.navigation.navigate({page:'events'});b.navigation.navigate({page:'events',eventId:'event-1'});b.navigation.navigate({page:'events',eventId:'event-1',tab:'signup'});
+ b.back();assert.equal(b.navigation.route.tab,'overview');b.back();assert.equal(b.navigation.route.eventId,'');b.forward();assert.equal(b.navigation.route.eventId,'event-1');assert.equal(b.entries.length,4);
+});
+test('player detail return uses the actual list entry and browser forward restores detail',()=>{
+ const b=browser();b.navigation.navigate({page:'social'});b.navigation.navigate({page:'social',playerId:'player-1'});b.navigation.navigate({page:'social',playerId:'player-2'});
+ b.navigation.backTo({page:'social'});assert.deepEqual(b.moves,[-2]);b.flush();assert.equal(b.navigation.route.playerId,'');b.forward();assert.equal(b.navigation.route.playerId,'player-1');
+});
+test('direct profile/detail links replace with a list instead of adding a return loop',()=>{
+ const b=browser('https://club.example/?page=social&player=player-1');b.navigation.backTo({page:'social'});assert.equal(b.entries.length,1);assert.equal(b.navigation.route.playerId,'');assert.equal(new URL(b.port.href()).searchParams.has('player'),false);
+ const e=browser('https://club.example/?event=event-1');e.navigation.backTo({page:'events'});assert.equal(e.entries.length,1);assert.equal(e.navigation.route.page,'events');assert.equal(e.navigation.route.eventId,'');
+});
+test('legacy event links and every social/event tab round-trip through the URL',()=>{
+ assert.equal(readClubRoute('https://club.example/?event=E').page,'events');assert.equal(readClubRoute('https://club.example/?event=E&tab=matches').tab,'rounds');
+ for(const route of [{page:'me'},{page:'admin'},{page:'ranking'},{page:'events',eventId:'event /你好',tab:'fees'},{page:'social',socialTab:'network'},{page:'social',socialTab:'challenges'},{page:'social',socialTab:'funny'},{page:'social',playerId:'player ?你好'}]){
+  const expected=normalizeRoute(route as any),url=clubRouteUrl('https://club.example/?campaign=friend',expected);assert.deepEqual(readClubRoute(new URL(url,'https://club.example').href),expected);assert.equal(new URL(url,'https://club.example').searchParams.get('campaign'),'friend');
+ }
+ assert.deepEqual(readClubRoute('https://club.example/?page=bogus&player=P'),homeRoute);
+});
+test('back closes a dialog first; history contains no form data and forward cannot reopen an old form',()=>{
+ const b=browser();let closed=0;b.navigation.navigate({page:'events'});const href=b.port.href();b.navigation.openDialog('opaque-dialog-id',()=>{closed++;b.navigation.dismissDialog('opaque-dialog-id')});
+ assert.equal(b.port.href(),href);assert.deepEqual(Object.keys((b.port.state() as any).__yulinNavigation).sort(),['dialog','index','owner','route','session']);
+ b.back();assert.equal(closed,1);assert.equal(b.navigation.route.page,'events');assert.equal(b.moves.length,0);b.forward();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);
+});
+test('closing a dialog followed immediately by navigation waits for the pending pop',()=>{
+ const b=browser();b.navigation.navigate({page:'me'});b.navigation.openDialog('dialog',()=>{});b.navigation.dismissDialog('dialog');b.navigation.navigate({page:'ranking'});
+ assert.deepEqual(b.moves,[-1]);assert.equal(b.navigation.route.page,'me');b.flush();assert.equal(b.navigation.route.page,'ranking');assert.equal(b.entries.length,3);b.back();assert.equal(b.navigation.route.page,'me');
+});
+test('branching after back drops stale forward pages',()=>{
+ const b=browser();b.navigation.navigate({page:'events'});b.navigation.navigate({page:'ranking'});b.back();b.navigation.navigate({page:'me'});assert.equal(b.entries.length,3);assert.equal(new URL(b.entries[2].href).searchParams.get('page'),'me');
+});
+test('reload restores same-account URL history; another account cannot restore its old route',()=>{
+ const b=browser();b.navigation.navigate({page:'events'});b.navigation.navigate({page:'events',eventId:'event-1'});
+ const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.equal(reloaded.route.eventId,'event-1');
+ b.back(reloaded);const old=b.port.state();assert.equal(reloaded.route.page,'events');assert.equal(reloaded.route.eventId,'');
+ b.forward(reloaded);assert.equal(reloaded.route.eventId,'event-1');b.back(reloaded);assert.equal(reloaded.route.eventId,'');
+ const other=new ClubNavigation(b.port,'member-B','session-three');assert.deepEqual(other.route,homeRoute);other.pop(old);assert.deepEqual(other.route,homeRoute);
+});
+test('scroll position belongs to each history entry and restores on back',()=>{
+ const b=browser();b.setScroll(640);b.navigation.navigate({page:'social'});assert.equal(b.scroll,0);b.setScroll(200);b.navigation.navigate({page:'social',playerId:'player-1'});b.back();assert.equal(b.scroll,200);b.back();assert.equal(b.scroll,640);
+});
