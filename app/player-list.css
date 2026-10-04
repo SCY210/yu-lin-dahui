@@ -1,4 +1,8 @@
 .pl-hub{min-width:0}
+.home-rank-avatar-link{flex:0 0 35px;display:flex;align-items:center;justify-content:center;width:35px;min-height:44px;padding:0;border:0;background:transparent;border-radius:50%;cursor:pointer}
+.home-rank-name-link{border:0;background:transparent;padding:2px 0;min-height:44px;text-align:left;color:inherit;font:inherit;line-height:1.4;overflow-wrap:anywhere;cursor:pointer}
+.home-rank-avatar-link:focus-visible,.home-rank-name-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px}
+.home-rank-name-link:hover{color:#735098}
 .pl-hub>.heading{flex-wrap:nowrap}
 .pl-hub>.heading>div:first-child{min-width:0}
 .pl-hub>.heading h1{font-size:clamp(25px,4vw,34px)}

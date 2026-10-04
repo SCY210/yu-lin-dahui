@@ -57,3 +57,50 @@ test('reload restores same-account URL history; another account cannot restore i
 test('scroll position belongs to each history entry and restores on back',()=>{
  const b=browser();b.setScroll(640);b.navigation.navigate({page:'social'});assert.equal(b.scroll,0);b.setScroll(200);b.navigation.navigate({page:'social',playerId:'player-1'});b.back();assert.equal(b.scroll,200);b.back();assert.equal(b.scroll,640);
 });
+
+test('signup profile return restores the exact activity, signup tab and scrolled list; related profiles retain source',()=>{
+ const b=browser();b.navigation.navigate({page:'events',eventId:'event-original',tab:'signup'});b.setScroll(680);
+ b.navigation.openPlayer('peer-one');assert.equal(b.navigation.route.playerId,'peer-one');assert.equal(b.navigation.profileBackLabel,'返回接龙');
+ b.navigation.openPlayer('peer-two');assert.equal(b.navigation.profileSource!.route.eventId,'event-original');assert.equal(b.navigation.profileSource!.scrollY,680);
+ b.navigation.returnFromProfile();assert.deepEqual(b.moves,[-2]);b.flush();assert.equal(b.navigation.route.eventId,'event-original');assert.equal(b.navigation.route.tab,'signup');assert.equal(b.scroll,680);
+ b.forward();assert.equal(b.navigation.route.playerId,'peer-one');assert.equal(b.navigation.profileBackLabel,'返回接龙');
+});
+
+test('annual ranking profile return preserves ranking year, month selection and scroll independently of player identity',()=>{
+ const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(945);
+ const selection={period:'2025-08',year:2025,rankingPeriod:'annual' as const};b.navigation.openPlayer('peer',selection);
+ assert.equal(b.navigation.profileBackLabel,'返回榜单');assert.deepEqual(b.navigation.rankingSelection,selection);
+ b.navigation.returnFromProfile();b.flush();assert.equal(b.navigation.route.page,'ranking');assert.equal(b.scroll,945);assert.deepEqual(b.navigation.rankingSelection,selection);
+ assert.equal((b.port.state() as any).__yulinNavigation.owner,'member-A');
+});
+
+test('refreshing a profile keeps a safe source; return without memory frames replaces that source and preserves filters',()=>{
+ const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(510);const selection={period:'2024-02',year:2024,rankingPeriod:'monthly' as const};b.navigation.openPlayer('peer',selection);
+ const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.equal(reloaded.profileBackLabel,'返回榜单');assert.deepEqual(reloaded.rankingSelection,selection);
+ reloaded.returnFromProfile();assert.equal(reloaded.route.page,'ranking');assert.equal(b.scroll,510);assert.equal(b.moves.length,0);assert.equal(b.entries.length,3);
+ assert.deepEqual(reloaded.rankingSelection,selection);
+});
+
+test('my profile returns to My; direct links fall back to player list and foreign account metadata cannot restore source',()=>{
+ const b=browser();b.navigation.navigate({page:'me'});b.navigation.openPlayer('mine');assert.equal(b.navigation.profileBackLabel,'返回我的');b.navigation.returnFromProfile();b.flush();assert.equal(b.navigation.route.page,'me');
+ const direct=browser('https://club.example/?page=social&player=peer');direct.navigation.openPlayer('another');assert.equal(direct.navigation.profileBackLabel,'返回球友列表');direct.navigation.returnFromProfile();assert.equal(direct.navigation.route.page,'social');assert.equal(direct.navigation.route.playerId,'');
+ b.navigation.openPlayer('peer');const other=new ClubNavigation(b.port,'member-B','session-three');assert.deepEqual(other.route,homeRoute);assert.equal(other.profileSource,undefined);assert.equal(other.rankingSelection,undefined);
+});
+
+test('source metadata stores only whitelisted route/filter scalars and rejects profile loops or invalid filter snapshots',()=>{
+ const source={route:{page:'ranking',password:'must-not-persist'},scrollY:400,ranking:{period:'2024-03',year:2024,rankingPeriod:'annual',token:'must-not-persist'},notes:'must-not-persist'};
+ const state={__yulinNavigation:{session:'old',owner:'member-A',index:2,route:normalizeRoute({page:'social',playerId:'peer'}),dialog:null,profileSource:source}};
+ const b=browser('https://club.example/?page=social&player=peer',state);assert.equal(b.navigation.profileBackLabel,'返回榜单');assert.ok(!JSON.stringify(b.port.state()).includes('must-not-persist'));
+ const loop={...state,__yulinNavigation:{...state.__yulinNavigation,profileSource:{route:{page:'social',playerId:'loop'},scrollY:200}}};const bad=browser('https://club.example/?page=social&player=peer',loop);assert.equal(bad.navigation.profileSource,undefined);assert.equal(bad.navigation.profileBackLabel,'返回球友列表');
+});
+
+test('changing ranking filters after returning from a profile persists latest selections on subsequent browser back and reload',()=>{
+ const b=browser();b.navigation.navigate({page:'ranking'});b.navigation.openPlayer('peer',{period:'2025-08',year:2025,rankingPeriod:'annual'});
+ b.navigation.returnFromProfile();b.flush();let emitted=0;const unsubscribe=b.navigation.subscribe(()=>emitted++);const count=emitted;
+ const latest={period:'2024-11',year:2024,rankingPeriod:'annual' as const};b.navigation.updateRankingSelection(latest);
+ assert.equal(emitted,count,'Updating a filter must not emit a route restoration that resets React state');assert.equal(b.entries.length,3,'Filters update this ranking entry rather than pushing another route');
+ b.navigation.navigate({page:'me'});b.back();assert.equal(b.navigation.route.page,'ranking');assert.deepEqual(b.navigation.rankingSelection,latest);
+ const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.deepEqual(reloaded.rankingSelection,latest);
+ reloaded.updateRankingSelection({...latest,rankingPeriod:'monthly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'monthly');
+ unsubscribe();
+});

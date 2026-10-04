@@ -25,12 +25,27 @@ export function clubRouteUrl(href:string,route:ClubRoute):string {
  return url.pathname+url.search+url.hash;
 }
 export const sameRoute = (a:ClubRoute,b:ClubRoute)=>JSON.stringify(a)===JSON.stringify(b);
-type Frame = {route:ClubRoute;dialog:string|null;scrollY:number};
-type Marker = {session:string;owner:string;index:number;route:ClubRoute;dialog:string|null};
+export type RankingSelection={period:string;year:number;rankingPeriod:'monthly'|'annual'};
+export type ProfileSource={route:ClubRoute;scrollY:number;ranking?:RankingSelection};
+type Frame = {route:ClubRoute;dialog:string|null;scrollY:number;profileSource?:ProfileSource;ranking?:RankingSelection};
+type Marker = {session:string;owner:string;index:number;route:ClubRoute;dialog:string|null;scrollY?:number;profileSource?:ProfileSource;ranking?:RankingSelection};
 export type NavigationPort = {href:()=>string; state:()=>unknown; push:(state:unknown,url:string)=>void; replace:(state:unknown,url:string)=>void; go:(delta:number)=>void; scrollY:()=>number; scrollTo:(y:number)=>void};
 const markerOf = (state:unknown):Marker|undefined => {
  const marker=state&&typeof state==='object'?(state as any).__yulinNavigation:undefined;
  return marker&&typeof marker==='object'&&typeof marker.session==='string'&&typeof marker.owner==='string'&&typeof marker.index==='number'&&marker.route&&typeof marker.route==='object'?marker:undefined;
+};
+const safeScroll=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(2000000,value)):0;
+const rankingOf=(value:unknown):RankingSelection|undefined=>{
+ if(!value||typeof value!=='object')return;
+ const v=value as any;
+ if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['monthly','annual'].includes(v.rankingPeriod))return;
+ return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod};
+};
+const sourceOf=(value:unknown):ProfileSource|undefined=>{
+ if(!value||typeof value!=='object')return;
+ const v=value as any;if(!v.route||!pages.has(v.route.page))return;
+ const route=normalizeRoute(v.route);if(route.page==='social'&&route.playerId)return;
+ const ranking=rankingOf(v.ranking);return {route,scrollY:safeScroll(v.scrollY),...(ranking?{ranking}:{})};
 };
 
 /** Only route IDs and opaque dialog IDs enter browser history. Form data stays in components. */
@@ -47,19 +62,46 @@ export class ClubNavigation {
   this.session=initialSession;
   const previous=markerOf(port.state());
   const route=previous&&previous.owner!==owner?homeRoute:readClubRoute(port.href());
-  this.frames=[{route,dialog:null,scrollY:port.scrollY()}];
+  const own=previous?.owner===owner,source=own&&route.page==='social'&&route.playerId?sourceOf(previous?.profileSource):undefined,ranking=own?rankingOf(previous?.ranking):undefined;
+  this.frames=[{route,dialog:null,scrollY:safeScroll(port.scrollY()),...(source?{profileSource:source}:{}),...(ranking?{ranking}:{})}];
   this.write(false);
  }
  get route(){return this.frames[this.index].route}
+ get profileSource(){return this.frames[this.index].profileSource}
+ get rankingSelection(){const frame=this.frames[this.index];return frame.ranking??frame.profileSource?.ranking}
+ updateRankingSelection(value:RankingSelection){
+  const selection=rankingOf(value),frame=this.frames[this.index];
+  if(!selection||frame.route.page!=='ranking')return;
+  frame.ranking=selection;this.write(false);
+ }
+ get profileBackLabel(){const source=this.profileSource?.route;if(!source)return '返回球友列表';if(source.page==='events')return source.tab==='signup'?'返回接龙':'返回活动';if(source.page==='ranking')return '返回榜单';if(source.page==='me')return '返回我的';if(source.page==='home')return '返回首页';if(source.page==='admin')return '返回群组管理';return source.socialTab==='network'?'返回关系图':source.socialTab==='challenges'?'返回复仇局':source.socialTab==='funny'?'返回趣味榜':'返回球友列表'}
  subscribe(listener:(route:ClubRoute)=>void){this.listeners.add(listener);listener(this.route);return()=>{this.listeners.delete(listener)}}
  private emit(){for(const listener of this.listeners)listener(this.route)}
  private write(push:boolean){
   const frame=this.frames[this.index],existing=this.port.state();
-  const state={...(existing&&typeof existing==='object'?existing:{}),__yulinNavigation:{session:this.session,owner:this.owner,index:this.index,route:frame.route,dialog:frame.dialog}};
+  const state={...(existing&&typeof existing==='object'?existing:{}),__yulinNavigation:{session:this.session,owner:this.owner,index:this.index,route:frame.route,dialog:frame.dialog,...(frame.scrollY?{scrollY:frame.scrollY}:{}),...(frame.profileSource?{profileSource:frame.profileSource}:{}),...(frame.ranking?{ranking:frame.ranking}:{})}};
   this.port[push?'push':'replace'](state,clubRouteUrl(this.port.href(),frame.route));
  }
- private rememberScroll(){this.frames[this.index].scrollY=this.port.scrollY()}
- private push(frame:Frame){this.rememberScroll();this.frames=this.frames.slice(0,this.index+1);this.frames.push(frame);this.index++;this.write(true);this.emit()}
+ private rememberScroll(){this.frames[this.index].scrollY=safeScroll(this.port.scrollY())}
+ private push(frame:Frame){this.rememberScroll();this.write(false);this.frames=this.frames.slice(0,this.index+1);this.frames.push(frame);this.index++;this.write(true);this.emit()}
+ openPlayer(playerId:string,selection?:RankingSelection){
+  if(this.moving){this.afterMove=()=>this.openPlayer(playerId,selection);return}
+  const id=safeId(playerId);if(!id)return;
+  const current=this.frames[this.index];if(current.route.page==='social'&&current.route.playerId===id)return;
+  const ranking=rankingOf(selection);
+  if(current.route.page==='ranking'&&ranking)current.ranking=ranking;
+  const source=current.route.page==='social'&&current.route.playerId?current.profileSource:{route:current.route,scrollY:safeScroll(this.port.scrollY()),...(current.route.page==='ranking'&&current.ranking?{ranking:current.ranking}:{})};
+  this.closeCurrentDialog();this.push({route:normalizeRoute({page:'social',playerId:id}),dialog:null,scrollY:0,...(source?{profileSource:source}:{})});this.port.scrollTo(0);
+ }
+ returnFromProfile(){
+  if(this.moving){this.afterMove=()=>this.returnFromProfile();return}
+  const source=this.profileSource;
+  if(!source){this.backTo({page:'social'});return}
+  for(let i=this.index-1;i>=0;i--)if(!this.frames[i].dialog&&sameRoute(this.frames[i].route,source.route)){
+   this.frames[i].scrollY=source.scrollY;if(source.ranking)this.frames[i].ranking=source.ranking;this.move(i-this.index);return;
+  }
+  this.closeCurrentDialog();this.frames[this.index]={route:source.route,dialog:null,scrollY:source.scrollY,...(source.ranking?{ranking:source.ranking}:{})};this.write(false);this.emit();this.port.scrollTo(source.scrollY);
+ }
  navigate(value:Partial<ClubRoute>){
   if(this.moving){this.afterMove=()=>this.navigate(value);return}
   const route=normalizeRoute({...homeRoute,...value});
@@ -86,7 +128,7 @@ export class ClubNavigation {
  private move(delta:number){this.moving=true;this.port.go(delta)}
  openDialog(id:string,close:()=>void){
   this.dialogClosers.set(id,close);
-  const show=()=>{if(this.dialogClosers.has(id))this.push({route:this.route,dialog:id,scrollY:this.port.scrollY()})};
+  const show=()=>{if(this.dialogClosers.has(id))this.push({...this.frames[this.index],route:this.route,dialog:id,scrollY:this.port.scrollY()})};
   if(this.moving)this.afterMove=show;else show();
  }
  dismissDialog(id:string){
@@ -101,7 +143,8 @@ export class ClubNavigation {
    const route=marker&&marker.owner!==this.owner?homeRoute:readClubRoute(this.port.href());
    // Old browser entries can carry index 0 from before a reload. A new generation avoids collisions.
    this.session=this.initialSession+':'+(++this.generation);
-   this.frames=[{route,dialog:null,scrollY:0}];this.index=0;this.write(false);
+   const own=marker?.owner===this.owner,source=own&&route.page==='social'&&route.playerId?sourceOf(marker?.profileSource):undefined,ranking=own?rankingOf(marker?.ranking):undefined;
+   this.frames=[{route,dialog:null,scrollY:own?safeScroll(marker?.scrollY):0,...(source?{profileSource:source}:{}),...(ranking?{ranking}:{})}];this.index=0;this.write(false);
   }
   if(previous.dialog&&previous.dialog!==this.frames[this.index].dialog){const close=this.dialogClosers.get(previous.dialog);this.dialogClosers.delete(previous.dialog);close?.()}
   const current=this.frames[this.index];

@@ -5,4 +5,8 @@
 .signup-member-line>.grow{min-width:0;flex:1 1 0;overflow-wrap:anywhere}
 .signup-member-line>.grow strong,.signup-member-line>.grow small,.signup-member-line>.grow .warning{overflow-wrap:anywhere}
 .signup-member-line .compact{flex-shrink:0}
+.signup-avatar-link{border:0;background:transparent;padding:0;min-height:44px;border-radius:50%;cursor:pointer}
+.signup-name-link{border:0;background:transparent;padding:4px 0;min-height:44px;color:inherit;font:inherit;font-weight:inherit;line-height:1.4;text-align:left;overflow-wrap:anywhere;cursor:pointer}
+.signup-name-link:hover{color:#7251a6}
+.signup-avatar-link:focus-visible,.signup-name-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px}
 @media(max-width:600px){.signup-member-line{gap:12px;align-items:flex-start}.signup-member-line .compact{width:100%;gap:6px;padding-top:2px;justify-content:flex-end}.signup-member-line .compact button{min-height:44px}.signup-member-line>.grow{min-width:0}.signup-member-line p{font-size:13px;line-height:1.6;margin:4px 0}}
