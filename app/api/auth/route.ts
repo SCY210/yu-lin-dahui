@@ -2,7 +2,6 @@ import {z} from 'zod';
 import {load,raw,save,committed} from '../../../lib/store';
 import {getAppUser,hashToken,passwordEnabled,sessionCookie} from '../../../lib/auth';
 import {makePassword,checkPassword,sessionToken,normalizeUsername} from '../../../lib/password';
-import {provisionOwnerMembers} from '../../../lib/provision-owner-members';
 export const dynamic='force-dynamic';
 const password=z.string().min(12).max(128);
 const username=z.string().trim().transform(normalizeUsername).pipe(z.string().min(2).max(32).regex(/^[a-z0-9_\-\u4e00-\u9fff]+$/));
@@ -39,7 +38,6 @@ export async function POST(req:Request){try{
  if(action==='login'){
   const p=z.object({username:z.string().trim().min(1).max(254).transform(normalizeUsername),password:z.string().min(1).max(128)}).parse(input);
   if(!await limit('login:'+p.username,8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
-  await provisionOwnerMembers();
   const c=await raw().prepare('SELECT id,username,salt,hash FROM password_credentials WHERE username=?').bind(p.username).first<{id:string;username:string;salt:string;hash:string}>();
   const valid=checkPassword(p.password,c?.salt??'dummy-salt-for-timing-v1',c?.hash??'00'.repeat(64));
   if(!c||!valid)return denied('账号或密码不正确',401);
