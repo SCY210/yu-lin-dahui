@@ -8,6 +8,7 @@ import FeatureGuide from './feature-guide';
 import RacketGallery from './racket-gallery';
 import './player-profile.css';
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
+import CultivationOrnament from './cultivation-ornament';
 
 const defaults = {years:0, hand:'right', preference:'doubles', style:'', equipment:'', level:'beginner', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
@@ -31,7 +32,8 @@ function Fact({label, value}: {label:string; value:unknown}) {
 export default function PlayerProfile({p, stats, ctx}:any) {
   if (!p) return null;
   const profile = {...defaults, ...p.profile};
-  const canEdit = ctx.admin || p.ownerId === ctx.data.me.id;
+  const isOwn = p.id === ctx.data.me.playerId;
+  const canEdit = ctx.admin || isOwn;
   const rules = ctx.data.settings.rules;
   const state = stats ?? {};
   const range=tensionRange(p.profile);
@@ -41,7 +43,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
     choice('level', '自评水平', [['beginner','萌新'], ['intermediate','进阶'], ['advanced','高手']]),
-    optional('style', '我的打法（最多300字）'),
+    optional('style', (isOwn ? '我的打法' : 'TA的打法')+'（最多300字）'),
     optional('racket', '战拍品牌 / 型号（最多120字）'),
     optional('strings', '拍线品牌 / 型号（最多120字）'),
     {...number('tensionMin','穿线磅数范围 · 最低（磅）'),optional:true,step:'any',min:1,max:80},
@@ -53,15 +55,19 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     <header className="pp-header">
       <ProfileAvatar p={p}/>
       <div className="pp-identity">
-        <p className="pp-eyebrow">球友档案</p>
+        <p className="pp-eyebrow"><span className="pp-perspective">{isOwn ? '我的档案' : p.name+'的档案'}</span></p>
         <h2>{p.name}</h2>
         <div className="pp-badges">
-          <span className="pp-tier">{state.tier || '暂无段位'}{state.provisional ? ' · 暂定' : ''}</span>
+          <span className="pp-tier">{state.tier || '暂无境界'}{state.provisional ? ' · 暂定' : ''}</span>
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
       </div>
-      {canEdit && <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>}
+      <div className="pp-header-actions">
+        {canEdit && <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>}
+        {ctx.admin && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
+      </div>
     </header>
+    <CultivationOrnament variant="ribbon"/>
 
     <section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
@@ -71,11 +77,11 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
         <Fact label="自评水平" value={levels[p.profile?.level]}/>
       </dl>
-      <div className="pp-style"><span>我的打法</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
+      <div className="pp-style"><span>{isOwn ? '我的打法' : 'TA的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section>
 
     <section className="pp-section" aria-label="装备信息">
-      <div className="pp-section-heading"><h3 className="pp-section-title">我的球场装备</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
+      <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : 'TA的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
       <dl className="pp-facts pp-equipment-facts">
         <Fact label="战拍品牌 / 型号" value={profile.racket}/>
         <Fact label="拍线品牌 / 型号" value={profile.strings}/>
@@ -86,7 +92,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section>
 
     <section className="pp-section" aria-label="比赛统计">
-      <div className="pp-section-heading"><h3 className="pp-section-title">球场记录</h3><div className="pp-guide-actions"><FeatureGuide rules={rules} topic="rating" label="段位说明"/><FeatureGuide rules={rules} topic="state" label="状态说明"/></div></div>
+      <div className="pp-section-heading"><h3 className="pp-section-title">球场记录</h3><div className="pp-guide-actions"><FeatureGuide rules={rules} topic="rating" label="境界说明"/><FeatureGuide rules={rules} topic="state" label="状态说明"/></div></div>
       <div className="pp-stats">
         <section className="pp-stat"><Trophy size={18} aria-hidden="true"/><span>比赛场次</span><strong>{state.games ?? 0}<small>场</small></strong><p>{state.wins ?? 0}胜 · {state.losses ?? 0}负</p></section>
         <section className="pp-stat"><Activity size={18} aria-hidden="true"/><span>最近 {state.formGames ?? 0} 场状态</span><strong>{state.formValue == null ? '—' : `${state.formValue}%`}</strong><p>胜率形成状态值；少于5场显示样本不足</p></section>

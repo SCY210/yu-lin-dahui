@@ -19,7 +19,7 @@ function RacketPhoto({photo, playerName}:any) {
   </figure>;
 }
 
-function RacketUpload({ctx, playerId, playerName}:any) {
+function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const requestId = useRef<string|null>(null);
@@ -93,7 +93,7 @@ function RacketUpload({ctx, playerId, playerName}:any) {
     <summary><ImagePlus size={17} aria-hidden="true"/>上传战拍照片</summary>
     <form className="racket-upload-form" onSubmit={upload} aria-busy={busy}>
       <label htmlFor={id+'-file'}>选择照片<input ref={input} id={id+'-file'} aria-label={'选择'+playerName+'的战拍照片'} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} aria-describedby={id+'-help'} onChange={e=>chooseFile(e.target.files?.[0] ?? null)}/></label>
-      <p className="racket-upload-help" id={id+'-help'}>JPEG / PNG / WebP，最多5MB。上传你的实际战拍照片。</p>
+      <p className="racket-upload-help" id={id+'-help'}>JPEG / PNG / WebP，最多5MB。{isOwn ? '上传你的实际战拍照片。' : '上传'+playerName+'的实际战拍照片。'}</p>
       {preview && <figure className="racket-preview"><img src={preview} alt={playerName+'选中的战拍照片预览'}/><figcaption>{file?.name}</figcaption></figure>}
       <label htmlFor={id+'-caption'}>照片说明（可选，最多300字）<input id={id+'-caption'} aria-label={playerName+'的战拍照片说明'} value={caption} maxLength={300} disabled={busy} onChange={e=>{setCaption(e.target.value);requestId.current=null;setError('');setSuccess('')}}/></label>
       {error && <p className="racket-upload-error" role="alert">{error}</p>}
@@ -105,12 +105,13 @@ function RacketUpload({ctx, playerId, playerName}:any) {
 
 export default function RacketGallery({ctx, playerId}:any) {
   const player = ctx.data.players.find((p:any)=>p.id === playerId);
-  const canUpload = !!player && (ctx.admin || player.ownerId === ctx.data.me.id);
+  const isOwn = playerId === ctx.data.me.playerId;
+  const canUpload = !!player && (ctx.admin || isOwn);
   const photos = (ctx.data.photos ?? []).filter((photo:any)=>photo.kind === 'racket' && photo.playerIds?.includes(playerId)).slice().sort((a:any,b:any)=>b.created-a.created);
   const playerName = player?.name || '球友';
   return <section className="racket-gallery" aria-label={playerName+'的战拍照片'}>
-    <div className="racket-heading"><h4><Camera size={17} aria-hidden="true"/>战拍照片</h4><FeatureGuide topic="photos" rules={ctx.data.settings.rules} label="上传说明"/>{photos.length > 0 && <span>{photos.length}张 · 最新上传在前</span>}</div>
+    <div className="racket-heading"><h4><Camera size={17} aria-hidden="true"/>{isOwn ? '我的战拍照片' : 'TA的战拍照片'}</h4><FeatureGuide topic="photos" rules={ctx.data.settings.rules} label="上传说明"/>{photos.length > 0 && <span>{photos.length}张 · 最新上传在前</span>}</div>
     {photos.length ? <div className="racket-grid">{photos.map((photo:any)=><RacketPhoto key={photo.id} photo={photo} playerName={playerName}/>)}</div> : <div className="racket-empty"><Camera size={25} aria-hidden="true"/><p>尚未上传战拍照片</p></div>}
-    {canUpload && <RacketUpload key={playerId} ctx={ctx} playerId={playerId} playerName={playerName}/>}
+    {canUpload && <RacketUpload key={playerId} ctx={ctx} playerId={playerId} playerName={playerName} isOwn={isOwn}/>}
   </section>;
 }

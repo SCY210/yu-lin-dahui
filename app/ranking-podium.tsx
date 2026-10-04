@@ -38,7 +38,7 @@ export default function RankingPodium({leaders, players, onProfile}: any) {
   if (!podium.length) return null;
   const slots = ['center', 'left', 'right'];
 
-  return <section className="rp-root" aria-label="本月积分领奖台">
+  return <section className="rp-root" aria-label="积分领奖台">
     <div className="rp-stage">
       {slots.map((slot, index) => {
         const row = podium[index];

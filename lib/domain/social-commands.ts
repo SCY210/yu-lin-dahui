@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {fail,type State,type Account} from './types';
 import {finished,won,styleTags} from './social';
+import {authorizeEventAction} from './permissions';
 const id=z.string().min(1).max(100);
 export const memberSocialActions=['profileDetails','challenge','challengeRespond','tagVote','awardVote'];
 const schemas:Record<string,z.ZodTypeAny>={
@@ -10,8 +11,8 @@ const schemas:Record<string,z.ZodTypeAny>={
  playSettings:z.object({eventId:id,playMode:z.enum(['balanced','arena','koc']),identityMode:z.enum(['off','cp','mentor','carry']),arenaCourtId:z.string().max(100),handicap:z.boolean()}),
  handicap:z.object({matchId:id,applied:z.boolean()}),
 };
-export async function applySocial(s:State,a:Account,action:string,input:unknown,now:number){const schema=schemas[action];if(!schema)return false;const p=schema.parse(input) as any;if(!memberSocialActions.includes(action)&&a.role!=='admin')fail('403: 仅管理员可以执行此操作');const player=(id:string)=>s.players.find(x=>x.id===id&&x.enabled)??fail('球友不存在或已停用');
- if(action==='profileDetails'){const pl=player(p.playerId);if(a.role!=='admin'&&pl.ownerId!==a.id)fail('403: 只能编辑自己及自己代报朋友的档案');const {playerId,...profile}=p;const next={...pl.profile,...profile};if(p.tensionMin!==undefined||p.tensionMax!==undefined)next.tension=p.tensionMin===null?'':`${p.tensionMin}–${p.tensionMax} 磅`;pl.profile=next}
+export async function applySocial(s:State,a:Account,action:string,input:unknown,now:number){const schema=schemas[action];if(!schema)return false;const p=schema.parse(input) as any;const eventAction=authorizeEventAction(s,a,action,p);if(!memberSocialActions.includes(action)&&!eventAction&&a.role!=='admin')fail('403: 仅管理员可以执行此操作');const player=(id:string)=>s.players.find(x=>x.id===id&&x.enabled)??fail('球友不存在或已停用');
+ if(action==='profileDetails'){const pl=player(p.playerId);if(a.role!=='admin'&&p.playerId!==a.playerId)fail('403: 只能编辑自己的档案');const {playerId,...profile}=p;const next={...pl.profile,...profile};if(p.tensionMin!==undefined||p.tensionMax!==undefined)next.tension=p.tensionMin===null?'':`${p.tensionMin}–${p.tensionMax} 磅`;pl.profile=next}
  else if(action==='challenge'){if(p.targetId===a.playerId)fail('不能挑战自己');player(p.targetId);const loss=[...finished(s)].reverse().find(m=>[...m.a,...m.b].includes(a.playerId)&&!won(m,a.playerId)&&m[m.a.includes(a.playerId)?'b':'a'].includes(p.targetId));if(!loss)fail('尚未在有效比赛中输给这位球友');if(s.challenges.some(c=>c.challengerId===a.playerId&&c.targetId===p.targetId&&['pending','accepted'].includes(c.status)&&!c.matchId))fail('已有待处理的复仇挑战');s.challenges.push({id:crypto.randomUUID(),challengerId:a.playerId,targetId:p.targetId,sourceMatchId:loss.id,created:now,status:'pending',matchId:null})}
  else if(action==='challengeRespond'){const c=s.challenges.find(c=>c.id===p.challengeId)??fail('挑战不存在');if(c.matchId)fail('挑战已关联比赛，请由管理员调整比赛');if(p.status==='cancelled'){if(c.challengerId!==a.playerId&&a.role!=='admin')fail('403: 只能撤回自己的挑战')}else if(player(c.targetId).ownerId!==a.id&&a.role!=='admin')fail('403: 只有被挑战者可以回应');if(!['pending','accepted'].includes(c.status))fail('挑战已经处理');c.status=p.status}
  else if(action==='challengeMatch'){const c=s.challenges.find(c=>c.id===p.challengeId)??fail('挑战不存在'),m=s.matches.find(m=>m.id===p.matchId)??fail('比赛不存在');if(c.status!=='accepted')fail('双方尚未接受挑战');if(!['draft','published'].includes(m.status))fail('只能关联未开始的比赛');if(!((m.a.includes(c.challengerId)&&m.b.includes(c.targetId))||(m.b.includes(c.challengerId)&&m.a.includes(c.targetId))))fail('挑战双方须在比赛两侧');if(c.matchId&&c.matchId!==m.id)fail('挑战已安排到另一场比赛');c.matchId=m.id}

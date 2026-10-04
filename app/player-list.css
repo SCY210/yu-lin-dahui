@@ -1,4 +1,7 @@
 .pl-hub{min-width:0}
+.pl-hub>.heading{flex-wrap:nowrap}
+.pl-hub>.heading>div:first-child{min-width:0}
+.pl-hub>.heading h1{font-size:clamp(25px,4vw,34px)}
 .pl-directory{margin:24px 0 32px}
 .pl-directory-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
 .pl-directory-heading h2{display:flex;align-items:center;gap:9px;margin:0;font-size:21px;color:#282252}

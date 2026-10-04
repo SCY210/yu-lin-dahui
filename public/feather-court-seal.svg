@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <defs>
+    <linearGradient id="a" x1="48" y1="38" x2="186" y2="214" gradientUnits="userSpaceOnUse"><stop stop-color="#eee4fc"/><stop offset="1" stop-color="#fbf6ee"/></linearGradient>
+    <linearGradient id="b" x1="82" y1="59" x2="160" y2="181" gradientUnits="userSpaceOnUse"><stop stop-color="#ab8bd1"/><stop offset="1" stop-color="#65529d"/></linearGradient>
+  </defs>
+  <circle cx="120" cy="117" r="87" fill="url(#a)" fill-opacity=".6"/>
+  <circle cx="120" cy="117" r="76" stroke="#ccb7e3" stroke-opacity=".65" stroke-dasharray="2 7"/>
+  <path d="M61 148c-24-8-28-34-14-56M179 80c25 11 31 40 18 64" stroke="#b79bcf" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M193 90l-11-12 15-4M43 136l12 13-16 3" stroke="#c7af88" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M91 155l28-79 30 78M101 158l18-82 20 82M80 151l39-75 40 77" stroke="url(#b)" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M80 151c-5-24-6-45 3-66 7 8 11 15 13 24M91 155c-7-35-8-67 4-93 9 12 15 26 17 44M104 159c-9-35-5-73 15-99 20 26 25 64 16 99M138 156c8-35 10-65-3-91-9 13-15 28-17 44M148 155c7-26 8-48-3-69-7 8-10 16-13 26" stroke="url(#b)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M80 151c11 11 25 16 39 16 15 0 30-5 40-14" stroke="#8a69b3" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M104 165h30v12c0 8-7 15-15 15s-15-7-15-15v-12Z" fill="#8f73b3" fill-opacity=".12" stroke="#8867af" stroke-width="2"/>
+  <path d="M105 174h28M108 180h21" stroke="#b299cb" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M67 185l15-17h13M145 168h13l16 17M67 185h107M84 171v14M155 171v14M91 184h55" stroke="#c5aa7e" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M39 163h21c9 0 12-9 6-13-5-4-12-1-12 5M176 154h22c10 0 11-10 5-13-5-3-11 0-11 5M52 198h34M155 198h28" stroke="#c3b2d6" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M119 31v9M115 35h8M175 50v7M172 53h6" stroke="#b99a67" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="64" cy="62" r="2.5" fill="#bea071"/>
+  <circle cx="189" cy="183" r="2" fill="#b49aca"/>
+</svg>

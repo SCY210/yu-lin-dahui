@@ -1,0 +1,24 @@
+import {fail,type Account,type Event,type State} from './types';
+
+export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Event,'creatorId'>){
+ return account.role==='admin'||event.creatorId===account.id;
+}
+
+const eventActions=new Set(['eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','settle','playSettings','handicap','challengeMatch']);
+
+// Resolve nested IDs from persisted state: a supplied eventId cannot grant access
+// to a booking, attendance record, round, match or cost belonging to another event.
+export function authorizeEventAction(s:State,a:Account,action:string,p:Record<string,unknown>){
+ if(!eventActions.has(action))return false;
+ let eventId:unknown=p.eventId;
+ if(['bookingEdit','bookingBearer'].includes(action))eventId=s.bookings.find(b=>b.id===p.bookingId)?.eventId;
+ else if(action==='attendanceEdit')eventId=s.attendance.find(at=>at.id===p.attendanceId)?.eventId;
+ else if(['swap','publish','start','cancelRound'].includes(action))eventId=s.rounds.find(r=>r.id===p.roundId)?.eventId;
+ else if(['moveCourt','lock','score','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
+ else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
+ const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
+ if(!canManageEvent(a,event))fail('403: 只能管理自己创建的活动');
+ return true;
+}
+
+export function isEventAction(action:string){return eventActions.has(action)}

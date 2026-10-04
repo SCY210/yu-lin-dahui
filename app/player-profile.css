@@ -10,6 +10,11 @@
 .pp-state{background:#f1f1f7;color:#67637c}
 .pp-edit{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;min-height:44px;border:1px solid #d8d2f0;border-radius:11px;background:#fff;color:#5646b4;padding:10px 14px;font-size:14px;font-weight:600}
 .pp-edit:hover{background:#eeebff;border-color:#bcb2e7}
+.pp-header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.pp-rename{min-height:44px;padding:6px 12px;border:0;border-radius:9px;background:transparent;color:#7f6b99;font-size:12px}
+.pp-rename:hover{background:#f2edf9;color:#5a4385}
+.pp-rename:focus-visible{outline:3px solid #a99adf;outline-offset:3px}
+.pp-perspective{display:inline-flex;max-width:100%;border:1px solid #e2d9ef;border-radius:999px;padding:3px 9px;background:#fff;color:#7a6298;font-size:11px;line-height:1.5;letter-spacing:.3px;overflow-wrap:anywhere}
 .pp-section{padding:24px 28px;border-bottom:1px solid #edeaf4}
 .pp-section:last-child{border-bottom:0}
 .pp-section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:17px}
@@ -84,3 +89,4 @@
 @media(max-width:600px){.pp-card{border-radius:18px}.pp-header{padding:21px 19px;gap:13px;flex-wrap:wrap}.pp-avatar{flex-basis:64px;width:64px;height:64px;border-radius:19px;font-size:26px}.pp-identity h2{font-size:22px}.pp-eyebrow{font-size:11px}.pp-badges{gap:6px}.pp-tier,.pp-state{font-size:12px;padding:4px 7px}.pp-edit{margin-left:auto;font-size:13px}.pp-section{padding:22px 19px}.pp-section-title{font-size:16px}.pp-section-note{font-size:11px}.pp-facts{gap:10px}.pp-fact{padding:12px}.pp-fact dd{font-size:14px}.pp-equipment-facts .pp-fact:first-child dd{font-size:17px}.pp-stats{grid-template-columns:1fr;gap:10px}.pp-stat{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:14px}.pp-stat>strong{font-size:23px}.pp-stat p{grid-column:2/-1}.pp-section-heading{align-items:flex-start}.pp-avatar-tools{padding:8px 19px 17px}.racket-upload-form{padding:14px}.racket-upload-button{width:100%}.racket-upload-help{font-size:12px}.racket-empty{gap:9px;min-height:92px}}
 @media(max-width:430px){.racket-grid{grid-template-columns:1fr}.racket-photo-link{aspect-ratio:5/4}.racket-heading>span{font-size:11px}}
 .pp-card .pp-fact dd{font-size:16px}.pp-fact dt,.pp-style>span,.pp-equipment-note>span{font-size:14px;color:#777087}
+@media(max-width:600px){.pp-header-actions{margin-left:auto;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:flex-end}.pp-header-actions .pp-edit{margin-left:0}.pp-perspective{font-size:11px}.pp-rename{font-size:12px}}

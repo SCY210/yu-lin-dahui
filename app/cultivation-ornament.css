@@ -1,0 +1,17 @@
+.cultivation-ornament{pointer-events:none;user-select:none;flex-shrink:0;color:#725895}
+.cultivation-ornament img{display:block;object-fit:contain}
+.cultivation-ornament-compact{width:46px;height:46px}
+.cultivation-ornament-compact img{width:100%;height:100%}
+.brand-lockup{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-lockup .cultivation-ornament-compact{width:38px;height:38px}
+@media(max-width:600px){.brand-lockup{gap:7px}.brand-lockup .cultivation-ornament-compact{width:30px;height:30px}}
+.cultivation-ornament-hero{display:flex;flex-direction:column;align-items:center;position:relative;width:156px;margin:-18px 3px -8px}
+.cultivation-ornament-hero img{width:156px;height:156px}
+.cultivation-seal-caption{position:absolute;bottom:7px;font-size:10px;letter-spacing:3px;color:#80619d}
+.cultivation-ornament-ribbon{display:flex;align-items:center;gap:9px;padding:8px 28px;border-bottom:1px solid #eee8f5;background:linear-gradient(90deg,#fbf8ff,#fffdf9)}
+.cultivation-ornament-ribbon img{width:34px;height:34px}
+.cultivation-ribbon-title{font-size:12px;letter-spacing:1.4px;color:#796292;font-weight:600}
+.cultivation-ribbon-motto{margin-left:auto;font-size:11px;letter-spacing:1px;color:#9a819d}
+@media(max-width:600px){.cultivation-ornament-hero{width:95px;margin:-9px 0 -8px}.cultivation-ornament-hero img{width:95px;height:95px}.cultivation-seal-caption{font-size:9px;bottom:0;letter-spacing:1.5px}.cultivation-ornament-ribbon{padding:8px 19px;gap:7px}.cultivation-ribbon-title{letter-spacing:.6px}.cultivation-ribbon-motto{font-size:10px;letter-spacing:0}}
+@media(max-width:380px){.cultivation-ribbon-motto{display:none}}
+@media(prefers-reduced-motion:reduce){.cultivation-ornament{animation:none;transition:none}}
