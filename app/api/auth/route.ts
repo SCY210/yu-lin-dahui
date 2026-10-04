@@ -27,7 +27,7 @@ export async function GET(){const u=await getAppUser();return Response.json(u?{s
 export async function POST(req:Request){try{
  const body=await readBody(req);
  if(req.headers.get('origin')!==new URL(req.url).origin)return denied('请求来源不允许');
- const input:any=JSON.parse(body),action=z.enum(['login','bind','createAccount','resetPassword','logout']).parse(input.action),ip=req.headers.get('cf-connecting-ip')??'local';
+ const input:any=JSON.parse(body),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','logout']).parse(input.action),ip=req.headers.get('cf-connecting-ip')??'local';
  if(action==='logout'){
   const token=req.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionCookie+'='))?.slice(sessionCookie.length+1);
   if(token)await raw().prepare('DELETE FROM auth_sessions WHERE id=?').bind(await hashToken(token)).run();
@@ -52,7 +52,40 @@ export async function POST(req:Request){try{
   if(!saved[0].meta.changes)return denied('账号或密码已更新，请重新登录',401);
   return result({ok:true},req,token);
  }
- const user=await getAppUser();if(!user)return denied('请先登录管理员账号',401);
+ const user=await getAppUser();if(!user)return denied('请先登录账号',401);
+ if(action==='changePassword'){
+  if(!await limit('changePassword:'+user.userId,8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
+  const parsed=z.object({action:z.literal('changePassword'),currentPassword:z.string().min(1).max(128),newPassword:password,confirmPassword:password,requestId:z.string().uuid()}).strict().safeParse(input);
+  if(!parsed.success)return denied('请填写当前密码、新密码和确认密码；新密码须为12–128位',400);
+  const p=parsed.data;
+  if(p.newPassword!==p.confirmPassword)return denied('两次新密码不一致',400);
+  const original=await raw().prepare('SELECT salt,hash FROM password_credentials WHERE id=?').bind(user.userId).first<{salt:string;hash:string}>();
+  if(!original)return denied('请先开通账号密码登录',409);
+  if(!checkPassword(p.currentPassword,original.salt,original.hash))return denied('当前密码不正确',401);
+  if(p.currentPassword===p.newPassword)return denied('新密码不能与当前密码相同',400);
+  const next=makePassword(p.newPassword),key=user.userId+':changePassword:'+p.requestId;
+  const token=req.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionCookie+'='))?.slice(sessionCookie.length+1);
+  const sessionId=user.method==='password'&&token?await hashToken(token):null;
+  for(let attempt=0;attempt<4;attempt++){
+   const freshUser=await getAppUser();if(!freshUser||freshUser.userId!==user.userId||freshUser.method!==user.method)return denied('登录已失效，请重新登录',401);
+   const s=await load();if(!s.accounts.some(a=>a.id===user.userId))return denied('账号不可用');
+   const current=await raw().prepare('SELECT salt,hash FROM password_credentials WHERE id=?').bind(user.userId).first<{salt:string;hash:string}>();
+   if(!current||current.salt!==original.salt||current.hash!==original.hash)return denied('密码已更新，请重新登录',409);
+   const previous=structuredClone(s),now=Date.now();
+   s.audits.push({id:crypto.randomUUID(),at:now,actor:user.userId,action:'changeOwnPassword',reason:'修改本人登录密码并退出全部登录会话'});
+   try{
+    await save(s,key,previous,[
+     raw().prepare('UPDATE password_credentials SET salt=?,hash=? WHERE id=? AND salt=? AND hash=? AND (? IS NULL OR EXISTS(SELECT 1 FROM auth_sessions WHERE id=? AND user_id=? AND expires>?))').bind(next.salt,next.hash,user.userId,original.salt,original.hash,sessionId,sessionId,user.userId,now),
+     // UPDATE must affect one row. A duplicate commit aborts the entire batch
+     // when a concurrent reset or session revocation invalidates the snapshot.
+     raw().prepare('INSERT INTO commits(revision,key,at) SELECT ?,?,? WHERE changes()=0').bind(s.revision+1,key,now),
+     raw().prepare('DELETE FROM auth_sessions WHERE user_id=?').bind(user.userId),
+    ]);
+    const h=new Headers({'Cache-Control':'no-store'});h.append('Set-Cookie',cookie(sessionCookie,'',req,0));h.append('Set-Cookie',cookie('yulin_signed_out','1',req,age));
+    return Response.json({ok:true,signedOut:true},{headers:h});
+   }catch(e){if(conflict(e)){if(attempt<3)continue;return denied('账号已更新或同时修改较多，请重新登录后重试',409)}throw e}
+  }
+ }
  const initial=await load(),actor=initial.accounts.find(a=>a.id===user.userId);
  if(!actor)return denied('请联系管理员开通账号');
  if(action==='bind'){
