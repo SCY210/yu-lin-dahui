@@ -64,10 +64,10 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         </div>
         <RealmProgress value={state.cultivation}/>
       </div>
-      <div className="pp-header-actions">
-        {canEdit && <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>}
+      {canEdit && <div className="pp-header-actions">
+        <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>
         {ctx.admin && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
-      </div>
+      </div>}
     </header>
     <CultivationOrnament variant="ribbon"/>
 

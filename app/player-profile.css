@@ -89,4 +89,13 @@
 @media(max-width:600px){.pp-card{border-radius:18px}.pp-header{padding:21px 19px;gap:13px;flex-wrap:wrap}.pp-avatar{flex-basis:64px;width:64px;height:64px;border-radius:19px;font-size:26px}.pp-identity h2{font-size:22px}.pp-eyebrow{font-size:11px}.pp-badges{gap:6px}.pp-tier,.pp-state{font-size:12px;padding:4px 7px}.pp-edit{margin-left:auto;font-size:13px}.pp-section{padding:22px 19px}.pp-section-title{font-size:16px}.pp-section-note{font-size:11px}.pp-facts{gap:10px}.pp-fact{padding:12px}.pp-fact dd{font-size:14px}.pp-equipment-facts .pp-fact:first-child dd{font-size:17px}.pp-stats{grid-template-columns:1fr;gap:10px}.pp-stat{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:14px}.pp-stat>strong{font-size:23px}.pp-stat p{grid-column:2/-1}.pp-section-heading{align-items:flex-start}.pp-avatar-tools{padding:8px 19px 17px}.racket-upload-form{padding:14px}.racket-upload-button{width:100%}.racket-upload-help{font-size:12px}.racket-empty{gap:9px;min-height:92px}}
 @media(max-width:430px){.racket-grid{grid-template-columns:1fr}.racket-photo-link{aspect-ratio:5/4}.racket-heading>span{font-size:11px}}
 .pp-card .pp-fact dd{font-size:16px}.pp-fact dt,.pp-style>span,.pp-equipment-note>span{font-size:14px;color:#777087}
-@media(max-width:600px){.pp-header-actions{margin-left:auto;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:flex-end}.pp-header-actions .pp-edit{margin-left:0}.pp-perspective{font-size:11px}.pp-rename{font-size:12px}}
+@media(max-width:600px){
+ .pp-header{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:start;gap:18px 13px}
+ .pp-avatar{grid-column:1;grid-row:1}
+ .pp-identity{grid-column:2;grid-row:1}
+ .pp-header-actions{grid-column:1/-1;min-width:0;margin:0;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:flex-start;gap:8px}
+ .pp-header-actions .pp-edit{margin:0;font-size:14px}
+ .pp-rename{font-size:14px}
+ .pp-perspective{font-size:11px}
+ .pp-identity .realm-progress-label b{white-space:nowrap;flex-shrink:0}
+}
