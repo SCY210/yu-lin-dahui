@@ -24,7 +24,7 @@ const schemas:Record<string,z.ZodTypeAny>={
  costOverride:z.object({costId:pid,reason,segments:z.array(z.object({start:time,end:time,cents})).min(1).max(100)}),
  bookingBearer:z.object({bookingId:pid,bearer:z.enum(['members','subsidy']),reason}),deleteCost:z.object({costId:pid,reason}),modes:z.object({eventId:pid,courtMode:mode,ballMode:mode,reason}),
  exemption:z.object({eventId:pid,playerId:pid,type:z.enum(['court','ball']),mode:z.enum(['none','redistribute','subsidy']),reason}),
- settle:z.object({eventId:pid,confirmed:z.boolean(),reason}),payment:z.object({eventId:pid,playerId:pid,cents:z.number().int().min(-100000000).max(100000000),method:z.enum(['Bizum','Revolut','现金','银行转账','其他']),reason}),
+ settle:z.object({eventId:pid,confirmed:z.boolean(),reason}) ,
  settings:z.object({name:text,invite:z.string().min(8).max(100),rules:rulesSchema}),rating:z.object({playerId:pid,value:z.number().min(0).max(4000),enabled:z.boolean(),reason}),demo:z.object({}),role:z.object({accountId:pid,role:z.enum(['admin','member']),reason}),
  historyPreview:z.object({season:z.string().regex(/^\d{4}-\d{2}$/),rules:rulesSchema}),historyRules:z.object({season:z.string().regex(/^\d{4}-\d{2}$/),rules:rulesSchema,reason}),
 };
@@ -58,7 +58,6 @@ export async function apply(s:State,a:Account,action:string,input:unknown,now:nu
  else if(action==='modes'){const e=event(p.eventId);e.courtMode=p.courtMode;e.ballMode=p.ballMode}
  else if(action==='exemption'){const r=reg(p.eventId,p.playerId);r[p.type==='court'?'courtExempt':'ballExempt']={mode:p.mode,reason:p.reason}}
  else if(action==='settle'){const e=event(p.eventId);if(p.confirmed&&s.attendance.some(x=>x.eventId===e.id&&x.end===null)&&now<e.end)fail('请先签退实际参加者，再确认正式结算');const result=calculateSettlement(s,e,now);if(p.confirmed&&result.unallocated)fail('仍有待分配费用，请通过费用承担设置指定群补贴或实际出勤');s.settlements.push({...result,id:id(),created:now,version:Math.max(0,...s.settlements.filter(x=>x.eventId===e.id).map(x=>x.version))+1,confirmed:p.confirmed,reason:p.reason})}
- else if(action==='payment'){event(p.eventId);player(p.playerId);if(!p.cents)fail('金额不能为0');if(!s.settlements.some(x=>x.eventId===p.eventId&&x.confirmed&&x.bills.some(b=>b.playerId===p.playerId)))fail('请先完成正式结算');s.payments.push({...p,id:id(),at:now,actor:a.id})}
  else if(action==='settings'){if(p.rules.ceiling<p.rules.target||p.rules.lead>p.rules.target)fail('比赛规则无效');s.settings.name=p.name;s.settings.inviteHash=await digest(p.invite);s.settings.rules=p.rules}
  else if(action==='rating'){const pl=player(p.playerId);pl.initialRating=p.value;pl.ratingReason=p.reason;pl.enabled=p.enabled;replayRating(s)}
  else if(action==='role'){const acc=s.accounts.find(x=>x.id===p.accountId)??fail('账号不存在');if(acc.role==='admin'&&p.role==='member'&&s.accounts.filter(x=>x.role==='admin').length===1)fail('至少保留一位管理员');acc.role=p.role}
