@@ -1,0 +1,7 @@
+.half-hour-field{min-width:0}
+.half-hour-controls{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:10px;min-width:0}
+.half-hour-controls input,.half-hour-controls select{width:100%;min-width:0;max-width:100%;font-size:16px;min-height:47px;color-scheme:light}
+.half-hour-controls input{padding-right:8px}
+.half-hour-hint,.half-hour-error{margin-top:7px;font-size:12px;line-height:1.5}
+.half-hour-error{color:#a64254}
+@media(max-width:360px){.half-hour-controls{gap:7px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}.half-hour-controls input,.half-hour-controls select{padding-left:9px;padding-right:6px}}
