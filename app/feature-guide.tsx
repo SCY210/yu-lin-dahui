@@ -37,7 +37,7 @@ export default function FeatureGuide({topic, rules, label='功能说明'}:Featur
       <div className="shrink-0">
         <label htmlFor={selectId} className="mb-2 block text-sm font-medium text-[var(--muted-foreground)]">查看其他功能</label>
         <select id={selectId} value={selected} onChange={e=>navigate(e.target.value as GuideTopic)} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
-          {guideTopics.map(item=><option key={item} value={item}>{guideLabels[item]}</option>)}
+          {guideTopics.filter(item=>item!=='annual').map(item=><option key={item} value={item}>{guideLabels[item]}</option>)}
         </select>
       </div>
       <div id={selectId+'-body'} role="region" aria-label={guide.title+'详细说明'} tabIndex={0} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1 text-base leading-7 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
@@ -60,7 +60,7 @@ export default function FeatureGuide({topic, rules, label='功能说明'}:Featur
         </section>}
         <section>
           <h3 className="mb-2 mt-0 text-base font-semibold">相关说明</h3>
-          <div className="flex flex-wrap gap-2">{guide.related.map(item=><button type="button" key={item} onClick={()=>navigate(item)} className="min-h-11 rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--primary)] hover:bg-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">{guideLabels[item]}</button>)}</div>
+          <div className="flex flex-wrap gap-2">{guide.related.filter(item=>item!=='annual').map(item=><button type="button" key={item} onClick={()=>navigate(item)} className="min-h-11 rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--primary)] hover:bg-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">{guideLabels[item]}</button>)}</div>
         </section>
       </div>
       <DialogClose asChild><button type="button" className="feature-guide-done min-h-11 shrink-0 rounded-xl border-0 bg-[var(--primary)] px-4 py-2 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">我知道了</button></DialogClose>
