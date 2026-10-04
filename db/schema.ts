@@ -1,0 +1,18 @@
+import {sqliteTable,text,integer,uniqueIndex} from 'drizzle-orm/sqlite-core';
+const payload=()=>text('payload').notNull();
+export const commits=sqliteTable('commits',{revision:integer('revision').primaryKey(),key:text('key').notNull().unique(),at:integer('at').notNull()});
+export const settings=sqliteTable('settings',{id:text('id').primaryKey(),payload:payload()});
+export const accounts=sqliteTable('accounts',{id:text('id').primaryKey(),email:text('email').notNull(),role:text('role').notNull(),playerId:text('player_id').notNull(),payload:payload()});
+export const players=sqliteTable('players',{id:text('id').primaryKey(),ownerId:text('owner_id').notNull(),payload:payload()});
+export const events=sqliteTable('events',{id:text('id').primaryKey(),payload:payload()});
+export const bookings=sqliteTable('bookings',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),payload:payload()});
+export const registrations=sqliteTable('registrations',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),playerId:text('player_id').notNull().references(()=>players.id),payload:payload()},t=>[uniqueIndex('registration_event_player').on(t.eventId,t.playerId)]);
+export const attendance=sqliteTable('attendance',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),playerId:text('player_id').notNull().references(()=>players.id),payload:payload()});
+export const rounds=sqliteTable('rounds',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),payload:payload()});
+export const matches=sqliteTable('matches',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),roundId:text('round_id').notNull().references(()=>rounds.id),payload:payload()});
+export const costs=sqliteTable('costs',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),payload:payload()});
+export const settlements=sqliteTable('settlements',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),version:integer('version').notNull(),payload:payload()},t=>[uniqueIndex('settlement_event_version').on(t.eventId,t.version)]);
+export const payments=sqliteTable('payments',{id:text('id').primaryKey(),eventId:text('event_id').notNull().references(()=>events.id),playerId:text('player_id').notNull().references(()=>players.id),payload:payload()});
+export const seasons=sqliteTable('seasons',{id:text('id').primaryKey(),payload:payload()});
+export const audits=sqliteTable('audits',{id:text('id').primaryKey(),payload:payload()});
+export const ratingChanges=sqliteTable('ratingChanges',{id:text('id').primaryKey(),payload:payload()});
