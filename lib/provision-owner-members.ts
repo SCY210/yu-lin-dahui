@@ -9,12 +9,17 @@ const entry=z.object({
  salt:z.string().regex(/^[0-9a-f]{64}$/),hash:z.string().regex(/^[0-9a-f]{128}$/),
 }).strict().refine(e=>e.username===normalizeUsername(e.name),'账号必须与指定名字对应');
 const schema=z.object({runId:z.string().uuid(),entries:z.array(entry).length(18)}).strict();
+const partSchema=z.object({runId:z.string().uuid(),entries:z.array(entry).length(9)}).strict();
 
 /** One owner-configured batch; no request data can select members or grant roles. */
 export async function provisionOwnerMembers(){
- const config=(env as unknown as Record<string,unknown>).OWNER_MEMBER_BATCH;
- if(typeof config!=='string'||!config)return;
- const seed=schema.parse(JSON.parse(config));
+ const bindings=env as unknown as Record<string,unknown>;
+ const first=bindings.OWNER_MEMBER_BATCH_1,second=bindings.OWNER_MEMBER_BATCH_2;
+ if(!first&&!second)return;
+ if(typeof first!=='string'||typeof second!=='string')throw new Error('批量开通配置不完整');
+ const a=partSchema.parse(JSON.parse(first)),b=partSchema.parse(JSON.parse(second));
+ if(a.runId!==b.runId)throw new Error('批量开通配置不匹配');
+ const seed=schema.parse({runId:a.runId,entries:[...a.entries,...b.entries]});
  for(const field of ['username','accountId','playerId'] as const)if(new Set(seed.entries.map(e=>e[field])).size!==18)throw new Error('批量账号有重复项');
  const key='site-owner:member-batch:'+seed.runId;
  if(await committed(key))return;
