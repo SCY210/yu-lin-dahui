@@ -13,7 +13,7 @@ const results=[],transportRetries=[],fixtures={};let currentTest='',memberA,memb
 const imageFixturePath='public/shuttlecock.png',png=readFileSync(imageFixturePath);
 assert.ok(png.length>0&&png.length<=5*1024*1024,'Expected valid existing PNG fixture');
 const base={years:4,hand:'right',preference:'mixed',style:'虚构验收 · 网前与轮转',equipment:'虚构验收 · 备用装备说明',level:'intermediate'};
-const gear={racket:'虚构球拍 4U',strings:'虚构球线 0.66mm',tension:'25 磅',grip:'G5 + 手胶',shoes:'虚构球鞋 42 码'};
+const gear={racket:'虚构球拍 4U',strings:'虚构球线 0.66mm',tensionMin:25,tensionMax:27};
 async function request(path,options={}){
  for(let attempt=0;attempt<2;attempt++){
   let response;try{response=await new Promise((resolve,reject)=>{
@@ -57,7 +57,7 @@ try{
  await test('结构化装备资料持久保存，其他登录成员可查看完整档案',async()=>{
   assert.equal((await update(memberA,memberA.playerId,gear)).status,200);
   const a=player((await get(memberA)).data,memberA.playerId),b=player((await get(memberB)).data,memberA.playerId);
-  assert.deepEqual(a.profile,{...base,...gear});assert.deepEqual(b.profile,a.profile);assert.equal(b.name,a.name);
+  assert.deepEqual(a.profile,{...base,...gear,tension:'25–27 磅'});assert.deepEqual(b.profile,a.profile);assert.equal(b.name,a.name);
  });
  await test('其他成员不能修改档案；管理员可以编辑但不改变档案身份',async()=>{
   const before=player((await get(memberA)).data,memberA.playerId);
@@ -69,12 +69,14 @@ try{
  await test('旧客户端省略装备字段时保留；显式空字符串可以清空',async()=>{
   assert.equal((await update(memberA,memberA.playerId,{style:'旧客户端更新打法'})).status,200);
   let p=player((await get(memberB)).data,memberA.playerId);for(const [key,value]of Object.entries(gear))assert.equal(p.profile[key],value);
-  assert.equal((await update(memberA,memberA.playerId,{strings:'',grip:''})).status,200);
-  p=player((await get(memberB)).data,memberA.playerId);assert.equal(p.profile.strings,'');assert.equal(p.profile.grip,'');assert.equal(p.profile.racket,gear.racket);assert.equal(p.profile.tension,gear.tension);assert.equal(p.profile.shoes,gear.shoes);
+  assert.equal((await update(memberA,memberA.playerId,{strings:''})).status,200);
+  p=player((await get(memberB)).data,memberA.playerId);assert.equal(p.profile.strings,'');assert.equal(p.profile.racket,gear.racket);assert.equal(p.profile.tensionMin,25);assert.equal(p.profile.tensionMax,27);
  });
  await test('装备字段限制长度且拒绝不存在的球友',async()=>{
-  for(const key of ['racket','strings','shoes'])assert.equal((await update(memberA,memberA.playerId,{[key]:'x'.repeat(121)})).status,400);
-  for(const key of ['tension','grip'])assert.equal((await update(memberA,memberA.playerId,{[key]:'x'.repeat(81)})).status,400);
+  for(const key of ['racket','strings'])assert.equal((await update(memberA,memberA.playerId,{[key]:'x'.repeat(121)})).status,400);
+  assert.equal((await update(memberA,memberA.playerId,{tensionMin:28,tensionMax:24})).status,400);
+  assert.equal((await update(memberA,memberA.playerId,{tensionMin:24,tensionMax:null})).status,400);
+  assert.equal((await update(memberA,memberA.playerId,{tensionMin:24,tensionMax:81})).status,400);
   assert.ok([400,404].includes((await update(memberA,'missing-'+suffix,gear)).status));
  });
  await test('代报朋友的档案可由所属成员编辑，其他成员不能编辑',async()=>{

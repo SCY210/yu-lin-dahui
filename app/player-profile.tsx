@@ -7,8 +7,9 @@ import PhotoGallery from './photo-gallery';
 import FeatureGuide from './feature-guide';
 import RacketGallery from './racket-gallery';
 import './player-profile.css';
+import {tensionRange,tensionLabel} from '../lib/domain/tension';
 
-const defaults = {years:0, hand:'right', preference:'doubles', style:'', equipment:'', level:'beginner', racket:'', strings:'', tension:'', grip:'', shoes:''};
+const defaults = {years:0, hand:'right', preference:'doubles', style:'', equipment:'', level:'beginner', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
 const levels:Record<string,string> = {beginner:'萌新', intermediate:'进阶', advanced:'高手'};
@@ -33,7 +34,9 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   const canEdit = ctx.admin || p.ownerId === ctx.data.me.id;
   const rules = ctx.data.settings.rules;
   const state = stats ?? {};
-  const edit = () => ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile}, [
+  const range=tensionRange(p.profile);
+  const unparsedLegacy=!range&&p.profile?.tension&&!('tensionMin' in p.profile||'tensionMax' in p.profile);
+  const edit = () => ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
     number('years', '球龄（年）'),
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
@@ -41,11 +44,10 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     optional('style', '我的打法（最多300字）'),
     optional('racket', '战拍品牌 / 型号（最多120字）'),
     optional('strings', '拍线品牌 / 型号（最多120字）'),
-    optional('tension', '穿线磅数，如26磅（最多80字）'),
-    optional('grip', '手胶 / 握把（最多80字）'),
-    optional('shoes', '球鞋品牌 / 型号（最多120字）'),
+    {...number('tensionMin','穿线磅数范围 · 最低（磅）'),optional:true,step:'any',min:1,max:80},
+    {...number('tensionMax','穿线磅数范围 · 最高（磅）'),optional:true,step:'any',min:1,max:80},
     optional('equipment', '其他装备与备注（最多500字）'),
-  ], undefined, '资料保存到球友档案，群内其他已登录成员可以查看。');
+  ], (v:any)=>{const {grip,shoes,tension,tensionMin,tensionMax,...rest}=v;if(unparsedLegacy&&tensionMin===''&&tensionMax==='')return rest;return {...rest,tensionMin:tensionMin===''?null:Number(tensionMin),tensionMax:tensionMax===''?null:Number(tensionMax)}}, '填写最低和最高磅数，如24–28磅；两项同时留空可不填写。其他已登录群友可以查看档案。');
 
   return <section className="pp-card" aria-label={p.name+'的球友档案'}>
     <header className="pp-header">
@@ -73,13 +75,11 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section>
 
     <section className="pp-section" aria-label="装备信息">
-      <div className="pp-section-heading"><h3 className="pp-section-title">我的球场装备</h3><span className="pp-section-note">球拍 · 拍线 · 球鞋</span></div>
+      <div className="pp-section-heading"><h3 className="pp-section-title">我的球场装备</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
       <dl className="pp-facts pp-equipment-facts">
         <Fact label="战拍品牌 / 型号" value={profile.racket}/>
         <Fact label="拍线品牌 / 型号" value={profile.strings}/>
-        <Fact label="穿线磅数" value={profile.tension}/>
-        <Fact label="手胶 / 握把" value={profile.grip}/>
-        <Fact label="球鞋品牌 / 型号" value={profile.shoes}/>
+        <Fact label="穿线磅数范围" value={tensionLabel(p.profile)}/>
       </dl>
       <div className="pp-equipment-note"><span>其他装备与备注</span><p className={profile.equipment ? '' : 'pp-unfilled'}>{profile.equipment || '尚未填写'}</p></div>
       <RacketGallery ctx={ctx} playerId={p.id}/>
