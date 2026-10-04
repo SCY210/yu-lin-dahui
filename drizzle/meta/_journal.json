@@ -22,6 +22,27 @@
       "when": 1791117922792,
       "tag": "0002_salty_leo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791128284078,
+      "tag": "0003_dazzling_vapor",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791129910847,
+      "tag": "0004_club_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791130991357,
+      "tag": "0005_managed_accounts",
+      "breakpoints": true
     }
   ]
 }

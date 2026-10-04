@@ -2,7 +2,7 @@
 # 当前费用范围
 根据最新要求，费用仅计算并展示每个人付多少，已移除待付/已付状态、付款确认与退款流程。历史数据库中的付款记录为兼容保留，新接口不再创建或展示；无需删除生产数据或执行迁移。
 
-# 羽球局
+# 羽林大会
 
 中文、移动端优先的私人羽毛球群 Web App。默认 EUR / Europe/Madrid。
 
@@ -16,10 +16,13 @@ node scripts/run-framework.mjs build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_handy_freak.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_absent_zuras.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_salty_leo.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0003_dazzling_vapor.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0004_club_brand.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_managed_accounts.sql
 node scripts/run-framework.mjs dev
 ```
 
-打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移只在新数据库执行一次。当前工作区的三个迁移已执行，不要重复执行。
+打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移只在新数据库执行一次。当前工作区的六个迁移已执行，不要重复执行。
 Windows 若 npm 包装脚本失效，本环境已验证的安装命令为：
 
 ```powershell
@@ -28,11 +31,11 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 
 本地数据持久保存在 `.wrangler/state`，刷新或停止开发服务不会清空。线上使用 Sites 管理的 Cloudflare D1，与本地数据完全分离。所有成员和业务记录保存在服务器；未用浏览器存储保存业务数据。
 
-## 登录与管理员初始化
+## 登录与账号管理
 
-线上使用 Sites 的 ChatGPT 登录与可信身份头。昵称只是显示名。网站首次以所有者私有方式发布，先由所有者登录、填写昵称并设置至少8位群邀请码，成为首位管理员。完成初始化前不要扩大网站受众。
+账号与密码为登录入口，由管理员在后台创建球友账号；不需要邮箱，也不开放自行注册。原账号在“我的 → 设置账号和密码”迁移并保留原档案与权限。新账号为普通成员，管理员可为已有球友档案开通登录，或重置忘记的密码。详见 [ACCOUNT_LOGIN.md](docs/ACCOUNT_LOGIN.md)。
 
-成员使用自己的 ChatGPT 账号登录，并输入群邀请码加入，只获得普通成员角色。邀请成员使用网站还需要在 Sites 的分享设置中为相应访客授权；本次未自动扩大受众。群邀请码不替代 Sites 的访问权限。
+当前 Sites 外层入口保留原访问范围；在明确授权改为公开登录入口前，没有 ChatGPT 账号的朋友仍无法直接进入。群内数据继续由服务器登录与成员权限保护。忘记密码由群管理员重置。
 
 开发模式的官方预览辅助器仅在回环地址模拟 `Seedy` 身份；线上构建不含该模拟登录。开发与内置测试服务都绑定127.0.0.1，不应暴露到公网。生产必须经 Sites 身份分发层，不要直接暴露信任身份头的 Worker。
 
@@ -41,7 +44,7 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 ## 完整人工验收路径
 
 1. 所有者登录并初始化群组。创建活动，设置报名/取消截止、容量和首个场地预约；添加第二片场地或不连续的预约时段。
-2. 普通成员登录加入并报名。每位朋友先建立独立档案，再单独报名。填满容量后确认候补；取消正式成员，观察首位有效候补递补。超过取消截止只提交申请，由管理员处理。
+2. 管理员创建普通成员账号，成员登录并报名。每位朋友先建立独立档案，再单独报名。填满容量后确认候补；取消正式成员，观察首位有效候补递补。超过取消截止只提交申请，由管理员处理。
 3. 管理员在接龙页确认签到，可暂停、恢复、签退或在费用页修正多个实际出勤时段。预计参加时间不会直接用作计费。
 4. 排场页生成本轮草稿。点选两名选手交换（可与轮休者交换），调整场地，锁定分组。重新生成保留锁定比赛。查看上场比例和连续等待轮次，然后确认发布。
 5. 开始本轮前确定是否计入月积分及 Rating。开始比赛，录入例如21:15的合法终局比分。查看比赛、个人页、月榜；修正比分会重建月积分并重放后续 Rating。
@@ -105,3 +108,7 @@ node tests/api.mjs
 
 
 球馆选择与地图入口详见 [VENUES.md](docs/VENUES.md)。
+
+最新排行榜规则：所有启用球友同榜、无最低场数门槛，并展示头像，详见 [RANKING.md](docs/RANKING.md)。
+
+最新活动入口和界面说明见 [ACTIVITY_UI.md](docs/ACTIVITY_UI.md)。
