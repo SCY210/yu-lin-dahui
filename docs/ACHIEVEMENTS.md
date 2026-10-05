@@ -6,14 +6,18 @@ The collection contains eight original imagegen badge themes, each with five att
 |---|---|---|
 | first-flight | Completed matches | 1 / 3 / 5 / 10 / 20 |
 | first-victory | Wins | 1 / 3 / 5 / 10 / 20 |
-| ten-matches | Completed matches | 10 / 20 / 30 / 40 / 50 |
-| fifty-matches | Completed matches | 50 / 75 / 100 / 150 / 200 |
-| ten-victories | Wins | 10 / 20 / 30 / 40 / 50 |
+| ten-matches (四方论剑) | Distinct defeated opponents | 2 / 4 / 6 / 8 / 12 |
+| fifty-matches (持之以恒) | Distinct Madrid calendar dates with completed matches | 1 / 3 / 7 / 15 / 30 |
+| ten-victories (黄金搭档) | Highest cumulative wins with one teammate | 1 / 3 / 5 / 10 / 20 |
 | three-streak | Lifetime best personal winning streak | 3 / 4 / 5 / 6 / 8 |
 | five-partners | Distinct teammates | 5 / 6 / 8 / 10 / 12 |
 | three-game-victory | Best-of-three wins that reach three games | 1 / 3 / 5 / 10 / 20 |
 
-All targets are lifetime cumulative goals; each original first unlock is preserved. Higher stages require more completed facts, never payment or random rewards. The first two collections provide early achievable steps, while veteran stages are longer-term goals. Rank 0 is locked; rank 5 is maximum and has no next goal. Each threshold stores its own first factual crossing time in the derived response, so historical games backfill all supported ranks immediately. The collection reports both themes unlocked out of eight and stages earned out of forty. A loss does not remove a lifetime best-streak milestone; correcting or voiding its underlying matches can.
+All eight themes now have distinct metrics. Repeated cumulative-match and cumulative-win themes have been replaced with opponent breadth, regular play on different dates, and sustained chemistry with one partner. Their legacy IDs and artwork paths stay stable, but their names, rules, progress and dates are derived from the new criteria. Existing records immediately recalculate the changed themes; the other five themes retain their rules and targets.
+
+All targets are lifetime cumulative goals. Higher stages require more completed facts, never payment or random rewards. Rank 0 is locked; rank 5 is maximum and has no next goal. Each threshold stores its own first factual crossing time in the derived response, so historical games backfill all supported ranks immediately. The collection reports both themes unlocked out of eight and stages earned out of forty. A loss does not remove a lifetime best-streak milestone; correcting or voiding its underlying matches can.
+
+Regular play counts the Madrid calendar date of the match's end. Multiple matches or activities ending on the same date count once, including across daylight-saving transitions. Wins are unnecessary for that metric. Opponent breadth only adds opposing real player IDs from wins and counts each player once. Partner chemistry maintains a separate win total per real teammate and takes the maximum, rather than adding different teammates together. Its details show the teammate currently holding that record. Ties keep the first record holder in deterministic chronological order. Losing does not subtract wins; score corrections and voiding recalculate all three metrics.
 
 ## Facts, permissions and corrections
 
@@ -29,4 +33,4 @@ Artwork was generated using the built-in imagegen tool. The transparent 256px ba
 
 ## Verification
 
-Regression tests cover milestones, factual unlock dates, personal streak order, distinct partners, duplicate records, best-of-three wins, invalid/future games, score corrections, voiding, archived activities, private drafts and conditional-read boundaries. All eight referenced badge files are validated as actual 256px WebP assets with a combined size below 256 KiB.
+Regression tests cover milestones, factual unlock dates, personal streak order, distinct partners and defeated opponents, Madrid calendar dates, individual partner records, duplicate records, best-of-three wins, invalid/future games, score corrections, voiding, archived activities, private drafts and conditional-read boundaries. A catalog guard prevents two themes from using the same metric. All eight referenced badge files are validated as actual 256px WebP assets with a combined size below 256 KiB.
