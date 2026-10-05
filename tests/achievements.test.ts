@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {achievementSnapshot} from '../lib/domain/achievements';
-import {achievementCatalog} from '../lib/achievement-catalog';
+import {achievementCatalog,achievementTargets,achievementRanks,achievementLevel,achievementGoal,rankImage} from '../lib/achievement-catalog';
 import {projectClubState} from '../lib/club-view';
 import {clubViewValidUntil} from '../lib/club-read-cache';
 import {emptyState,type Match,type State,type Event} from '../lib/domain/types';
@@ -80,4 +80,38 @@ test('catalog identifiers and assets are unique and every target is attainable',
 test('every badge has a real 256px generated WebP asset and the complete collection stays lightweight',()=>{
  let bytes=0;for(const a of achievementCatalog){const path='public/badges/'+a.id+'.webp',data=readFileSync(path);const image=validateImage(new Uint8Array(data),'image/webp');assert.equal(image.width,256);assert.equal(image.height,256);bytes+=statSync(path).size}
  assert.ok(bytes<256*1024,'Badge collection should remain below 256 KiB');
+});
+
+test('each achievement has five increasing, finite goals and preserves its original first unlock',()=>{
+ assert.equal(achievementRanks.length,5);
+ for(const a of achievementCatalog){const targets=achievementTargets[a.id];assert.equal(targets.length,5);assert.equal(targets[0],a.target);
+  for(const [i,target]of targets.entries()){assert.ok(Number.isSafeInteger(target)&&target>0);if(i)assert.ok(target>targets[i-1]);assert.equal(achievementLevel(a.id,target),i+1);assert.equal(achievementLevel(a.id,target-1),i);assert.ok(achievementGoal(a.id,target).includes(String(target)))}
+ }
+});
+
+test('past results backfill every tier with its own factual date; max level has no nonexistent next goal',()=>{
+ const s=fixture();for(let i=0;i<20;i++)s.matches.push(game('tier-'+String(i).padStart(2,'0'),now-100000+i*1000));
+ const result=summary(s),p=result.progress['first-flight'];assert.equal(p.level,5);assert.equal(achievementLevel('first-flight',p.current),5);
+ assert.deepEqual(p.levelUnlockedAt,[0,2,4,9,19].map(i=>s.matches[i].end));assert.equal(result.progress['first-victory'].level,5);
+ assert.equal(result.totalLevels,Object.values(result.progress).reduce((sum,p)=>sum+p.level,0));
+ assert.equal(achievementLevel('first-flight',2000),5);
+});
+
+test('corrections revoke only unsupported tiers while a later loss retains the historical best streak',()=>{
+ const s=fixture();for(let i=0;i<5;i++)s.matches.push(game('w'+i,now-10000+i*1000));
+ assert.equal(summary(s).progress['three-streak'].level,3);
+ s.matches.push(game('lost',now-1000,false));assert.equal(summary(s).progress['three-streak'].level,3);
+ s.matches[1].status='cancelled';const p=summary(s).progress['three-streak'];assert.equal(p.level,2);assert.equal(p.levelUnlockedAt[2],null);
+ assert.equal(summary(s).progress['first-victory'].level,2);
+});
+
+test('the complete forty-stage collection can be achieved from valid records and distinct real teammates',()=>{
+ const s=fixture();for(let i=0;i<12;i++)s.players.push({id:'mate'+i,name:'mate'+i,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
+ for(let i=0;i<200;i++){const m=game('full'+String(i).padStart(3,'0'),now-1000000+i*1000,true,'mate'+i%12);if(i<20){m.games=[{a:21,b:15},{a:15,b:21},{a:21,b:17}];m.scoreA=2;m.scoreB=1}s.matches.push(m)}
+ const p=summary(s);assert.equal(p.unlockedCount,8);assert.equal(p.totalLevels,40);for(const result of Object.values(p.progress)){assert.equal(result.level,5);assert.ok(result.levelUnlockedAt.every(at=>at!==null))}
+});
+
+test('rank frames are real generated WebP assets and are shared across all eight achievement themes',()=>{
+ let bytes=0;for(let level=1;level<=5;level++){const file='public'+rankImage(level),data=readFileSync(file),image=validateImage(new Uint8Array(data),'image/webp');assert.equal(image.width,384);assert.equal(image.height,384);bytes+=data.byteLength}
+ assert.ok(bytes<384*1024,'Shared rank ornaments should remain below 384 KiB');
 });

@@ -66,7 +66,7 @@ export default function ClubApp(){
    if(!isClubResponse(d))throw new Error('服务返回的资料暂不可用，请稍后重试');
    if(request===refreshSequence.current){
     if(dataSnapshot.current?.me?.id&&dataSnapshot.current.me.id!==d.me?.id){setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false)}
-    if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>old.progress[a.id]?.unlockedAt===null&&next.progress[a.id]?.unlockedAt!=null);if(fresh.length)toast.success('解锁成就：'+fresh.map(a=>a.name).join('、'))}}
+    if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>typeof old.progress[a.id]?.level==='number'&&next.progress[a.id]?.level>old.progress[a.id].level);if(fresh.length)toast.success('成就升级：'+fresh.map(a=>a.name+' Lv.'+next.progress[a.id].level).join('、'))}}
     const etag=r.headers.get('ETag');readValidator.current=etag&&d.me?{etag,period,year}:null;
     dataSnapshot.current=d;setData(d);setError('');
    }
