@@ -1,4 +1,5 @@
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
+import {courtSpans} from './booking-signups';
 import {fail,type State,type Event,type Settlement,type Mode,type Exemption} from './types';
 type Q={n:bigint;d:bigint};
 const q=(n:number|bigint,d:number|bigint=1):Q=>({n:BigInt(n),d:BigInt(d)});
@@ -16,21 +17,28 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  const detail:Settlement['detail']=[];let total=0,subsidy=0,unallocated=0;
  const points=[e.start,e.end,...spans.flatMap(a=>[a.start,a.end]),...s.bookings.filter(b=>b.eventId===e.id).flatMap(b=>[b.start,b.end])];
  for(const c of s.costs.filter(c=>c.eventId===e.id)){if(c.start!==null&&c.end!==null)points.push(c.start,c.end);for(const o of c.overrides??[])points.push(o.start,o.end)}
+ for(const b of s.bookings.filter(b=>b.eventId===e.id))for(const a of courtSpans(s,e,b))points.push(a.start,Math.min(a.end,now));
  const cuts=[...new Set(points)].filter(t=>t>=e.start&&t<=e.end).sort((a,b)=>a-b);
  const active=(a:number,b:number)=>ids.filter(id=>spans.some(x=>x.playerId===id&&x.start<b&&x.end>a));
- const distribute=(name:string,type:'court'|'ball'|'other',amount:number,start:number,end:number,mode:Mode,estimated:boolean,bearer='members')=>{
+ const distribute=(name:string,type:'court'|'ball'|'other',amount:number,start:number,end:number,mode:Mode,estimated:boolean,bearer='members',bookingId?:string)=>{
+  const scoped=usesAutomaticAttendance(e)&&(s.registrations.some(r=>r.eventId===e.id&&r.bookingSignups)||s.attendance.some(a=>a.eventId===e.id&&a.bookingId));
+  const booking=bookingId&&scoped?s.bookings.find(b=>b.id===bookingId):undefined;
+  const scope=booking&&usesAutomaticAttendance(e)?courtSpans(s,e,booking).map(a=>({...a,end:Math.min(a.end,now)})).filter(a=>a.end>a.start):spans;
+  const scopeIds=ids.filter(id=>scope.some(a=>a.playerId===id&&a.start<end&&a.end>start));
+  const scopedActive=(a:number,b:number)=>scopeIds.filter(id=>scope.some(x=>x.playerId===id&&x.start<b&&x.end>a));
+  const scopedMinutes=(id:string)=>{const rows=scope.filter(a=>a.playerId===id).map(a=>[Math.max(a.start,start),Math.min(a.end,end)]).filter(a=>a[1]>a[0]).sort((a,b)=>a[0]-b[0]);let total=0,last=-Infinity;for(const [a,b]of rows){total+=Math.max(0,b-Math.max(a,last));last=Math.max(last,b)}return total};
   total+=amount;const segmentWeights:Record<string,number>={};const intervals:{key:string;start:number;end:number;members:string[]}[]=[];
-  if(mode==='interval'){for(let i=0;i<cuts.length-1;i++){const a=Math.max(cuts[i],start),b=Math.min(cuts[i+1],end);if(b>a){const members=active(a,b);const key=String(i);segmentWeights[key]=b-a;intervals.push({key,start:a,end:b,members})}}}
-  else{intervals.push({key:'all',start,end,members:ids});segmentWeights.all=1}
+  if(mode==='interval'){for(let i=0;i<cuts.length-1;i++){const a=Math.max(cuts[i],start),b=Math.min(cuts[i+1],end);if(b>a){const members=scopedActive(a,b);const key=String(i);segmentWeights[key]=b-a;intervals.push({key,start:a,end:b,members})}}}
+  else{intervals.push({key:'all',start,end,members:booking?scopeIds:ids});segmentWeights.all=1}
   const amounts=allocate(amount,segmentWeights); if(!intervals.length){unallocated+=amount;detail.push({name,start,end,cents:amount,shares:{},subsidy:0,unallocated:amount,estimated});return}
   for(const seg of intervals){const cents=amounts[seg.key]??0;const weights:Record<string,number>={};const ex=(id:string):Exemption=>{const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===id);return type==='court'?r?.courtExempt??{mode:'none',reason:''}:type==='ball'?r?.ballExempt??{mode:'none',reason:''}:{mode:'none',reason:''}};
-   for(const id of seg.members){if(ex(id).mode==='redistribute')continue;const w=mode==='duration'?Math.round(minutes(id)*60000):1;const key=ex(id).mode==='subsidy'?'@subsidy':id;weights[key]=(weights[key]??0)+w}
+   for(const id of seg.members){if(ex(id).mode==='redistribute')continue;const w=mode==='duration'?(booking?scopedMinutes(id):Math.round(minutes(id)*60000)):1;const key=ex(id).mode==='subsidy'?'@subsidy':id;weights[key]=(weights[key]??0)+w}
    const shares=bearer==='subsidy'?{'@subsidy':cents}:allocate(cents,weights);const sub=shares['@subsidy']??0;delete shares['@subsidy'];const missing=cents-sub-Object.values(shares).reduce((a,b)=>a+b,0);subsidy+=sub;unallocated+=missing;
    for(const [id,n]of Object.entries(shares)){const bill=bills.find(b=>b.playerId===id)!;bill[type]+=n;bill.total+=n}
    detail.push({name,start:seg.start,end:seg.end,cents,shares,subsidy:sub,unallocated:missing,estimated});
   }
  };
- for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members');
+ for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members',b.id);
  for(const c of s.costs.filter(c=>c.eventId===e.id)){const amount=c.type==='ball'?ballCents(c):c.cents;if(c.overrides?.length){if(c.overrides.reduce((a,x)=>a+x.cents,0)!==amount)fail('球费时段调整合计必须等于总球费');for(const o of c.overrides)distribute(c.name,c.type==='ball'?'ball':'other',o.cents,o.start,o.end,e.ballMode,false,c.bearer)}
   else if(c.start!==null&&c.end!==null)distribute(c.name,c.type==='ball'?'ball':'other',amount,c.start,c.end,c.type==='ball'?e.ballMode:'equal',false,c.bearer);
   else if(c.type==='ball'&&e.ballMode==='interval'){const weights:Record<string,number>={};const segs:{key:string;start:number;end:number}[]=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];const courts=s.bookings.filter(x=>x.eventId===e.id&&x.start<=a&&x.end>=b).length;if(active(a,b).length&&courts){weights[String(i)]=(b-a)*courts;segs.push({key:String(i),start:a,end:b})}}const parts=allocate(amount,weights);if(!segs.length)distribute(c.name,'ball',amount,e.start,e.end,e.ballMode,true,c.bearer);else for(const seg of segs)distribute(c.name,'ball',parts[seg.key],seg.start,seg.end,e.ballMode,true,c.bearer)}
