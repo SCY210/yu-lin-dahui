@@ -1,14 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./decor-layout.css";
+import "./wuxia-theme.css";
 import AppRuntime from './app-runtime';
+import {VisualThemeProvider,ThemeSwitcher} from './visual-theme';
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#4f46e5',
+  themeColor: '#202921',
 };
 
 export const metadata: Metadata = {
@@ -31,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body className="antialiased"><AppRuntime/>{children}</body>
+    <html lang="zh-CN" className="wuxia-theme" suppressHydrationWarning>
+      <body className="antialiased"><VisualThemeProvider><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}</VisualThemeProvider></body>
     </html>
   );
 }

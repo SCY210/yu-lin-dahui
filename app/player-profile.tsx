@@ -23,8 +23,8 @@ function ProfileAvatar({p}:any) {
   const [failedId, setFailedId] = useState<string|null>(null);
   const name:string = p.name || '球友';
   return p.avatarId && p.avatarId !== failedId
-    ? <img className="pp-avatar" src={'/api/photos/'+p.avatarId} alt={p.name+'的头像'} onError={()=>setFailedId(p.avatarId)}/>
-    : <span className="pp-avatar pp-avatar-fallback" aria-label={name+'的默认头像'}>{Array.from(name)[0]}</span>;
+    ? <img className="pp-avatar" src={'/api/photos/'+p.avatarId} alt={name+'的头像'} onError={()=>setFailedId(p.avatarId)}/>
+    : null;
 }
 
 function Fact({label, value}: {label:string; value:unknown}) {
