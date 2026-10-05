@@ -16,6 +16,34 @@ function fixture(cap=4){
  s.bookings.push({id:'A',eventId:e.id,name:'一号场',start,end:start+hour,signupCapacity:cap,pricing:'total',cents:1200},{id:'B',eventId:e.id,name:'二号场',start,end:start+hour,signupCapacity:cap,pricing:'total',cents:2400},{id:'C',eventId:e.id,name:'一号场',start:start+2*hour,end:start+3*hour,signupCapacity:cap,pricing:'total',cents:1200});return {s,e};
 }
 async function join(s:ReturnType<typeof emptyState>,id:string,court='A',now=early,overrides={}){const b=s.bookings.find(b=>b.id===court)!;return apply(s,s.accounts.find(a=>a.playerId===id)!,'courtRegister',{bookingId:court,playerId:id,arrival:b.start,departure:b.end,note:'',...overrides},now)}
+
+test('旧报名截止已过仍可加入场地和旧活动接龙，时段结束后拒绝',async()=>{
+ const {s,e}=fixture();e.signupDeadline=early-1;
+ await join(s,'1');assert.equal(bookingRows(s,'A')[0].status,'confirmed');
+ await apply(s,s.accounts[2],'register',{eventId:e.id,playerId:'2',arrival:start,departure:end,note:''},early);
+ assert.equal(s.registrations.find(r=>r.playerId==='2')!.status,'confirmed');
+ const before=structuredClone(s);
+ await assert.rejects(()=>join(s,'3','A',start+hour),/时段已结束/);
+ await assert.rejects(()=>apply(s,s.accounts[3],'register',{eventId:e.id,playerId:'3',arrival:start,departure:end,note:''},end),/时段已结束/);
+ assert.deepEqual(s,before);
+});
+
+test('取消截止后仍可报名，未开放或已结束的活动继续阻止报名',async()=>{
+ const {s,e}=fixture();e.signupDeadline=early-1;
+ await join(s,'1','A',start-hour);assert.equal(bookingRows(s,'A')[0].status,'confirmed');
+ for(const status of ['draft','locked','ended','cancelled'] as const){
+  e.status=status;const before=structuredClone(s);
+  await assert.rejects(()=>join(s,'2'),/未开放报名|活动已结束/);assert.deepEqual(s,before);
+ }
+});
+
+test('创建及编辑活动不再需要填写报名截止时间',async()=>{
+ const {s,e}=fixture();
+ await apply(s,s.accounts[0],'event',{title:'无报名截止活动',start,end,venue:'模拟球馆',address:'',capacity:4,cancelDeadline:start-24*hour,note:'',status:'open',bookings:[{name:'测试场地',start,end,pricing:'total',cents:0}]},early);
+ const created=s.events.at(-1)!;assert.equal(created.title,'无报名截止活动');
+ await apply(s,s.accounts[0],'eventEdit',{eventId:created.id,title:'编辑无截止活动',venue:e.venue,address:'',capacity:4,cancelDeadline:start-24*hour,note:'',reason:'修改标题'},early);
+ assert.equal(created.title,'编辑无截止活动');assert.equal(created.cancelDeadline,start-24*hour);
+});
 test('每场独立上限、候补；同一人多时段总名单只计一次',async()=>{const {s}=fixture(1);await join(s,'1');await join(s,'2');await join(s,'1','C');assert.equal(bookingRows(s,'A').find(r=>r.playerId==='2')!.status,'waitlist');assert.equal(bookingRows(s,'C')[0].status,'confirmed');assert.equal(s.registrations.filter(r=>r.playerId==='1').length,1);assert.equal(s.registrations[0].status,'confirmed');await join(s,'2','C');assert.equal(s.registrations.find(r=>r.playerId==='2')!.status,'waitlist')});
 test('重复保存保留名额和接龙顺序，不新增参加记录',async()=>{const {s}=fixture();await join(s,'1');const original=structuredClone(s.registrations[0]);await join(s,'1','A',early+1000);assert.deepEqual(s.registrations[0],original);assert.equal(s.attendance.length,0)});
 test('重叠场地拒绝、相接时段允许；非法参加范围不留数据',async()=>{const {s}=fixture();await join(s,'1');const prior=structuredClone(s.registrations);await assert.rejects(()=>join(s,'1','B'),/重叠/);assert.deepEqual(s.registrations,prior);await assert.rejects(()=>join(s,'2','A',early,{arrival:start-hour}),/所选场地/);assert.deepEqual(s.registrations,prior);s.bookings[2].start=start+hour;s.bookings[2].end=start+2*hour;await join(s,'1','C');assert.equal(s.registrations[0].bookingSignups!.length,2)});
@@ -33,5 +61,5 @@ test('旧接龙保留原名单与费用规则；选场转换不丢失已发生�
 test('持久化 JSON 重读和成员视图保留独立场地状态，不泄漏账号权限',async()=>{const {s}=fixture(1);await join(s,'1');await join(s,'2');await join(s,'1','C');const saved=JSON.parse(JSON.stringify(s));const view=projectClubState(saved,s.accounts[1],'2027-04',2027,early);assert.equal(view.registrations.find(r=>r.playerId==='1')!.bookingSignups!.length,2);assert.equal(view.bookings[0].signupCapacity,1);assert.deepEqual(view.accounts,[])});
 test('一场候补、另一场正式的混合状态分别显示，空档不会当作已正式参加',async()=>{const {s,e}=fixture(1);await join(s,'1');await join(s,'2');await join(s,'2','C');const r=s.registrations.find(r=>r.playerId==='2')!;assert.equal(r.status,'confirmed');assert.equal(r.bookingSignups!.find(x=>x.bookingId==='A')!.status,'waitlist');assert.equal(r.bookingSignups!.find(x=>x.bookingId==='C')!.status,'confirmed');assert.ok(!readyIds(s,e.id,start).includes('2'));assert.ok(readyIds(s,e.id,start+2*hour).includes('2'))});
 test('原接龙转入场地释放旧名额、递补旧候补；逾期成员不能绕过取消规则',async()=>{const {s,e}=fixture(1);e.capacity=1;for(const id of ['1','2'])await apply(s,s.accounts.find(a=>a.playerId===id)!,'register',{eventId:e.id,playerId:id,arrival:start,departure:end,note:''},early);await join(s,'1','A');assert.equal(s.registrations.find(r=>r.playerId==='2')!.status,'confirmed');const before=structuredClone(s);await assert.rejects(()=>join(s,'2','C',start-hour),/自由取消/);assert.deepEqual(s,before)});
-test('新接龙拒绝无效时间、无效场地和已截止报名；不接受伪造的正式状态',async()=>{const {s,e}=fixture(1);await join(s,'1');await join(s,'2','A',early,{status:'confirmed',sequence:0,promotedAt:0});assert.equal(bookingRows(s,'A').find(x=>x.playerId==='2')!.status,'waitlist');const before=structuredClone(s);await assert.rejects(()=>join(s,'3','A',early,{arrival:Number.MAX_SAFE_INTEGER}));await assert.rejects(()=>apply(s,s.accounts[3],'courtRegister',{bookingId:'outside',playerId:'3',arrival:start,departure:end,note:''},early),/不存在/);e.signupDeadline=early-1;await assert.rejects(()=>join(s,'3'),/报名已截止/);e.signupDeadline=before.events[0].signupDeadline;assert.deepEqual(s,before)});
+test('新接龙拒绝无效时间和无效场地；不接受伪造的正式状态',async()=>{const {s,e}=fixture(1);await join(s,'1');await join(s,'2','A',early,{status:'confirmed',sequence:0,promotedAt:0});assert.equal(bookingRows(s,'A').find(x=>x.playerId==='2')!.status,'waitlist');const before=structuredClone(s);await assert.rejects(()=>join(s,'3','A',early,{arrival:Number.MAX_SAFE_INTEGER}));await assert.rejects(()=>apply(s,s.accounts[3],'courtRegister',{bookingId:'outside',playerId:'3',arrival:start,departure:end,note:''},early),/不存在/);assert.deepEqual(s,before)});
 test('界面费用预览与持久化结算逐人逐分一致，包括取消归档和相接换场',async()=>{for(const cancel of [false,true]){const {s,e}=fixture(2);await join(s,'1');await join(s,'2','B');s.bookings[2].start=start+hour;s.bookings[2].end=start+2*hour;await join(s,'1','C');if(cancel)await apply(s,s.accounts[0],'courtCancel',{bookingId:'A',playerId:'1',reason:'离开一号场'},start+hour/2);const raw=calculateSettlement(s,e,end),view=projectClubState(s,s.accounts[0],'2027-04',2027,end);assert.deepEqual(view.drafts.find(d=>d.eventId===e.id),raw)}});
