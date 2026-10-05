@@ -61,7 +61,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '炼气的进度条以 800 为起点，低于 800 显示 0%；低于 900 仍属炼气。化神是当前最高境界，显示圆满、100%。',
           `月榜每胜 ${rules.win} 分、每负 ${rules.loss} 分。实力分与月榜积分分别计算，比赛也分别设置开关；月榜增加 ${rules.win} 分不会直接增加 ${rules.win}% 修为。`,
         ]},
-        {title:'暂定境界', paragraphs:['累计有效 实力分 比赛少于 10 场时标记“暂定境界”；第 10 场起不再标暂定。月榜和年度榜仍然没有最低场数要求。档案中的“自评水平”由球友填写，与计算境界分别展示。']},
+        {title:'暂定境界', paragraphs:['累计有效 实力分 比赛少于 10 场时标记“暂定境界”；第 10 场起不再标暂定。月榜和年度榜仍然没有最低场数要求。']},
       ],
       table:{caption:'修仙境界门槛（当前实力分）',columns:['境界','实力分区间'],rows:cultivationRealms.map(realm=>[realm.name,realm.range])},
       example:{title:'双方实力相同时',text:`双方平均实力分相同，预期胜率都是 50%。赢家每人增加 ${rules.k/2} 实力分，输家每人减少 ${rules.k/2}；一场三局两胜也只更新一次。${rules.k===32?'当前调整系数为 32 时，从 1000 出发通常需要约 2–3 次同实力胜利达到金丹；':''}持续战胜相同对手时，双方实力差会逐渐改变，实际增长随预期胜率调整。`},
