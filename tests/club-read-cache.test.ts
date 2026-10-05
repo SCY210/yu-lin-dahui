@@ -47,13 +47,13 @@ test('validator cache is bounded, expires, and a new Worker safely falls back to
  assert.equal(cache.remember(version,identity,'2026-10',2026,now,now),null);
 });
 
-test('pre-activity projections expire as soon as remaining rounds change',()=>{
+test('future rounds start at the activity, with no phantom pre-activity countdown changes',()=>{
  const {s,a,e}=fixture();
  // Use a time just before a 20-minute boundary, away from activity start.
  const before=e.start-duration-1000,next=clubViewValidUntil(s,a,before);
- assert.equal(next,e.start-duration+1);
+ assert.equal(next,before+300000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,before),projectClubState(s,a,'2026-10',2026,next-1));
- assert.notDeepEqual(projectClubState(s,a,'2026-10',2026,before).rotationPlans,projectClubState(s,a,'2026-10',2026,next).rotationPlans);
+ assert.deepEqual(projectClubState(s,a,'2026-10',2026,before).rotationPlans,projectClubState(s,a,'2026-10',2026,next).rotationPlans);
 });
 
 test('arrival, booking and live fee boundaries never return a stale unchanged view',()=>{

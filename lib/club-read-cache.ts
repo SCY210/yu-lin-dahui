@@ -43,8 +43,6 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  for(const e of events){
   if(e.start<=now&&now<e.end)return now;
   boundary(e.start);boundary(e.end);
-  // floor((end-now)/duration) loses a round immediately after each exact boundary.
-  if(e.end>now)boundary(now+(e.end-now)%roundDuration+1);
   for(const attendance of attendanceForEvent(s,e)){
    boundary(attendance.start);
    if(attendance.end!==null){boundary(attendance.end);boundary(attendance.end-roundDuration+1)}
