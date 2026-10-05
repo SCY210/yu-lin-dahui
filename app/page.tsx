@@ -1,5 +1,4 @@
 import { getAppUser } from '../lib/auth';
-import {runRequestedEventMerge} from '../lib/requested-event-merge';
 import AuthPanel from './auth-panel';
 import ClubApp from './club-app';
 import CultivationOrnament from './cultivation-ornament';
