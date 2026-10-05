@@ -82,3 +82,11 @@ test('管理员仍可管理他人或未记录创建者的活动',async()=>{
  await apply(s,admin,'eventStatus',{eventId:'foreign',status:'ended'},start);assert.equal(s.events[1].status,'ended');
  await apply(s,admin,'bookingBearer',{bookingId:'foreign-court',bearer:'subsidy',reason:'管理员确认'},start);assert.equal(s.bookings[1].bearer,'subsidy');
 });
+test('管理员也不能载入虚构验收数据，空群组既有资料与审计保持不变',async()=>{
+ const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId=admin.id;
+ s.accounts.push({...admin});s.players.push({id:admin.playerId,ownerId:admin.id,name:'已有管理员',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'已有资料'});
+ s.audits.push({id:'existing-audit',at:start-1,actor:admin.id,action:'profile',reason:'已有操作记录'});
+ const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,admin,'demo',{},start),/未知操作/);
+ assert.deepEqual(s,before);
+});
