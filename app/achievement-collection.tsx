@@ -9,7 +9,7 @@ function Badge({id,level,locked=false}:{id:AchievementId;level:number;locked?:bo
  return <span className={'achievement-art tier-'+level+(locked?' art-locked':'')}><img className="achievement-emblem" src={badgeImage(id)} width={256} height={256} alt="" loading="lazy" decoding="async"/><img className="achievement-frame" src={rankImage(level)} width={384} height={384} alt="" loading="lazy" decoding="async"/>{locked?<LockKeyhole className="achievement-lock" size={15} aria-hidden="true"/>:<span className="achievement-level-seal">{level}</span>}</span>;
 }
 
-export default function AchievementCollection({summary,own=false}:{summary?:AchievementSummary;own?:boolean}){
+export default function AchievementCollection({summary,own=false,players=[]}:{summary?:AchievementSummary;own?:boolean;players?:{id:string;name:string}[]}){
  const [earnedOnly,setEarnedOnly]=useState(false),[selected,setSelected]=useState<AchievementId|null>(null);
  const chosen=achievementCatalog.find(a=>a.id===selected),chosenProgress=chosen&&summary?.progress[chosen.id];
  const totalLevels=summary?achievementCatalog.reduce((total,a)=>total+achievementLevel(a.id,summary.progress[a.id].current),0):0;
@@ -27,7 +27,7 @@ export default function AchievementCollection({summary,own=false}:{summary?:Achi
    })}</ul>
    {earnedOnly&&summary.unlockedCount===0&&<p className="achievement-empty">完成第一场比赛，就能点亮第一枚徽章。</p>}
    {chosen&&chosenProgress&&<div className="achievement-detail" id="achievement-detail" role="region" aria-label={chosen.name+'成就等级与目标'}>
-    <div className="achievement-detail-heading"><h4>{chosen.name} · 等级路线</h4><p>{chosen.description} 当前累计：{chosenProgress.current} {chosen.unit}。</p></div>
+    <div className="achievement-detail-heading"><h4>{chosen.name} · 等级路线</h4><p>{chosen.description} 当前累计：{chosenProgress.current} {chosen.unit}。</p>{chosen.metric==='partnerWins'&&chosenProgress.partnerId&&<p>当前记录搭档：{players.find(p=>p.id===chosenProgress.partnerId)?.name??'球友'} · {chosenProgress.current} 胜</p>}</div>
     <ol className="achievement-roadmap">{achievementTargets[chosen.id].map((target,index)=>{
      const level=index+1,earned=chosenProgress.current>=target,at=chosenProgress.levelUnlockedAt?.[index];
      return <li key={level} className={earned?'stage-earned':'stage-locked'}><Badge id={chosen.id} level={level} locked={!earned}/><div><strong>{achievementRanks[index].name} · Lv.{level}</strong><p>{achievementGoal(chosen.id,target)}</p><small>{earned?(at!=null?'达成于 '+date(at):'已达成'):'还差 '+(target-chosenProgress.current)+' '+chosen.unit}</small></div>{earned?<Check size={18} aria-label="已达成"/>:<ChevronRight size={18} aria-hidden="true"/>}</li>;
