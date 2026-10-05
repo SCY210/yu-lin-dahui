@@ -2,6 +2,7 @@
 import {useState,type ReactNode} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight} from 'lucide-react';
 import {Popover,PopoverTrigger,PopoverContent} from '@/components/ui/popover';
+import {rankingQuarter,quarterMonths} from '../lib/ranking-quarter';
 function DateFrame({children,previous,next,previousLabel,nextLabel,first,last}:{children:ReactNode;previous:()=>void;next:()=>void;previousLabel:string;nextLabel:string;first:boolean;last:boolean}) {
  return <div className="month-picker rv-date-picker"><button type="button" className="month-arrow" aria-label={previousLabel} disabled={first} onClick={previous}><ChevronLeft size={18}/></button>{children}<button type="button" className="month-arrow" aria-label={nextLabel} disabled={last} onClick={next}><ChevronRight size={18}/></button></div>;
 }
@@ -21,5 +22,18 @@ export default function MonthPicker({value,onChange}:{value:string;onChange:(v:s
 export function YearPicker({value,onChange}:{value:number;onChange:(v:number)=>void}) {
  return <DateFrame previous={()=>onChange(value-1)} next={()=>onChange(value+1)} previousLabel="上一年排名" nextLabel="下一年排名" first={value<=2000} last={value>=2100}>
   <div className="month-current rv-year-current"><CalendarDays size={18}/><select aria-label="选择排名年份" value={value} onChange={e=>onChange(Number(e.target.value))}>{Array.from({length:101},(_,i)=>2000+i).map(year=><option key={year} value={year}>{year}年</option>)}</select></div>
+ </DateFrame>;
+}
+
+export function QuarterPicker({value,onChange}:{value:string;onChange:(v:string)=>void}){
+ const selected=rankingQuarter(value),year=Number(value.slice(0,4)),quarter=Number(selected.slice(-1));
+ const [open,setOpen]=useState(false),[browseYear,setBrowseYear]=useState(year);
+ function select(y:number,q:number){onChange(quarterMonths(`${y}-Q${q}`)[0]);setBrowseYear(y)}
+ function move(delta:number){const index=year*4+quarter-1+delta,y=Math.floor(index/4),q=index%4+1;if(y<2000||y>2100)return;select(y,q)}
+ return <DateFrame previous={()=>move(-1)} next={()=>move(1)} previousLabel="上个季度" nextLabel="下个季度" first={selected==='2000-Q1'} last={selected==='2100-Q4'}>
+  <Popover open={open} onOpenChange={v=>{setOpen(v);if(v)setBrowseYear(year)}}><PopoverTrigger asChild><button type="button" className="month-current" aria-label="选择排名季度"><CalendarDays size={18}/><span>{year}年第{quarter}季度</span></button></PopoverTrigger><PopoverContent className="month-panel" align="end" sideOffset={8}>
+   <div className="month-year"><button type="button" className="month-arrow" aria-label="上一年" disabled={browseYear<=2000} onClick={()=>setBrowseYear(browseYear-1)}><ChevronLeft size={18}/></button><strong>{browseYear}年</strong><button type="button" className="month-arrow" aria-label="下一年" disabled={browseYear>=2100} onClick={()=>setBrowseYear(browseYear+1)}><ChevronRight size={18}/></button></div>
+   <div className="month-grid" style={{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}}>{[1,2,3,4].map(q=><button type="button" key={q} className={browseYear===year&&q===quarter?'selected':''} onClick={()=>{select(browseYear,q);setOpen(false)}} aria-label={`${browseYear}年第${q}季度，${(q-1)*3+1}至${q*3}月`}>第{q}季度<br/><small>{(q-1)*3+1}–{q*3}月</small></button>)}</div>
+  </PopoverContent></Popover>
  </DateFrame>;
 }

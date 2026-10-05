@@ -25,7 +25,7 @@ export function clubRouteUrl(href:string,route:ClubRoute):string {
  return url.pathname+url.search+url.hash;
 }
 export const sameRoute = (a:ClubRoute,b:ClubRoute)=>JSON.stringify(a)===JSON.stringify(b);
-export type RankingSelection={period:string;year:number;rankingPeriod:'monthly'|'annual'};
+export type RankingSelection={period:string;year:number;rankingPeriod:'quarterly'|'annual'};
 export type ProfileSource={route:ClubRoute;scrollY:number;ranking?:RankingSelection};
 type Frame = {route:ClubRoute;dialog:string|null;scrollY:number;profileSource?:ProfileSource;ranking?:RankingSelection};
 type Marker = {session:string;owner:string;index:number;route:ClubRoute;dialog:string|null;scrollY?:number;profileSource?:ProfileSource;ranking?:RankingSelection};
@@ -38,8 +38,8 @@ const safeScroll=(value:unknown)=>typeof value==='number'&&Number.isFinite(value
 const rankingOf=(value:unknown):RankingSelection|undefined=>{
  if(!value||typeof value!=='object')return;
  const v=value as any;
- if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['monthly','annual'].includes(v.rankingPeriod))return;
- return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod};
+ if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['quarterly','monthly','annual'].includes(v.rankingPeriod))return;
+ return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod==='annual'?'annual':'quarterly'};
 };
 const sourceOf=(value:unknown):ProfileSource|undefined=>{
  if(!value||typeof value!=='object')return;
