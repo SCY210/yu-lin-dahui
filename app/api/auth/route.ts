@@ -1,4 +1,6 @@
 import {assertAccountMutable,assertPlayerMutable} from '../../../lib/domain/ownership';
+import {newUsername as username,changeUsernameInput} from '../../../lib/username-policy';
+import {changeLoginUsername,loginAccountMetadata} from '../../../lib/username-change';
 import {publicApiError} from '../../../lib/api-error';
 import {z} from 'zod';
 import {load,raw,save,committed} from '../../../lib/store';
@@ -6,7 +8,6 @@ import {getAppUser,hashToken,passwordEnabled,sessionCookie} from '../../../lib/a
 import {makePassword,checkPassword,sessionToken,normalizeUsername} from '../../../lib/password';
 export const dynamic='force-dynamic';
 const password=z.string().min(12).max(128);
-const username=z.string().trim().transform(normalizeUsername).pipe(z.string().min(2).max(32).regex(/^[a-z0-9_\-\u4e00-\u9fff]+$/));
 const age=14*86400;
 async function readBody(req:Request){
  const reader=req.body?.getReader();if(!reader)return '';
@@ -25,11 +26,11 @@ async function limit(key:string,max:number,window:number){
  return (row?.count??max+1)<=max;
 }
 const conflict=(e:unknown)=>String(e).includes('UNIQUE constraint failed: commits');
-export async function GET(){const u=await getAppUser();return Response.json(u?{signedIn:true,method:u.method,username:u.username,passwordEnabled:await passwordEnabled(u.userId)}:{signedIn:false},{headers:{'Cache-Control':'no-store'}})}
+export async function GET(){try{const u=await getAppUser();return Response.json(u?{signedIn:true,method:u.method,...await loginAccountMetadata(u.userId)}:{signedIn:false},{headers:{'Cache-Control':'no-store'}})}catch(error){const safe=publicApiError(error);return denied(safe.error,safe.status)}}
 export async function POST(req:Request){try{
  const body=await readBody(req);
  if(req.headers.get('origin')!==new URL(req.url).origin)return denied('请求来源不允许');
- const input:any=JSON.parse(body),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','logout']).parse(input.action),ip=req.headers.get('cf-connecting-ip')??'local';
+ const input:any=JSON.parse(body),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','changeUsername','logout']).parse(input.action),ip=req.headers.get('cf-connecting-ip')??'local';
  if(action==='logout'){
   const token=req.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionCookie+'='))?.slice(sessionCookie.length+1);
   if(token)await raw().prepare('DELETE FROM auth_sessions WHERE id=?').bind(await hashToken(token)).run();
@@ -47,7 +48,7 @@ export async function POST(req:Request){try{
   const token=sessionToken();
   const saved=await raw().batch([
    // A simultaneous reset must not issue a session based on a stale password hash.
-   raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND salt=? AND hash=?').bind(await hashToken(token),c.id,Date.now()+age*1000,c.id,c.salt,c.hash),
+   raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=?').bind(await hashToken(token),c.id,Date.now()+age*1000,c.id,c.username,c.salt,c.hash),
    raw().prepare('DELETE FROM auth_rate_limits WHERE id=?').bind(await hashToken('login:'+p.username)),
    raw().prepare('DELETE FROM auth_sessions WHERE expires<=?').bind(Date.now())
   ]);
@@ -55,6 +56,14 @@ export async function POST(req:Request){try{
   return result({ok:true},req,token);
  }
  const user=await getAppUser();if(!user)return denied('请先登录账号',401);
+ if(action==='changeUsername'){
+  const p=changeUsernameInput.parse(input),meta=await loginAccountMetadata(user.userId);
+  if(!await limit('changeUsername:'+user.userId,meta.isOwner?40:8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
+  const changed=await changeLoginUsername(user,p,req);
+  if(!changed.signedOut)return result(changed,req);
+  const h=new Headers({'Cache-Control':'no-store'});h.append('Set-Cookie',cookie(sessionCookie,'',req,0));h.append('Set-Cookie',cookie('yulin_signed_out','1',req,age));
+  return Response.json(changed,{headers:h});
+ }
  if(action==='changePassword'){
   if(!await limit('changePassword:'+user.userId,8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
   const parsed=z.object({action:z.literal('changePassword'),currentPassword:z.string().min(1).max(128),newPassword:password,confirmPassword:password,requestId:z.string().uuid()}).strict().safeParse(input);
@@ -158,4 +167,4 @@ export async function POST(req:Request){try{
   }
  }
  return denied('操作未完成，请稍后重试',409);
-}catch(e){if(e instanceof z.ZodError)return denied('请检查输入：账号2–32位中英文、数字、_或-；密码至少12位',400);const safe=publicApiError(e);return denied(safe.error,safe.status)}}
+}catch(e){if(e instanceof z.ZodError)return denied('请检查输入：新登录账号须为2–32位英文字母和数字；密码至少12位',400);const safe=publicApiError(e);return denied(safe.error,safe.status)}}

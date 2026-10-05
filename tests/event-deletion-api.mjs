@@ -14,7 +14,7 @@ const get=async actor=>{const r=await request(actor,'/api/club');assert.equal(r.
 async function command(actor,action,payload,revision){const current=revision??(await get(actor)).revision;return request(actor,'/api/club',{action,payload,revision:current,requestId:randomUUID()})}
 async function test(name,fn){await fn();results.push(name);console.log('PASS '+name)}
 async function member(label){
- const username='delete_'+label+'_'+suffix,password=randomBytes(24).toString('base64url');
+ const username='delete'+(label==='甲'?'a':'b')+suffix,password=randomBytes(24).toString('base64url');
  assert.equal((await request(admin,'/api/auth',{action:'createAccount',name:'删除功能虚构球友'+label,username,password,requestId:randomUUID()})).status,200);
  const logged=await request(null,'/api/auth',{action:'login',username,password});assert.equal(logged.status,200);
  const cookie=logged.headers.getSetCookie().find(c=>c.startsWith('yulin_session=')).split(';')[0];const a={cookie};a.me=(await get(a)).me;assert.equal(a.me.role,'member');return a;

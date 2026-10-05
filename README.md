@@ -6,6 +6,8 @@
 
 中文、移动端优先的私人羽毛球群 Web App。默认 EUR / Europe/Madrid。
 
+源码仓库：[SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui)（私有）。网站继续通过 Sites 托管；GitHub 独立副本同步已验证的源码版本，数据库、上传照片、密码和本地运行状态保存在各自的数据服务中。
+
 ## 运行
 
 需要 Node.js >=22.13。进入本目录后：
@@ -19,10 +21,11 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0003_dazzling_vapor.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0004_club_brand.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0005_managed_accounts.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0006_username_change.sql
 node scripts/run-framework.mjs dev
 ```
 
-打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移只在新数据库执行一次。当前工作区的六个迁移已执行，不要重复执行。
+打开服务实际输出的地址（本机默认 http://127.0.0.1:5173/）。迁移按 `drizzle/meta/_journal.json` 的顺序逐个执行一次；已有数据库只追加尚未应用的迁移，不重复执行历史文件。
 Windows 若 npm 包装脚本失效，本环境已验证的安装命令为：
 
 ```powershell
@@ -33,19 +36,19 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 
 ## 登录与账号管理
 
-账号与密码为登录入口，由管理员在后台创建球友账号；不需要邮箱，也不开放自行注册。原账号在“我的 → 设置账号和密码”迁移并保留原档案与权限。新账号为普通成员，管理员可为已有球友档案开通登录，或重置忘记的密码。详见 [ACCOUNT_LOGIN.md](docs/ACCOUNT_LOGIN.md)。
+账号与密码为登录入口，由管理员在后台创建球友账号；不需要邮箱，也不开放自行注册。原账号在“我的 → 设置账号和密码”迁移并保留原档案与权限。新账号为普通成员，管理员可为已有球友档案开通登录，或重置忘记的密码。新登录账号只使用2–32位英文字母或数字，旧格式账号保持兼容。成员可自主改一次账号；群主可不限次数改自己和其他人的账号、名字。详见 [ACCOUNT_LOGIN.md](docs/ACCOUNT_LOGIN.md)。
 
 网站已按群主明确授权公开登录入口。朋友直接打开网址，用管理员创建的账号和密码登录，不需要 ChatGPT 账号。群内数据继续由服务器登录与成员权限保护，匿名访客不能读取活动、费用、照片或创建账号。忘记密码由群管理员重置。
 
 开发模式的官方预览辅助器仅在回环地址模拟 `Seedy` 身份；线上构建不含该模拟登录。开发与内置测试服务都绑定127.0.0.1，不应暴露到公网。生产必须经 Sites 身份分发层，不要直接暴露信任身份头的 Worker。
 
-管理员入口在“我的 → 群组管理”。可以修改群名、邀请码、赛季默认规则、初始 Rating、成员启用状态和账号权限。至少保留一位管理员。邀请码仅保存 SHA-256 摘要，没有管理员通用密码或测试后门。
+管理员入口在“我的 → 群组管理”。可以修改群名、邀请码、赛季默认规则、初始 Rating、成员启用状态和账号权限。群主拥有固定最高权限并分配管理员角色，其他管理员不能修改群主账号。邀请码仅保存 SHA-256 摘要，没有管理员通用密码或测试后门。
 
 ## 完整人工验收路径
 
 1. 所有者登录并初始化群组。创建活动，设置报名/取消截止、容量和首个场地预约；添加第二片场地或不连续的预约时段。
 2. 管理员创建普通成员账号，成员登录并报名。每位朋友先建立独立档案，再单独报名。填满容量后确认候补；取消正式成员，观察首位有效候补递补。超过取消截止只提交申请，由管理员处理。
-3. 管理员在接龙页确认签到，可暂停、恢复、签退或在费用页修正多个实际出勤时段。预计参加时间不会直接用作计费。
+3. 正式报名默认参加，无需签到。修改接龙中的参加时间后，用该区间安排比赛并分摊费用；未发生的未来时间不计算为已参加时长。
 4. 排场页生成本轮草稿。点选两名选手交换（可与轮休者交换），调整场地，锁定分组。重新生成保留锁定比赛。查看上场比例和连续等待轮次，然后确认发布。
 5. 开始本轮前确定是否计入月积分及 Rating。开始比赛，录入例如21:15的合法终局比分。查看比赛、个人页、月榜；修正比分会重建月积分并重放后续 Rating。
 6. 费用页输入本次耗球型号、每筒/每颗价格及实际消耗颗数。“1筒+4颗”以两个数量输入；可填耗球时间段。添加其他费用，分别选择场地/球费分摊模式。
@@ -66,7 +69,7 @@ node 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --prefer-offli
 - `commands.ts`：报名顺序、候补递补、权限、服务端输入校验与状态变更。
 - `grouping.ts`：先按有效轮次上场欠额和等待选择人员，再进行600次确定种子的局部搜索；平衡实力、重复搭档与对手。锁定比赛优先保留。只安排能覆盖整场预计时长的有效预约；并非全局最优保证。
 - `money.ts`：等额、时长比例、逐时段三种独立算法。BigInt有理数与最大余数法按稳定参赛者ID处理尾差。每项来源费用先确定到欧分，再分配；按小时费用/耗球总成本产生不到1欧分的部分按半向上确定项目总额。个人分摊明细+群补贴+待分配严格等于总额。无分时耗球数据时，按有实际参与者的预约场地分钟估算并标注；可逐记录输入精确耗球时段，或在界面调整为两段费用。
-- `ranking.ts`：比赛是事实来源。Madrid自然月、实际开赛时间+稳定ID排序个人前12场，最低6场正式榜；规则可设0关闭限制。并列依次看积分、胜率、场均净胜分。Elo按实际完成时间+ID重放，每场四人的变化之和为0，前10场暂定。
+- `ranking.ts`：比赛是事实来源。Madrid自然月、实际开赛时间+稳定ID排序个人前12场计分，全部启用球友同榜，无最低场数门槛。并列依次看积分、胜率、场均净胜分。Elo按实际完成时间+ID重放，每场四人的变化之和为0，前10场暂定。
 
 默认初始Rating1000，K32，胜3负0，21分/领先2分/30封顶；规则绑定月份，新月份在首次开赛时自动创建，不依赖定时任务。默认规则更新不改变已有月份；历史规则须先预览再确认，赛季版本递增并保留操作记录。
 
@@ -97,7 +100,7 @@ node tests/api.mjs
 
 ## 已完成与边界
 
-已打通：创建活动→正式/候补报名→自动递补→签到/暂停/签退→双打草稿/交换/锁定/发布→开赛前计分确认→比分→月榜/Rating→分项AA/豁免/补贴→结算版本，展示每人分摊金额；包括历史修正、权限、审计、JSON导出和手机底部导航。
+已打通：创建活动→正式/候补报名→自动递补→默认参加→双打草稿/交换/锁定/发布→开赛前计分确认→比分→月榜/Rating→分项AA/豁免/补贴→结算版本，展示每人分摊金额；包括历史修正、权限、审计、JSON导出和手机底部导航。
 
 尚未实现：活动整体改期的联动编辑（目前可修改标题/球馆/容量/截止/备注，以及各预约时段）。已新增三局两胜、头像上传及社群功能，详见 docs/SOCIAL_FEATURES.md。聊天、支付接口、库存和多群平台仍不在范围内。时段球费调整表单一次支持两段，更多时段用独立耗球记录，后台数据结构支持多段。
 

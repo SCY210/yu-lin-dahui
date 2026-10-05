@@ -16,10 +16,10 @@ const cookie=r=>r.headers.getSetCookie().find(c=>c.startsWith('yulin_session='))
 async function test(name,fn){await fn();results.push(name);console.log('PASS '+name)}
 const initial=await get(owner);assert.equal(initial.setup,true,'A dedicated empty local database is required');
 assert.equal((await command(owner,'initialize',{name:'虚构群主验收',invite:'fictional-invite-for-owner-tests'})).status,200);
-const ownView=await get(owner);owner.playerId=ownView.me.playerId;owner.username='owner_'+suffix;owner.password=password();
+const ownView=await get(owner);owner.playerId=ownView.me.playerId;owner.username='owner'+suffix;owner.password=password();
 assert.equal((await auth(owner,{action:'bind',username:owner.username,password:owner.password})).status,200);
 const ownerLogin=await auth(null,{action:'login',username:owner.username,password:owner.password});assert.equal(ownerLogin.status,200);owner.cookie=cookie(ownerLogin);
-async function member(label){const username='owner_test_'+label+'_'+suffix,pw=password();const r=await auth(owner,{action:'createAccount',name:'虚构权限球友'+label,username,password:pw,requestId:randomUUID()});assert.equal(r.status,200);const logged=await auth(null,{action:'login',username,password:pw});assert.equal(logged.status,200);const a={id:r.data.accountId,cookie:cookie(logged),username,password:pw};a.playerId=(await get(a)).me.playerId;return a}
+async function member(label){const username='ownertest'+(label==='甲'?'a':'b')+suffix,pw=password();const r=await auth(owner,{action:'createAccount',name:'虚构权限球友'+label,username,password:pw,requestId:randomUUID()});assert.equal(r.status,200);const logged=await auth(null,{action:'login',username,password:pw});assert.equal(logged.status,200);const a={id:r.data.accountId,cookie:cookie(logged),username,password:pw};a.playerId=(await get(a)).me.playerId;return a}
 const admin=await member('甲'),other=await member('乙');assert.equal((await command(owner,'role',{accountId:admin.id,role:'admin',reason:'虚构群主授权'})).status,200);
 const baseline=await get(owner),ownerPlayer=baseline.players.find(p=>p.id===owner.playerId);
 const profile={playerId:owner.playerId,years:4,hand:'left',preference:'doubles',style:'越权资料',equipment:'越权备注',level:'advanced',racket:'越权战拍',strings:'越权拍线',tensionMin:24,tensionMax:28};
@@ -33,8 +33,8 @@ await test('普通管理员不能修改群主名字、资料、战拍、初始�
 });
 await test('通过重置密码、账号绑定或球员绑定不能接管群主，原会话与密码仍有效',async()=>{
  assert.equal((await auth(admin,{action:'resetPassword',accountId:owner.id,password:password(),requestId:randomUUID()})).status,403);
- for(const target of [{accountId:owner.id},{playerId:owner.playerId}])assert.equal((await auth(admin,{action:'createAccount',name:'伪装',username:'takeover_'+suffix,password:password(),requestId:randomUUID(),...target})).status,403);
- assert.equal((await auth(admin,{action:'createAccount',name:'伪装',username:'takeover_'+suffix,password:password(),requestId:randomUUID(),accountId:other.id,playerId:owner.playerId})).status,400);
+ for(const target of [{accountId:owner.id},{playerId:owner.playerId}])assert.equal((await auth(admin,{action:'createAccount',name:'伪装',username:'takeover'+suffix,password:password(),requestId:randomUUID(),...target})).status,403);
+ assert.equal((await auth(admin,{action:'createAccount',name:'伪装',username:'takeover'+suffix,password:password(),requestId:randomUUID(),accountId:other.id,playerId:owner.playerId})).status,400);
  assert.equal((await get(owner)).me.isOwner,true);assert.equal((await auth(null,{action:'login',username:owner.username,password:owner.password})).status,200);
 });
 async function upload(actor,kind,playerId){const form=new FormData();form.set('file',new Blob([readFileSync('public/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind',kind);form.set('playerId',playerId);form.set('requestId',randomUUID());form.set('revision',String((await get(actor)).revision));return fetch(origin+'/api/photos',{method:'POST',headers:{...headers(actor),Origin:origin},body:form})}

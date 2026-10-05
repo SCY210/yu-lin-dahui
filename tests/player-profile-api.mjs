@@ -45,7 +45,7 @@ async function upload(actor,kind,values={},options={}){
 }
 async function test(name,fn){currentTest=name;await fn();results.push({name,status:'passed'});console.log('PASS '+name)}
 function player(s,id){const p=s.players.find(p=>p.id===id);assert.ok(p,'Expected fictional player profile');return p}
-async function createMember(label){const username='profile_'+label+'_'+suffix,password=randomBytes(24).toString('base64url');const created=await auth({action:'createAccount',name:'虚构档案球友 '+label,username,password,requestId:randomUUID()},'admin');assert.equal(created.status,200);const logged=await auth({action:'login',username,password});assert.equal(logged.status,200);const cookie=cookiePair(logged),s=(await get({cookie})).data;assert.equal(s.me.role,'member');return {cookie,accountId:s.me.id,playerId:s.me.playerId,username}}
+async function createMember(label){const username='profile'+label+suffix,password=randomBytes(24).toString('base64url');const created=await auth({action:'createAccount',name:'虚构档案球友 '+label,username,password,requestId:randomUUID()},'admin');assert.equal(created.status,200);const logged=await auth({action:'login',username,password});assert.equal(logged.status,200);const cookie=cookiePair(logged),s=(await get({cookie})).data;assert.equal(s.me.role,'member');return {cookie,accountId:s.me.id,playerId:s.me.playerId,username}}
 
 try{
  await test('创建两个独立普通成员；未登录无法读取档案或上传照片',async()=>{

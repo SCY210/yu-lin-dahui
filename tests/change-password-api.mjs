@@ -19,7 +19,7 @@ const adminId=process.env.CHANGE_PASSWORD_TEST_ADMIN_ID??'local_seedy';
 const adminHeaders={'oai-authenticated-user-id':adminId,'oai-authenticated-user-email':adminId+'@example.invalid'};
 const secrets=[],results=[],transportRetries=[];
 const password=()=>{const value=randomBytes(24).toString('base64url');secrets.push(value);return value};
-const A={username:'cp_a_'+suffix,password:password(),cookies:[]},B={username:'cp_b_'+suffix,password:password(),cookies:[]};
+const A={username:'cpa'+suffix,password:password(),cookies:[]},B={username:'cpb'+suffix,password:password(),cookies:[]};
 let currentTest='fixture setup',historyBefore,profileBefore,initialSnapshot,loginRace,twoChanges,adminRace,rateLimit;
 
 function cookiePair(res,name='yulin_session'){

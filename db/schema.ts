@@ -20,6 +20,6 @@ export const challenges=sqliteTable('challenges',{id:text('id').primaryKey(),pay
 export const tagVotes=sqliteTable('tagVotes',{id:text('id').primaryKey(),payload:payload()});
 export const awardVotes=sqliteTable('awardVotes',{id:text('id').primaryKey(),payload:payload()});
 export const photos=sqliteTable('photos',{id:text('id').primaryKey(),payload:payload()});
-export const passwordCredentials=sqliteTable('password_credentials',{id:text('id').primaryKey().references(()=>accounts.id),username:text('username').notNull().unique(),salt:text('salt').notNull(),hash:text('hash').notNull(),created:integer('created').notNull()});
+export const passwordCredentials=sqliteTable('password_credentials',{id:text('id').primaryKey().references(()=>accounts.id),username:text('username').notNull().unique(),salt:text('salt').notNull(),hash:text('hash').notNull(),created:integer('created').notNull(),usernameChangedAt:integer('username_changed_at')});
 export const authSessions=sqliteTable('auth_sessions',{id:text('id').primaryKey(),userId:text('user_id').notNull().references(()=>accounts.id),expires:integer('expires').notNull()});
 export const authRateLimits=sqliteTable('auth_rate_limits',{id:text('id').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull()});

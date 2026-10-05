@@ -1,0 +1,16 @@
+.change-username-dialog .form-fields{margin-top:4px}
+.change-username-dialog input,.account-edit-dialog input{font-size:16px;min-height:47px}
+.change-username-dialog small{margin-top:7px;line-height:1.5}
+.change-username-dialog .error{margin:16px 0;color:#a64254;overflow-wrap:anywhere}
+.username-current{display:flex;flex-direction:column;gap:7px;font-size:14px;color:#7c738d}
+.username-current strong{font-family:ui-monospace,'Microsoft YaHei',monospace;color:#68587f;font-size:16px;overflow-wrap:anywhere}
+.change-username-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.change-username-actions button{min-height:46px}
+.account-manager .account-line{flex-wrap:wrap}
+.account-manager .account-line>.grow{flex:1 1 170px;min-width:0;overflow-wrap:anywhere}
+.account-manager .account-line>.actions{justify-content:flex-end;gap:8px}
+.account-manager .account-line>.actions button{min-height:44px;white-space:nowrap}
+.my-login-account .row>div{flex:1 1 170px;min-width:0;overflow-wrap:anywhere}
+.my-login-account p{font-size:14px;line-height:1.7;margin:8px 0 0}
+.my-login-account .account-key{display:block;margin-top:8px;overflow-wrap:anywhere}
+@media(max-width:600px){.change-username-actions button{flex:1;min-width:0;padding-left:10px;padding-right:10px}.account-manager .account-line>.actions{width:100%;justify-content:flex-start}.my-login-account .row>button{max-width:100%}}
