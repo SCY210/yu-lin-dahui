@@ -14,6 +14,9 @@ export function secureResponse(response:Response,request:Request):Response {
  const headers=new Headers(response.headers);
  for(const {key,value} of securityHeaders)headers.set(key,value);
  const pathname=new URL(request.url).pathname;
- if(pathname==='/'||pathname==='/api'||pathname.startsWith('/api/'))headers.set('Cache-Control','private, no-store');
+  if(pathname==='/'||pathname==='/api'||pathname.startsWith('/api/'))headers.set('Cache-Control','private, no-store');
+  if(pathname==='/sw.js'){
+   headers.set('Cache-Control','no-cache');headers.set('Service-Worker-Allowed','/');
+  }
  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
