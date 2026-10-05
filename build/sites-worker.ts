@@ -3,6 +3,7 @@ import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 import { secureResponse } from "../lib/security-headers";
 import { cancelUnreadWriteBody } from "../lib/write-security";
+import { flushPushOutbox } from "../lib/push-outbox";
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
@@ -28,6 +29,9 @@ export default {
     const response = await runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
     const cancellation = cancelUnreadWriteBody(request);
     if (cancellation) ctx.waitUntil(cancellation);
+    if (response.ok && new URL(request.url).pathname === '/api/club') {
+      ctx.waitUntil(flushPushOutbox(env).catch(() => { console.warn('Push delivery deferred'); }));
+    }
     return secureResponse(response, request);
   },
 };

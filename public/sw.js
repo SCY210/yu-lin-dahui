@@ -38,3 +38,31 @@ self.addEventListener('fetch', event => {
     return await cache.match(OFFLINE_PAGE) ?? Response.error();
   }));
 });
+
+self.addEventListener('push', event => {
+  event.waitUntil((async () => {
+    let message = {};
+    try { const value = event.data?.json(); if (value && typeof value === 'object' && !Array.isArray(value)) message = value; } catch { /* Show a visible fallback. */ }
+    const signup = message.kind === 'signup' && typeof message.eventId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(message.eventId);
+    await self.registration.showNotification(signup ? '羽林大会 · 新接龙' : '羽林大会 · 通知', {
+      body: typeof message.body === 'string' ? message.body.slice(0,250) : '有新消息，请打开羽林大会查看。',
+      icon: '/icons/app-192.png', badge: '/icons/app-192.png',
+      tag: signup ? 'yulin-signup-'+message.eventId : 'yulin-push-test', renotify: false,
+      data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId) : '/?page=me' },
+    });
+  })());
+});
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const path = event.notification.data?.path;
+    // Push content can never direct users to another origin or a login endpoint.
+    const safePath = typeof path === 'string' && /^\/\?page=(me|events)(?:&event=[A-Za-z0-9_%~-]{1,300})?$/.test(path) ? path : '/?page=me';
+    const url = new URL(safePath,self.location.origin).href;
+    const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    for (const client of windows) if (new URL(client.url).origin === self.location.origin && 'navigate' in client) {
+      await client.navigate(url);await client.focus();return;
+    }
+    await self.clients.openWindow(url);
+  })());
+});
