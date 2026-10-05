@@ -1,40 +1,38 @@
-# 功能说明界面
+# Contextual feature guides
 
-`app/feature-guide.tsx` 提供统一上下文入口：
+app/feature-guide.tsx provides a shared guide entry:
 
 ```tsx
 import FeatureGuide from './feature-guide';
 <FeatureGuide topic="ranking" rules={viewedSeasonRules} />
-<FeatureGuide topic="accounts" label="账号说明" />
+<FeatureGuide topic="accounts" label="Account help" />
 ```
 
-Props：`topic: GuideTopic`（必填）、`rules?: Rules`（该页面当前 / 所查看月份的真实规则）、`label?: string`（默认“功能说明”）。`GuideTopic`、`guideTopics`、`guideLabels`、`getFeatureGuide(topic, rules?)` 从 `lib/feature-guides.ts` 导出。未传 rules 时使用领域 `defaultRules`；排行榜与历史比赛页面必须传实际赛季规则，避免历史口径被默认值覆盖。
+Props: required topic: GuideTopic, optional rules: Rules, and optional label. GuideTopic, guideTopics, guideLabels, and getFeatureGuide(topic, rules?) are exported from lib/feature-guides.ts. Without rules, the domain defaults are used. Ranking/history pages must pass the actual viewed season so historical rules are not replaced by current defaults.
 
-主题：ranking、rating、titles、activities、signup、grouping、matches、fees、partners、challenges、state、modes、photos、annual、accounts。每个入口打开自身主题，同时可以通过原生主题选择框和相关说明按钮访问全部说明。每次重新打开回到入口主题。无需新依赖或全局 CSS；沿用白色、靛紫色和现有 CSS 变量。
+Topics: ranking, rating, titles, activities, signup, grouping, matches, fees, partners, challenges, state, modes, photos, annual, accounts. Each entry opens its own topic and permits switching to all topics. Reopening restores the entry topic.
 
-Radix Dialog 提供模态焦点管理、Escape 关闭、关闭后恢复触发按钮焦点；使用 DialogTitle / DialogDescription 建立无障碍名称与说明。关闭按钮中文命名，所有按钮 type=button。对话框最大高度跟随动态视口，正文单独滚动，正文 16px，表格有 caption 和行列标题，滚动区可键盘聚焦，触控目标至少 44px。需由集成者在 390px 视口验证最终页面的入口排列与弹窗布局。
+Radix Dialog handles modal focus, Escape, and focus restoration. DialogTitle/DialogDescription supply accessible naming. Buttons use type=button, touch targets at least 44px, and visible focus. The bounded dialog uses a separately scrollable 16px body; tables have captions and row/column headers. Verify the integrated 390px layout, keyboard access, and screen-reader labels.
 
-## 内容依据
+## Rules represented by the guide
 
-所有规则从当前仓库领域与 API 实现推导，界面本身不改变计分或业务行为：
+Guides describe current domain/API behavior and do not change scoring:
 
-- `lib/domain/ranking.ts`：月榜前 cap 场按开赛时间 / ID 排序；cap=0 不限；无最低场数限制；积分→胜率→场均净胜，仍同则并列；Elo 按结束时间重放、双方均值、K 与 400 分尺度。
-- `lib/domain/types.ts`：默认胜3/负0、cap12、目标21/领先2/封顶30、K32；Madrid 月份；rules.minimum 是兼容字段，说明不将其作为门槛。
-- `lib/domain/social.ts`：青铜<900、白银[900,1050)、黄金[1050,1200)、铂金[1200,1400)、钻石≥1400；少于10场 Elo 暂定；最近最多10场胜率，少于5场样本不足，整数状态值≥70火热、≤30低迷；搭档 / 对手标签至少3场；最坑需要至少两位达标搭档。
-- `lib/domain/commands.ts`：正式容量、候补顺序与递补、截止后取消申请、签到状态、轮次草稿→发布→开赛、合法每局终局比分、三局两胜、赛季规则留存、结算版本。
-- `lib/domain/grouping.ts`、`play.ts`：机会差额与连续等待优先；队伍平均 Elo、重复搭档与对手权重；锁定草稿保留；擂主二人固定与新挑战者条件；个人轮转更优先换搭档；队内实力决定师徒/大腿标签；双方均值差≥120 时建议让分，round(gap/60)、上限8。
-- `lib/domain/social-commands.ts`：标签一账号 / 球友 / 标签一票，可撤回；赛后每类别一票可改投，不能投自己；真实出勤候选者；历史落败才能挑战，管理员安排未开始比赛，双方分居两队；应用让分关闭月榜与 Elo。
-- `lib/domain/money.ts`：均摊 / 按时长 / 时段切分；真实出勤，不以报名预计时段代替；整数分最大余数分配；个人、补贴、待分配总额对账。当前界面范围只解释每人分摊，无收付款跟踪承诺。
-- `app/api/photos/route.ts`、`app/photo-gallery.tsx`：最多5MB JPEG/PNG/WebP；选择真实比赛关联四人，手选关联须实际参加；无自动识人。
-- `lib/domain/social.ts`、`app/social-hub.tsx`：年度已完成比赛按Madrid开赛年份；活动数来自有完整比赛的活动，累计分钟是比赛时长；年度最克制取至少3场中最高胜率者，与全期“你最克谁”>50%门槛不同。
-- `app/api/auth/route.ts`、`app/api/club/route.ts`：管理员创建账号与重置密码、现有档案保留、账号名密码且无需邮箱、群组数据需认证；精确 Elo 向普通成员隐藏。
+- ranking.ts: monthly matches ordered by start time/ID, first cap eligible games (cap=0 means unlimited); no minimum-game qualification; points, win rate, then average point difference; exact ties share rank. Elo replays by completion time with team means, K, and a 400-point scale.
+- types.ts: defaults win=3, loss=0, cap=12, target=21, lead=2, ceiling=30, K=32; Madrid months. rules.minimum is retained only for compatibility.
+- social.ts: bronze below 900, silver 900-1049, gold 1050-1199, platinum 1200-1399, diamond from 1400. Elo is provisional below ten rated matches. Form uses at most ten recent complete matches; fewer than five is insufficient. Integer form >=70 is hot, <=30 is low. Relationship labels need three matches; the weakest-partner label needs at least two qualifying alternatives.
+- commands.ts: capacity, waitlist ordering/promotion, late cancellation requests, participation state, draft/publish/start transitions, valid terminal game scores, best-of-three, preserved season rules, and settlement versions.
+- grouping.ts/play.ts: opportunity deficits and waiting priority, Elo balance and repetition costs, locked drafts, arena winners/challengers, rotating partners, within-team role labels, and suggested handicap from a team-mean gap of at least 120 (round(gap/60), capped at eight).
+- social-commands.ts: tag votes keyed by account/player/tag and retractable; activity award votes keyed by account/category and changeable, excluding self-votes. The current eligible-activity rules come from activity-voting.ts. Challenges require an actual historical loss and place accepted opponents on different teams in an unstarted match. Applied handicap disables monthly points and Elo.
+- money.ts: equal/duration/interval splits, actual participation, integer-cent largest remainder, and participant/subsidy/unallocated reconciliation. The current app does not promise payment collection.
+- photo API: at most 5 MiB JPEG/PNG/WebP, checked structure/dimensions, explicit uploader rights confirmation, protected reads, match-based four-player associations, or manually selected actual attendees. No facial recognition.
+- social.ts/social-hub.tsx: annual calculations use Madrid start years and complete matches, but the annual entry is currently hidden. Played minutes mean match duration. Annual opponent metrics and all-time relationship labels use their respective sample/win-rate rules.
+- auth/club APIs: administrator-managed accounts/reset, identity preservation, username/password without email, authentication, and numeric Elo hidden from ordinary members.
 
-计算示例均为明确的例子而非伪造的当前数据。默认比分示例显式说明实际校验服从所查看赛季规则。月榜公式示例会在 cap<5 时说明五场例子的上限差异。
+Examples are labeled examples rather than fabricated current data. Score examples follow the viewed season's rules; point examples account for a cap smaller than their example sample.
 
-## 接入与验收
+## Integration
 
-已接入首页说明条、月榜“积分怎么算”、个人页积分/段位/称号/账号说明、活动详情的接龙/分组/比分/玩法、费用计算、球友/关系图/复仇/趣味榜/年度总结、相册和管理员账号管理。入口打开对应主题，也可直接切换全部主题。
+Entries exist on home, monthly rankings, personal account/profile, activity signup/grouping/scoring/modes, fees, social pages, albums, and account administration.
 
-排行榜以及首页/个人页使用所查看月份规则；活动详情使用活动开赛月份的规则；其余入口传群组当前默认规则。积分说明先展示公式和排序，段位先展示门槛表，再解释Elo。
-
-390×844手机浏览器逐一切换全部15个主题，标题均正确显示，弹窗和表格无页面横向溢出。Escape关闭后焦点回到原说明按钮。按钮修复为紫底白字，正文16px，关闭/切换/相关入口可触控。积分、段位和球拍装饰已保存验收截图。TypeScript与生产构建由根代理验证。没有改动计分或业务权限。
+Home/ranking/personal pages use the viewed month; activities use their start month; other entries use current defaults. Verify all fifteen topics, headings, tables, 390px overflow, Escape focus restoration, and related-topic navigation after modifications. Generated screenshots and session-specific reports are local outputs.

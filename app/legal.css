@@ -1,0 +1,7 @@
+.legal-page{max-width:850px;margin:0 auto;padding:28px 22px 60px;line-height:1.7;color:#202337;overflow-wrap:anywhere}
+.legal-page h1{font-size:30px;margin:20px 0 12px}.legal-page h2{font-size:21px;margin:28px 0 10px}.legal-page p{margin:10px 0}
+.legal-page a,.legal-footer a,.image-rights a{color:#4338ca;text-decoration:underline;text-underline-offset:3px}
+.legal-page a:focus-visible,.legal-footer a:focus-visible,.image-rights input:focus-visible{outline:3px solid #a99adf;outline-offset:3px}
+.legal-draft{padding:16px;border:1px solid #d7c386;border-radius:12px;background:#fff9e8}.legal-draft p{margin-bottom:0}
+.legal-footer{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;padding:12px 18px 96px;font-size:14px}.legal-footer a{display:inline-flex;align-items:center;min-height:44px}
+.image-rights label{display:flex!important;align-items:flex-start;gap:10px;font-size:14px!important;line-height:1.6}.image-rights input[type=checkbox]{flex:0 0 20px;width:20px;height:20px;min-height:20px;padding:0;margin-top:3px;accent-color:#4f46e5}.image-rights p{font-size:13px;line-height:1.6;color:#65657a;margin:8px 0}

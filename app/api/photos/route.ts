@@ -3,6 +3,7 @@ import {readPhotoForm} from '../../../lib/request-body';
 import {assertWriteRequest,releaseRejectedWriteBody,writeErrorResponse} from '../../../lib/write-security';
 import {cleanExpiredRateLimits,consumeRateLimit,reserveUploadBytes,trustedClientIP} from '../../../lib/rate-limit';
 import {validateImage} from '../../../lib/image-validation';
+import {assertImageRights} from '../../../lib/image-rights';
 import {fail} from '../../../lib/domain/types';
 import {env} from 'cloudflare:workers';
 import {getAppUser} from '../../../lib/auth';
@@ -23,6 +24,7 @@ export async function POST(req:Request){
   const s=await load(),a=s.accounts.find(a=>a.id===u.userId);
   if(!a)return Response.json({error:'请先加入群组'},{status:403});
   if(await committed(key))return Response.json({ok:true,duplicate:true});
+  const rights=assertImageRights(f);
   if(Number(f.get('revision'))!==s.revision)return Response.json({error:'数据已更新，请刷新后重新上传'},{status:409});
   const file=f.get('file');if(!(file instanceof File)||!file.size||file.size>5*1024*1024)fail('请选择不超过5MB的JPEG、PNG或WebP照片');
   const kind=z.enum(['avatar','photo','racket']).parse(f.get('kind')),caption=z.string().max(300).parse(f.get('caption')??'');
@@ -46,7 +48,7 @@ export async function POST(req:Request){
   if(kind==='avatar')s.players.find(p=>p.id===playerIds[0])!.avatarId=assetId;
   uploadedKey='media/'+assetId;await env.BUCKET.put(uploadedKey,bytes,{httpMetadata:{contentType:image.type}});
   s.photos.push({id:assetId,key:uploadedKey,kind,eventId,matchId,playerIds,ownerId:a.id,caption,created:Date.now(),type:image.type,size:file.size});
-  s.audits.push({id:crypto.randomUUID(),at:Date.now(),actor:a.id,action:'photoUpload',reason:kind==='avatar'?'更新头像':kind==='racket'?'上传战拍照片':'上传活动照片',changes:{assetId,eventId,matchId,playerIds}});
+  s.audits.push({id:crypto.randomUUID(),at:Date.now(),actor:a.id,action:'photoUpload',reason:kind==='avatar'?'更新头像':kind==='racket'?'上传战拍照片':'上传活动照片',changes:{assetId,eventId,matchId,playerIds,...rights}});
   await save(s,key,previous);uploadedKey=null;return Response.json({ok:true,id:assetId});
  }catch(error){
   if(uploadedKey&&env.BUCKET)try{await env.BUCKET.delete(uploadedKey)}catch{}

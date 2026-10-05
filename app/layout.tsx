@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./decor-layout.css";
 import AppRuntime from './app-runtime';
+import './legal.css';
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -32,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className="antialiased"><AppRuntime/>{children}</body>
+      <body className="antialiased"><AppRuntime/>{children}<footer className="legal-footer" aria-label="Legal information"><a href="/privacy">Privacy / 隐私说明</a><a href="/terms">Club rules / 使用规则</a></footer></body>
     </html>
   );
 }
