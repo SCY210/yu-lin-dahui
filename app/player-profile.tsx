@@ -10,6 +10,7 @@ const AvatarEditor=lazy(()=>import('./avatar-editor'));
 import FeatureGuide from './feature-guide';
 const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
+const AchievementCollection=lazy(()=>import('./achievement-collection'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import CultivationOrnament from './cultivation-ornament';
 
@@ -103,6 +104,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>
     </section>
 
+    <Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} own={isOwn}/></Deferred>
     {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

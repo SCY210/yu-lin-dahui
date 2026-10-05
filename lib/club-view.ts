@@ -1,4 +1,5 @@
 import {canDeletePhoto} from './domain/photo-deletion';
+import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
 import {leaderboard,annualLeaderboard,replayRating} from './domain/ranking';
@@ -14,6 +15,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const historicalIds=new Set(s.events.map(e=>e.id));
  const eventCollections=['bookings','registrations','attendance','rounds','matches','costs','settlements','payments','awardVotes'] as const;
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>historicalIds.has(row.eventId));
+ const achievements=achievementSnapshot({...history,events:s.events,matches:s.matches},now);
  // Deletion hides an activity's workspace; completed results stay historical facts.
  const monthly=leaderboard(history,period),annual=annualLeaderboard(history,year);
  const ratingHistory=admin?replayRating(structuredClone(history)):[];
@@ -31,6 +33,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   events:s.events.map(e=>({...e,...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings,registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   leaderboard:monthly.map(r=>({...r,...(!admin?{rating:null}:{})})),annualLeaderboard:annual.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingYear:year,period,
   social,
+  achievements,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
   tagVotes:s.tagVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),awardVotes:s.awardVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
