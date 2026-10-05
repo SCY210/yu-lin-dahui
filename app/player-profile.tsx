@@ -34,7 +34,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   if (!p) return null;
   const profile = {...defaults, ...p.profile};
   const isOwn = p.id === ctx.data.me.playerId;
-  const canEdit = ctx.admin || isOwn;
+  const canEdit = isOwn || (ctx.admin && (!p.protectedOwner || ctx.data.me.isOwner));
   const rules = ctx.data.settings.rules;
   const state = stats ?? {};
   const range=tensionRange(p.profile);
@@ -66,7 +66,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>
       {canEdit && <div className="pp-header-actions">
         <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>
-        {ctx.admin && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
+        {ctx.admin && canEdit && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
     </header>
     <CultivationOrnament variant="ribbon"/>

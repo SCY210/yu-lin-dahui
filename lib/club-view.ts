@@ -1,3 +1,4 @@
+import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
 import {leaderboard,annualLeaderboard,replayRating} from './domain/ranking';
 import {calculateSettlement} from './domain/money';
@@ -7,7 +8,7 @@ import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendanc
 
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now()){
  s=structuredClone(s);enableDefaultAttendance(s,now);applyDefaultAttendance(s);
- const admin=a.role==='admin',history={...s};
+ const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));
  const eventCollections=['bookings','registrations','attendance','rounds','matches','costs','settlements','payments','awardVotes'] as const;
@@ -23,8 +24,8 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const social=socialSnapshot(s,period,year,now,history);
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement(s,e,now));
  return {
-  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules},me:a,
-  players:s.players.map(p=>({...p,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!['grip','shoes'].includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a)},
+  players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!['grip','shoes'].includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events,deletedEvents,bookings:s.bookings,registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   leaderboard:monthly.map(r=>({...r,...(!admin?{rating:null}:{})})),annualLeaderboard:annual.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingYear:year,period,
   social,
@@ -32,6 +33,6 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   tagVotes:s.tagVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),awardVotes:s.awardVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>p),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
-  audits:admin?s.audits:[],accounts:admin?s.accounts:[],drafts,ratingHistory,
+  audits:admin?s.audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  };
 }

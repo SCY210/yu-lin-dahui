@@ -1,3 +1,5 @@
+import {assertAccountMutable,assertPlayerMutable} from '../../../lib/domain/ownership';
+import {publicApiError} from '../../../lib/api-error';
 import {z} from 'zod';
 import {load,raw,save,committed} from '../../../lib/store';
 import {getAppUser,hashToken,passwordEnabled,sessionCookie} from '../../../lib/auth';
@@ -114,6 +116,7 @@ export async function POST(req:Request){try{
   for(let attempt=0;attempt<4;attempt++){
    const s=await load();if(s.accounts.find(a=>a.id===user.userId)?.role!=='admin')return denied('管理员权限已变更');
    if(await committed(key))return result({ok:true,duplicate:true},req);
+   assertAccountMutable(s,s.accounts.find(a=>a.id===user.userId)!,p.accountId);
    if(!s.accounts.some(a=>a.id===p.accountId)||!await passwordEnabled(p.accountId))return denied('目标账号尚未开通密码登录',404);
    cred??=makePassword(p.password);const previous=structuredClone(s);
    s.audits.push({id:crypto.randomUUID(),at:Date.now(),actor:user.userId,action:'resetAccountPassword',reason:'管理员重置登录密码',changes:{accountId:p.accountId}});
@@ -125,6 +128,7 @@ export async function POST(req:Request){try{
  }
  if(action==='createAccount'){
   const p=z.object({name:z.string().trim().min(1).max(150),username,password,requestId:z.string().uuid(),playerId:z.string().optional(),accountId:z.string().optional()}).parse(input);
+  if(p.accountId&&p.playerId)return denied('请只选择账号或球友档案中的一种绑定方式',400);
   const key=actor.id+':createAccount:'+p.requestId,newId='account:'+crypto.randomUUID(),newPlayerId=crypto.randomUUID();
   let cred:ReturnType<typeof makePassword>|undefined;
   for(let attempt=0;attempt<4;attempt++){
@@ -133,9 +137,13 @@ export async function POST(req:Request){try{
    if(await raw().prepare('SELECT id FROM password_credentials WHERE username=?').bind(p.username).first())return denied('这个账号名已被使用',409);
    const existing=p.accountId?s.accounts.find(a=>a.id===p.accountId):undefined;
    if(p.accountId&&!existing)return denied('原账号不存在',404);
+   const freshActor=s.accounts.find(a=>a.id===user.userId)!;
+   if(existing)assertAccountMutable(s,freshActor,existing.id);
+   if(p.playerId)assertPlayerMutable(s,freshActor,p.playerId);
    if(existing&&await passwordEnabled(existing.id))return denied('原账号已有登录账号，请使用重置密码',409);
    const player=existing?s.players.find(v=>v.id===existing.playerId):p.playerId?s.players.find(v=>v.id===p.playerId):undefined;
    if((existing||p.playerId)&&!player)return denied('球友档案不存在',404);
+   if(player)assertPlayerMutable(s,freshActor,player.id);
    if(!existing&&player&&s.accounts.some(a=>a.playerId===player.id))return denied('该球友已有账号，请开通原账号或重置密码',409);
    const accountId=existing?.id??newId,playerId=player?.id??newPlayerId;
    cred??=makePassword(p.password);const previous=structuredClone(s);
@@ -150,4 +158,4 @@ export async function POST(req:Request){try{
   }
  }
  return denied('操作未完成，请稍后重试',409);
-}catch(e){return denied(e instanceof z.ZodError?'请检查输入：账号2–32位中英文、数字、_或-；密码至少12位':'登录操作未完成，请刷新后重试',400)}}
+}catch(e){if(e instanceof z.ZodError)return denied('请检查输入：账号2–32位中英文、数字、_或-；密码至少12位',400);const safe=publicApiError(e);return denied(safe.error,safe.status)}}

@@ -106,7 +106,7 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
 export default function RacketGallery({ctx, playerId}:any) {
   const player = ctx.data.players.find((p:any)=>p.id === playerId);
   const isOwn = playerId === ctx.data.me.playerId;
-  const canUpload = !!player && (ctx.admin || isOwn);
+  const canUpload = !!player && (isOwn || (ctx.admin && (!player.protectedOwner || ctx.data.me.isOwner)));
   const photos = (ctx.data.photos ?? []).filter((photo:any)=>photo.kind === 'racket' && photo.playerIds?.includes(playerId)).slice().sort((a:any,b:any)=>b.created-a.created);
   const playerName = player?.name || '球友';
   return <section className="racket-gallery" aria-label={playerName+'的战拍照片'}>
