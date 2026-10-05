@@ -20,7 +20,7 @@ export async function applyCourtSignup(s:State,a:Account,action:string,input:unk
  if(['ended','cancelled'].includes(e.status))fail('活动已结束');
  let r=s.registrations.find(x=>x.eventId===e.id&&x.playerId===p.playerId),row=r?.bookingSignups?.find(x=>x.bookingId===b.id);
  if(action==='courtRegister'){
-  if(!player.enabled)fail('成员已停用');if(!manager&&(e.status!=='open'||now>e.signupDeadline))fail('报名已截止');if(!manager&&now>=b.end)fail('该场地时段已结束');
+  if(!player.enabled)fail('成员已停用');if(!manager&&e.status!=='open')fail('当前活动未开放报名');if(!manager&&now>=b.end)fail('该场地时段已结束');
   if(p.arrival<b.start||p.departure>b.end||p.departure<=p.arrival)fail('参加时间必须在所选场地时段内');
   if(r?.bookingSignups?.some(x=>x.bookingId!==b.id&&x.status!=='cancelled'&&x.arrival<p.departure&&x.departure>p.arrival))fail('你已报名其他场地的重叠时段，请先取消或调整');
   if(s.matches.some(m=>m.eventId===e.id&&m.status==='playing'&&[...m.a,...m.b].includes(player.id)))fail('成员正在比赛，请先完成比赛');
