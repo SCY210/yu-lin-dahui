@@ -1,0 +1,8 @@
+.event-shuttles h3{margin:0}.event-shuttles>.row{gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.shuttle-selected{border:1px solid #c7c4f1;border-radius:12px;padding:14px 16px;background:var(--accent);display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.shuttle-selected .badge{display:inline-flex;align-items:center;gap:5px}.shuttle-selected>strong{font-size:18px;overflow-wrap:anywhere}.shuttle-selected>p{flex-basis:100%;margin:0;font-size:14px;white-space:pre-wrap}
+.shuttle-options{display:grid;gap:12px;margin:16px 0}.shuttle-option{padding:16px;border:1px solid var(--border);border-radius:12px;min-width:0}.shuttle-option.is-selected{border-color:#b7b1ef}
+.shuttle-option-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}.shuttle-option-heading strong{font-size:16px;overflow-wrap:anywhere}.shuttle-option-heading>span{font-size:14px;color:var(--muted-foreground)}.shuttle-option>p{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.shuttle-vote-track{height:6px;border-radius:6px;background:var(--muted);margin:12px 0 14px;overflow:hidden}.shuttle-vote-track>span{display:block;height:100%;background:var(--primary);border-radius:inherit}
+.event-shuttles .actions{gap:8px}.event-shuttles button{min-height:44px}
+@media(max-width:600px){.shuttle-option{padding:13px}.event-shuttles .actions{flex-wrap:wrap}}
