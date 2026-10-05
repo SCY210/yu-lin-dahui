@@ -11,7 +11,30 @@ export const achievementCatalog=[
 
 export type AchievementId=typeof achievementCatalog[number]['id'];
 export type AchievementMetric=typeof achievementCatalog[number]['metric'];
-export type AchievementProgress={current:number;unlockedAt:number|null};
-export type AchievementSummary={unlockedCount:number;progress:Record<AchievementId,AchievementProgress>};
+export const achievementRanks=[
+ {level:1,name:'青铜',description:'朴素铜边 · 初识羽林'},
+ {level:2,name:'白银',description:'银色双叶 · 稳步成长'},
+ {level:3,name:'黄金',description:'金色羽翼 · 实力绽放'},
+ {level:4,name:'铂金',description:'铂金卷纹 · 深厚积累'},
+ {level:5,name:'钻石',description:'晶钻冠饰 · 生涯里程碑'},
+] as const;
+export const achievementTargets:Record<AchievementId,readonly [number,number,number,number,number]>={
+ 'first-flight':[1,3,5,10,20],'first-victory':[1,3,5,10,20],
+ 'ten-matches':[10,20,30,40,50],'fifty-matches':[50,75,100,150,200],
+ 'ten-victories':[10,20,30,40,50],'three-streak':[3,4,5,6,8],
+ 'five-partners':[5,6,8,10,12],'three-game-victory':[1,3,5,10,20],
+};
+export type AchievementProgress={current:number;unlockedAt:number|null;level:number;levelUnlockedAt:(number|null)[]};
+export type AchievementSummary={unlockedCount:number;totalLevels:number;progress:Record<AchievementId,AchievementProgress>};
+export const rankImage=(level:number)=>'/badges/ranks/level-'+Math.max(1,Math.min(5,level))+'.webp';
+export function achievementLevel(id:AchievementId,current:number){return achievementTargets[id].filter(target=>current>=target).length}
+export function achievementGoal(id:AchievementId,target:number){
+ const metric=achievementCatalog.find(a=>a.id===id)!.metric;
+ if(metric==='matches')return '累计完成 '+target+' 场有效比赛';
+ if(metric==='wins')return '累计赢得 '+target+' 场有效比赛';
+ if(metric==='bestStreak')return '达成 '+target+' 场连胜';
+ if(metric==='partners')return '与 '+target+' 位不同搭档完成有效比赛';
+ return '累计赢得 '+target+' 场打满三局的有效比赛';
+}
 
 export const badgeImage=(id:AchievementId)=>'/badges/'+id+'.webp';

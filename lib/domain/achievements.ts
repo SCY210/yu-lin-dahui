@@ -1,4 +1,4 @@
-import {achievementCatalog,type AchievementMetric,type AchievementSummary} from '../achievement-catalog';
+import {achievementCatalog,achievementTargets,type AchievementMetric,type AchievementSummary} from '../achievement-catalog';
 import {winner} from './social';
 import type {State,Match} from './types';
 
@@ -17,7 +17,7 @@ export function achievementSnapshot(s:State,now=Date.now()):Record<string,Achiev
  const totals=new Map<string,{metrics:Record<AchievementMetric,number>;streak:number;partners:Set<string>;summary:AchievementSummary}>();
  for(const p of s.players)totals.set(p.id,{
   metrics:{matches:0,wins:0,bestStreak:0,partners:0,threeGameWins:0},streak:0,partners:new Set(),
-  summary:{unlockedCount:0,progress:Object.fromEntries(achievementCatalog.map(a=>[a.id,{current:0,unlockedAt:null}])) as AchievementSummary['progress']},
+  summary:{unlockedCount:0,totalLevels:0,progress:Object.fromEntries(achievementCatalog.map(a=>[a.id,{current:0,unlockedAt:null,level:0,levelUnlockedAt:[null,null,null,null,null]}])) as AchievementSummary['progress']},
  });
  const seen=new Set<string>();
  const matches=s.matches.filter(m=>eventIds.has(m.eventId)&&validResult(m,now)).sort((a,b)=>a.end!-b.end!||a.id.localeCompare(b.id));
@@ -35,7 +35,10 @@ export function achievementSnapshot(s:State,now=Date.now()):Record<string,Achiev
    }else row.streak=0;
    for(const a of achievementCatalog){
     const progress=row.summary.progress[a.id];progress.current=row.metrics[a.metric];
-    if(progress.unlockedAt===null&&progress.current>=a.target){progress.unlockedAt=m.end;row.summary.unlockedCount++}
+    for(const [index,target]of achievementTargets[a.id].entries())if(progress.levelUnlockedAt[index]===null&&progress.current>=target){
+     progress.levelUnlockedAt[index]=m.end;progress.level++;row.summary.totalLevels++;
+     if(index===0){progress.unlockedAt=m.end;row.summary.unlockedCount++}
+    }
    }
   }
  }
