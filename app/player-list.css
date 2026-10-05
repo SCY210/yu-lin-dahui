@@ -11,30 +11,21 @@
 .pl-directory-heading h2{display:flex;align-items:center;gap:9px;margin:0;font-size:21px;color:#282252}
 .pl-directory-heading p{margin:7px 0 0;color:#737087;font-size:14px;line-height:1.7}
 .pl-count{flex-shrink:0;border:1px solid #ded9ef;border-radius:999px;background:#f2effa;padding:6px 11px;font-size:12px;color:#625889}
-.pl-player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.pl-player-card{display:flex;align-items:center;gap:13px;width:100%;min-width:0;min-height:108px;text-align:left;padding:21px 18px;border:1px solid #e2ddef;border-radius:19px;background:linear-gradient(145deg,#fff 65%,#f8f5ff);color:#282252;box-shadow:0 5px 18px #51418406;transition:border-color .18s,box-shadow .18s,transform .18s}
-.pl-player-card:hover{border-color:#b7a9dd;box-shadow:0 7px 22px #51418412;transform:translateY(-2px)}
-.pl-player-card:active{transform:translateY(0)}
-.pl-player-card .avatar{width:49px;height:49px;font-size:22px;background:#eeebfa;color:#5e46a1;object-fit:cover;border:1px solid #e4ddf5}
-.pl-player-info{display:flex;flex:1;min-width:0;flex-direction:column;gap:8px}
-.pl-player-info>strong{font-size:17px;font-weight:650;overflow-wrap:anywhere;line-height:1.35}
-.pl-player-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.pl-tier{padding:3px 7px;border-radius:6px;background:#eeebfa;color:#65518e;font-size:11px;line-height:1.6}
-.pl-state{font-size:11px;line-height:1.6;color:#82768f}
-.pl-card-arrow{flex-shrink:0;color:#a39ab8}
+
 .pl-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:23px 0 25px}
 .pl-detail-heading>div{text-align:right}
 .pl-detail-heading h1{margin:5px 0 0;font-size:25px;color:#2e2656}
 .pl-detail-heading .eyebrow{margin:0;color:#8775a6;font-size:10px;letter-spacing:1.8px}
 .pl-back{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border:1px solid #ded5ee;border-radius:12px;background:#f4f0fb;color:#625084;font-size:14px;font-weight:600}
 .pl-back:hover{background:#ece4f8;border-color:#c5b3e2}
-.pl-back:focus-visible,.pl-player-card:focus-visible,.pl-relation-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px}
+.pl-back:focus-visible,.pl-relation-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px}
 .pl-relation-link{min-height:44px}
 .pl-detail{min-width:0}
 .pl-detail .relation-row{gap:10px;flex-wrap:wrap}
 .pl-detail .relation-row>span{overflow-wrap:anywhere}
 .pl-hub .social-tabs{min-height:48px}
 .pl-hub .social-tabs button{min-height:44px}
-@media(max-width:1040px){.pl-player-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.pl-directory{margin-top:22px}.pl-directory-heading{gap:10px;align-items:flex-start}.pl-directory-heading h2{font-size:19px}.pl-directory-heading p{font-size:13px;max-width:230px}.pl-count{font-size:11px;padding:6px 9px}.pl-player-grid{grid-template-columns:1fr;gap:11px}.pl-player-card{min-height:91px;padding:17px 16px;border-radius:17px;gap:13px}.pl-player-card .avatar{width:45px;height:45px;font-size:20px}.pl-player-info>strong{font-size:16px}.pl-player-badges{gap:7px}.pl-tier,.pl-state{font-size:12px}.pl-detail-heading{gap:12px;margin:20px 0 23px}.pl-detail-heading h1{font-size:22px}.pl-detail-heading .eyebrow{font-size:9px;letter-spacing:1px}.pl-back{font-size:13px;padding:10px 12px}.pl-hub .social-tabs button{font-size:14px}}
-@media(prefers-reduced-motion:reduce){.pl-player-card{transition:none}.pl-player-card:hover{transform:none}}
+@media(max-width:600px){.pl-directory{margin-top:22px}.pl-directory-heading{gap:10px;align-items:flex-start}.pl-directory-heading h2{font-size:19px}.pl-directory-heading p{font-size:13px;max-width:230px}.pl-count{font-size:11px;padding:6px 9px}.pl-detail-heading{gap:12px;margin:20px 0 23px}.pl-detail-heading h1{font-size:22px}.pl-detail-heading .eyebrow{font-size:9px;letter-spacing:1px}.pl-back{font-size:13px;padding:10px 12px}.pl-hub .social-tabs button{font-size:14px}}
+
+.pl-mobile-hint{display:none}
+@media(max-width:760px){.pl-mobile-hint{display:inline}.pl-desktop-hint{display:none}}

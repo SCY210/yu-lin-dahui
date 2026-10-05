@@ -26,7 +26,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  return {
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a)},
   players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!['grip','shoes'].includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
-  events:s.events,deletedEvents,bookings:s.bookings,registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
+  events:s.events.map(e=>({...e,...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,bookings:s.bookings,registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   leaderboard:monthly.map(r=>({...r,...(!admin?{rating:null}:{})})),annualLeaderboard:annual.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingYear:year,period,
   social,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),

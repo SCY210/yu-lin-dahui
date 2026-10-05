@@ -1,17 +1,18 @@
 'use client';
+import Deferred from './deferred';
 import RealmProgress from './realm-progress';
 
-import {useState} from 'react';
+import {lazy,useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
-import PhotoGallery from './photo-gallery';
+const PhotoGallery=lazy(()=>import('./photo-gallery'));
 import FeatureGuide from './feature-guide';
-import RacketGallery from './racket-gallery';
+const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import CultivationOrnament from './cultivation-ornament';
 
-const defaults = {years:0, hand:'right', preference:'doubles', style:'', equipment:'', level:'beginner', racket:'', strings:''};
+const defaults = {years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', level:'beginner', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
 const levels:Record<string,string> = {beginner:'萌新', intermediate:'进阶', advanced:'高手'};
@@ -44,6 +45,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
     choice('level', '自评水平', [['beginner','萌新'], ['intermediate','进阶'], ['advanced','高手']]),
+    optional('motto', (isOwn ? '我的口号' : '这位球友的口号')+'（最多80字）'),
     optional('style', (isOwn ? '我的打法' : '这位球友的打法')+'（最多300字）'),
     optional('racket', '战拍品牌 / 型号（最多120字）'),
     optional('strings', '拍线品牌 / 型号（最多120字）'),
@@ -79,6 +81,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
         <Fact label="自评水平" value={levels[p.profile?.level]}/>
       </dl>
+      <div className="pp-style"><span>{isOwn ? '我的口号' : '这位球友的口号'}</span><p className={profile.motto ? '' : 'pp-unfilled'}>{profile.motto || '尚未填写'}</p></div>
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section>
 
@@ -90,7 +93,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="穿线磅数范围" value={tensionLabel(p.profile)}/>
       </dl>
       <div className="pp-equipment-note"><span>其他装备与备注</span><p className={profile.equipment ? '' : 'pp-unfilled'}>{profile.equipment || '尚未填写'}</p></div>
-      <RacketGallery ctx={ctx} playerId={p.id}/>
+      <Deferred><RacketGallery ctx={ctx} playerId={p.id}/></Deferred>
     </section>
 
     <section className="pp-section" aria-label="比赛统计">
@@ -102,6 +105,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>
     </section>
 
-    {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></details>}
+    {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

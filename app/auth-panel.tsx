@@ -19,7 +19,7 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
   if(binding){toast.success('账号登录已开通，原权限和记录已保留');onBound?.()}else location.reload();
  }catch(e){if(!sessionInvalidated.current)setError((e as Error).message)}finally{if(!sessionInvalidated.current)setBusy(false)}}
  return <div className={binding?'auth-bind':'auth-card'}>
- {!binding&&<div className="auth-decoration" aria-hidden="true"><img src="/shuttlecock.png" width={1309} height={1202} alt=""/></div>}
+ {!binding&&<div className="auth-decoration" aria-hidden="true"><img src="/shuttlecock.webp" width={512} height={470} alt=""/></div>}
  <h1>{binding?'开通账号登录':'登录羽林大会'}</h1>
  <p className="muted">{binding?'设置自己的账号和密码，保留现有管理员权限、球友档案和比赛记录。':'使用管理员为你创建的账号和密码。'}</p>
  <form onSubmit={submit}><div className="form-fields">

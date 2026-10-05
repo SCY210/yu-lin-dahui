@@ -16,6 +16,42 @@ test('三局两胜以局数确定胜者，而非总分；Elo及月榜正确',asy
 test('复仇挑战必须来源于失利，只有目标可以接受，管理员关联双方对位比赛',async()=>{const {s}=fixture();s.matches.push(match('loss',['A','B'],['C','D'],false));await assert.rejects(()=>apply(s,s.accounts[1],'challenge',{targetId:'E'},start),/尚未/);await apply(s,s.accounts[1],'challenge',{targetId:'C'},start);const c=s.challenges[0];await assert.rejects(()=>apply(s,s.accounts[3],'challengeRespond',{challengeId:c.id,status:'accepted'},start),/403/);await apply(s,s.accounts[2],'challengeRespond',{challengeId:c.id,status:'accepted'},start);const m=match('next');m.status='draft';s.matches.push(m);await apply(s,s.accounts[0],'challengeMatch',{challengeId:c.id,matchId:m.id},start);assert.equal(c.matchId,m.id);await assert.rejects(()=>apply(s,s.accounts[1],'challengeMatch',{challengeId:c.id,matchId:m.id},start),/403/)});
 test('标签投票一人一票可撤回，活动奖项立即开放、每账号每类一票且权限正确',async()=>{const {s,e}=fixture();await apply(s,s.accounts[1],'tagVote',{playerId:'A',tag:'防守怪',active:true},start);await apply(s,s.accounts[1],'tagVote',{playerId:'A',tag:'防守怪',active:true},start);assert.equal(s.tagVotes.length,1);await apply(s,s.accounts[1],'tagVote',{playerId:'A',tag:'防守怪',active:false},start);assert.equal(s.tagVotes.length,0);await apply(s,s.accounts[1],'awardVote',{eventId:e.id,playerId:'A',category:'mvp'},start);e.status='ended';await apply(s,s.accounts[1],'awardVote',{eventId:e.id,playerId:'A',category:'mvp'},e.end);await apply(s,s.accounts[1],'awardVote',{eventId:e.id,playerId:'C',category:'mvp'},e.end);assert.equal(s.awardVotes.length,1);assert.equal(s.awardVotes[0].playerId,'C');await assert.rejects(()=>apply(s,s.accounts[1],'awardVote',{eventId:e.id,playerId:'B',category:'mvp'},e.end),/其他球友/)});
 test('球友档案只允许自己、代报者或管理员编辑',async()=>{const {s}=fixture();const p={playerId:'B',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate'};await apply(s,s.accounts[1],'profileDetails',p,start);assert.equal(s.players[1].profile?.hand,'left');await assert.rejects(()=>apply(s,s.accounts[2],'profileDetails',p,start),/403/)});
+
+test('个人口号按本人档案保存并trim，空白可清空且不修改姓名',async()=>{
+ const {s}=fixture(),owner=s.accounts[1],player=s.players[1],name=player.name;
+ const p={playerId:player.id,years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate'};
+ await apply(s,owner,'profileDetails',{...p,motto:'  每一拍都全力以赴  ',name:'不能自行改名'},start);
+ assert.equal(player.profile?.motto,'每一拍都全力以赴');assert.equal(player.name,name);
+ await apply(s,owner,'profileDetails',{...p,motto:'球'.repeat(80)},start);assert.equal(player.profile?.motto?.length,80);
+ await apply(s,owner,'profileDetails',{...p,motto:'   '},start);assert.equal(player.profile?.motto,'');
+});
+
+test('个人口号超过80字时拒绝且State完全不变',async()=>{
+ const {s}=fixture(),owner=s.accounts[1];
+ const p={playerId:'B',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate'};
+ await apply(s,owner,'profileDetails',{...p,motto:'保留口号'},start);const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,owner,'profileDetails',{...p,motto:'球'.repeat(81),style:'不应被保存'},start));
+ assert.deepEqual(s,before);
+});
+
+test('旧档案payload省略或undefined口号时保留旧值',async()=>{
+ const {s}=fixture(),owner=s.accounts[1],player=s.players[1];
+ const p={playerId:'B',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate'};
+ await apply(s,owner,'profileDetails',{...p,motto:'球场见'},start);
+ await apply(s,owner,'profileDetails',{...p,style:'新打法'},start);assert.equal(player.profile?.motto,'球场见');
+ await apply(s,owner,'profileDetails',{...p,motto:undefined},start);assert.equal(player.profile?.motto,'球场见');
+});
+
+test('口号字段沿用本人编辑与群主保护，普通成员不能改他人或姓名',async()=>{
+ const {s}=fixture();s.settings.ownerAccountId=s.accounts[0].id;
+ s.accounts[2].role='admin';
+ const profile={years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate',motto:'越权口号'};
+ for(const [actor,target] of [[s.accounts[1],'C'],[s.accounts[2],'A']] as const){
+  const before=structuredClone(s);await assert.rejects(()=>apply(s,actor,'profileDetails',{...profile,playerId:target},start),/403/);assert.deepEqual(s,before);
+ }
+ const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[1],'profile',{playerId:'B',name:'越权改名'},start),/403/);assert.deepEqual(s,before);
+ await apply(s,s.accounts[0],'profileDetails',{...profile,playerId:'A',motto:'群主自己的口号'},start);assert.equal(s.players[0].profile?.motto,'群主自己的口号');
+});
 test('穿线磅数范围验证、兼容旧值、空值清除及旧客户端保留',async()=>{
  const {s}=fixture();const player=s.players[1],owner=s.accounts[1];
  const p={playerId:'B',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'测试球拍',level:'intermediate'};

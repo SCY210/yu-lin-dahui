@@ -1,6 +1,6 @@
 'use client';
 import {cultivationRealms} from '@/lib/domain/cultivation';
-import {Avatar} from './social-hub';
+import {Avatar} from './avatar';
 import MonthPicker,{YearPicker} from './month-picker';
 import FeatureGuide from './feature-guide';
 import RankingPodium from './ranking-podium';

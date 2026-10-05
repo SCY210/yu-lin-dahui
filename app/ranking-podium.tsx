@@ -2,7 +2,7 @@
 
 import {useId} from 'react';
 import {Crown,Sparkles} from 'lucide-react';
-import {Avatar} from './social-hub';
+import {Avatar} from './avatar';
 import './ranking-podium.css';
 
 function Medal({rank}: {rank: number}) {
