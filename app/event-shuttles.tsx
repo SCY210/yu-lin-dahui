@@ -13,6 +13,7 @@ export default function EventShuttles({e,ctx}:{e:Event;ctx:any}){
  const plan=e.shuttlePlan,options=plan?.options??[],selected=options.find(o=>o.id===plan?.selectedId);
  const manager=canManageEvent(data.me,e),editable=manager&&!['ended','cancelled'].includes(e.status);
  const participants=shuttleParticipantIds(data,e.id),counts=shuttleVoteCounts(data,e),canVote=canVoteForShuttle(data,e,data.me,now);
+ const waiting=data.registrations.some((r:any)=>r.eventId===e.id&&r.playerId===data.me.playerId&&r.status==='waitlist');
  const mine=plan?.votes.find(v=>v.voterId===data.me.id);
  const total=Object.values(counts).reduce((sum,count)=>sum+count,0);
  const votingOpen=!!plan?.votingOpen&&now<e.start&&['open','locked'].includes(e.status);
@@ -36,8 +37,8 @@ export default function EventShuttles({e,ctx}:{e:Event;ctx:any}){
      </div>
     </div>;
    })}</div>
-   <p className="hint">正式接龙与候补成员每个账号一票，可改投或撤回。投票仅供参考，最终由创建者确认用球。</p>
-   {votingOpen&&!participants.has(data.me.playerId)&&<p className="hint">先参加本次接龙，即可投票。</p>}
+   <p className="hint">仅正式接龙成员每个账号一票，候补成员不能投票，可改投或撤回。投票仅供参考，最终由创建者确认用球。</p>
+   {votingOpen&&!participants.has(data.me.playerId)&&<p className="hint">{waiting?'你目前是候补，转为正式接龙后才能投票。':'请使用本人账号正式接龙后再投票。'}</p>}
    {editable&&<div className="actions">
     {now<e.start&&['open','locked'].includes(e.status)&&<button type="button" className="secondary" disabled={busy} onClick={()=>send('shuttleVoting',{eventId:e.id,open:!plan?.votingOpen})}>{plan?.votingOpen?'关闭投票':'开放投票'}</button>}
     {selected&&<button type="button" className="ghost" disabled={busy} onClick={()=>open('清除用球确认','shuttleConfirm',{eventId:e.id,optionId:null},[],undefined,'清除当前用球确认并保留候选球与票数，需要时可再次开放投票。')}>清除确认</button>}

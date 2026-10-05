@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {CalendarDays,Check,Shuffle} from 'lucide-react';
 import {canManageEvent} from '../lib/domain/permissions';
 import {pointsWindow} from '../lib/domain/points-window';
-import {canVotePointsMode,pointsChoiceCounts,pointsModeLabels,type PointsMode} from '../lib/domain/points-voting';
+import {canVotePointsMode,pointsVotingOpen,pointsChoiceCounts,pointsModeLabels,type PointsMode} from '../lib/domain/points-voting';
 import {dt,epoch,hm,halfTimed,choice} from './ui';
 import type {Event} from '../lib/domain/types';
 import './event-points-plan.css';
@@ -14,6 +14,8 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
  const manager=canManageEvent(data.me,e),editable=manager&&!['ended','cancelled','draft'].includes(e.status);
  const window=pointsWindow(e),minutes=Math.round((window.end-window.start)/60000),free=Math.max(0,Math.round((e.end-window.end)/60000));
  const counts=pointsChoiceCounts(data,e),mine=e.pointsChoice?.votes.find(v=>v.voterId===data.me.id),canVote=canVotePointsMode(data,e,data.me,now);
+ const votingOpen=pointsVotingOpen(e,now);
+ const waiting=data.registrations.some((r:any)=>r.eventId===e.id&&r.playerId===data.me.playerId&&r.status==='waitlist');
  const started=data.matches.some((m:any)=>m.eventId===e.id&&['playing','complete','forfeit'].includes(m.status));
  const rounds=data.rounds.filter((r:any)=>r.eventId===e.id&&r.pointsSlot!==undefined&&r.status!=='cancelled'),drafts=rounds.filter((r:any)=>r.status==='draft');
  const recommend=e.pointsChoice?.selectedMode??(counts.fixed>counts.rotate?'fixed':'rotate');
@@ -32,9 +34,9 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
    <div className="actions"><button type="button" className={'tag-button'+(mine?.mode===mode?' active':'')} aria-pressed={mine?.mode===mode&&canVote} disabled={!canVote||busy} onClick={()=>send('pointsModeVote',{eventId:e.id,mode:mine?.mode===mode?null:mode})}>{mine?.mode===mode?'撤回投票':'投这一种'}</button>
    {editable&&!started&&e.pointsChoice?.selectedMode!==mode&&<button type="button" className="ghost" disabled={busy} onClick={()=>confirm(mode)}>确认此方式</button>}</div>
   </div>)}</div>
-  <p className="hint">正式接龙和候补成员每个账号一票，可改投或撤回。投票仅供参考，创建者确认后安排比赛。</p>
-  {editable&&!started&&now<e.start&&<button type="button" className="secondary" disabled={busy} onClick={()=>send('pointsModeVoting',{eventId:e.id,open:!e.pointsChoice?.votingOpen})}>{e.pointsChoice?.votingOpen?'关闭搭档投票':'开放搭档投票'}</button>}
-  {!canVote&&<p className="hint" role="status">{now>=e.start?'活动已开始，搭档投票已关闭。':e.pointsChoice?.votingOpen?'参加本次接龙后即可投票。':'搭档投票尚未开放或已确认。'}</p>}
+  <p className="hint">仅正式接龙成员每个账号一票，候补成员不能投票，可改投或撤回。未确认搭档方式时默认开放投票；投票仅供参考，创建者确认后关闭投票并安排比赛。</p>
+  {editable&&!started&&now<e.start&&<button type="button" className="secondary" disabled={busy} onClick={()=>send('pointsModeVoting',{eventId:e.id,open:!votingOpen})}>{votingOpen?'关闭搭档投票':'开放搭档投票'}</button>}
+  {!canVote&&<p className="hint" role="status">{waiting?'你目前是候补，转为正式接龙后才能投票。':now>=e.start?'活动已开始，搭档投票已关闭。':votingOpen?'请使用本人账号正式接龙后再投票。':e.pointsChoice?.selectedMode?'创建者已确认搭档方式，投票已关闭。':'创建者已关闭搭档投票。'}</p>}
   {planning&&editable&&<div className="actions points-plan-actions">
    <button type="button" className="primary" disabled={busy||started||e.playMode==='arena'} onClick={arrange}><CalendarDays size={17} aria-hidden="true"/>{rounds.length?'重新分配积分赛':'一次分配积分赛'}</button>
    {drafts.length>0&&<button type="button" className="secondary" disabled={busy||started} onClick={()=>open('发布全部积分赛分组','publishPoints',{eventId:e.id},[],undefined,`发布 ${drafts.length} 轮草稿，成员可按时间查看搭档、对手与轮休安排。`)}><Check size={17} aria-hidden="true"/>发布全部分组</button>}

@@ -1,9 +1,9 @@
 import {z} from 'zod';
 import {authorizeEventAction} from './permissions';
-import {canVotePointsMode} from './points-voting';
+import {canVotePointsMode,pointsVotingOpen} from './points-voting';
 import {fail,type State,type Event,type Account} from './types';
 
-export {pointsModeLabels,pointsChoiceCounts,canVotePointsMode,type PointsMode} from './points-voting';
+export {pointsModeLabels,pointsChoiceCounts,canVotePointsMode,pointsVotingOpen,type PointsMode} from './points-voting';
 
 const id=z.string().min(1).max(100),mode=z.enum(['rotate','fixed']);
 const schemas:Record<string,z.ZodTypeAny>={
@@ -16,9 +16,9 @@ export async function applyPointsChoice(s:State,a:Account,action:string,input:un
  const p=schema.parse(input) as any;if(action!=='pointsModeVote')authorizeEventAction(s,a,action,p);
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(['ended','cancelled'].includes(e.status))fail('活动已结束或取消');
- const choice=e.pointsChoice??{votes:[],votingOpen:false};
+ const choice=e.pointsChoice??{votes:[],votingOpen:pointsVotingOpen(e,now)};
  if(action==='pointsModeVote'){
-  if(!canVotePointsMode(s,e,a,now))fail('403: 仅已接龙成员可在活动开始前参与开放的搭档投票');
+  if(!canVotePointsMode(s,e,a,now))fail('403: 仅正式接龙成员可在活动开始前参与开放的搭档投票，候补不能投票');
   choice.votes=choice.votes.filter(v=>v.voterId!==a.id);
   if(p.mode!==null)choice.votes.push({id:crypto.randomUUID(),voterId:a.id,playerId:a.playerId,mode:p.mode,at:now});
  }else if(action==='pointsModeVoting'){
