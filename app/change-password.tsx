@@ -19,7 +19,7 @@ export default function ChangePassword({open,onOpenChange,onChanged}:{open:boole
    clear();onChanged();
   }catch(e){setError(e instanceof Error?e.message:'密码修改失败，请重试')}finally{setBusy(false)}
  }
- return <Dialog open={open} onOpenChange={changeOpen}><DialogContent className="app-dialog change-password-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(busy)ev.preventDefault()}} onInteractOutside={ev=>{if(busy)ev.preventDefault()}}>
+ return <Dialog open={open} historyCloseBlocked={busy} onOpenChange={changeOpen}><DialogContent className="app-dialog change-password-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(busy)ev.preventDefault()}} onInteractOutside={ev=>{if(busy)ev.preventDefault()}}>
   <DialogHeader><DialogTitle>修改密码</DialogTitle><DialogDescription>修改成功后将退出全部设备，请使用新密码重新登录。</DialogDescription></DialogHeader>
   <form onSubmit={submit}><div className="form-fields">
    <label>当前密码<input type="password" required minLength={1} maxLength={128} value={currentPassword} onChange={ev=>setCurrentPassword(ev.target.value)} autoComplete="current-password" disabled={busy}/></label>

@@ -24,5 +24,7 @@ export type Settings={name:string;inviteHash:string;rules:Rules;initialized:bool
 export type State={revision:number;settings:Settings;accounts:Account[];players:Player[];events:Event[];bookings:Booking[];registrations:Registration[];attendance:Attendance[];rounds:Round[];matches:Match[];costs:Cost[];settlements:Settlement[];payments:Payment[];seasons:Season[];audits:Audit[];ratingChanges:RatingChange[];challenges:Challenge[];tagVotes:TagVote[];awardVotes:AwardVote[];photos:Photo[]};
 export const defaultRules:Rules={win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'};
 export function emptyState():State{return {revision:0,settings:{name:'羽林大会',inviteHash:'',rules:{...defaultRules},initialized:false},accounts:[],players:[],events:[],bookings:[],registrations:[],attendance:[],rounds:[],matches:[],costs:[],settlements:[],payments:[],seasons:[],audits:[],ratingChanges:[],challenges:[],tagVotes:[],awardVotes:[],photos:[]};}
-export function fail(message:string):never{throw new Error(message)}
-export function month(t:number){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'}).formatToParts(t);return `${p.find(x=>x.type==='year')!.value}-${p.find(x=>x.type==='month')!.value}`}
+export class DomainError extends Error{constructor(message:string){super(message);this.name='DomainError'}}
+export function fail(message:string):never{throw new DomainError(message)}
+const monthFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'});
+export function month(t:number){const p=monthFormatter.formatToParts(t);return `${p.find(x=>x.type==='year')!.value}-${p.find(x=>x.type==='month')!.value}`}

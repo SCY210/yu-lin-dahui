@@ -52,7 +52,7 @@ const sourceOf=(value:unknown):ProfileSource|undefined=>{
 export class ClubNavigation {
  private frames:Frame[]=[];
  private index=0;
- private dialogClosers=new Map<string,()=>void>();
+ private dialogClosers=new Map<string,()=>boolean|void>();
  private listeners=new Set<(route:ClubRoute)=>void>();
  private moving=false;
  private afterMove:(()=>void)|null=null;
@@ -126,7 +126,7 @@ export class ClubNavigation {
   const close=this.dialogClosers.get(frame.dialog);this.dialogClosers.delete(frame.dialog);frame.dialog=null;this.write(false);close?.();
  }
  private move(delta:number){this.moving=true;this.port.go(delta)}
- openDialog(id:string,close:()=>void){
+ openDialog(id:string,close:()=>boolean|void){
   this.dialogClosers.set(id,close);
   const show=()=>{if(this.dialogClosers.has(id))this.push({...this.frames[this.index],route:this.route,dialog:id,scrollY:this.port.scrollY()})};
   if(this.moving)this.afterMove=show;else show();
@@ -137,7 +137,15 @@ export class ClubNavigation {
  }
  pop(state:unknown){
   this.rememberScroll();
-  const previous=this.frames[this.index],marker=markerOf(state);
+  const previousIndex=this.index,previous=this.frames[this.index],marker=markerOf(state);
+  const ownTarget=marker?.session===this.session&&marker.owner===this.owner&&Number.isInteger(marker.index)&&marker.index>=0&&this.frames[marker.index]&&sameRoute(this.frames[marker.index].route,normalizeRoute(marker.route));
+  if(ownTarget&&previous.dialog&&previous.dialog!==this.frames[marker!.index].dialog){
+   const close=this.dialogClosers.get(previous.dialog);
+   const wasMoving=this.moving;this.moving=true;let accepted:boolean|void;
+   try{accepted=close?.()}finally{this.moving=wasMoving}
+   if(accepted===false){this.move(previousIndex-marker!.index);return}
+   this.dialogClosers.delete(previous.dialog);
+  }
   if(marker?.session===this.session&&marker.owner===this.owner&&Number.isInteger(marker.index)&&marker.index>=0&&this.frames[marker.index]&&sameRoute(this.frames[marker.index].route,normalizeRoute(marker.route)))this.index=marker.index;
   else {
    const route=marker&&marker.owner!==this.owner?homeRoute:readClubRoute(this.port.href());

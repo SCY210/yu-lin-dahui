@@ -1,5 +1,5 @@
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
-import type {State,Event,Settlement,Mode,Exemption} from './types';
+import {fail,type State,type Event,type Settlement,type Mode,type Exemption} from './types';
 type Q={n:bigint;d:bigint};
 const q=(n:number|bigint,d:number|bigint=1):Q=>({n:BigInt(n),d:BigInt(d)});
 const add=(a:Q,b:Q):Q=>({n:a.n*b.d+b.n*a.d,d:a.d*b.d});
@@ -31,11 +31,11 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
   }
  };
  for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members');
- for(const c of s.costs.filter(c=>c.eventId===e.id)){const amount=c.type==='ball'?ballCents(c):c.cents;if(c.overrides?.length){if(c.overrides.reduce((a,x)=>a+x.cents,0)!==amount)throw new Error('球费时段调整合计必须等于总球费');for(const o of c.overrides)distribute(c.name,c.type==='ball'?'ball':'other',o.cents,o.start,o.end,e.ballMode,false,c.bearer)}
+ for(const c of s.costs.filter(c=>c.eventId===e.id)){const amount=c.type==='ball'?ballCents(c):c.cents;if(c.overrides?.length){if(c.overrides.reduce((a,x)=>a+x.cents,0)!==amount)fail('球费时段调整合计必须等于总球费');for(const o of c.overrides)distribute(c.name,c.type==='ball'?'ball':'other',o.cents,o.start,o.end,e.ballMode,false,c.bearer)}
   else if(c.start!==null&&c.end!==null)distribute(c.name,c.type==='ball'?'ball':'other',amount,c.start,c.end,c.type==='ball'?e.ballMode:'equal',false,c.bearer);
   else if(c.type==='ball'&&e.ballMode==='interval'){const weights:Record<string,number>={};const segs:{key:string;start:number;end:number}[]=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];const courts=s.bookings.filter(x=>x.eventId===e.id&&x.start<=a&&x.end>=b).length;if(active(a,b).length&&courts){weights[String(i)]=(b-a)*courts;segs.push({key:String(i),start:a,end:b})}}const parts=allocate(amount,weights);if(!segs.length)distribute(c.name,'ball',amount,e.start,e.end,e.ballMode,true,c.bearer);else for(const seg of segs)distribute(c.name,'ball',parts[seg.key],seg.start,seg.end,e.ballMode,true,c.bearer)}
   else distribute(c.name,c.type==='ball'?'ball':'other',amount,e.start,e.end,c.type==='ball'?e.ballMode:'equal',c.type==='ball',c.bearer);
  }
- if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)throw new Error('对账失败');return {eventId:e.id,bills,detail,total,subsidy,unallocated};
+ if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');return {eventId:e.id,bills,detail,total,subsidy,unallocated};
 }
 

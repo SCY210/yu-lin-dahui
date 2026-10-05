@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button"
 import { useDialogHistory } from "@/lib/client/club-navigation-react"
 
 function Dialog({
+  historyCloseBlocked = false,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  useDialogHistory(!!props.open, props.onOpenChange)
+}: React.ComponentProps<typeof DialogPrimitive.Root> & {historyCloseBlocked?: boolean}) {
+  useDialogHistory(!!props.open, props.onOpenChange, historyCloseBlocked)
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 

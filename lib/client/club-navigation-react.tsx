@@ -33,14 +33,14 @@ export function useClubNavigation(owner:string|undefined){
 }
 
 /** Shared by every app Dialog and AlertDialog, including account and feature-guide dialogs. */
-export function useDialogHistory(open:boolean,onOpenChange:((open:boolean)=>void)|undefined){
- const navigation=useContext(ClubNavigationContext),closeRef=useRef(onOpenChange);
- closeRef.current=onOpenChange;
+export function useDialogHistory(open:boolean,onOpenChange:((open:boolean)=>void)|undefined,blocked=false){
+ const navigation=useContext(ClubNavigationContext),closeRef=useRef(onOpenChange),blockedRef=useRef(blocked);
+ closeRef.current=onOpenChange;blockedRef.current=blocked;
  useEffect(()=>{
   if(!open||!navigation)return;
   const id=crypto.randomUUID();let cancelled=false;
   // Effect replay in development must not push a second phantom dialog entry.
-  queueMicrotask(()=>{if(!cancelled)navigation.openDialog(id,()=>closeRef.current?.(false))});
+  queueMicrotask(()=>{if(!cancelled)navigation.openDialog(id,()=>{if(blockedRef.current)return false;closeRef.current?.(false)})});
   return()=>{cancelled=true;navigation.dismissDialog(id)};
  },[open,navigation]);
 }

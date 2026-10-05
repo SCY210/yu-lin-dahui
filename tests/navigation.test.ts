@@ -104,3 +104,11 @@ test('changing ranking filters after returning from a profile persists latest se
  reloaded.updateRankingSelection({...latest,rankingPeriod:'monthly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'monthly');
  unsubscribe();
 });
+test('保存中的弹窗拒绝手机返回时恢复原历史位置，完成后可正常返回且不重复关闭',()=>{
+ const b=browser();let busy=true,closed=0;b.navigation.navigate({page:'events'});
+ b.navigation.openDialog('saving',()=>{if(busy)return false;closed++;return true});
+ b.back();assert.deepEqual(b.moves,[1]);assert.equal(b.navigation.route.page,'events');b.flush();assert.equal((b.port.state() as any).__yulinNavigation.dialog,'saving');assert.equal(closed,0);
+ b.back();b.flush();assert.equal(closed,0);assert.equal(b.entries.length,3);
+ busy=false;b.back();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);assert.equal(b.navigation.route.page,'events');
+ b.forward();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);
+});

@@ -1,3 +1,4 @@
+import {fail} from './domain/types';
 import {load,save} from './store';
 import {enableDefaultAttendance} from './domain/attendance';
 
@@ -12,5 +13,5 @@ export async function loadClubState(){
    throw error;
   }
  }
- throw new Error('409: 活动数据正在更新，请稍后重试');
+ fail('409: 活动数据正在更新，请稍后重试');
 }

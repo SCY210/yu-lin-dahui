@@ -59,3 +59,17 @@ test('planned automatic arrivals do not become arrival personality after their s
  assert.equal(personality.onTime,1);assert.equal(personality.early,0);
  assert.equal(v.events.find(e=>e.id===old.id)!.attendanceMode,undefined);assert.deepEqual(s.attendance,[{id:'actual-old',eventId:old.id,playerId:'self',start:old.start,end:old.end,state:'left'}]);
 });
+test('已完成活动改回私有草稿后，所有账号仍看到相同历史榜单与档案统计，草稿内容保持隔离',()=>{
+ const {s,me,start}=fixture();
+ for(const id of ['third','fourth'])s.players.push({id,ownerId:'other',name:id,rating:1000,initialRating:1000,ratedGames:0,enabled:true,ratingReason:''});
+ s.matches.push({id:'historical-draft-result',eventId:'hidden',roundId:'private-round',courtId:'court-hidden',a:['self','third'],b:['peer','fourth'],status:'complete',start,end:start+1200000,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'other'});
+ s.registrations.push({id:'private-reg',eventId:'hidden',playerId:'peer',sequence:1,status:'confirmed',arrival:start,departure:start+3600000,note:'私有报名备注',cancelRequested:false,registeredAt:start-60000,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
+ const member=projectClubState(s,me,'2026-10',2026,start),creator=projectClubState(s,s.accounts[1],'2026-10',2026,start),admin=projectClubState(s,{...me,role:'admin'},'2026-10',2026,start);
+ const publicRanking=(rows:typeof member.leaderboard)=>rows.map(({rating,...row})=>row);
+ assert.deepEqual(publicRanking(member.leaderboard),publicRanking(admin.leaderboard));assert.deepEqual(publicRanking(creator.leaderboard),publicRanking(admin.leaderboard));
+ assert.deepEqual(publicRanking(member.annualLeaderboard),publicRanking(admin.annualLeaderboard));assert.equal(member.leaderboard.find(r=>r.playerId==='self')!.points,3);
+ assert.deepEqual(member.social.stats,admin.social.stats);assert.equal(member.social.stats.find(p=>p.playerId==='self')!.games,1);
+ assert.ok(!member.events.some(e=>e.id==='hidden'));assert.ok(!member.matches.some(m=>m.id==='historical-draft-result'));assert.ok(!member.registrations.some(r=>r.id==='private-reg'));assert.ok(!('historical-draft-result' in member.social.matchLevels));assert.ok(!('hidden' in member.social.arenas));
+ assert.equal(member.social.personality.find(p=>p.playerId==='peer')!.fastSignup,0);assert.equal(admin.social.personality.find(p=>p.playerId==='peer')!.fastSignup,1);
+ assert.ok(member.players.every(p=>p.rating===null&&p.initialRating===null));assert.deepEqual(member.ratingHistory,[]);
+});

@@ -27,7 +27,7 @@ export function Forms({form,setForm,busy,action,danger,setDanger}:any){
  // Fields can emit multiple updates during one render (including native control
  // synchronization). Merge into the latest state instead of restoring old values.
  const updateValues=(values:Record<string,unknown>)=>setForm((current:Form|null)=>current?{...current,values:{...current.values,...values}}:current);
- return <><Dialog open={!!form} onOpenChange={v=>{if(!v&&!busy)setForm(null)}}>
+ return <><Dialog open={!!form} historyCloseBlocked={busy} onOpenChange={v=>{if(!v&&!busy)setForm(null)}}>
  <DialogContent className="app-dialog"><DialogHeader><DialogTitle>{form?.title}</DialogTitle><DialogDescription>{form?.description??'保存到群组共享记录。时间统一为马德里时间。'}</DialogDescription></DialogHeader>
  {form&&<form onSubmit={async ev=>{ev.preventDefault();try{await action(form.action,form.convert?form.convert(form.values):form.values)}catch{}}}>
  <div className="form-fields">{form.fields.map((f:Field)=><label key={f.key}>
