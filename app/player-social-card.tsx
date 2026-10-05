@@ -1,5 +1,5 @@
 'use client';
-import {useRef,useState,type ReactNode,type PointerEvent} from 'react';
+import {useEffect,useRef,useState,type ReactNode,type PointerEvent} from 'react';
 import {ArrowUpRight,RotateCcw,RotateCw} from 'lucide-react';
 import {tensionLabel} from '../lib/domain/tension';
 import './player-social-card.css';
@@ -10,7 +10,24 @@ function RacketMark({large=false}:{large?:boolean}){
 
 export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self,onProfile}:{player:any;stats:any;monthly:any;photo:any;avatar:ReactNode;self:boolean;onProfile:()=>void}){
  const [flipped,setFlipped]=useState(false),[failedPhoto,setFailedPhoto]=useState<string|null>(null);
- const tilt=useRef<HTMLDivElement>(null);
+ const tilt=useRef<HTMLDivElement>(null),front=useRef<HTMLButtonElement>(null),back=useRef<HTMLDivElement>(null);
+ const [turn,setTurn]=useState<'out'|'in'|null>(null);
+ const turning=useRef(false),target=useRef(false),restoreFocus=useRef(false);
+ useEffect(()=>{
+  if(!turn)return;
+  const timer=setTimeout(()=>{if(turn==='out'){setFlipped(target.current);setTurn('in')}else{turning.current=false;setTurn(null)}},180);
+  return()=>clearTimeout(timer);
+ },[turn]);
+ useEffect(()=>{
+  if(turn||!restoreFocus.current)return;restoreFocus.current=false;
+  const control=flipped?back.current:front.current;
+  if(control&&!control.closest('[inert]'))control.focus({preventScroll:true});
+ },[flipped,turn]);
+ function flip(next:boolean){
+  if(turning.current||next===flipped)return;reset();target.current=next;restoreFocus.current=true;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFlipped(next);return}
+  turning.current=true;setTurn('out');
+ }
  const profile=player.profile??{},motto=profile.motto?.trim();
  function move(event:PointerEvent<HTMLDivElement>){
   if(event.pointerType!=='mouse'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -19,10 +36,10 @@ export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self
   tilt.current?.style.setProperty('--pc-glow-x',`${x*100}%`);tilt.current?.style.setProperty('--pc-glow-y',`${y*100}%`);
  }
  function reset(){tilt.current?.style.setProperty('--pc-rx','0deg');tilt.current?.style.setProperty('--pc-ry','0deg')}
- return <article className={'pc-scene'+(flipped?' pc-scene--flipped':'')} aria-label={player.name+'的球友卡片'} onPointerMove={move} onPointerLeave={reset}>
+ return <article className={'pc-scene'+(flipped?' pc-scene--flipped':'')+(turn?' pc-scene--turn-'+turn:'')} aria-busy={!!turn} aria-label={player.name+'的球友卡片'} onPointerMove={move} onPointerLeave={reset}>
   <div className="pc-tilt" ref={tilt}><div className="pc-rotor">
-   <div className="pc-face pc-front" aria-hidden={flipped} inert={flipped}>
-    <button type="button" className="pc-front-trigger" aria-label={'翻转'+player.name+'的卡片，查看战拍'} aria-expanded={flipped} onClick={()=>{reset();setFlipped(true)}}>
+   <div className="pc-face pc-front" hidden={flipped} aria-hidden={flipped} inert={flipped}>
+    <button type="button" ref={front} className="pc-front-trigger" aria-label={'翻转'+player.name+'的卡片，查看战拍'} aria-expanded={flipped} onClick={()=>{flip(true)}}>
      <span className="pc-heading"><span>羽林同修</span><span>{self?'我的名帖':'球友名帖'}</span></span>
      <span className="pc-portrait">{avatar}</span>
      <strong className="pc-player-name" title={player.name}>{player.name}</strong>
@@ -31,9 +48,9 @@ export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self
      <span className="pc-front-racket"><RacketMark/><span><span>本命战拍</span><strong title={profile.racket}>{profile.racket||'战拍待填写'}</strong></span></span>
      <span className="pc-stats"><span><b>{stats?.games??0}</b><span>累计出场</span></span><span><b>{stats?.games?Math.round(stats.rate*100)+'%':'—'}</b><span>胜率</span></span><span><b>{monthly?.points??0}</b><span>本月积分</span></span></span>
     </button>
-    <div className="pc-controls"><button type="button" onClick={onProfile}>查看档案<ArrowUpRight size={14} aria-hidden="true"/></button><button type="button" onClick={()=>{reset();setFlipped(true)}} aria-label={'翻转'+player.name+'的卡片'}><RotateCw size={14} aria-hidden="true"/>翻面</button></div>
+    <div className="pc-controls"><button type="button" onClick={onProfile}>查看档案<ArrowUpRight size={14} aria-hidden="true"/></button><button type="button" onClick={()=>{flip(true)}} aria-label={'翻转'+player.name+'的卡片'}><RotateCw size={14} aria-hidden="true"/>翻面</button></div>
    </div>
-   <div className="pc-face pc-back" role="group" tabIndex={flipped?0:-1} aria-label={player.name+'的战拍卡片，轻点翻回正面'} aria-hidden={!flipped} inert={!flipped} onClick={event=>{if((event.target as HTMLElement).closest('button,a'))return;reset();setFlipped(false)}} onKeyDown={event=>{if(event.target===event.currentTarget&&['Enter',' '].includes(event.key)){event.preventDefault();reset();setFlipped(false)}}}>
+   <div ref={back} className="pc-face pc-back" hidden={!flipped} role="group" tabIndex={flipped?0:-1} aria-label={player.name+'的战拍卡片，轻点翻回正面'} aria-hidden={!flipped} inert={!flipped} onClick={event=>{if((event.target as HTMLElement).closest('button,a'))return;flip(false)}} onKeyDown={event=>{if(event.target===event.currentTarget&&['Enter',' '].includes(event.key)){event.preventDefault();flip(false)}}}>
     <div className="pc-back-heading"><span>本命战拍</span><span className="pc-back-hint"><RotateCcw size={13} aria-hidden="true"/>轻点翻回</span></div>
     <strong className="pc-back-name">{player.name}</strong>
     <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={'/api/photos/'+photo.id} alt={player.name+'的战拍照片'} loading="lazy" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
