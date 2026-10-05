@@ -5,6 +5,7 @@ import {useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
 import PhotoGallery from './photo-gallery';
+import AvatarEditor from './avatar-editor';
 import FeatureGuide from './feature-guide';
 import RacketGallery from './racket-gallery';
 import './player-profile.css';
@@ -65,7 +66,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         </div>
         <RealmProgress value={state.cultivation}/>
       </div>
-      {canEdit && <div className="pp-header-actions">
+      {canEdit && <div className="pp-header-actions"><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/>
         <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>
         {ctx.admin && canEdit && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
