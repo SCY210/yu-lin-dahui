@@ -8,7 +8,7 @@ import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now()){
- s=structuredClone(s);enableDefaultAttendance(s,now);applyDefaultAttendance(s);
+ s=structuredClone(s);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));
@@ -23,7 +23,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>ids.has(row.eventId));
  const matchIds=new Set(s.matches.map(m=>m.id));
  const social=socialSnapshot(s,period,year,now,history);
- const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement(s,e,now));
+ const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement({...s,attendance:actualAttendance},e,now));
  return {
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a)},
   players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!['grip','shoes'].includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
