@@ -33,7 +33,7 @@ await test('普通创建者拥有删除入口所需权限，其他成员不能�
  assert.ok((await get(A)).events.some(x=>x.id===e.id));
 });
 await test('删除前真实活动照片可读取',async()=>{
- const form=new FormData();form.set('file',new Blob([readFileSync('public/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind','photo');form.set('eventId',e.id);form.set('revision',String((await get(admin)).revision));form.set('requestId',randomUUID());
+ const form=new FormData();form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind','photo');form.set('eventId',e.id);form.set('revision',String((await get(admin)).revision));form.set('requestId',randomUUID());
  const r=await fetch(origin+'/api/photos',{method:'POST',headers:{Cookie:admin.cookie,Origin:origin},body:form});assert.equal(r.status,200);photoId=(await r.json()).id;
  assert.equal((await fetch(origin+'/api/photos/'+photoId,{headers:{Cookie:B.cookie}})).status,200);
 });
@@ -46,7 +46,7 @@ await test('删除持久化并隐藏活动、关联记录与照片直链，只�
 await test('已删除活动拒绝报名、状态修改和上传照片',async()=>{
  assert.equal((await command(A,'register',{eventId:e.id,playerId:A.me.playerId,arrival:start,departure:end,note:''})).status,400);
  assert.equal((await command(A,'eventStatus',{eventId:e.id,status:'open'})).status,400);
- const form=new FormData();form.set('file',new Blob([readFileSync('public/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind','photo');form.set('eventId',e.id);form.set('revision',String((await get(admin)).revision));form.set('requestId',randomUUID());
+ const form=new FormData();form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind','photo');form.set('eventId',e.id);form.set('revision',String((await get(admin)).revision));form.set('requestId',randomUUID());
  assert.equal((await fetch(origin+'/api/photos',{method:'POST',headers:{Cookie:admin.cookie,Origin:origin},body:form})).status,400);
 });
 await test('创建者恢复原活动、预约和照片，重复恢复不会创建新活动',async()=>{

@@ -1,7 +1,19 @@
 import {env} from 'cloudflare:workers';
 import {emptyState,type State} from './domain/types';
+import type {ClubReadVersion} from './club-read-cache';
 const names=['accounts','players','events','bookings','registrations','attendance','rounds','matches','costs','settlements','payments','seasons','audits','ratingChanges','challenges','tagVotes','awardVotes','photos'] as const;
 export function raw(){if(!env.DB)throw new Error('数据库暂不可用，请稍后重试');return env.DB}
+/** Indexed metadata reads verify freshness and current permissions on every poll. */
+export async function clubReadVersion(accountId:string):Promise<ClubReadVersion>{
+ const db=raw();
+ const result=await db.batch([
+  db.prepare('SELECT COALESCE(MAX(revision),0) AS revision FROM commits'),
+  db.prepare('SELECT payload FROM settings WHERE id=?').bind('club'),
+  db.prepare('SELECT payload FROM accounts WHERE id=?').bind(accountId),
+ ]);
+ const state=emptyState(),settings=result[1].results[0] as {payload:string}|undefined,account=result[2].results[0] as {payload:string}|undefined;
+ return {revision:Number((result[0].results[0] as {revision:number}).revision),settings:settings?JSON.parse(settings.payload):state.settings,account:account?JSON.parse(account.payload):null};
+}
 export async function load():Promise<State>{const db=raw();const result:any[]=await db.batch([db.prepare('SELECT COALESCE(MAX(revision),0) AS revision FROM commits'),db.prepare('SELECT payload FROM settings WHERE id = ?').bind('club'),...names.map(n=>db.prepare(`SELECT payload FROM ${n}`))]);const s=emptyState();s.revision=Number(result[0].results[0].revision);if(result[1].results[0])s.settings=JSON.parse(String(result[1].results[0].payload));names.forEach((n,i)=>{(s[n] as unknown[])=result[i+2].results.map((row:any)=>JSON.parse(String(row.payload)))});return s}
 export async function committed(key:string){return !!(await raw().prepare('SELECT revision FROM commits WHERE key = ?').bind(key).first())}
 export async function save(s:State,key:string,previous:State,extra:D1PreparedStatement[]=[]){const db=raw();const qs=[db.prepare('INSERT INTO commits(revision,key,at) VALUES(?,?,?)').bind(s.revision+1,key,Date.now())];

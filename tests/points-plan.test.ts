@@ -78,8 +78,8 @@ test('固定搭档也适用于逐轮生成，禁止单轮换搭档破坏固定�
  first.status='complete';s.matches.forEach(m=>m.status='complete');await act('generate',{at:start+15*minute,duration:15,seed:11});assert.deepEqual(e.pointsChoice!.teams,teams);
  for(const m of s.matches.filter(m=>m.roundId!==first.id))for(const t of [m.a,m.b])assert.ok(teams.some(team=>team.every(id=>t.includes(id))));assert.ok(partners.size>0);
 });
-test('搭档方式投票：正式和候补一账号一票，可改投撤回，最高票不自动确认',async()=>{
- const {s,e,act}=fixture();s.registrations[2].status='waitlist';await act('pointsModeVoting',{open:true});
+test('搭档方式投票：正式成员一账号一票，可改投撤回，最高票不自动确认',async()=>{
+ const {s,e,act}=fixture();await act('pointsModeVoting',{open:true});
  await act('pointsModeVote',{mode:'fixed'},'actor1');await act('pointsModeVote',{mode:'fixed'},'actor2');assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:2});assert.equal(e.pointsChoice!.selectedMode,undefined);
  await act('pointsModeVote',{mode:'rotate'},'actor1');assert.deepEqual(pointsChoiceCounts(s,e),{rotate:1,fixed:1});await act('pointsModeVote',{mode:null},'actor2');assert.equal(e.pointsChoice!.votes.length,1);
  await act('pointsModeSelect',{mode:'fixed'});assert.equal(e.pointsChoice!.selectedMode,'fixed');assert.equal(e.pointsChoice!.votingOpen,false);assert.equal(e.pointsChoice!.votes.length,1);
@@ -97,4 +97,18 @@ test('其他账号ID不在共享投票响应中暴露；历史活动仍沿用原
  const {s,e,act,account}=fixture();await act('pointsModeVoting',{open:true});await act('pointsModeVote',{mode:'fixed'},'actor1');await act('pointsModeVote',{mode:'rotate'},'actor2');
  const view=projectClubState(s,account('actor1'),'2026-10',2026,now),shown=view.events[0];assert.equal(shown.pointsChoice!.votes.find(v=>v.playerId==='p01')!.voterId,'actor1');assert.equal(shown.pointsChoice!.votes.find(v=>v.playerId==='p02')!.voterId,'');
  assert.equal(e.pointsPlan,undefined);assert.equal(isPointsTime(e,e.end),true);await act('generate',{at:start,duration:15,seed:3});const r=s.rounds[0];await act('publish',{roundId:r.id});await act('start',{roundId:r.id,at:start,monthly:false,elo:false});assert.ok(s.matches.every(m=>!m.monthly&&!m.elo));
+});
+
+test('搭档投票拒绝候补；递补为正式可投票，退回候补后不计票',async()=>{
+ const {s,e,act,account}=fixture();await act('pointsModeVoting',{open:true});s.registrations[2].status='waitlist';
+ const before=structuredClone(s);assert.equal(canVotePointsMode(s,e,account('actor2'),now),false);await assert.rejects(()=>act('pointsModeVote',{mode:'fixed'},'actor2'),/403/);assert.deepEqual(s,before);
+ s.registrations[2].status='confirmed';await act('pointsModeVote',{mode:'fixed'},'actor2');assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:1});
+ s.registrations[2].status='waitlist';assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:0});
+});
+
+test('未配置搭档投票时正式成员默认可投；显式关闭及确认后的关闭不被默认值覆盖',async()=>{
+ const {s,e,act,account}=fixture();assert.equal(e.pointsChoice,undefined);assert.equal(canVotePointsMode(s,e,account('actor1'),now),true);
+ await act('pointsModeVote',{mode:'fixed'},'actor1');assert.equal(e.pointsChoice!.votingOpen,true);assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:1});
+ await act('pointsModeVoting',{open:false});const closed=structuredClone(s);await assert.rejects(()=>act('pointsModeVote',{mode:'rotate'},'actor2'),/403/);assert.deepEqual(s,closed);
+ await act('pointsModeVoting',{open:true});await act('pointsModeVote',{mode:'rotate'},'actor2');await act('pointsModeSelect',{mode:'fixed'});const confirmed=structuredClone(s);await assert.rejects(()=>act('pointsModeVote',{mode:null},'actor1'),/403/);assert.deepEqual(s,confirmed);
 });

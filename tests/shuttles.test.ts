@@ -10,11 +10,11 @@ function fixture(){
  const s=emptyState();
  const e:Event={id:'shuttle-event',creatorId:'creator',title:'用球验收',start:now+3600000,end:now+4*3600000,venue:'测试球馆',address:'',capacity:12,signupDeadline:now+3600000,cancelDeadline:now+3600000,note:'',status:'open',courtMode:'interval',ballMode:'interval'};
  s.events.push(e,{...e,id:'other-event',creatorId:'outsider'});
- for(const id of ['creator','admin','formal','waitlist','cancelled','disabled','outsider','foreign']){
+ for(const id of ['creator','admin','formal','second','waitlist','cancelled','disabled','outsider','foreign']){
   const a:Account={id,playerId:id+'-player',email:'',role:id==='admin'?'admin':'member'};
   s.accounts.push(a);s.players.push({id:a.playerId,ownerId:a.id,name:id,initialRating:1000,rating:1000,ratedGames:0,enabled:id!=='disabled',ratingReason:''});
  }
- for(const [id,status] of [['formal','confirmed'],['waitlist','waitlist'],['cancelled','cancelled'],['disabled','confirmed'],['foreign','confirmed']] as const){
+ for(const [id,status] of [['formal','confirmed'],['second','confirmed'],['waitlist','waitlist'],['cancelled','cancelled'],['disabled','confirmed'],['foreign','confirmed']] as const){
   const r:Registration={id:'reg-'+id,eventId:id==='foreign'?'other-event':e.id,playerId:id+'-player',sequence:s.registrations.length+1,status,arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}};s.registrations.push(r);
  }
  const account=(id:string)=>s.accounts.find(a=>a.id===id)!;
@@ -39,14 +39,14 @@ for(const action of ['shuttleOption','shuttleRemove','shuttleConfirm','shuttleVo
  await assert.rejects(()=>act('formal',action,{name:'伪造',optionId:a,open:true}),/403/);assert.deepEqual(s,before);
 });
 
-test('正式接龙和候补都能投票，每账号一票，改投与撤回改变真实票数',async()=>{
- const {s,e,vote,a,b}=await voting();await vote('formal',a);await vote('waitlist',a);assert.equal(shuttleVoteCounts(s,e)[a],2);
+test('仅正式接龙可以投票，每账号一票，改投与撤回改变真实票数',async()=>{
+ const {s,e,vote,a,b}=await voting();await vote('formal',a);await vote('second',a);assert.equal(shuttleVoteCounts(s,e)[a],2);
  await vote('formal',b);assert.equal(e.shuttlePlan!.votes.length,2);assert.deepEqual(shuttleVoteCounts(s,e),{[a]:1,[b]:1});
  await vote('formal',b);assert.equal(e.shuttlePlan!.votes.length,2);
  await vote('formal',null);assert.deepEqual(shuttleVoteCounts(s,e),{[a]:1,[b]:0});
 });
 
-for(const who of ['creator','admin','cancelled','disabled','outsider','foreign'])test(`未接龙或无效成员不能投票：${who}`,async()=>{
+for(const who of ['creator','admin','waitlist','cancelled','disabled','outsider','foreign'])test(`未接龙或无效成员不能投票：${who}`,async()=>{
  const {s,e,account,vote,a}=await voting(),before=structuredClone(s);
  assert.equal(canVoteForShuttle(s,e,account(who),now),false);await assert.rejects(()=>vote(who,a),/403/);assert.deepEqual(s,before);
 });
@@ -60,22 +60,22 @@ test('不能用其他活动的选项、伪造玩家或未知球影响投票',asy
 });
 
 test('最高票不自动选用；创建者可选另一款，确认后关闭投票且保留票数',async()=>{
- const {s,e,act,vote,a,b}=await voting();await vote('formal',a);await vote('waitlist',a);assert.equal(e.shuttlePlan!.selectedId,undefined);
+ const {s,e,act,vote,a,b}=await voting();await vote('formal',a);await vote('second',a);assert.equal(e.shuttlePlan!.selectedId,undefined);
  await act('creator','shuttleConfirm',{optionId:b});assert.equal(e.shuttlePlan!.selectedId,b);assert.equal(e.shuttlePlan!.votingOpen,false);assert.equal(shuttleVoteCounts(s,e)[a],2);
  const before=structuredClone(s);await assert.rejects(()=>vote('formal',b),/403/);assert.deepEqual(s,before);
  await act('creator','shuttleVoting',{open:true});await vote('formal',b);assert.equal(e.shuttlePlan!.selectedId,b);
 });
 
 test('取消报名、停用成员不再计票，代报朋友不带来额外账号票数',async()=>{
- const {s,e,vote,a,b,act}=await voting();await vote('formal',a);await vote('waitlist',b);
- s.registrations.find(r=>r.playerId==='formal-player')!.status='cancelled';s.players.find(p=>p.id==='waitlist-player')!.enabled=false;
+ const {s,e,vote,a,b,act}=await voting();await vote('formal',a);await vote('second',b);
+ s.registrations.find(r=>r.playerId==='formal-player')!.status='cancelled';s.players.find(p=>p.id==='second-player')!.enabled=false;
  assert.deepEqual(shuttleVoteCounts(s,e),{[a]:0,[b]:0});await assert.rejects(()=>vote('formal',b),/403/);
  s.registrations.find(r=>r.playerId==='formal-player')!.status='confirmed';s.players.push({...s.players[0],id:'friend-player',ownerId:'formal'});s.registrations.push({...s.registrations[0],id:'friend-reg',playerId:'friend-player'});
  await act('formal','shuttleVote',{optionId:b,playerId:'friend-player'});assert.equal(e.shuttlePlan!.votes.filter(v=>v.voterId==='formal').length,1);
 });
 
 test('移除未选候选球清理对应票数，已确认球须先清除或更换',async()=>{
- const {s,e,act,vote,a,b}=await voting();await vote('formal',a);await vote('waitlist',b);await act('creator','shuttleConfirm',{optionId:b});
+ const {s,e,act,vote,a,b}=await voting();await vote('formal',a);await vote('second',b);await act('creator','shuttleConfirm',{optionId:b});
  await act('creator','shuttleRemove',{optionId:a});assert.deepEqual(e.shuttlePlan!.votes.map(v=>v.optionId),[b]);
  const before=structuredClone(s);await assert.rejects(()=>act('creator','shuttleRemove',{optionId:b}),/先更换或清除/);assert.deepEqual(s,before);
  await act('creator','shuttleConfirm',{optionId:null});await act('creator','shuttleRemove',{optionId:b});assert.equal(e.shuttlePlan!.options.length,0);assert.equal(e.shuttlePlan!.votes.length,0);assert.equal(e.shuttlePlan!.votingOpen,false);
@@ -94,8 +94,8 @@ test('候选球去重、数量和文字限制在服务端执行，错误不改�
 });
 
 test('共享活动保留票数及本人选择，隐藏其他账号ID，不改变持久化原始数据',async()=>{
- const {s,e,account,vote,a,b}=await voting();await vote('formal',a);await vote('waitlist',b);
+ const {s,e,account,vote,a,b}=await voting();await vote('formal',a);await vote('second',b);
  const before=structuredClone(s),view=projectClubState(s,account('formal'),'2026-10',2026,now),shown=view.events.find(x=>x.id===e.id)!;
- assert.equal(shown.shuttlePlan!.votes.find(v=>v.playerId==='formal-player')!.voterId,'formal');assert.equal(shown.shuttlePlan!.votes.find(v=>v.playerId==='waitlist-player')!.voterId,'');
+ assert.equal(shown.shuttlePlan!.votes.find(v=>v.playerId==='formal-player')!.voterId,'formal');assert.equal(shown.shuttlePlan!.votes.find(v=>v.playerId==='second-player')!.voterId,'');
  assert.deepEqual(shuttleVoteCounts(view,shown),{[a]:1,[b]:1});assert.deepEqual(s,before);
 });

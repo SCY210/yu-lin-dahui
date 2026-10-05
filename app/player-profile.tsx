@@ -1,13 +1,14 @@
 'use client';
+import Deferred from './deferred';
 import RealmProgress from './realm-progress';
 
-import {useState} from 'react';
+import {lazy,useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
-import PhotoGallery from './photo-gallery';
-import AvatarEditor from './avatar-editor';
+const PhotoGallery=lazy(()=>import('./photo-gallery'));
+const AvatarEditor=lazy(()=>import('./avatar-editor'));
 import FeatureGuide from './feature-guide';
-import RacketGallery from './racket-gallery';
+const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import CultivationOrnament from './cultivation-ornament';
@@ -66,7 +67,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         </div>
         <RealmProgress value={state.cultivation}/>
       </div>
-      {canEdit && <div className="pp-header-actions"><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/>
+      {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
         <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>
         {ctx.admin && canEdit && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
@@ -93,7 +94,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="穿线磅数范围" value={tensionLabel(p.profile)}/>
       </dl>
       <div className="pp-equipment-note"><span>其他装备与备注</span><p className={profile.equipment ? '' : 'pp-unfilled'}>{profile.equipment || '尚未填写'}</p></div>
-      <RacketGallery ctx={ctx} playerId={p.id}/>
+      <Deferred><RacketGallery ctx={ctx} playerId={p.id}/></Deferred>
     </section>
 
     <section className="pp-section" aria-label="比赛统计">
@@ -105,6 +106,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>
     </section>
 
-    {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></details>}
+    {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

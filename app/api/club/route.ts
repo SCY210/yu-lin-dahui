@@ -7,7 +7,8 @@ import {publicApiError} from '../../../lib/api-error';
 import {loadClubState} from '../../../lib/club-maintenance';
 import {projectClubState} from '../../../lib/club-view';
 import {getAppUser,passwordEnabled} from '../../../lib/auth';
-import {save,committed,raw} from '../../../lib/store';
+import {save,committed,raw,clubReadVersion} from '../../../lib/store';
+import {createClubReadCache,clubViewValidUntil} from '../../../lib/club-read-cache';
 import {apply,digest} from '../../../lib/domain/commands';
 import {month,fail,type State,type Account} from '../../../lib/domain/types';
 import {leaderboard,replayRating} from '../../../lib/domain/ranking';
@@ -16,7 +17,41 @@ export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 
 function error(e:unknown){return writeErrorResponse(e)}
-export async function GET(req:Request){try{const user=await getAppUser();if(!user)return response({error:'请先登录羽林大会'},401);const s=await loadClubState();if(!s.settings.initialized)return response({setup:true,user:{name:user.displayName,email:user.email}});const a=s.accounts.find(a=>a.id===user.userId);if(!a){if(!['127.0.0.1','localhost','[::1]'].includes(new URL(req.url).hostname))return response({error:'请联系管理员创建登录账号'},403);return response({join:true,user:{name:user.displayName}})}const period=new URL(req.url).searchParams.get('month')??month(Date.now());if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))fail('月份无效');if(new URL(req.url).searchParams.get('export')==='1'){if(a.role!=='admin')return response({error:'403: 仅管理员可以导出'},403);return new Response(JSON.stringify(s,null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="club-export.json"','Cache-Control':'no-store'}})}const year=Number(new URL(req.url).searchParams.get('year')??period.slice(0,4));if(!Number.isInteger(year)||year<2000||year>2100)fail('年份无效');const credentials=a.role==='admin'?(await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials').all<{accountId:string;username:string;usernameChangedAt:number|null}>()).results:[await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials WHERE id=?').bind(a.id).first<{accountId:string;username:string;usernameChangedAt:number|null}>()].filter((c):c is {accountId:string;username:string;usernameChangedAt:number|null}=>c!==null);const ownCredential=credentials.find(c=>c.accountId===a.id)??null,ownUsername=ownCredential?.username??null,owner=isClubOwner(s,a);return response({...projectClubState(s,a,period,year),loginAccounts:a.role==='admin'?credentials:[],auth:{method:user.method,username:ownUsername,passwordEnabled:!!ownCredential,isOwner:owner,canChangeUsername:canChangeOwnUsername(owner,ownCredential),usernameChangedAt:ownCredential?.usernameChangedAt??null}})}catch(e){return error(e)}finally{await releaseRejectedWriteBody(req)}}
+const readCache=createClubReadCache();
+export async function GET(req:Request){try{
+ const user=await getAppUser();
+ if(!user)return response({error:'请先登录羽林大会'},401);
+ const url=new URL(req.url),period=url.searchParams.get('month')??month(Date.now());
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))fail('月份无效');
+ const year=Number(url.searchParams.get('year')??period.slice(0,4));
+ if(!Number.isInteger(year)||year<2000||year>2100)fail('年份无效');
+ const identity={userId:user.userId,method:user.method,username:user.username};
+ // Authentication precedes every conditional read. Exports always get fresh full data.
+ if(url.searchParams.get('export')!=='1'&&req.headers.has('If-None-Match')){
+  const version=await clubReadVersion(user.userId);
+  if(readCache.matches(req.headers.get('If-None-Match'),version,identity,period,year,Date.now())){
+   return new Response(null,{status:304,headers:{'Cache-Control':'no-store','ETag':req.headers.get('If-None-Match')!}});
+  }
+ }
+ const s=await loadClubState();
+ if(!s.settings.initialized)return response({setup:true,user:{name:user.displayName,email:user.email}});
+ const a=s.accounts.find(a=>a.id===user.userId);
+ if(!a){
+  if(!['127.0.0.1','localhost','[::1]'].includes(url.hostname))return response({error:'请联系管理员创建登录账号'},403);
+  return response({join:true,user:{name:user.displayName}});
+ }
+ if(url.searchParams.get('export')==='1'){
+  if(a.role!=='admin')return response({error:'403: 仅管理员可以导出'},403);
+  return new Response(JSON.stringify(s,null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="club-export.json"','Cache-Control':'no-store'}});
+ }
+ const credentials=a.role==='admin'?
+  (await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials').all<{accountId:string;username:string;usernameChangedAt:number|null}>()).results:
+  [await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials WHERE id=?').bind(a.id).first<{accountId:string;username:string;usernameChangedAt:number|null}>()].filter((c):c is {accountId:string;username:string;usernameChangedAt:number|null}=>c!==null);
+ const ownCredential=credentials.find(c=>c.accountId===a.id)??null,ownUsername=ownCredential?.username??null,owner=isClubOwner(s,a),now=Date.now();
+ const data={...projectClubState(s,a,period,year,now),loginAccounts:a.role==='admin'?credentials:[],auth:{method:user.method,username:ownUsername,passwordEnabled:!!ownCredential,isOwner:owner,canChangeUsername:canChangeOwnUsername(owner,ownCredential),usernameChangedAt:ownCredential?.usernameChangedAt??null}};
+ const token=readCache.remember({revision:s.revision,settings:s.settings,account:a},identity,period,year,clubViewValidUntil(s,a,now),now);
+ return Response.json(data,{headers:{'Cache-Control':'no-store',...(token?{'ETag':token}:{})}});
+}catch(e){return error(e)}finally{await releaseRejectedWriteBody(req)}}
 export async function POST(req:Request){try{assertWriteRequest(req);const ip=trustedClientIP(req);await cleanExpiredRateLimits();await consumeRateLimit('club-ip:'+ip,600,5*60000,{message:'当前网络操作较多，请稍后重试'});const user=await getAppUser();if(!user)return response({error:'请先登录'},401);await consumeRateLimit('club-actor:'+user.userId,120,5*60000,{message:'操作较频繁，请稍后再试'});const body=z.object({action:z.string().max(40),payload:z.unknown(),requestId:z.string().uuid(),revision:z.number().int().nonnegative().optional()}).parse(await readJsonBody(req));const key=user.userId+':'+body.requestId;
  if(body.action==='friend'||body.action==='event'){
   const account=await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{role:string}>();

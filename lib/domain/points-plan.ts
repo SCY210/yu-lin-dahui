@@ -6,11 +6,9 @@ import {authorizeEventAction} from './permissions';
 import {businessTimestamp} from './timestamp';
 import {fail,type State,type Account,type Event,type Match,type Round} from './types';
 
-const minute=60000;
-export function defaultPointsMinutes(e:Pick<Event,'start'|'end'>){return Math.max(0,Math.floor((e.end-e.start)/minute)-30)}
-export function pointsWindow(e:Event){return e.pointsPlan??{start:e.start,end:e.start+defaultPointsMinutes(e)*minute,roundMinutes:15}}
-export function isPointsTime(e:Event,at:number){return !e.pointsPlan||(at>=e.pointsPlan.start&&at<e.pointsPlan.end)}
+export {defaultPointsMinutes,pointsWindow,isPointsTime} from './points-window';
 
+const minute=60000;
 const id=z.string().min(1).max(100);
 const schemas:Record<string,z.ZodTypeAny>={
  planPoints:z.object({eventId:id,at:businessTimestamp,pointsMinutes:z.number().int().min(5).max(720),roundMinutes:z.number().int().min(5).max(60),seed:z.number().int().min(1).max(2147483647),pairing:z.enum(['rotate','fixed'])}),

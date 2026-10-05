@@ -10,7 +10,7 @@ assert.ok(['127.0.0.1','localhost','[::1]'].includes(new URL(origin).hostname),'
 const run=randomUUID(),suffix=run.replaceAll('-','').slice(0,12),fixtureIP='203.0.113.'+(1+parseInt(run.slice(0,4),16)%254);
 const adminHeaders={'oai-authenticated-user-id':'local_seedy','oai-authenticated-user-email':'local_seedy@example.invalid'};
 const results=[],transportRetries=[],fixtures={};let currentTest='',memberA,memberB,friendId,avatarId,racketId,activityPhotoId;
-const imageFixturePath='public/shuttlecock.png',png=readFileSync(imageFixturePath);
+const imageFixturePath='tests/fixtures/shuttlecock.png',png=readFileSync(imageFixturePath);
 assert.ok(png.length>0&&png.length<=5*1024*1024,'Expected valid existing PNG fixture');
 const base={years:4,hand:'right',preference:'mixed',style:'虚构验收 · 网前与轮转',equipment:'虚构验收 · 备用装备说明',level:'intermediate'};
 const gear={racket:'虚构球拍 4U',strings:'虚构球线 0.66mm',tensionMin:25,tensionMax:27};
