@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./decor-layout.css";
 import AppRuntime from './app-runtime';
 
 export const viewport: Viewport = {

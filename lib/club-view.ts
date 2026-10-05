@@ -1,3 +1,4 @@
+import {canDeletePhoto} from './domain/photo-deletion';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
 import {leaderboard,annualLeaderboard,replayRating} from './domain/ranking';
@@ -31,7 +32,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   social,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
   tagVotes:s.tagVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),awardVotes:s.awardVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),
-  photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>p),
+  photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
   audits:admin?s.audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  };

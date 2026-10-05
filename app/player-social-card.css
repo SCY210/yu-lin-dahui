@@ -1,7 +1,13 @@
 .pc-scene{position:relative;min-width:0;height:510px;perspective:1300px}
 .pc-tilt{width:100%;height:100%;transform-style:preserve-3d;transform:rotateX(var(--pc-rx,0deg)) rotateY(var(--pc-ry,0deg));transition:transform .18s ease-out}
-.pc-rotor{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .72s cubic-bezier(.22,.68,.2,1)}
-.pc-scene--flipped .pc-rotor{transform:rotateY(180deg)}
+.pc-rotor{position:relative;width:100%;height:100%;transform:scaleX(1);transform-origin:center;transition:transform .18s ease-in}
+/* Keep one painted face even inside Safari's clipped carousel layers. A
+   positive 2D scale folds to the edge without ever rendering mirrored text. */
+.pc-face[hidden]{display:none!important}
+.pc-scene--turn-out .pc-rotor{transform:scaleX(0)}
+.pc-scene--turn-in .pc-rotor{animation:pc-unfold .18s ease-out both;transition:none}
+.pc-scene--turn-out .pc-rotor,.pc-scene--turn-in .pc-rotor{pointer-events:none}
+@keyframes pc-unfold{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .pc-face{position:absolute;inset:0;display:flex;flex-direction:column;border-radius:24px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;box-shadow:0 10px 28px #5940710c}
 .pc-front{color:#44314f;background:radial-gradient(ellipse at var(--pc-glow-x,20%) var(--pc-glow-y,10%),#ede2f64a,transparent 75%),linear-gradient(145deg,#fff,#fcfaff 75%,#f4effa);border:1px solid #dbd0e8}
 .pc-front::before{content:'';position:absolute;inset:9px;border:1px solid #d3c2e43d;border-radius:17px;pointer-events:none}
@@ -32,7 +38,7 @@
 .pc-controls button:first-child{justify-content:flex-start}
 .pc-controls button:hover{background:#f2eaf9;color:#735388}
 .pc-front-trigger:focus-visible,.pc-controls button:focus-visible,.pc-back button:focus-visible{outline:2px solid #b294c7;outline-offset:-4px;border-radius:10px}
-.pc-back{cursor:pointer;transform:rotateY(180deg);background:linear-gradient(145deg,#fff,#f8f3fc);color:#654c72;border:1px solid #dbcee5;padding:22px}
+.pc-back{cursor:pointer;background:linear-gradient(145deg,#fff,#f8f3fc);color:#654c72;border:1px solid #dbcee5;padding:22px}
 .pc-back-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#8a7098;font-size:10px;letter-spacing:1.5px}
 .pc-back-hint{display:inline-flex;align-items:center;gap:5px;color:#9d80ac;font-size:11px;letter-spacing:0}
 .pc-back-name{font-size:17px;margin:10px 0 14px;line-height:1.4;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#654574}
@@ -51,4 +57,4 @@
 .pc-back:focus-visible{outline:3px solid #baa2c5;outline-offset:3px}
 @media(max-width:760px){.pc-scene{height:500px}.pc-front-trigger{padding:24px 24px 16px}.pc-player-name{font-size:23px}.pc-face{border-radius:23px}.pc-heading{font-size:11px;margin-bottom:18px}.pc-heading>span:last-child{font-size:10px}.pc-portrait{width:84px;height:84px;margin-bottom:12px}.pc-portrait .avatar{width:72px;height:72px;flex-basis:72px;font-size:31px}.pc-motto{font-size:14px}.pc-front-racket strong{font-size:14px}.pc-controls button{font-size:13px}.pc-back{padding:22px 24px}.pc-back-name{font-size:19px}.pc-weapon-image{max-height:183px}.pc-weapon-model{font-size:18px}.pc-weapon-details strong{font-size:13px}.pc-back-motto{font-size:14px}.pc-back-profile{font-size:13px}}
 @media(max-width:359px){.pc-scene{height:510px}.pc-front-trigger{padding-left:18px;padding-right:18px}.pc-back{padding-left:18px;padding-right:18px}.pc-player-name{font-size:20px}.pc-motto{font-size:13px}}
-@media(prefers-reduced-motion:reduce){.pc-tilt{transform:none!important;transition:none}.pc-rotor{transition:none}}
+@media(prefers-reduced-motion:reduce){.pc-tilt{transform:none!important;transition:none}.pc-rotor{transform:none!important;transition:none;animation:none}}
