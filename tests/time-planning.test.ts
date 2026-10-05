@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {HALF_HOUR,ceilHalfHour,madridDateTime,madridEpoch,plannedEpoch,plannedInterval,plannedDateChange} from '../lib/time-planning';
+import {HALF_HOUR,ceilHalfHour,madridDateTime,madridEpoch,plannedEpoch,plannedInterval,plannedDateChange,shiftActivityTimes} from '../lib/time-planning';
 
 test('计划默认值向上取整点或半点，已在边界时不再推进',()=>{
  const exact=Date.parse('2026-10-05T14:30:00Z');assert.equal(ceilHalfHour(exact),exact);
@@ -53,4 +53,26 @@ test('秋季重复02:30的旧时间保留各自UTC偏移，未编辑不会移动
  const first=Date.parse('2026-10-25T00:30:12.345Z'),second=Date.parse('2026-10-25T01:30:12.345Z');
  assert.equal(madridDateTime(first),'2026-10-25T02:30');assert.equal(madridDateTime(second),'2026-10-25T02:30');
  assert.equal(plannedEpoch('2026-10-25T02:30',first),first);assert.equal(plannedEpoch('2026-10-25T02:30',second),second);
+});
+
+test('创建活动修改开始日期，同步结束与报名取消截止，保留价格及其他字段',()=>{
+ const values={start:'2026-10-06T18:30',end:'2026-10-06T21:30',signupDeadline:'2026-10-06T17:30',cancelDeadline:'2026-10-05T18:30',courtPrice:6.9};
+ assert.deepEqual(shiftActivityTimes(values,{start:'2026-10-08T20:00'}),{start:'2026-10-08T20:00',end:'2026-10-08T23:00',signupDeadline:'2026-10-08T19:00',cancelDeadline:'2026-10-07T20:00',courtPrice:6.9});
+ assert.equal(values.start,'2026-10-06T18:30');
+});
+
+test('开始时间跨夏令时，截止仍保留真实提前时长，手动调整和同时提交的字段不丢失',()=>{
+ const values={start:'2026-03-28T18:00',end:'2026-03-28T21:00',signupDeadline:'2026-03-28T16:00',cancelDeadline:'2026-03-27T18:00'};
+ const result=shiftActivityTimes(values,{start:'2026-03-29T18:00',end:'2026-03-29T22:00'});
+ assert.equal(result.end,'2026-03-29T22:00');assert.equal(result.signupDeadline,'2026-03-29T16:00');
+ assert.equal(madridEpoch(result.start)-madridEpoch(result.cancelDeadline),86400000);
+ assert.deepEqual(shiftActivityTimes(values,{signupDeadline:'2026-03-28T17:00'}),{...values,signupDeadline:'2026-03-28T17:00'});
+});
+
+test('创建活动不完整日期仍可编辑，不把其他时间改成无效值',()=>{
+ const values={start:'2026-10-06T18:30',end:'2026-10-06T21:30',signupDeadline:'2026-10-06T17:30',cancelDeadline:'2026-10-05T18:30'};
+ assert.deepEqual(shiftActivityTimes(values,{start:'T18:30'}),{...values,start:'T18:30'});
+ const cleared={...values,start:'T18:30'};
+ const restored=shiftActivityTimes(cleared,{start:'2026-10-08T18:30'},values.start);
+ assert.equal(restored.signupDeadline,'2026-10-08T17:30');assert.equal(restored.cancelDeadline,'2026-10-07T18:30');
 });
