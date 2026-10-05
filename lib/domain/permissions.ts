@@ -4,7 +4,7 @@ export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Even
  return account.role==='admin'||event.creatorId===account.id;
 }
 
-const eventActions=new Set(['shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','settle','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['pointsModeVoting','pointsModeSelect','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','settle','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
