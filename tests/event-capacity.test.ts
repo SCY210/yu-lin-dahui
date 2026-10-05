@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {eventCapacitySummary} from '../lib/client/event-capacity';
+import type {Event,Booking,Registration} from '../lib/domain/types';
+const event={id:'e',capacity:6} as Event;
+const bookings:Booking[]=[{id:'a',eventId:'e',name:'1号场',start:0,end:60,signupCapacity:6,pricing:'total',cents:0},{id:'b',eventId:'e',name:'2号场',start:0,end:120,signupCapacity:6,pricing:'total',cents:0}];
+const reg=(id:string,slots:{bookingId:string;status:string}[])=>({id,playerId:id,eventId:'e',status:slots.some(x=>x.status==='confirmed')?'confirmed':'waitlist',bookingSignups:slots} as Registration);
+test('两场各6名额：外部卡片显示12上限，按各场正式报名计数',()=>{const regs=Array.from({length:12},(_,i)=>reg('p'+i,[{bookingId:i<6?'a':'b',status:'confirmed'}]));const result=eventCapacitySummary(event,bookings,regs);assert.equal(result.occupied,12);assert.equal(result.capacity,12);assert.deepEqual(result.courts.map(c=>[c.occupied,c.capacity]),[[6,6],[6,6]])});
+test('一个球友报名两个时段占两个名额，避免满员时出现虚假空位',()=>{const result=eventCapacitySummary(event,bookings,[reg('p1',[{bookingId:'a',status:'confirmed'},{bookingId:'b',status:'confirmed'}])]);assert.equal(result.people,1);assert.equal(result.occupied,2);assert.equal(result.capacity,12)});
+test('候补与取消不占正式名额，不混入其他活动和重复报名',()=>{const regs=[reg('p1',[{bookingId:'a',status:'confirmed'},{bookingId:'a',status:'confirmed'},{bookingId:'b',status:'waitlist'}]),reg('p2',[{bookingId:'a',status:'cancelled'}]),{...reg('p3',[{bookingId:'b',status:'confirmed'}]),eventId:'other'}];assert.equal(eventCapacitySummary(event,bookings,regs).occupied,1)});
+test('各场不同上限、缺省上限，以及同名场地不同时段均准确显示',()=>{const bs=[{...bookings[0],signupCapacity:4},{...bookings[1],name:'1号场',signupCapacity:undefined,start:60}];const result=eventCapacitySummary(event,bs,[]);assert.equal(result.capacity,10);assert.deepEqual(result.courts.map(c=>c.capacity),[4,6]);assert.ok(result.courts.every(c=>c.showTime))});
+test('旧活动仍用原总上限；单场保留兼容名单计数',()=>{const legacy={id:'legacy',playerId:'p',eventId:'e',status:'confirmed'} as Registration;const old=eventCapacitySummary(event,bookings.map(b=>({...b,signupCapacity:undefined})),[legacy]);assert.equal(old.capacity,6);assert.equal(old.occupied,1);assert.equal(old.scoped,false);const one=eventCapacitySummary(event,[bookings[0]],[legacy]);assert.equal(one.occupied,1);assert.equal(one.capacity,6)});
