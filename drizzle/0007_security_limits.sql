@@ -1,0 +1,1 @@
+CREATE INDEX `auth_rate_limits_expires` ON `auth_rate_limits` (`expires`);

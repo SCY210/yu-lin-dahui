@@ -1,4 +1,4 @@
-import {sqliteTable,text,integer,uniqueIndex} from 'drizzle-orm/sqlite-core';
+import {sqliteTable,text,integer,uniqueIndex,index} from 'drizzle-orm/sqlite-core';
 const payload=()=>text('payload').notNull();
 export const commits=sqliteTable('commits',{revision:integer('revision').primaryKey(),key:text('key').notNull().unique(),at:integer('at').notNull()});
 export const settings=sqliteTable('settings',{id:text('id').primaryKey(),payload:payload()});
@@ -22,4 +22,4 @@ export const awardVotes=sqliteTable('awardVotes',{id:text('id').primaryKey(),pay
 export const photos=sqliteTable('photos',{id:text('id').primaryKey(),payload:payload()});
 export const passwordCredentials=sqliteTable('password_credentials',{id:text('id').primaryKey().references(()=>accounts.id),username:text('username').notNull().unique(),salt:text('salt').notNull(),hash:text('hash').notNull(),created:integer('created').notNull(),usernameChangedAt:integer('username_changed_at')});
 export const authSessions=sqliteTable('auth_sessions',{id:text('id').primaryKey(),userId:text('user_id').notNull().references(()=>accounts.id),expires:integer('expires').notNull()});
-export const authRateLimits=sqliteTable('auth_rate_limits',{id:text('id').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull()});
+export const authRateLimits=sqliteTable('auth_rate_limits',{id:text('id').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull()},table=>[index('auth_rate_limits_expires').on(table.expires)]);

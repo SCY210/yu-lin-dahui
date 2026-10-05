@@ -6,6 +6,8 @@
 
 中文、移动端优先的私人羽毛球群 Web App。默认 EUR / Europe/Madrid。
 
+网站防护及本地验证范围见 [SECURITY.md](docs/SECURITY.md)。
+
 源码仓库：[SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui)（私有）。网站继续通过 Sites 托管；GitHub 独立副本同步已验证的源码版本，数据库、上传照片、密码和本地运行状态保存在各自的数据服务中。
 
 ## 运行

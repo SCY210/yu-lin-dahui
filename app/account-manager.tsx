@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import {notifySessionChange} from '../lib/client/session-sync';
 import {toast} from 'sonner';
 import {UserPlus,KeyRound,Pencil} from 'lucide-react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
@@ -19,7 +20,7 @@ export default function AccountManager({data,refresh,onEditName,onSelfUsernameCh
    const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d:any=await r.json();if(!r.ok)throw new Error(d.error);
    const selfReset=form.reset&&form.accountId===data.me.id;
    setForm(null);toast.success(selfReset?'密码已重置，请重新登录':form.reset?'密码已重置，原登录会话已退出':'账号已创建，请将账号和初始密码交给本人');
-   if(selfReset&&data.auth.method==='password'){location.reload();return}await refresh();
+   if(selfReset&&data.auth.method==='password'){notifySessionChange();location.reload();return}await refresh();
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }
  return <section className="card account-manager">

@@ -9,7 +9,8 @@ import {applySocial,memberSocialActions} from './social-commands';
 import {decorateMatch} from './play';
 import {findVenue} from '../venues';
 import {authorizeEventAction,isEventAction,canManageEvent} from './permissions';
-const id=()=>crypto.randomUUID();const text=z.string().trim().min(1).max(150),pid=z.string().min(1).max(100),time=z.number().int().min(0),cents=z.number().int().min(0).max(100000000),reason=z.string().trim().min(1).max(500),mode=z.enum(['equal','duration','interval']);
+import {businessTimestamp as time} from './timestamp';
+const id=()=>crypto.randomUUID();const text=z.string().trim().min(1).max(150),pid=z.string().min(1).max(100),cents=z.number().int().min(0).max(100000000),reason=z.string().trim().min(1).max(500),mode=z.enum(['equal','duration','interval']);
 const rulesSchema=z.object({win:z.number().int().min(0).max(100),loss:z.number().int().min(0).max(100),minimum:z.number().int().min(0).max(500),cap:z.number().int().min(0).max(500),target:z.number().int().min(1).max(100),ceiling:z.number().int().min(1).max(150),lead:z.number().int().min(1).max(10),k:z.number().min(1).max(128),algorithm:z.literal('doubles-elo-v1')});
 export async function digest(v:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))).map(x=>x.toString(16).padStart(2,'0')).join('')}
 export function authorized(a:Account,action:string){if(!['register','cancel','friend','event',...memberSocialActions].includes(action)&&!isEventAction(action)&&a.role!=='admin')fail('403: 仅管理员可以执行此操作')}

@@ -1,13 +1,23 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {flushSync} from 'react-dom';
 import {toast} from 'sonner';
+import {listenForSessionChanges,notifySessionChange} from '../lib/client/session-sync';
 export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBound?:()=>void}){
  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
- async function submit(e:React.FormEvent){e.preventDefault();if(busy)return;if(binding&&!/^[A-Za-z0-9]{2,32}$/.test(username.trim())){setError('新账号须为2–32位英文字母或数字');return}if(binding&&password!==confirmation){setError('两次密码不一致');return}setBusy(true);setError('');try{
+ const sessionInvalidated=useRef(false);
+ useEffect(()=>{
+  if(binding)return; // The authenticated parent invalidates and unmounts binding forms.
+  const invalidate=()=>{if(sessionInvalidated.current)return;sessionInvalidated.current=true;flushSync(()=>{setUsername('');setPassword('');setConfirmation('');setError('');setBusy(true)});location.replace('/')};
+  const sync=listenForSessionChanges(invalidate),restore=(event:PageTransitionEvent)=>{if(event.persisted)invalidate()};
+  window.addEventListener('pageshow',restore);
+  return()=>{sync.stop();window.removeEventListener('pageshow',restore)};
+ },[binding]);
+ async function submit(e:React.FormEvent){e.preventDefault();if(busy||sessionInvalidated.current)return;if(binding&&!/^[A-Za-z0-9]{2,32}$/.test(username.trim())){setError('新账号须为2–32位英文字母或数字');return}if(binding&&password!==confirmation){setError('两次密码不一致');return}setBusy(true);setError('');try{
   const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})}),d:any=await r.json();if(!r.ok)throw new Error(d.error);
-  setPassword('');setConfirmation('');
+  if(sessionInvalidated.current)return;setPassword('');setConfirmation('');notifySessionChange();
   if(binding){toast.success('账号登录已开通，原权限和记录已保留');onBound?.()}else location.reload();
- }catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+ }catch(e){if(!sessionInvalidated.current)setError((e as Error).message)}finally{if(!sessionInvalidated.current)setBusy(false)}}
  return <div className={binding?'auth-bind':'auth-card'}>
  {!binding&&<div className="auth-decoration" aria-hidden="true"><img src="/shuttlecock.png" width={1309} height={1202} alt=""/></div>}
  <h1>{binding?'开通账号登录':'登录羽林大会'}</h1>

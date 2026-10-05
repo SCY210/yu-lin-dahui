@@ -1,3 +1,6 @@
+import {readJsonBody} from '../../../lib/request-body';
+import {assertWriteRequest,releaseRejectedWriteBody,writeErrorResponse} from '../../../lib/write-security';
+import {cleanExpiredRateLimits,consumeRateLimit,loginRateKey,rateLimitId,trustedClientIP} from '../../../lib/rate-limit';
 import {assertAccountMutable,assertPlayerMutable} from '../../../lib/domain/ownership';
 import {newUsername as username,changeUsernameInput} from '../../../lib/username-policy';
 import {changeLoginUsername,loginAccountMetadata} from '../../../lib/username-change';
@@ -9,38 +12,26 @@ import {makePassword,checkPassword,sessionToken,normalizeUsername} from '../../.
 export const dynamic='force-dynamic';
 const password=z.string().min(12).max(128);
 const age=14*86400;
-async function readBody(req:Request){
- const reader=req.body?.getReader();if(!reader)return '';
- const chunks:Uint8Array[]=[];let size=0;
- for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>8192){await reader.cancel();throw new Error('认证请求过大')}chunks.push(value)}
- const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
- return new TextDecoder().decode(bytes);
-}
 function cookie(name:string,value:string,req:Request,maxAge:number){return `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${new URL(req.url).protocol==='https:'?'; Secure':''}`}
 function result(data:unknown,req:Request,token?:string){const h=new Headers({'Cache-Control':'no-store'});if(token){h.append('Set-Cookie',cookie(sessionCookie,token,req,age));h.append('Set-Cookie',cookie('yulin_signed_out','',req,0))}return Response.json(data,{headers:h})}
 function denied(error:string,status=403){return Response.json({error},{status,headers:{'Cache-Control':'no-store'}})}
-async function limit(key:string,max:number,window:number){
- const id=await hashToken(key),now=Date.now();
- await raw().prepare('DELETE FROM auth_rate_limits WHERE id IN (SELECT id FROM auth_rate_limits WHERE expires<=? LIMIT 100)').bind(now).run();
- const row=await raw().prepare('INSERT INTO auth_rate_limits(id,count,expires) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=CASE WHEN auth_rate_limits.expires<=? THEN 1 ELSE auth_rate_limits.count+1 END,expires=CASE WHEN auth_rate_limits.expires<=? THEN excluded.expires ELSE auth_rate_limits.expires END RETURNING count').bind(id,now+window,now,now).first<{count:number}>();
- return (row?.count??max+1)<=max;
-}
 const conflict=(e:unknown)=>String(e).includes('UNIQUE constraint failed: commits');
 export async function GET(){try{const u=await getAppUser();return Response.json(u?{signedIn:true,method:u.method,...await loginAccountMetadata(u.userId)}:{signedIn:false},{headers:{'Cache-Control':'no-store'}})}catch(error){const safe=publicApiError(error);return denied(safe.error,safe.status)}}
 export async function POST(req:Request){try{
- const body=await readBody(req);
- if(req.headers.get('origin')!==new URL(req.url).origin)return denied('请求来源不允许');
- const input:any=JSON.parse(body),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','changeUsername','logout']).parse(input.action),ip=req.headers.get('cf-connecting-ip')??'local';
+ assertWriteRequest(req);const ip=trustedClientIP(req);
+ const input:any=await readJsonBody(req,8192),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','changeUsername','logout']).parse(input.action);
  if(action==='logout'){
   const token=req.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionCookie+'='))?.slice(sessionCookie.length+1);
-  if(token)await raw().prepare('DELETE FROM auth_sessions WHERE id=?').bind(await hashToken(token)).run();
+  if(token&&/^[A-Za-z0-9_-]{43}$/.test(token))await raw().prepare('DELETE FROM auth_sessions WHERE id=?').bind(await hashToken(token)).run();
   const h=new Headers({'Cache-Control':'no-store'});h.append('Set-Cookie',cookie(sessionCookie,'',req,0));h.append('Set-Cookie',cookie('yulin_signed_out','1',req,age));
   return Response.json({ok:true},{headers:h});
  }
- if(!await limit('ip:'+ip,120,15*60000))return denied('登录请求较多，请稍后再试',429);
+ await cleanExpiredRateLimits();
+ await consumeRateLimit('auth-ip:'+ip,120,15*60000,{message:'登录请求较多，请稍后再试'});
  if(action==='login'){
   const p=z.object({username:z.string().trim().min(1).max(254).transform(normalizeUsername),password:z.string().min(1).max(128)}).parse(input);
-  if(!await limit('login:'+p.username,8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
+  const pairId=await rateLimitId(loginRateKey(p.username,ip));
+  await consumeRateLimit(loginRateKey(p.username,ip),8,15*60000,{message:'当前网络尝试次数较多，请15分钟后重试'});
   const c=await raw().prepare('SELECT id,username,salt,hash FROM password_credentials WHERE username=?').bind(p.username).first<{id:string;username:string;salt:string;hash:string}>();
   const valid=checkPassword(p.password,c?.salt??'dummy-salt-for-timing-v1',c?.hash??'00'.repeat(64));
   if(!c||!valid)return denied('账号或密码不正确',401);
@@ -49,7 +40,7 @@ export async function POST(req:Request){try{
   const saved=await raw().batch([
    // A simultaneous reset must not issue a session based on a stale password hash.
    raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=?').bind(await hashToken(token),c.id,Date.now()+age*1000,c.id,c.username,c.salt,c.hash),
-   raw().prepare('DELETE FROM auth_rate_limits WHERE id=?').bind(await hashToken('login:'+p.username)),
+   raw().prepare('DELETE FROM auth_rate_limits WHERE id=?').bind(pairId),
    raw().prepare('DELETE FROM auth_sessions WHERE expires<=?').bind(Date.now())
   ]);
   if(!saved[0].meta.changes)return denied('账号或密码已更新，请重新登录',401);
@@ -58,14 +49,14 @@ export async function POST(req:Request){try{
  const user=await getAppUser();if(!user)return denied('请先登录账号',401);
  if(action==='changeUsername'){
   const p=changeUsernameInput.parse(input),meta=await loginAccountMetadata(user.userId);
-  if(!await limit('changeUsername:'+user.userId,meta.isOwner?40:8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
+  await consumeRateLimit('changeUsername:'+user.userId,meta.isOwner?40:8,15*60000,{message:'修改账号尝试较多，请15分钟后重试'});
   const changed=await changeLoginUsername(user,p,req);
   if(!changed.signedOut)return result(changed,req);
   const h=new Headers({'Cache-Control':'no-store'});h.append('Set-Cookie',cookie(sessionCookie,'',req,0));h.append('Set-Cookie',cookie('yulin_signed_out','1',req,age));
   return Response.json(changed,{headers:h});
  }
  if(action==='changePassword'){
-  if(!await limit('changePassword:'+user.userId,8,15*60000))return denied('尝试次数较多，请15分钟后重试',429);
+  await consumeRateLimit('changePassword:'+user.userId,8,15*60000,{message:'修改密码尝试较多，请15分钟后重试'});
   const parsed=z.object({action:z.literal('changePassword'),currentPassword:z.string().min(1).max(128),newPassword:password,confirmPassword:password,requestId:z.string().uuid()}).strict().safeParse(input);
   if(!parsed.success)return denied('请填写当前密码、新密码和确认密码；新密码须为12–128位',400);
   const p=parsed.data;
@@ -167,4 +158,4 @@ export async function POST(req:Request){try{
   }
  }
  return denied('操作未完成，请稍后重试',409);
-}catch(e){if(e instanceof z.ZodError)return denied('请检查输入：新登录账号须为2–32位英文字母和数字；密码至少12位',400);const safe=publicApiError(e);return denied(safe.error,safe.status)}}
+}catch(e){if(e instanceof z.ZodError)return denied('请检查输入：新登录账号须为2–32位英文字母和数字；密码至少12位',400);return writeErrorResponse(e)}finally{await releaseRejectedWriteBody(req,8192)}}

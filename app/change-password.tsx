@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {notifySessionChange} from '../lib/client/session-sync';
 import './change-password.css';
 
 export default function ChangePassword({open,onOpenChange,onChanged}:{open:boolean;onOpenChange:(open:boolean)=>void;onChanged:()=>void}){
@@ -16,7 +17,7 @@ export default function ChangePassword({open,onOpenChange,onChanged}:{open:boole
   try{
    const response=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'changePassword',currentPassword,newPassword,confirmPassword,requestId:crypto.randomUUID()})});
    const result:any=await response.json();if(!response.ok)throw new Error(result.error??'密码修改失败，请重试');
-   clear();onChanged();
+   clear();notifySessionChange();onChanged();
   }catch(e){setError(e instanceof Error?e.message:'密码修改失败，请重试')}finally{setBusy(false)}
  }
  return <Dialog open={open} historyCloseBlocked={busy} onOpenChange={changeOpen}><DialogContent className="app-dialog change-password-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(busy)ev.preventDefault()}} onInteractOutside={ev=>{if(busy)ev.preventDefault()}}>

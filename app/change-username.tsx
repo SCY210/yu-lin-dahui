@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {notifySessionChange} from '../lib/client/session-sync';
 import './change-username.css';
 
 type Props={open:boolean;onOpenChange:(open:boolean)=>void;onChanged:(result:{signedOut:boolean;username:string})=>void|Promise<void>;currentUsername:string;isOwner:boolean;passwordEnabled:boolean;accountId?:string;accountName?:string};
@@ -19,7 +20,7 @@ export default function ChangeUsername({open,onOpenChange,onChanged,currentUsern
   try{
    const response=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'changeUsername',newUsername:username,requestId:requestId.current,...(passwordEnabled?{currentPassword}:{}),...(accountId?{accountId}:{})})});
    const result:any=await response.json();if(!response.ok)throw new Error(result.error??'账号修改失败，请重试');
-   setNewUsername('');setCurrentPassword('');await onChanged({signedOut:result.signedOut,username:result.username});
+   setNewUsername('');setCurrentPassword('');if(result.signedOut)notifySessionChange();await onChanged({signedOut:result.signedOut,username:result.username});
   }catch(e){setError(e instanceof Error?e.message:'账号修改失败，请重试')}finally{inFlight.current=false;setBusy(false)}
  }
  return <Dialog open={open} historyCloseBlocked={busy} onOpenChange={changeOpen}><DialogContent className="app-dialog change-username-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(inFlight.current)ev.preventDefault()}} onInteractOutside={ev=>{if(inFlight.current)ev.preventDefault()}}>
