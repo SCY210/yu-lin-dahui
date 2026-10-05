@@ -1,0 +1,23 @@
+.event-guides-empty{display:none}
+.ev-combined{min-width:0;margin-top:17px}
+.ev-signup-summary{padding:20px;border:1px solid #e4deef;border-radius:18px;background:#fff;box-shadow:0 3px 12px #49357e04}
+.ev-summary-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ev-summary-heading h2{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:0;color:#3d315a;font-size:20px}
+.ev-summary-heading h2>span{font-size:13px;font-weight:500;padding:4px 9px;border:1px solid #e7e0f1;border-radius:999px;background:#f5f1fb;color:#877098;font-variant-numeric:tabular-nums}
+.ev-summary-heading button{min-height:35px}
+.ev-summary-status{display:flex;gap:14px;flex-wrap:wrap;margin:11px 0 15px;color:#90859b;font-size:13px}
+.ev-summary-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ev-summary-actions button{min-height:44px;font-size:14px}
+.ev-combined>.card{margin:14px 0}
+.ev-combined>.card>h3{margin:0 0 8px;font-size:17px;color:#4a3c61}
+.ev-details{margin:12px 0;border:1px solid #e7e1ef;border-radius:14px;background:#fff;overflow:hidden}
+.ev-details>summary{padding:15px 18px;font-size:14px;font-weight:500;color:#7e698f;min-height:48px;list-style-position:inside}
+.ev-details[open]>summary{border-bottom:1px solid #ece7f4;background:#fcfaff}
+.ev-details-content{padding:0 17px 14px}
+.ev-details-content>.card{padding:16px 0;margin:0;border:0;border-radius:0;box-shadow:none;border-bottom:1px solid #eee9f5}
+.ev-details-content>.card:last-child{border-bottom:0}
+.ev-deadlines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0;padding-bottom:14px;border-bottom:1px solid #eee9f5}
+.ev-deadlines>div{min-width:0}
+.ev-deadlines dt{font-size:12px;color:#9b8ca6;margin-bottom:4px}
+.ev-deadlines dd{margin:0;font-size:13px;color:#766286;overflow-wrap:anywhere}
+@media(max-width:600px){.ev-signup-summary{padding:16px;border-radius:16px}.ev-summary-heading h2{font-size:18px;gap:8px}.ev-summary-heading h2>span{font-size:12px;padding:3px 8px}.ev-summary-actions .primary{flex:1}.ev-summary-actions .secondary{padding:10px 12px;font-size:13px}.ev-summary-status{font-size:12px;margin:9px 0 13px}.ev-deadlines{grid-template-columns:1fr;gap:9px}.ev-details>summary{font-size:13px;padding:13px 16px}.ev-details-content{padding:0 15px 12px}}
