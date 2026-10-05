@@ -30,7 +30,7 @@ export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self
  }
  const profile=player.profile??{},motto=profile.motto?.trim();
  function move(event:PointerEvent<HTMLDivElement>){
-  if(event.pointerType!=='mouse'||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  if(event.pointerType!=='mouse'||!window.matchMedia('(min-width:761px) and (hover:hover) and (pointer:fine)').matches||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const box=event.currentTarget.getBoundingClientRect(),x=(event.clientX-box.left)/box.width,y=(event.clientY-box.top)/box.height;
   tilt.current?.style.setProperty('--pc-rx',`${(0.5-y)*9}deg`);tilt.current?.style.setProperty('--pc-ry',`${(x-0.5)*11}deg`);
   tilt.current?.style.setProperty('--pc-glow-x',`${x*100}%`);tilt.current?.style.setProperty('--pc-glow-y',`${y*100}%`);
