@@ -14,4 +14,3 @@ export function shuttleVoteCounts(s:ShuttleState,e:Event){
  for(const vote of e.shuttlePlan?.votes??[])if(participants.has(vote.playerId)&&Object.hasOwn(counts,vote.optionId))counts[vote.optionId]++;
  return counts;
 }
-

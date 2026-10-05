@@ -22,4 +22,3 @@ export const guideLabels:Record<GuideTopic,string> = {
   challenges:'复仇挑战', state:'最近状态', modes:'玩法与随机身份',
   photos:'照片与头像', annual:'年度总结', accounts:'账号与权限',
 };
-
