@@ -1,6 +1,7 @@
 import {winner,points,tier} from './social';
 import {cultivationProgress} from './cultivation';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
+import {quarterMonths} from '../ranking-quarter';
 export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return hi<=r.ceiling&&((hi===r.target&&lo<=hi-r.lead)||(hi>r.target&&hi<r.ceiling&&hi-lo===r.lead)||(hi===r.ceiling&&lo>=r.ceiling-r.lead&&lo<hi))}
 export function replayRating(s:State){for(const p of s.players){p.rating=p.initialRating;p.ratedGames=0}const changes:{matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string}[]=[];
  for(const m of s.matches.filter(m=>m.status==='complete'&&m.elo).sort((a,b)=>(a.end!-b.end!)||a.id.localeCompare(b.id))){const a=m.a.map(id=>s.players.find(p=>p.id===id)!),b=m.b.map(id=>s.players.find(p=>p.id===id)!);const ra=(a[0].rating+a[1].rating)/2,rb=(b[0].rating+b[1].rating)/2;const rules=s.seasons.find(x=>x.id===month(m.start!))?.rules??s.settings.rules;const expected=1/(1+10**((rb-ra)/400)),delta=rules.k*((winner(m)==='a'?1:0)-expected);for(const [ps,d]of [[a,delta],[b,-delta]] as const)for(const p of ps){changes.push({matchId:m.id,playerId:p.id,before:p.rating,after:p.rating+d,delta:d,algorithm:rules.algorithm});p.rating+=d;p.ratedGames++}}
@@ -11,13 +12,13 @@ export function leaderboard(s:State,season:string){const rules=s.seasons.find(x=
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
 
-/** Annual points sum twelve month results; each month keeps its own rules and cap. */
-export function annualLeaderboard(s:State, year:number) {
+/** Aggregate scored facts without averaging monthly rates or changing past caps. */
+function aggregateLeaderboard(s:State,periods:string[]) {
+ const chosen=new Set(periods);
  const rows=s.players.filter(p=>p.enabled).map(p=>{
-  const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&Number(month(m.start).slice(0,4))===year&&[...m.a,...m.b].includes(p.id));
+  const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id));
   let games=0,wins=0,net=0,score=0;
-  for(let i=1;i<=12;i++) {
-   const period=`${year}-${String(i).padStart(2,'0')}`;
+  for(const period of periods) {
    const rules=s.seasons.find(season=>season.id===period)?.rules??s.settings.rules;
    const eligible=all.filter(m=>m.monthly&&month(m.start!)===period).sort((a,b)=>a.start!-b.start!||a.id.localeCompare(b.id));
    const scored=rules.cap?eligible.slice(0,rules.cap):eligible;
@@ -36,3 +37,7 @@ export function annualLeaderboard(s:State, year:number) {
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});
  return rows;
 }
+/** Each quarter sums its three months; historical monthly rules/caps remain intact. */
+export function quarterlyLeaderboard(s:State,quarter:string){return aggregateLeaderboard(s,quarterMonths(quarter))}
+/** Annual points keep the same twelve-month calculation. */
+export function annualLeaderboard(s:State,year:number){return aggregateLeaderboard(s,Array.from({length:12},(_,i)=>`${year}-${String(i+1).padStart(2,'0')}`))}
