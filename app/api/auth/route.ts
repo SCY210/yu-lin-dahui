@@ -9,6 +9,8 @@ import {z} from 'zod';
 import {load,raw,save,committed} from '../../../lib/store';
 import {getAppUser,hashToken,passwordEnabled,sessionCookie} from '../../../lib/auth';
 import {makePassword,checkPassword,sessionToken,normalizeUsername} from '../../../lib/password';
+import {pushEndpoint} from '../../../lib/push-contract';
+import {removePushSubscription} from '../../../lib/push-subscriptions';
 export const dynamic='force-dynamic';
 const password=z.string().min(12).max(128);
 const age=14*86400;
@@ -21,6 +23,7 @@ export async function POST(req:Request){try{
  assertWriteRequest(req);const ip=trustedClientIP(req);
  const input:any=await readJsonBody(req,8192),action=z.enum(['login','bind','createAccount','resetPassword','changePassword','changeUsername','logout']).parse(input.action);
  if(action==='logout'){
+  if(input.pushEndpoint!==undefined){const endpoint=pushEndpoint.parse(input.pushEndpoint),owner=await getAppUser();if(owner)await removePushSubscription(owner.userId,endpoint)}
   const token=req.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionCookie+'='))?.slice(sessionCookie.length+1);
   if(token&&/^[A-Za-z0-9_-]{43}$/.test(token))await raw().prepare('DELETE FROM auth_sessions WHERE id=?').bind(await hashToken(token)).run();
   const h=new Headers({'Cache-Control':'no-store'});h.append('Set-Cookie',cookie(sessionCookie,'',req,0));h.append('Set-Cookie',cookie('yulin_signed_out','1',req,age));
