@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   appleWebApp: {capable:true,title:'羽林大会',statusBarStyle:'default'},
   other: {'apple-mobile-web-app-capable':'yes'},
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-    apple: '/icons/apple-touch-icon.png',
+    icon: "/favicon.svg?v=feather-v2",
+    shortcut: "/favicon.svg?v=feather-v2",
+    apple: '/icons/apple-touch-icon-feather.png',
   },
 };
 
