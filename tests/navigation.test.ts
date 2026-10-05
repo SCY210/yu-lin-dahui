@@ -75,7 +75,7 @@ test('annual ranking profile return preserves ranking year, month selection and 
 });
 
 test('refreshing a profile keeps a safe source; return without memory frames replaces that source and preserves filters',()=>{
- const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(510);const selection={period:'2024-02',year:2024,rankingPeriod:'monthly' as const};b.navigation.openPlayer('peer',selection);
+ const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(510);const selection={period:'2024-02',year:2024,rankingPeriod:'quarterly' as const};b.navigation.openPlayer('peer',selection);
  const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.equal(reloaded.profileBackLabel,'返回榜单');assert.deepEqual(reloaded.rankingSelection,selection);
  reloaded.returnFromProfile();assert.equal(reloaded.route.page,'ranking');assert.equal(b.scroll,510);assert.equal(b.moves.length,0);assert.equal(b.entries.length,3);
  assert.deepEqual(reloaded.rankingSelection,selection);
@@ -101,8 +101,14 @@ test('changing ranking filters after returning from a profile persists latest se
  assert.equal(emitted,count,'Updating a filter must not emit a route restoration that resets React state');assert.equal(b.entries.length,3,'Filters update this ranking entry rather than pushing another route');
  b.navigation.navigate({page:'me'});b.back();assert.equal(b.navigation.route.page,'ranking');assert.deepEqual(b.navigation.rankingSelection,latest);
  const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.deepEqual(reloaded.rankingSelection,latest);
- reloaded.updateRankingSelection({...latest,rankingPeriod:'monthly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'monthly');
+ reloaded.updateRankingSelection({...latest,rankingPeriod:'quarterly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'quarterly');
  unsubscribe();
+});
+
+test('旧月榜历史记录升级为所属季度，季度筛选返回球友档案后保留',()=>{
+ const state={__yulinNavigation:{session:'old',owner:'member-A',index:0,route:normalizeRoute({page:'ranking'}),dialog:null,ranking:{period:'2025-08',year:2025,rankingPeriod:'monthly'}}};
+ const b=browser('https://club.example/?page=ranking',state);assert.deepEqual(b.navigation.rankingSelection,{period:'2025-08',year:2025,rankingPeriod:'quarterly'});
+ const selection={period:'2024-10',year:2024,rankingPeriod:'quarterly' as const};b.navigation.openPlayer('peer',selection);b.navigation.returnFromProfile();b.flush();assert.deepEqual(b.navigation.rankingSelection,selection);
 });
 test('保存中的弹窗拒绝手机返回时恢复原历史位置，完成后可正常返回且不重复关闭',()=>{
  const b=browser();let busy=true,closed=0;b.navigation.navigate({page:'events'});

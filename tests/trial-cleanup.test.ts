@@ -20,6 +20,11 @@ test('准确移除三组试用身份和未来报名，正式球友不变；重�
 test('普通成员和其他管理员都不能清理或恢复试用账号',()=>{
  for(const role of ['member','admin'] as const){const {s}=fixture(),a={id:'other',playerId:'other',email:'',role},before=structuredClone(s);assert.throws(()=>archiveTrials(s,a,now),/403/);assert.throws(()=>restoreTrials(s,a,now),/403/);assert.throws(()=>trialCleanupStatus(s,a),/403/);assert.deepEqual(s,before)}
 });
+test('试用账号发出的旧打法标签票一并存档，可随账号恢复且不覆盖其他投票',()=>{
+ const {s,owner}=fixture(),vote={id:'trial-style-vote',voterId:trialTargets[0].accountId,playerId:owner.playerId,tag:'网前雨刮器',at:now-1000};
+ s.tagVotes.push(vote);archiveTrials(s,owner,now);assert.equal(s.tagVotes.length,0);restoreTrials(s,owner,now);assert.deepEqual(s.tagVotes,[vote]);
+ archiveTrials(s,owner,now);s.tagVotes.push({...vote,tag:'其他已存在记录'});const before=structuredClone(s);assert.throws(()=>restoreTrials(s,owner,now),/不能覆盖恢复/);assert.deepEqual(s,before);
+});
 test('改名、身份被替换、已有计分比赛或参与记录时拒绝且不改变数据',()=>{
  for(const mutation of [(s:any)=>s.players[1].name='正式成员',(s:any)=>s.accounts[1].role='admin',(s:any)=>s.players[1].ratedGames=1,(s:any)=>s.registrations[0].arrival=now,(s:any)=>s.attendance.push({id:'attendance',eventId:'event',playerId:trialTargets[0].playerId,start:now,end:now+1000,state:'left'})]){const {s,owner}=fixture();mutation(s);const before=structuredClone(s);assert.throws(()=>archiveTrials(s,owner,now));assert.deepEqual(s,before)}
 });
