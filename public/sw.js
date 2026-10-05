@@ -10,7 +10,11 @@ self.addEventListener('install', event => {
       throw new Error('Offline screen unavailable');
     }
     const cache = await caches.open(OFFLINE_CACHE);
-    await cache.put(OFFLINE_PAGE, response);
+    // Static hosts may redirect offline.html to /offline. Strip the redirect
+    // metadata so the cached response can serve a different navigation safely.
+    await cache.put(OFFLINE_PAGE, new Response(response.body, {
+      status: response.status, statusText: response.statusText, headers: response.headers,
+    }));
     await self.skipWaiting();
   })());
 });

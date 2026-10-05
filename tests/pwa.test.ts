@@ -6,7 +6,10 @@ import {secureResponse} from '../lib/security-headers';
 
 function worker(){
  const handlers=new Map<string,(event:any)=>void>(),storage=new Map<string,Response>(),fetches:any[]=[],deleted:string[]=[];
- let network=(request:any,options?:any)=>{fetches.push({request,options});return Promise.resolve(new Response('<h1>offline</h1>',{headers:{'Content-Type':'text/html'}}))};
+ let network=(request:any,options?:any)=>{
+  fetches.push({request,options});const response=new Response('<h1>offline</h1>',{headers:{'Content-Type':'text/html'}});
+  Object.defineProperty(response,'redirected',{value:true});return Promise.resolve(response);
+ };
  const self={location:{origin:'https://club.example'},addEventListener:(name:string,handler:(event:any)=>void)=>handlers.set(name,handler),skipWaiting:async()=>{},clients:{claim:async()=>{}}};
  const caches={open:async()=>({put:async(key:string,response:Response)=>storage.set(key,response.clone()),match:async(key:string)=>storage.get(key)?.clone()}),keys:async()=>['yulin-offline-v0','yulin-offline-v1','another-app-cache'],delete:async(key:string)=>{deleted.push(key);return true}};
  runInNewContext(readFileSync('public/sw.js','utf8'),{self,caches,URL,Response,fetch:(...args:any[])=>network(args[0],args[1])});
@@ -26,6 +29,7 @@ test('App安装清单覆盖安卓图标和Apple触屏图标，独立窗口从首
 
 test('Service Worker只预存断网页，安装请求不携带账号Cookie，激活不删除其他缓存',async()=>{
  const sw=worker();await sw.lifecycle('install');assert.deepEqual([...sw.storage.keys()],['/offline.html']);
+ assert.equal(sw.storage.get('/offline.html')!.redirected,false);
  assert.equal(sw.fetches[0].request,'/offline.html');assert.equal(sw.fetches[0].options.credentials,'omit');assert.equal(sw.fetches[0].options.cache,'reload');
  await sw.lifecycle('activate');assert.deepEqual(sw.deleted,['yulin-offline-v0']);
 });
