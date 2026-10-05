@@ -10,21 +10,21 @@ const AvatarEditor=lazy(()=>import('./avatar-editor'));
 import FeatureGuide from './feature-guide';
 const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
+const AchievementCollection=lazy(()=>import('./achievement-collection'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import CultivationOrnament from './cultivation-ornament';
 
 const defaults = {years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', level:'beginner', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
-const levels:Record<string,string> = {beginner:'萌新', intermediate:'进阶', advanced:'高手'};
 const optional = (key:string, label:string) => ({...text(key, label), optional:true});
 
 function ProfileAvatar({p}:any) {
   const [failedId, setFailedId] = useState<string|null>(null);
   const name:string = p.name || '球友';
   return p.avatarId && p.avatarId !== failedId
-    ? <img className="pp-avatar" src={'/api/photos/'+p.avatarId} alt={p.name+'的头像'} onError={()=>setFailedId(p.avatarId)}/>
-    : <span className="pp-avatar pp-avatar-fallback" aria-label={name+'的默认头像'}>{Array.from(name)[0]}</span>;
+    ? <img className="pp-avatar" src={'/api/photos/'+p.avatarId} alt={name+'的头像'} onError={()=>setFailedId(p.avatarId)}/>
+    : null;
 }
 
 function Fact({label, value}: {label:string; value:unknown}) {
@@ -45,7 +45,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     number('years', '球龄（年）'),
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
-    choice('level', '自评水平', [['beginner','萌新'], ['intermediate','进阶'], ['advanced','高手']]),
     optional('motto', (isOwn ? '我的口号' : '这位球友的口号')+'（最多80字）'),
     optional('style', (isOwn ? '我的打法' : '这位球友的打法')+'（最多300字）'),
     optional('racket', '战拍品牌 / 型号（最多120字）'),
@@ -80,7 +79,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="球龄" value={p.profile?.years != null ? `${p.profile.years}年` : null}/>
         <Fact label="惯用手" value={hands[p.profile?.hand]}/>
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
-        <Fact label="自评水平" value={levels[p.profile?.level]}/>
       </dl>
       <div className="pp-style"><span>{isOwn ? '我的口号' : '这位球友的口号'}</span><p className={profile.motto ? '' : 'pp-unfilled'}>{profile.motto || '尚未填写'}</p></div>
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
@@ -106,6 +104,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>
     </section>
 
+    <Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} own={isOwn}/></Deferred>
     {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

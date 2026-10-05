@@ -3,7 +3,7 @@ import type {Account,Event,State} from './types';
 
 type VotingState=Pick<State,'players'|'registrations'|'attendance'>;
 
-/** Formal sign-ups may vote before play; past attendance preserves participation. */
+/** Formal participation and past attendance preserve eligibility after play. */
 export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):string[]{
  const participants=new Set(s.registrations.filter(r=>r.eventId===eventId&&r.status==='confirmed').map(r=>r.playerId));
  // Automatic attendance may include planned future intervals in the club view.
@@ -12,6 +12,10 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
  return s.players.filter(p=>p.enabled&&participants.has(p.id)).map(p=>p.id);
 }
 
-export function canCastAwardVote(s:VotingState,e:Event,a:Account,now=Date.now()):boolean{
- return e.deletedAt===undefined&&e.status!=='cancelled'&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
+export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()):boolean{
+ return e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status)&&now>=e.start&&(e.status==='ended'||now>=e.end)&&!s.matches.some(m=>m.eventId===e.id&&m.status==='playing');
+}
+
+export function canCastAwardVote(s:VotingState&Pick<State,'matches'>,e:Event,a:Account,now=Date.now()):boolean{
+ return isAwardVotingOpen(s,e,now)&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
 }

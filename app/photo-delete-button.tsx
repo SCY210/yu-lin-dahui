@@ -24,7 +24,7 @@ export default function PhotoDeleteButton({photo,ctx,label='删除照片'}:{phot
  return <>
   <button type="button" className="ghost danger" style={{minHeight:44}} aria-label={title+(photo.caption?'：'+photo.caption:'')} disabled={ctx.busy||busy} onClick={()=>{setError('');setOpen(true)}}><Trash2 size={16} aria-hidden="true"/>{label}</button>
   <AlertDialog open={open} onOpenChange={next=>{if(!busy)setOpen(next)}}>
-   <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{title}</AlertDialogTitle><AlertDialogDescription>{photo.kind==='avatar'?'删除后恢复默认头像。':photo.kind==='racket'?'这张照片将从战拍相册中移除。':'这张照片会从关联的活动、比赛及球友相册中一起移除。'}删除后无法恢复。</AlertDialogDescription></AlertDialogHeader>
+   <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{title}</AlertDialogTitle><AlertDialogDescription>{photo.kind==='avatar'?'删除后只显示名字。':photo.kind==='racket'?'这张照片将从战拍相册中移除。':'这张照片会从关联的活动、比赛及球友相册中一起移除。'}删除后无法恢复。</AlertDialogDescription></AlertDialogHeader>
     {error&&<p className="error" role="alert">{error}</p>}
     <AlertDialogFooter><AlertDialogCancel disabled={busy}>保留照片</AlertDialogCancel><AlertDialogAction disabled={busy} onClick={event=>{event.preventDefault();void remove()}}>{busy?'正在删除…':error?'重试删除':'确认删除'}</AlertDialogAction></AlertDialogFooter>
    </AlertDialogContent>

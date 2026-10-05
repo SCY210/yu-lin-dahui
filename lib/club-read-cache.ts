@@ -51,5 +51,9 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
    boundary(booking.start);boundary(booking.end-roundDuration+1);
   }
  }
+ // A historical score can be entered with a future end time. Achievements only
+ // unlock when that completed fact has actually happened.
+ const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
+ for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
  return expires;
 }
