@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {propose,validateRound} from './grouping';
+import {pointsRoundWindows} from './points-phases';
 import {fixedPartnerTeams,proposeFixed} from './fixed-partners';
 import {decorateMatch} from './play';
 import {authorizeEventAction} from './permissions';
@@ -36,11 +37,9 @@ export async function applyPointsPlan(s:State,a:Account,action:string,input:unkn
   const replaced=new Set(working.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).map(r=>r.id));
   working.rounds.filter(r=>replaced.has(r.id)).forEach(r=>r.status='cancelled');
   working.matches.filter(m=>replaced.has(m.roundId)).forEach(m=>m.status='cancelled');
-  const durations:number[]=[];let remaining=p.pointsMinutes;
-  while(remaining>0){const length=Math.min(p.roundMinutes,remaining);if(length<5&&durations.length){durations[durations.length-1]+=length;break}durations.push(length);remaining-=length}
-  if(durations.length>48)fail('积分赛最多预排48轮，请增加每轮预计时长');
-  const plannedRounds:Round[]=[],plannedMatches:Match[]=[];let at=p.at;
-  for(const [i,duration] of durations.entries()){
+  const windows=pointsRoundWindows(working,event,p.at,end,p.roundMinutes);
+  const plannedRounds:Round[]=[],plannedMatches:Match[]=[];
+  for(const [i,{start:at,duration}] of windows.entries()){
    let proposal:ReturnType<typeof propose>;
    try{proposal=teams?proposeFixed(working,event,at,duration,((p.seed+i*7919)%2147483647)||1,teams):propose(working,event,at,duration,((p.seed+i*7919)%2147483647)||1)}catch(error){fail(`第${i+1}轮无法安排：${error instanceof Error?error.message:'请检查参加时间和场地'}`)}
    const r:Round={id:crypto.randomUUID(),eventId:e.id,start:at,duration,status:'published',eligible:proposal.eligible,rest:proposal.rest,seed:((p.seed+i*7919)%2147483647)||1,pointsSlot:i+1};
@@ -49,7 +48,6 @@ export async function applyPointsPlan(s:State,a:Account,action:string,input:unkn
     const m:Match={...court,id:crypto.randomUUID(),eventId:e.id,roundId:r.id,status:'published',start:null,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
     decorateMatch(working,event,m);working.matches.push(m);plannedMatches.push(m);
    }
-   at+=duration*minute;
   }
   // Published status above makes the existing fair rotation algorithm count
   // earlier planned turns. Commit as editable drafts until the organiser publishes.

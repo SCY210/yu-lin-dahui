@@ -33,10 +33,21 @@ export function courtSpans(s:State,e:Event,b:Booking){
  const current=e.status==='cancelled'?[]:s.registrations.filter(r=>r.eventId===e.id).flatMap(r=>registrationSpans(s,e,r,b.id));
  return [...current,...s.attendance.filter(a=>a.eventId===e.id&&a.end!==null&&a.source==='automatic'&&(!a.bookingId||a.bookingId===b.id))].map(a=>({...a,start:Math.max(a.start,b.start),end:Math.min(a.end??e.end,b.end)})).filter(a=>a.end>a.start);
 }
+export function venueParticipation(s:State,e:Event,r:Registration){
+ const spans=registrationSpans(s,e,r).map(a=>({start:a.start,end:a.end??e.end,venue:s.bookings.find(b=>b.id===a.bookingId)?.venue??e.venue})).filter(a=>a.end>a.start).sort((a,b)=>a.venue.localeCompare(b.venue)||a.start-b.start);
+ const merged:typeof spans=[];
+ for(const a of spans){const last=merged.at(-1);if(last&&last.venue===a.venue&&a.start<=last.end)last.end=Math.max(last.end,a.end);else merged.push({...a})}
+ return merged;
+}
 export function bookingAllowsPlayer(s:State,eventId:string,bookingId:string,playerId:string,start:number,end:number){
- const r=s.registrations.find(r=>r.eventId===eventId&&r.playerId===playerId);
- if(!r?.bookingSignups)return true;
- return r.bookingSignups.some(x=>x.bookingId===bookingId&&x.status==='confirmed'&&x.arrival<=start&&x.departure>=end&&Math.max(x.registeredAt,x.joinedAsWaitlist?(x.promotedAt??0):0)<=start);
+ const e=s.events.find(e=>e.id===eventId),b=s.bookings.find(b=>b.id===bookingId&&b.eventId===eventId),r=s.registrations.find(r=>r.eventId===eventId&&r.playerId===playerId);
+ if(!e||!b)return false;
+ const venue=b.venue??e.venue;
+ if(!r?.bookingSignups)return venue===e.venue&&(e.attendanceMode!=='automatic'||r?.status==='confirmed');
+ if(r.status!=='confirmed')return false;
+ // Signups define attendance and fee groups. Matches mix everyone present at
+ // the same venue, including consecutive signup intervals on different courts.
+ return venueParticipation(s,e,r).some(a=>a.venue===venue&&a.start<=start&&a.end>=end);
 }
 export function archiveBooking(s:State,e:Event,r:Registration,bookingId:string,now:number){
  for(const a of registrationSpans(s,e,r,bookingId)){const end=Math.min(a.end??e.end,now);if(end>a.start)s.attendance.push({...a,id:crypto.randomUUID(),end,state:'left',source:'automatic'})}
