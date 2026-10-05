@@ -21,6 +21,7 @@ for(const [id,playerId,name,username] of [['owner','owner-player','正式群主'
  if(username)insert('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)',[id,username,'a'.repeat(64),'b'.repeat(128),1]);
 }
 insert('INSERT INTO auth_sessions(id,user_id,expires) VALUES(?,?,?)',['trial-session',targets[0][0],Date.now()+100000]);
+insert('INSERT INTO tagVotes(id,payload) VALUES(?,?)',['trial-style-vote',JSON.stringify({id:'trial-style-vote',voterId:targets[0][0],playerId:'owner-player',tag:'网前雨刮器',at:1})]);
 globalThis.__trialUser={userId:'owner'};
 const revision=()=>Number(sqlite.prepare('SELECT COALESCE(MAX(revision),0) AS n FROM commits').get().n);
 const post=(action,requestId=crypto.randomUUID(),revisionValue=revision(),origin='https://fixture.invalid')=>POST(new Request('https://fixture.invalid/api/trial-cleanup',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify({action,requestId,revision:revisionValue})}));
@@ -29,11 +30,13 @@ globalThis.__trialUser={userId:'admin'};assert.equal((await GET()).status,403);a
 globalThis.__trialUser={userId:'owner'};assert.equal((await post('remove',crypto.randomUUID(),0,'https://other.invalid')).status,403);assert.equal((await post('remove',crypto.randomUUID(),99)).status,409);
 forceFailure=true;assert.equal((await post('remove')).status,503);assert.equal(count('players'),5);assert.equal(count('password_credentials'),3);assert.equal(count('auth_sessions'),1);assert.equal(count('trial_credential_archive'),0);assert.equal(revision(),0);forceFailure=false;
 const key=crypto.randomUUID();assert.equal((await post('remove',key)).status,200);assert.equal(count('accounts'),2);assert.equal(count('players'),2);assert.equal(count('password_credentials'),0);assert.equal(count('auth_sessions'),0);assert.equal(count('trial_credential_archive'),1);
+assert.equal(count('tagVotes'),0);
 assert.equal((await post('remove',key,0)).status,200);assert.equal(revision(),1);
 const publicState=sqlite.prepare('SELECT payload FROM audits').all().map(r=>JSON.parse(r.payload));assert.ok(!JSON.stringify(publicState).includes('b'.repeat(128)));
 // Reserved-name collision must not overwrite a newer login credential.
 insert('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)',['admin','trial01','c'.repeat(64),'d'.repeat(128),1]);assert.equal((await post('restore')).status,409);assert.equal(count('accounts'),2);sqlite.prepare('DELETE FROM password_credentials WHERE id=?').run('admin');
 assert.equal((await post('restore')).status,200);assert.equal(count('accounts'),5);assert.equal(count('players'),5);assert.equal(count('password_credentials'),3);assert.equal(count('trial_credential_archive'),0);assert.equal(count('auth_sessions'),0);
 assert.equal(sqlite.prepare('SELECT hash FROM password_credentials WHERE id=?').get(targets[0][0]).hash,'b'.repeat(128));
+assert.equal(count('tagVotes'),1);
 console.log('PASS trial removal API: owner-only, CSRF, stale revision, real SQLite foreign keys, transactional rollback, private credential archive, session revocation, idempotence and safe restore/name conflict');
 sqlite.close();delete globalThis.__trialDb;delete globalThis.__trialUser;
