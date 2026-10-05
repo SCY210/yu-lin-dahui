@@ -1,0 +1,40 @@
+/* Decorative art gets its own space; it never floats over account controls. */
+.shell .home-heading{display:grid;grid-template-columns:minmax(0,1fr) 130px;column-gap:22px;row-gap:17px;align-items:center;padding-right:0;min-height:0}
+.shell .home-heading>div:first-child{grid-column:1;grid-row:1;min-width:0;padding-right:0;flex-basis:auto}
+.shell .home-heading>.home-shuttle{position:static;grid-column:2;grid-row:1;justify-self:end;align-self:center;width:120px;height:110px;max-width:100%;object-fit:contain;transform:none;margin:0;pointer-events:none}
+.shell .home-heading>.actions{grid-column:1/-1;grid-row:2;width:100%;flex-direction:row;flex-wrap:wrap;margin-top:0;justify-content:flex-start}
+.cultivation-ornament.cultivation-ornament-hero{position:static;width:118px;margin:0;gap:4px;align-self:center}
+.cultivation-ornament.cultivation-ornament-hero img{width:118px;height:118px}
+.cultivation-ornament .cultivation-seal-caption{position:static;line-height:1.4;font-size:10px;letter-spacing:2px;margin:0;white-space:nowrap}
+.cultivation-ornament.cultivation-ornament-ribbon{min-width:0;flex-wrap:wrap;row-gap:5px}
+.cultivation-ornament .cultivation-ribbon-title{white-space:nowrap}
+.cultivation-ornament .cultivation-ribbon-motto{white-space:nowrap}
+.shell .racket-art{pointer-events:none;flex-shrink:0;max-width:110px;object-fit:contain;transform:none}
+.welcome .auth-decoration{display:flex;justify-content:flex-end;height:88px;margin:0 0 12px;pointer-events:none}
+.welcome .auth-decoration img{width:105px;height:88px;object-fit:contain;transform:none}
+@media(max-width:760px){
+ .shell .home-heading{grid-template-columns:minmax(0,1fr) 84px;column-gap:14px;row-gap:16px}
+ .shell .home-heading>.home-shuttle{width:80px;height:82px}
+ .cultivation-ornament.cultivation-ornament-hero{width:78px;gap:3px}
+ .cultivation-ornament.cultivation-ornament-hero img{width:78px;height:78px}
+ .cultivation-ornament .cultivation-seal-caption{font-size:9px;letter-spacing:1.2px}
+ .shell .racket-art{width:70px;height:72px;max-width:70px}
+ .welcome .auth-decoration{height:74px;margin:0 0 10px}
+ .welcome .auth-decoration img{width:90px;height:74px}
+ .pc-scene .pc-tilt{transform:none!important;transition:none}
+}
+@media(max-width:600px){
+ .rp-root .rp-stage .rp-aura{width:min(88px,calc(100% - 12px));height:auto;aspect-ratio:1;top:16px}
+ .rp-root .rp-stage .rp-metal-1 .rp-aura{width:min(102px,calc(100% - 12px));height:auto;top:15px}
+ .rp-root .rp-stage .rp-halo{inset:-4px;animation:none;opacity:.7}
+ .rp-root .rp-stage .rp-orbit{inset:5px;animation:none;box-shadow:none}
+ .rp-root .rp-stage .rp-orbit:after{inset:6px;border-style:solid;opacity:.45}
+ .rp-root .rp-stage .rp-feather{top:11px;width:21px;height:46px}
+ .rp-root .rp-stage .rp-feather-left{left:3px;transform:rotate(-16deg)}
+ .rp-root .rp-stage .rp-feather-right{right:3px;transform:scaleX(-1) rotate(-16deg)}
+ .rp-root .rp-stage .rp-spark{animation:none;width:10px;height:10px;opacity:.4}
+ .rp-root .rp-stage .rp-spark-left{left:8px;top:4px}
+ .rp-root .rp-stage .rp-spark-right{right:8px;top:49px;width:8px;height:8px}
+ .cultivation-ornament.cultivation-ornament-ribbon{padding:8px 18px;gap:8px}
+}
+@media(max-width:420px){.cultivation-ornament .cultivation-ribbon-motto{display:none}}
