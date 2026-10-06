@@ -1,9 +1,9 @@
-# Initial cultivation realm
+# 炼气零修为与每周成长
 
-The default strength rating remains 1000. It now displays **炼气 · 初期 · 修为 0%** consistently in player profiles, social cards, the personal page, leaderboards and team realm labels. Existing players at that default and newly created players share the same starting realm.
+默认起点保持为炼气、初期、0修为。精确实力初值1000保持不变，匹配继续使用隐藏实力分。
 
-Realm thresholds are 1100 (筑基), 1232 (金丹), 1300 (元婴), and 1380 (化神). The first progress bar starts at 1000; lower ratings display 0% without changing their stored strength. Progress within each realm is rounded down and bounded to 0–99%, resets at promotion, and displays 100% at the highest realm.
+当前可见境界采用累计成长修为：炼气0、筑基60、金丹180、元婴400、化神800。每正式计分小局胜10、负3，当天首个完赛正式局+10成长，成长日限前12小局；详情与旧数据转换见 [WEEKLY_PROGRESSION.md](WEEKLY_PROGRESSION.md)。季度/年度积分不额外加当天成长奖励，默认每胜10、负3且无旧月度12场封顶。
 
-This changes presentation thresholds only. It does not reset player ratings, initial ratings, matches, rating changes, points, grouping or the Elo calculation. A first equal-strength win with K=32 still adds 16 rating points and now displays 16% progress in 炼气. Losses continue to affect strength; friendly matches do not add rated progress.
+这保留了初始化炼气零进度的更新，同时替换旧的按当前Elo映射可见境界的公式。已确实达到旧高境界的球友获得一次冻结补差额，不修改初始实力、当前实力或原始赛果；缺席不会扣修为。普通成员不会因此获得精确实力值。
 
-Regression coverage checks default players across monthly, quarterly, annual and member-facing projections; unchanged source state and ranking points; realm boundaries; actual match progression and historical replay.
+三局两胜按实际小局统计积分与胜率，但Elo仍按整场胜负只更新一次。所有页面使用统一可见成长进度；首场同实力胜利仍增加16隐藏实力分，同时获得20成长修为（含当天奖励）。

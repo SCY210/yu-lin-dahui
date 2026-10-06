@@ -67,7 +67,7 @@ test('已完成活动改回私有草稿后，所有账号仍看到相同历史�
  const member=projectClubState(s,me,'2026-10',2026,start),creator=projectClubState(s,s.accounts[1],'2026-10',2026,start),admin=projectClubState(s,{...me,role:'admin'},'2026-10',2026,start);
  const publicRanking=(rows:typeof member.leaderboard)=>rows.map(({rating,...row})=>row);
  assert.deepEqual(publicRanking(member.leaderboard),publicRanking(admin.leaderboard));assert.deepEqual(publicRanking(creator.leaderboard),publicRanking(admin.leaderboard));
- assert.deepEqual(publicRanking(member.annualLeaderboard),publicRanking(admin.annualLeaderboard));assert.equal(member.leaderboard.find(r=>r.playerId==='self')!.points,3);
+ assert.deepEqual(publicRanking(member.annualLeaderboard),publicRanking(admin.annualLeaderboard));assert.equal(member.leaderboard.find(r=>r.playerId==='self')!.points,10);
  assert.deepEqual(member.social.stats,admin.social.stats);assert.equal(member.social.stats.find(p=>p.playerId==='self')!.games,1);
  assert.ok(!member.events.some(e=>e.id==='hidden'));assert.ok(!member.matches.some(m=>m.id==='historical-draft-result'));assert.ok(!member.registrations.some(r=>r.id==='private-reg'));assert.ok(!('historical-draft-result' in member.social.matchLevels));assert.ok(!('hidden' in member.social.arenas));
  assert.equal(member.social.personality.find(p=>p.playerId==='peer')!.fastSignup,0);assert.equal(admin.social.personality.find(p=>p.playerId==='peer')!.fastSignup,1);
