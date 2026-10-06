@@ -12,8 +12,15 @@ export default function AquariumWelcome({name,children}:{name:string;children:Re
     <div className="aq-greeting"><p className="aq-kicker">粉粉水族馆</p><p className="aq-hello">{name}，</p><h1>今天也闪闪发光</h1></div>
     <div className="aq-welcome-actions">{children}</div>
    </div>
-   <img className="aq-capy-hugger" src="/api/theme/aquarium/art?kind=capyhug" width={220} height={220} alt="" aria-hidden="true"/>
-   <img className="aq-capy-paws" src="/api/theme/aquarium/art?kind=capypaws" width={220} height={73} alt="" aria-hidden="true"/>
+   <div className="aq-capy-companion" aria-hidden="true">
+    <svg className="aq-capy-heart" viewBox="0 0 120 110" width={120} height={110} focusable="false">
+     <defs><linearGradient id="aq-heart-pink" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ffb6d2"/><stop offset=".55" stopColor="#ef78aa"/><stop offset="1" stopColor="#cf4682"/></linearGradient></defs>
+     <path d="M60 103C49 94 7 65 7 35C7 9 41 1 60 25C79 1 113 9 113 35C113 65 71 94 60 103Z" fill="url(#aq-heart-pink)" stroke="#e16e9f" strokeWidth="2"/>
+     <path d="M20 33C20 20 36 15 46 22" fill="none" stroke="#fff4fa" strokeWidth="6" strokeLinecap="round" opacity=".8"/>
+    </svg>
+    <img className="aq-capy-hugger" src="/api/theme/aquarium/art?kind=capyhug" width={220} height={220} alt=""/>
+    <img className="aq-capy-paws" src="/api/theme/aquarium/art?kind=capypaws" width={220} height={73} alt=""/>
+   </div>
   </div>
   <div className="aq-companion-lane">
    <div className="aq-loopy-roam" aria-hidden="true"><span className="aq-loopy-gait"/></div>
