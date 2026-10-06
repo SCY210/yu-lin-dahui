@@ -9,10 +9,18 @@ export function blockedWordMasker(words:readonly string[]=[]){
  const terms=normalizeBlockedWords(words).sort((a,b)=>b.length-a.length);
  if(!terms.length)return (text:string)=>text;
  const escape=(word:string)=>word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
- const pattern=terms.map(escape).join('|'),matcher=new RegExp('(?=('+pattern+'))','giu');
+ const wordCharacter=/[\p{L}\p{N}\p{M}_]/u;
+ const boundary='[\\p{L}\\p{N}\\p{M}_]';
+ const pattern=terms.map(word=>{
+  const characters=[...word];
+  const before=wordCharacter.test(characters[0])?'(?<!'+boundary+')':'';
+  const after=wordCharacter.test(characters.at(-1)!)?'(?!'+boundary+')':'';
+  return before+escape(word)+after;
+ }).join('|');
+ const matcher=new RegExp('(?=('+pattern+'))','giu');
  return (original:string)=>{
   const text=original.normalize('NFC'),hidden=new Uint8Array(text.length);
-  // Lookahead also finds overlapping terms, rather than leaking the end of a second match.
+  // Match complete entries at Unicode word boundaries, never a character inside a longer word/name.
   for(const match of text.matchAll(matcher)){const from=match.index!;hidden.fill(1,from,from+match[1].length)}
   let at=0,result='';for(const character of text){result+=hidden[at]?'*':character;at+=character.length}return result;
  };
