@@ -29,7 +29,7 @@ export default {
     const response = await runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
     const cancellation = cancelUnreadWriteBody(request);
     if (cancellation) ctx.waitUntil(cancellation);
-    if (response.ok && new URL(request.url).pathname === '/api/club') {
+    if (response.ok && ['/api/club','/api/notifications'].includes(new URL(request.url).pathname)) {
       ctx.waitUntil(flushPushOutbox(env).catch(() => { console.warn('Push delivery deferred'); }));
     }
     return secureResponse(response, request);

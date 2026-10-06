@@ -8,26 +8,33 @@ import {consumeRateLimit,trustedClientIP} from '../../../lib/rate-limit';
 import {pushEndpoint,pushSubscriptionInput,testPushMessage} from '../../../lib/push-contract';
 import {pushConfiguration,sendWebPush,verifySubscriptionKeys} from '../../../lib/push-crypto';
 import {pushSubscriptionId,removePushSubscription} from '../../../lib/push-subscriptions';
+import {reminderPreferences} from '../../../lib/reminder-contract';
+import {reminderCenter} from '../../../lib/reminder-store';
 import type {Player} from '../../../lib/domain/types';
 export const dynamic='force-dynamic';
 const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const accountId=z.string().min(1).max(150);
 const input=z.discriminatedUnion('action',[
+ z.object({action:z.literal('preferences'),accountId,preferences:reminderPreferences}).strict(),
+ z.object({action:z.literal('read'),accountId,id:z.string().min(1).max(600).optional()}).strict(),
  z.object({action:z.literal('subscribe'),accountId,subscription:pushSubscriptionInput}).strict(),
  z.object({action:z.enum(['status','unsubscribe','test']),accountId,endpoint:pushEndpoint}).strict(),
 ]);
 async function member(){
  const user=await getAppUser();if(!user)throw new RequestError('请先登录',401);
- const version=await clubReadVersion(user.userId);if(!version.settings.initialized||!version.account)throw new RequestError('仅群组成员可以开启接龙通知',403);
+ const version=await clubReadVersion(user.userId);if(!version.settings.initialized||!version.account)throw new RequestError('仅群组成员可以使用活动提醒',403);
  const row=await raw().prepare('SELECT payload FROM players WHERE id=?').bind(version.account.playerId).first<{payload:string}>();
  if(!row||!(JSON.parse(row.payload) as Player).enabled)throw new RequestError('账号当前不可开启通知',403);
  return version.account;
 }
-export async function GET(){try{const account=await member(),config=pushConfiguration(env);return reply({accountId:account.id,configured:!!config,publicKey:config?.publicKey??null})}catch(e){return writeErrorResponse(e)}}
+export async function GET(){try{const account=await member(),config=pushConfiguration(env);await consumeRateLimit('reminder-read:'+account.id,60,60000);return reply({accountId:account.id,configured:!!config,publicKey:config?.publicKey??null,...await reminderCenter(account.id)})}catch(e){return writeErrorResponse(e)}}
 export async function POST(req:Request){try{
  assertWriteRequest(req);const account=await member();await consumeRateLimit('push-ip:'+trustedClientIP(req),90,5*60000);await consumeRateLimit('push-account:'+account.id,45,5*60000);
  const p=input.parse(await readJsonBody(req,8192));if(p.accountId!==account.id)throw new RequestError('登录账号已更新，请刷新后操作',409);
- const db=raw(),endpoint=p.action==='subscribe'?p.subscription.endpoint:p.endpoint,id=await pushSubscriptionId(endpoint);
+ const db=raw();
+ if(p.action==='preferences'){await db.prepare('INSERT INTO reminder_settings(account_id,payload) VALUES(?,?) ON CONFLICT(account_id) DO UPDATE SET payload=excluded.payload').bind(account.id,JSON.stringify(p.preferences)).run();return reply({ok:true,preferences:p.preferences})}
+ if(p.action==='read'){if(p.id)await db.prepare('UPDATE reminder_inbox SET read_at=? WHERE id=? AND account_id=? AND read_at IS NULL').bind(Date.now(),p.id,account.id).run();else await db.prepare('UPDATE reminder_inbox SET read_at=? WHERE account_id=? AND read_at IS NULL').bind(Date.now(),account.id).run();return reply({ok:true})}
+ const endpoint=p.action==='subscribe'?p.subscription.endpoint:p.endpoint,id=await pushSubscriptionId(endpoint);
  const existing=await db.prepare('SELECT account_id AS accountId,payload FROM push_subscriptions WHERE id=?').bind(id).first<{accountId:string;payload:string}>();
  if(p.action==='status')return reply({enabled:existing?.accountId===account.id,resetDevice:!!existing&&existing.accountId!==account.id});
  if(p.action==='unsubscribe'){await removePushSubscription(account.id,endpoint);return reply({ok:true,enabled:false})}
@@ -42,7 +49,7 @@ export async function POST(req:Request){try{
   if(!result.meta.changes)throw new RequestError('每个账号最多开启5台设备，请先在旧设备关闭通知',409);
   return reply({ok:true,enabled:true});
  }
- if(!existing||existing.accountId!==account.id)throw new RequestError('请先在这台设备开启接龙通知',409);
+ if(!existing||existing.accountId!==account.id)throw new RequestError('请先在这台设备开启活动提醒',409);
  await consumeRateLimit('push-test:'+account.id,3,60000,{message:'测试通知发送较频繁，请一分钟后重试'});
  const status=await sendWebPush(pushSubscriptionInput.parse(JSON.parse(existing.payload)),testPushMessage,config);
  if(status===404||status===410){await removePushSubscription(account.id,endpoint);throw new RequestError('通知连接已失效，请重新开启',409)}

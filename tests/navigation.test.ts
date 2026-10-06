@@ -30,7 +30,7 @@ test('direct profile/detail links replace with a list instead of adding a return
 });
 test('legacy event links and every social/event tab round-trip through the URL',()=>{
  assert.equal(readClubRoute('https://club.example/?event=E').page,'events');assert.equal(readClubRoute('https://club.example/?event=E&tab=matches').tab,'rounds');
- for(const route of [{page:'me'},{page:'admin'},{page:'ranking'},{page:'events',eventId:'event /你好',tab:'fees'},{page:'social',socialTab:'network'},{page:'social',socialTab:'challenges'},{page:'social',socialTab:'funny'},{page:'social',playerId:'player ?你好'}]){
+ for(const route of [{page:'reminders'},{page:'me'},{page:'admin'},{page:'ranking'},{page:'events',eventId:'event /你好',tab:'fees'},{page:'social',socialTab:'network'},{page:'social',socialTab:'challenges'},{page:'social',socialTab:'funny'},{page:'social',playerId:'player ?你好'}]){
   const expected=normalizeRoute(route as any),url=clubRouteUrl('https://club.example/?campaign=friend',expected);assert.deepEqual(readClubRoute(new URL(url,'https://club.example').href),expected);assert.equal(new URL(url,'https://club.example').searchParams.get('campaign'),'friend');
  }
  assert.deepEqual(readClubRoute('https://club.example/?page=bogus&player=P'),homeRoute);
@@ -118,3 +118,5 @@ test('保存中的弹窗拒绝手机返回时恢复原历史位置，完成后�
  busy=false;b.back();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);assert.equal(b.navigation.route.page,'events');
  b.forward();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);
 });
+
+ test('reminder center, activity detail and mobile back restore the exact source',()=>{const b=browser();b.navigation.navigate({page:'reminders'});b.setScroll(300);b.navigation.navigate({page:'events',eventId:'event',tab:'fees'});b.back();assert.equal(b.navigation.route.page,'reminders');assert.equal(b.scroll,300);b.forward();assert.equal(b.navigation.route.tab,'fees')});

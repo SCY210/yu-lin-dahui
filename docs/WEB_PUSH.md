@@ -1,11 +1,13 @@
-# New signup Web Push
+# Activity Web Push
 
-Members opt in separately on each device under **我的 → 接龙通知**. No permission is requested automatically. The explicit button calls the browser permission dialog, registers the existing service worker and uploads the device subscription to the authenticated site. The user can turn it off or send a test to the current device. Each account may register up to five devices.
+The activity assistant also supports personal signup, promotion, material schedule changes, published matches, confirmed fees and eligible post-event voting. See [ACTIVITY_REMINDERS.md](ACTIVITY_REMINDERS.md) for recipient rules, inbox, preferences and the explicit timing limitation.
+
+Members opt in separately on each device under **右上角「提醒」→ 提醒偏好与设备设置**. No permission is requested automatically. The explicit button calls the browser permission dialog, registers the existing service worker and uploads the device subscription to the authenticated site. The user can turn it off or send a test to the current device. Each account may register up to five devices.
 
 ## Delivery rules
 
 - Notify opted-in members when a newly created activity is open, or an unpublished draft first becomes open. The activity must not be deleted or already over.
-- Exclude the actor's own devices. Ordinary roster changes, edits, reopening, restoration and activity merges do not broadcast another notification.
+- Exclude the actor's own devices. Ordinary roster changes, reopening and restoration do not broadcast another new-signup notification. Material activity changes use targeted reminders.
 - Queue the job and its recipient snapshot in the same D1 transaction as the activity save. A failed save cannot create a phantom alert, duplicate requests cannot recreate it, and later subscribers receive only future notices.
 - The Worker uses `waitUntil` to send after returning the save response. A durable outbox drains in bounded batches on successful club requests. Claims use an expiring lease to prevent concurrent senders; transient failures retry up to three times on later requests. Large backlogs or outages may therefore be delayed until another club request. Sent jobs use a stable notification tag, without repeated alerts on retry. Delivery through a push provider is not proof the phone displayed it.
 - Before sending, recheck current event status and current member eligibility. Expired activities, inactive members and deleted subscriptions are skipped. Provider 404/410 responses remove the expired device. Queue metadata is retained for seven days.
