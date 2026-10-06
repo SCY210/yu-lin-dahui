@@ -1,9 +1,9 @@
-export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin';
+export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders';
 export type EventTab = 'overview'|'signup'|'rounds'|'fees'|'social';
 export type SocialTab = 'players'|'network'|'challenges'|'funny';
 export type ClubRoute = {page:ClubPage; eventId:string; tab:EventTab; playerId:string; socialTab:SocialTab};
 export const homeRoute:ClubRoute = {page:'home',eventId:'',tab:'overview',playerId:'',socialTab:'players'};
-const pages = new Set(['home','events','ranking','me','social','admin']);
+const pages = new Set(['home','events','ranking','me','social','admin','reminders']);
 const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';

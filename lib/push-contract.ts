@@ -16,4 +16,4 @@ export function newlyOpenedSignups(next:State,previous:State,now=Date.now()):Eve
 }
 const format=new Intl.DateTimeFormat('zh-CN',{timeZone:'Europe/Madrid',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
 export function signupPushMessage(e:Event){return {title:'羽林大会 · 新接龙',body:e.title.slice(0,80)+' · '+format.format(e.start)+' · '+e.venue.slice(0,60),eventId:e.id,kind:'signup',tag:'yulin-signup-'+e.id}}
-export const testPushMessage={title:'羽林大会 · 通知测试',body:'通知已连接。以后有新接龙开放报名，就会在这里提醒你。',kind:'test',tag:'yulin-push-test'};
+export const testPushMessage={title:'羽林大会 · 通知测试',body:'通知已连接。新接龙、我的报名和重要活动消息会在这里提醒你。',kind:'test',tag:'yulin-push-test'};

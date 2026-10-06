@@ -12,9 +12,9 @@ export async function verifySubscriptionKeys(subscription:StoredPushSubscription
  const point=Uint8Array.from(atob(subscription.keys.p256dh.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
  await crypto.subtle.importKey('raw',point,{name:'ECDH',namedCurve:'P-256'},false,[]);
 }
-export async function sendWebPush(subscription:StoredPushSubscription,message:unknown,config:PushConfig,send:typeof fetch=fetch){
+export async function sendWebPush(subscription:StoredPushSubscription,message:unknown,config:PushConfig,send:typeof fetch=fetch,ttl=86400){
  if(!allowedPushEndpoint(subscription.endpoint))throw new Error('Unsupported push service');
- const request=await buildPushPayload({data:JSON.stringify(message),options:{ttl:86400}}, {...subscription,expirationTime:subscription.expirationTime??null},config);
+ const request=await buildPushPayload({data:JSON.stringify(message),options:{ttl:Math.max(1,Math.min(86400,Math.floor(ttl)))}}, {...subscription,expirationTime:subscription.expirationTime??null},config);
  const response=await send(subscription.endpoint,{...request,redirect:'manual',signal:AbortSignal.timeout(4000)});
  return response.status;
 }

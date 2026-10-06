@@ -1,4 +1,5 @@
-export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string};
+import {reminderPreferences,defaultReminderPreferences,type Reminder,type ReminderPreferences} from '../reminder-contract';
+export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;items:Reminder[];unread:number;preferences:ReminderPreferences};
 type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean};
 function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)}
 export function pushSupport(){
@@ -15,7 +16,7 @@ export async function notificationRequest(accountId:string,action:string,detail:
 export async function notificationConfig(accountId:string):Promise<NotificationConfig>{
  const response=await fetch('/api/notifications',{cache:'no-store',signal:AbortSignal.timeout(10000)}),data:unknown=await response.json();
  if(!record(data)||!response.ok)throw new Error(record(data)&&typeof data.error==='string'?data.error:'通知服务暂不可用');if(data.accountId!==accountId)throw new Error('登录账号已更新，请刷新后操作');
- if(typeof data.configured!=='boolean'||(data.publicKey!==null&&typeof data.publicKey!=='string'))throw new Error('通知设置暂时无法同步');return {accountId,configured:data.configured,publicKey:data.publicKey};
+ if(typeof data.configured!=='boolean'||(data.publicKey!==null&&typeof data.publicKey!=='string'))throw new Error('通知设置暂时无法同步');const prefs=reminderPreferences.safeParse(data.preferences);return {accountId,configured:data.configured,publicKey:data.publicKey,items:Array.isArray(data.items)?data.items as Reminder[]:[],unread:typeof data.unread==='number'?data.unread:0,preferences:prefs.success?prefs.data:{...defaultReminderPreferences}};
 }
 export async function localPushSubscription(){
  if(!('serviceWorker' in navigator))return null;
