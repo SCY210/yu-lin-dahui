@@ -9,6 +9,7 @@ export default function AquariumWelcome({name,children}:{name:string;children:Re
  return <section className={'aquarium-welcome'+(moving?'':' animals-paused')} aria-label="粉粉水族馆欢迎卡片">
   <div className="aq-card-stage">
    <div className="aq-welcome-note">
+    <BubbleField/>
     <div className="aq-greeting"><p className="aq-kicker">粉粉水族馆</p><p className="aq-hello">{name}，</p><h1>今天也闪闪发光</h1></div>
     <div className="aq-welcome-actions">{children}</div>
    </div>
@@ -23,9 +24,14 @@ export default function AquariumWelcome({name,children}:{name:string;children:Re
    </div>
   </div>
   <div className="aq-companion-lane">
+   <BubbleField/>
    <div className="aq-loopy-roam" aria-hidden="true"><span className="aq-loopy-gait"/></div>
    <img className="aq-swimming-friend" src="/api/theme/aquarium/art?kind=mascot" width={64} height={64} alt="" aria-hidden="true"/>
    <button type="button" className="aq-motion-toggle" onClick={toggle} aria-pressed={moving} aria-label={moving?'暂停动物动画':'播放动物动画'}>{moving?<Pause size={13}/>:<Play size={13}/>}<span>动物动效</span></button>
   </div>
  </section>;
+}
+
+function BubbleField(){
+ return <div className="aq-bubble-field" aria-hidden="true">{Array.from({length:10},(_,index)=><span className="aq-bubble" key={index}/>)}</div>;
 }

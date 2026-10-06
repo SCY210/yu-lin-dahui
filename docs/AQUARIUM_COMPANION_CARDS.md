@@ -11,3 +11,5 @@
 新增素材位于 assets/private-aquarium/capyhug.webp、capypaws.webp、loopywalk.webp。由内置 ImageGen 生成，提示词保存在 AQUARIUM_CARD_PROMPTS.txt。通过 scripts/encode-aquarium-art.mjs 编码进服务端，公共静态输出不包含动物素材。
 
 水豚的爱心使用内嵌 SVG，位于身体与爪子之间，无需外部字体或图片请求。三个图层共用正向定位的容器，手机文字区为装饰预留高度，不依赖负偏移或裁切；窄屏保持完整显示。SVG 装饰不响应点击，权限接口保持原有保护。
+
+欢迎卡片与动物区各加入十颗半透明泡泡，使用轻微上浮的 CSS 动画。泡泡置于内容下方且限制在容器内，不接收点击、不增加图片请求；暂停动物动效会同时暂停泡泡，系统减少动态效果时静止显示。
