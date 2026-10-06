@@ -1,7 +1,8 @@
 'use client';
 import Deferred from './deferred';
 import RealmProgress from './realm-progress';
-import RealmBadge from './realm-badge';import {lazy,useState} from 'react';
+import RealmBadge from './realm-badge';
+import {lazy,useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
 const PhotoGallery=lazy(()=>import('./photo-gallery'));

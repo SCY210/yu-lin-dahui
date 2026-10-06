@@ -1,6 +1,5 @@
 @import 'tailwindcss' source(none);
 @import 'tw-animate-css';
-@import './realm-badge.css';
 /* Scan application code, including lazy pages, but not unused UI templates or
    test/build artifacts. Paths are relative to this stylesheet. When adopting a
    UI component, add it and any UI dependencies to this list. */

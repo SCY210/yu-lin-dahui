@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./decor-layout.css";
 import "./wuxia-theme.css";
-import "./realm-badge.css";
 import AppRuntime from './app-runtime';
 import {VisualThemeProvider,ThemeSwitcher} from './visual-theme';
 import {aquariumAccess} from '../lib/theme-access-server';

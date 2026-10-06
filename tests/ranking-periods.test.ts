@@ -18,7 +18,7 @@ function match(id:string,at:string,a=21,b=10,teams=[['A','B'],['C','D']]):Match 
 }
 
 test('修仙境界采用更紧凑五级门槛，与积分排名分开',()=>{
- for(const [rating,realm] of [[899.999,'炼气'],[900,'筑基'],[1031.999,'筑基'],[1032,'金丹'],[1099.999,'金丹'],[1100,'元婴'],[1179.999,'元婴'],[1180,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
+ for(const [rating,realm] of [[1000,'炼气'],[1099.999,'炼气'],[1100,'筑基'],[1231.999,'筑基'],[1232,'金丹'],[1299.999,'金丹'],[1300,'元婴'],[1379.999,'元婴'],[1380,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
  const s=fixture();s.matches.push(match('loss','2026-06-01T13:00:00Z',10,21));
  const before=structuredClone(s.players);
  assert.equal(leaderboard(s,'2026-06')[0].playerId,'C');

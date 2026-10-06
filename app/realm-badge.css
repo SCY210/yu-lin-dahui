@@ -62,14 +62,14 @@
 }
 
 .rb-name {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
   text-shadow: 0 0 8px color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, transparent) !important;
 }
 
 .rb-stage {
-  font-size: 11px !important;
+  font-size: 12px !important;
   color: color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, #cfcbbf) !important;
   font-weight: 500 !important;
   letter-spacing: 0.05em !important;
@@ -82,15 +82,15 @@
 }
 
 .rb-spin {
-  animation: rb-sp 24s linear infinite !important;
+  animation: rb-sp 24s linear infinite;
 }
 
 .rb-spinr {
-  animation: rb-sp 30s linear infinite reverse !important;
+  animation: rb-sp 30s linear infinite reverse;
 }
 
 .rb-fast {
-  animation: rb-sp 9s linear infinite !important;
+  animation: rb-sp 9s linear infinite;
 }
 
 @keyframes rb-sp {
@@ -103,7 +103,7 @@
 }
 
 .rb-pl {
-  animation: rb-pulse 3.2s ease-in-out infinite !important;
+  animation: rb-pulse 3.2s ease-in-out infinite;
   transform-box: view-box !important;
   transform-origin: 100px 100px !important;
 }
@@ -114,7 +114,7 @@
 }
 
 .rb-draw-path {
-  animation: rb-draw 5s ease-in-out infinite alternate !important;
+  animation: rb-draw 5s ease-in-out infinite alternate;
 }
 
 @keyframes rb-rise {
@@ -123,7 +123,8 @@
 }
 
 .rb-rise-rect {
-  animation: rb-rise 4s ease-in-out infinite alternate !important;
+  animation: rb-rise 4s ease-in-out infinite alternate;
+  animation-delay: var(--rb-delay, 0s);
 }
 
 @keyframes rb-breathe {
@@ -132,13 +133,13 @@
 }
 
 .rb-breathe-circle {
-  animation: rb-breathe 3s ease-in-out infinite !important;
+  animation: rb-breathe 3s ease-in-out infinite;
   transform-box: view-box !important;
   transform-origin: 100px 100px !important;
 }
 
 .rb-nascent-soul {
-  animation: rb-breathe 4s ease-in-out infinite !important;
+  animation: rb-breathe 4s ease-in-out infinite;
   transform-box: view-box !important;
   transform-origin: 100px 108px !important;
 }
@@ -149,7 +150,8 @@
 }
 
 .rb-ray-line {
-  animation: rb-ray 2.6s ease-in-out infinite !important;
+  animation: rb-ray 2.6s ease-in-out infinite;
+  animation-delay: var(--rb-delay, 0s);
 }
 
 /* ── Social Card variant (名帖上的展示形态) ─────────────────── */
@@ -179,7 +181,12 @@
 }
 
 .rv-realm-badge.realm-badge .rb-name {
-  font-size: 11px !important;
+  font-size: 14px !important;
+}
+
+/* Keep scrolled-away badges and background pages from running animations. */
+.realm-badge[data-motion='paused'] svg * {
+  animation-play-state: paused !important;
 }
 
 /* ── Reduced-motion ─────────────────────────────────────────── */
@@ -193,6 +200,19 @@
   .rb-breathe-circle,
   .rb-nascent-soul,
   .rb-ray-line {
-    animation-duration: 60s !important;
+    animation: none !important;
+  }
+  .realm-badge,
+  .realm-badge:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+  .rb-draw-path {
+    stroke-dashoffset: 0;
+  }
+  .rb-rise-rect,
+  .rb-ray-line,
+  .rb-pl {
+    opacity: 1;
   }
 }

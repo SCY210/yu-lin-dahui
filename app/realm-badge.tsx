@@ -1,4 +1,5 @@
-import {useId} from 'react';
+'use client';
+import {useEffect,useId,useRef,useState,type CSSProperties} from 'react';
 import './realm-badge.css';
 
 export interface RankInfo {
@@ -10,7 +11,7 @@ export interface RankInfo {
 }
 
 export const RANKS: RankInfo[] = [
-  {n: '练气', p: 'LIÀN QÌ', c: '#7fe3ff', t: '一缕灵气入体', k: 1},
+  {n: '炼气', p: 'LIÀN QÌ', c: '#7fe3ff', t: '一缕灵气入体', k: 1},
   {n: '筑基', p: 'ZHÙ JĪ', c: '#6ee7a0', t: '层层夯实道基', k: 2},
   {n: '金丹', p: 'JĪN DĀN', c: '#ffc94d', t: '灵力凝结成丹', k: 3},
   {n: '元婴', p: 'YUÁN YĪNG', c: '#b69cff', t: '丹碎婴生，神游', k: 4},
@@ -18,9 +19,9 @@ export const RANKS: RankInfo[] = [
 ];
 
 export function getRankByRealm(realm: string): {rank: RankInfo; level: number} {
-  const norm = realm.trim();
-  const index = RANKS.findIndex(r => r.n === norm || r.n.replace('练', '炼') === norm || norm.includes(r.n.slice(0, 1)));
-  const level = index >= 0 ? index : (norm.includes('气') ? 0 : 0);
+  const norm = realm.trim().replace(/^练气$/, '炼气');
+  const index = RANKS.findIndex(r => r.n === norm);
+  const level = index >= 0 ? index : 0;
   return {rank: RANKS[level] ?? RANKS[0], level};
 }
 
@@ -94,7 +95,7 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
             rx="2"
             fill={rank.c}
             className="rb-rise-rect"
-            style={{animationDelay: `${v.delay}s`}}
+            style={{'--rb-delay': `${v.delay}s`} as CSSProperties}
           />
         ))}
         <path d="M100 54 L100 72" stroke={rank.c} strokeWidth="2.4" strokeLinecap="round" className="rb-pl" />
@@ -166,7 +167,7 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
               strokeWidth={i % 2 ? 1.5 : 2.6}
               strokeLinecap="round"
               className="rb-ray-line"
-              style={{animationDelay: `${(i % 6) * 0.25}s`}}
+              style={{'--rb-delay': `${(i % 6) * 0.25}s`} as CSSProperties}
             />
           );
         })}
@@ -194,12 +195,24 @@ export function RealmInsigniaSvg({level, rank}: {level: number; rank: RankInfo})
  */
 export default function RealmBadge({realm, stage, className = ''}: {realm: string; stage?: string; className?: string}) {
   const {rank, level} = getRankByRealm(realm);
+  const badge=useRef<HTMLSpanElement>(null),[moving,setMoving]=useState(false);
+  useEffect(()=>{
+    let inView=false;
+    const update=()=>setMoving(inView&&!document.hidden);
+    const observer=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{inView=entries.some(entry=>entry.isIntersecting);update();});
+    if(observer&&badge.current)observer.observe(badge.current);
+    else {inView=true;update();}
+    document.addEventListener('visibilitychange',update);
+    return()=>{observer?.disconnect();document.removeEventListener('visibilitychange',update);};
+  },[]);
   return (
     <span
+      ref={badge}
+      data-motion={moving?'running':'paused'}
       className={`realm-badge realm-badge-${level}${className ? ' ' + className : ''}`}
       style={{
         '--rb-c': rank.c,
-      } as React.CSSProperties}
+      } as CSSProperties}
     >
       <span className="rb-insignia-wrap" aria-hidden="true">
         <RealmInsigniaSvg level={level} rank={rank} />
