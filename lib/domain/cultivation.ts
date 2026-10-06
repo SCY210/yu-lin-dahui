@@ -23,11 +23,11 @@ export function playerCultivation(s:State,id:string,now=Date.now()){return culti
 /** Freeze only the difference needed to preserve the old visible realm. */
 export function enableWeeklyProgression(s:State,now=Date.now()){
  if(!s.settings.initialized||s.settings.progressionVersion==='weekly-v2')return false;
- const earned=cultivationSnapshot(s,now),legacy=[-Infinity,900,1032,1100,1180];
+ const earned=cultivationSnapshot(s,now),legacy=[-Infinity,1100,1232,1300,1380];
  for(const p of s.players){if(p.cultivationBase!==undefined)continue;const index=Math.max(0,legacy.findLastIndex(min=>p.rating>=min));p.cultivationBase=Math.max(0,cultivationRealms[index].minimum-earned.get(p.id)!.earned)}
  const upgrade=(rules:State['settings']['rules'])=>{if(rules.win===3&&rules.loss===0&&(rules.cap===12||rules.cap===0)){rules.win=10;rules.loss=3;rules.cap=0;return true}return false};
  upgrade(s.settings.rules);for(const season of s.seasons)if(upgrade(season.rules))season.version=(season.version??1)+1;
  s.settings.progressionVersion='weekly-v2';return true;
 }
 /** This remains a strength description for matching, not the growth realm. */
-export function strengthTier(rating:number){return rating<900?'入门':rating<1032?'基础':rating<1100?'熟练':rating<1180?'进阶':'高手'}
+export function strengthTier(rating:number){return rating<1100?'入门':rating<1232?'基础':rating<1300?'熟练':rating<1380?'进阶':'高手'}
