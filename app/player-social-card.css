@@ -18,8 +18,7 @@
 .pc-portrait{display:flex;align-items:center;justify-content:center;width:90px;height:90px;padding:5px;border:1px solid #cdbada;border-radius:50%;box-shadow:0 0 0 7px #ece2f538,0 7px 20px #86629a0d;margin-bottom:14px}
 .pc-portrait .avatar{width:78px;height:78px;flex:0 0 78px;border-radius:50%;background:linear-gradient(145deg,#f2eaf8,#e8ddf3);border:2px solid #fff;color:#805b9e;font-size:31px;font-weight:500;object-fit:cover}
 .pc-player-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%;min-height:52px;font-size:22px;line-height:1.3;font-weight:600;letter-spacing:.3px;color:#473152}
-.pc-realm{display:inline-block;border:1px solid #e0d4eb;border-radius:7px;background:#f1eaf8;color:#826099;padding:5px 11px;font-size:12px;line-height:1.4;letter-spacing:.5px}
-.pc-realm>span{letter-spacing:0;color:#8a7098}
+.pc-realm{margin-bottom:2px}
 .pc-motto{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;max-width:100%;min-height:44px;font-size:14px;line-height:1.7;color:#806589;margin:10px 0 10px}
 .pc-motto>span{color:#b795c5;font-family:Georgia,serif;font-size:21px;line-height:0;margin:0 3px}
 .pc-front .pc-unfilled{color:#8a7098;font-size:12px}

@@ -1,10 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
  <defs>
-  <linearGradient id="ink" x1="14" y1="5" x2="116" y2="125" gradientUnits="userSpaceOnUse"><stop stop-color="#923c4c"/><stop offset=".55" stop-color="#6c293d"/><stop offset="1" stop-color="#422238"/></linearGradient>
   <linearGradient id="gold" x1="33" y1="26" x2="95" y2="110" gradientUnits="userSpaceOnUse"><stop stop-color="#f8e4b9"/><stop offset="1" stop-color="#cfa268"/></linearGradient>
  </defs>
- <rect width="128" height="128" rx="30" fill="url(#ink)"/>
- <rect x="6" y="6" width="116" height="116" rx="25" stroke="#e5bc82" stroke-opacity=".52"/>
+ <rect width="128" height="128" rx="30" fill="none"/>
+ <rect x="6" y="6" width="116" height="116" rx="25" stroke="#bba887" stroke-opacity=".7" stroke-width="2"/>
  <path d="M29 102C13 89 12 62 23 43M99 27c16 14 18 40 7 58" stroke="url(#gold)" stroke-width="3" stroke-linecap="round"/>
  <g fill="#fff3dc" stroke="#6c293d" stroke-width="2.5" stroke-linejoin="round">
   <path d="M25 39c2 18 15 32 31 40l5-7C51 54 39 42 25 39Z"/>

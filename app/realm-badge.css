@@ -1,0 +1,218 @@
+/* ═══════════════════════════════════════════════════════════════════
+   修行段位徽记 · 练气至化神
+   Implementation based directly on 修行段位徽记 · 练气至化神.html
+   ═══════════════════════════════════════════════════════════════════ */
+
+.realm-badge {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 3px 14px 3px 6px !important;
+  border-radius: 9999px !important;
+  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 16%, #17201a) !important;
+  border: 1px solid color-mix(in srgb, var(--rb-c, #7fe3ff) 50%, #c4ab76) !important;
+  box-shadow:
+    0 2px 8px rgba(23, 32, 26, 0.22),
+    0 0 10px color-mix(in srgb, var(--rb-c, #7fe3ff) 22%, transparent),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16) !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
+  font-family: "Noto Serif SC", "Songti SC", "STKaiti", "KaiTi", serif !important;
+  letter-spacing: 0.12em !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  text-decoration: none !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background 0.25s ease !important;
+}
+
+.realm-badge:hover {
+  transform: translateY(-1.5px) scale(1.04) !important;
+  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 24%, #17201a) !important;
+  box-shadow:
+    0 4px 14px rgba(23, 32, 26, 0.3),
+    0 0 16px color-mix(in srgb, var(--rb-c, #7fe3ff) 36%, transparent),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Insignia SVG wrapper */
+.rb-insignia-wrap {
+  width: 28px !important;
+  height: 28px !important;
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.rb-svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  transform-box: view-box !important;
+  overflow: visible !important;
+}
+
+/* Text area */
+.rb-txt {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.rb-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, transparent) !important;
+}
+
+.rb-stage {
+  font-size: 12px !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, #cfcbbf) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* ── SVG Animations from HTML design ────────────────────────── */
+.rb-o {
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+.rb-spin {
+  animation: rb-sp 24s linear infinite;
+}
+
+.rb-spinr {
+  animation: rb-sp 30s linear infinite reverse;
+}
+
+.rb-fast {
+  animation: rb-sp 9s linear infinite;
+}
+
+@keyframes rb-sp {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rb-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
+  50%      { opacity: 1; transform: scale(1.06); }
+}
+
+.rb-pl {
+  animation: rb-pulse 3.2s ease-in-out infinite;
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+@keyframes rb-draw {
+  0%       { stroke-dashoffset: 400; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
+
+.rb-draw-path {
+  animation: rb-draw 5s ease-in-out infinite alternate;
+}
+
+@keyframes rb-rise {
+  0%, 15%   { opacity: 0.08; }
+  35%, 100% { opacity: 1; }
+}
+
+.rb-rise-rect {
+  animation: rb-rise 4s ease-in-out infinite alternate;
+  animation-delay: var(--rb-delay, 0s);
+}
+
+@keyframes rb-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+.rb-breathe-circle {
+  animation: rb-breathe 3s ease-in-out infinite;
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+.rb-nascent-soul {
+  animation: rb-breathe 4s ease-in-out infinite;
+  transform-box: view-box !important;
+  transform-origin: 100px 108px !important;
+}
+
+@keyframes rb-ray {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+
+.rb-ray-line {
+  animation: rb-ray 2.6s ease-in-out infinite;
+  animation-delay: var(--rb-delay, 0s);
+}
+
+/* ── Social Card variant (名帖上的展示形态) ─────────────────── */
+.pc-realm.realm-badge {
+  margin: 6px 0 8px !important;
+  padding: 5px 16px 5px 8px !important;
+}
+
+.pc-realm.realm-badge .rb-insignia-wrap {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.pc-realm.realm-badge .rb-name {
+  font-size: 15px !important;
+  letter-spacing: 0.16em !important;
+}
+
+/* ── Inline variant (排行榜列表中的形态) ────────────────────── */
+.rv-realm-badge.realm-badge {
+  padding: 2px 9px 2px 4px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-insignia-wrap {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-name {
+  font-size: 14px !important;
+}
+
+/* Keep scrolled-away badges and background pages from running animations. */
+.realm-badge[data-motion='paused'] svg * {
+  animation-play-state: paused !important;
+}
+
+/* ── Reduced-motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rb-spin,
+  .rb-spinr,
+  .rb-fast,
+  .rb-pl,
+  .rb-draw-path,
+  .rb-rise-rect,
+  .rb-breathe-circle,
+  .rb-nascent-soul,
+  .rb-ray-line {
+    animation: none !important;
+  }
+  .realm-badge,
+  .realm-badge:hover {
+    transition: none !important;
+    transform: none !important;
+  }
+  .rb-draw-path {
+    stroke-dashoffset: 0;
+  }
+  .rb-rise-rect,
+  .rb-ray-line,
+  .rb-pl {
+    opacity: 1;
+  }
+}

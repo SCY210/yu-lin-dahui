@@ -2,8 +2,8 @@
 import {useEffect,useRef,useState,type ReactNode,type PointerEvent} from 'react';
 import {ArrowUpRight,RotateCcw,RotateCw} from 'lucide-react';
 import {tensionLabel} from '../lib/domain/tension';
+import RealmBadge from './realm-badge';
 import './player-social-card.css';
-
 function RacketMark({large=false}:{large?:boolean}){
  return <svg viewBox="0 0 100 160" className={large?'pc-racket-mark pc-racket-mark--large':'pc-racket-mark'} aria-hidden="true" fill="none"><ellipse cx="49" cy="48" rx="32" ry="42" stroke="currentColor" strokeWidth="3"/><ellipse cx="49" cy="48" rx="27" ry="37" stroke="currentColor" strokeWidth=".8"/>{[29,39,49,59,69].map(x=><path key={x} d={`M${x} 15v65`} stroke="currentColor" strokeWidth=".6" opacity=".4"/>)}{[25,36,47,58,69].map(y=><path key={y} d={`M23 ${y}h52`} stroke="currentColor" strokeWidth=".6" opacity=".4"/>)}<path d="m33 85 13 21v32m20-53-14 21v32M45 136h9v20h-9z" stroke="currentColor" strokeWidth="2"/><path d="m46 139 7 3-7 3 7 3-7 3" stroke="currentColor" strokeWidth="1"/></svg>;
 }
@@ -43,7 +43,7 @@ export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self
      <span className="pc-heading"><span>羽林同修</span><span>{self?'我的名帖':'球友名帖'}</span></span>
      <span className="pc-portrait">{avatar}</span>
      <strong className="pc-player-name" title={player.name}>{player.name}</strong>
-     <span className="pc-realm">{stats?.tier||'暂无境界'}<span>{stats?.provisional?' · 暂定':''}</span></span>
+     {stats?.tier ? <RealmBadge className="pc-realm" realm={stats.tier} stage={stats.provisional ? '暂定' : undefined} /> : <span className="pc-realm">暂无境界</span>}
      <span className={'pc-motto'+(!motto?' pc-unfilled':'')} title={motto}>{motto?<><span aria-hidden="true">“</span>{motto}<span aria-hidden="true">”</span></>:'尚未填写个人口号'}</span>
      <span className="pc-front-racket"><RacketMark/><span><span>本命战拍</span><strong title={profile.racket}>{profile.racket||'战拍待填写'}</strong></span></span>
      <span className="pc-stats"><span><b>{stats?.games??0}</b><span>累计小局</span></span><span><b>{stats?.games?Math.round(stats.rate*100)+'%':'—'}</b><span>胜率</span></span><span><b>{monthly?.points??0}</b><span>本月积分</span></span></span>
