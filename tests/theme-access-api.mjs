@@ -30,9 +30,9 @@ for(const [user,account,expected] of [
  if(expected===200){assert.match(await sheet.text(),/html\.aquarium-theme/);assert.equal(image.headers.get('content-type'),'image/webp');assert.equal(new TextDecoder().decode((await image.arrayBuffer()).slice(0,4)),'RIFF')}
  else{assert.doesNotMatch(await sheet.text(),/--background/);assert.doesNotMatch(image.headers.get('content-type')??'',/image/)}
 }
-for(const kind of ['capyhug','capypaws','loopywalk']){const image=await art.GET(new Request('https://example.invalid/api/theme/aquarium/art?kind='+kind));assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/webp')}
+for(const kind of ['capyhug','capypaws','capysmall','loopywalk']){const image=await art.GET(new Request('https://example.invalid/api/theme/aquarium/art?kind='+kind));assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/webp')}
 globalThis.__queenUser={userId:'other-admin'};globalThis.__queenAccount={id:'other-admin',playerId:'other-player',role:'admin'};
-for(const kind of ['capyhug','capypaws','loopywalk'])assert.equal((await art.GET(new Request('https://example.invalid/api/theme/aquarium/art?kind='+kind))).status,403);
+for(const kind of ['capyhug','capypaws','capysmall','loopywalk'])assert.equal((await art.GET(new Request('https://example.invalid/api/theme/aquarium/art?kind='+kind))).status,403);
 globalThis.__queenUser={userId:queen.id};globalThis.__queenAccount=queen;
 assert.equal((await art.GET(new Request('https://example.invalid/api/theme/aquarium/art?kind=__proto__'))).status,404);
 console.log('PASS exclusive aquarium: anonymous, other administrators, renamed player, mismatched IDs and missing account denied; bound queen and persisted owner receive CSS/art with private no-store; invalid asset rejected');
