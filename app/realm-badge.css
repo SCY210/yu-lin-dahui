@@ -1,189 +1,198 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Realm Badge — per-rank visual effects (炼气 → 化神)
-   Each rank gets a unique look with progressively fancier animation.
+   修行段位徽记 · 练气至化神
+   Implementation based directly on 修行段位徽记 · 练气至化神.html
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Shared base ─────────────────────────────────────────────── */
 .realm-badge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 7px;
-  font-size: 12px;
-  line-height: 1.6;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  isolation: isolate;
-}
-/* Shimmer pseudo-element (only shown on higher ranks) */
-.realm-badge::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-}
-.realm-badge > span { position: relative; z-index: 1; }
-
-/* ── 0 · 炼气 — plain muted, no animation ─────────────────── */
-.realm-badge-0 {
-  background: #f0eef5;
-  border: 1px solid #ddd9e6;
-  color: #8a7e99;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 3px 14px 3px 6px !important;
+  border-radius: 9999px !important;
+  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 16%, #17201a) !important;
+  border: 1px solid color-mix(in srgb, var(--rb-c, #7fe3ff) 50%, #c4ab76) !important;
+  box-shadow:
+    0 2px 8px rgba(23, 32, 26, 0.22),
+    0 0 10px color-mix(in srgb, var(--rb-c, #7fe3ff) 22%, transparent),
+    inset 0 1px 1px rgba(255, 255, 255, 0.16) !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
+  font-family: "Noto Serif SC", "Songti SC", "STKaiti", "KaiTi", serif !important;
+  letter-spacing: 0.12em !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  text-decoration: none !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background 0.25s ease !important;
 }
 
-/* ── 1 · 筑基 — soft blue-purple, gentle pulse glow ────────── */
-.realm-badge-1 {
-  background: linear-gradient(135deg, #e8e4ff, #dde6ff);
-  border: 1px solid #c9c0f0;
-  color: #5d4fb3;
-  animation: rb-pulse-1 3s ease-in-out infinite;
-}
-@keyframes rb-pulse-1 {
-  0%, 100% { box-shadow: 0 0 0 0 #b5a8e833; }
-  50%      { box-shadow: 0 0 10px 2px #b5a8e855; }
+.realm-badge:hover {
+  transform: translateY(-1.5px) scale(1.04) !important;
+  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 24%, #17201a) !important;
+  box-shadow:
+    0 4px 14px rgba(23, 32, 26, 0.3),
+    0 0 16px color-mix(in srgb, var(--rb-c, #7fe3ff) 36%, transparent),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
 }
 
-/* ── 2 · 金丹 — warm amber, rotating shimmer sweep ─────────── */
-.realm-badge-2 {
-  background: linear-gradient(135deg, #fff5e0, #ffe8b8, #fff0d0);
-  border: 1px solid #e2c47a;
-  color: #8b6914;
-  box-shadow: 0 0 6px #d4a83422;
-}
-.realm-badge-2::before {
-  opacity: 1;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    #fffbe890 45%,
-    #ffe98044 55%,
-    transparent 70%
-  );
-  animation: rb-shimmer 3.5s ease-in-out infinite;
-}
-@keyframes rb-shimmer {
-  0%   { transform: translateX(-120%); }
-  60%  { transform: translateX(120%); }
-  100% { transform: translateX(120%); }
+/* Insignia SVG wrapper */
+.rb-insignia-wrap {
+  width: 28px !important;
+  height: 28px !important;
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-/* ── 3 · 元婴 — radiant purple-gold, breathing glow + shimmer  */
-.realm-badge-3 {
-  background: linear-gradient(140deg, #f0e2ff, #ede0ff 40%, #fff1d6 90%);
-  border: 1px solid #c7a5e8;
-  color: #7a3cc4;
-  animation: rb-breathe-3 4s ease-in-out infinite;
-}
-.realm-badge-3::before {
-  opacity: 1;
-  background: linear-gradient(
-    110deg,
-    transparent 25%,
-    #f3dcff66 40%,
-    #ffe9a844 50%,
-    #f3dcff33 60%,
-    transparent 75%
-  );
-  animation: rb-shimmer 3s ease-in-out infinite;
-}
-@keyframes rb-breathe-3 {
-  0%, 100% { box-shadow: 0 0 4px 0 #c9a0f020, 0 0 0 0 #dbb6ff10; }
-  50%      { box-shadow: 0 0 14px 3px #c9a0f040, 0 0 6px 1px #dbb6ff30; }
+.rb-svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  transform-box: view-box !important;
+  overflow: visible !important;
 }
 
-/* ── 4 · 化神 — brilliant gold, multi-layer animated glow ──── */
-.realm-badge-4 {
-  background: linear-gradient(140deg, #fff7d6, #ffe599 30%, #ffd54f 60%, #ffe082 90%);
-  border: 1px solid #d4a017;
-  color: #7a5500;
-  animation: rb-glow-4 3s ease-in-out infinite;
-  text-shadow: 0 0 8px #ffd54f60;
-}
-.realm-badge-4::before {
-  opacity: 1;
-  background: linear-gradient(
-    115deg,
-    transparent 20%,
-    #fffde8cc 35%,
-    #fff176aa 45%,
-    #ffe082cc 55%,
-    #fffde8aa 65%,
-    transparent 80%
-  );
-  animation: rb-golden-sweep 2.5s ease-in-out infinite;
-}
-/* Golden sparkle dots via ::after */
-.realm-badge-4::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(circle at 18% 40%, #fff8 0, transparent 3px),
-    radial-gradient(circle at 75% 30%, #fffde8bb 0, transparent 4px),
-    radial-gradient(circle at 42% 70%, #fff176aa 0, transparent 3px),
-    radial-gradient(circle at 88% 65%, #fff8 0, transparent 3px);
-  animation: rb-sparkle 2s ease-in-out infinite alternate;
-}
-@keyframes rb-glow-4 {
-  0%, 100% {
-    box-shadow:
-      0 0 6px 1px #ffd54f44,
-      0 0 14px 3px #d4a01720,
-      inset 0 0 6px #ffe08230;
-  }
-  50% {
-    box-shadow:
-      0 0 16px 4px #ffd54f66,
-      0 0 30px 8px #d4a01730,
-      inset 0 0 10px #ffe08250;
-  }
-}
-@keyframes rb-golden-sweep {
-  0%   { transform: translateX(-130%); }
-  50%  { transform: translateX(130%); }
-  100% { transform: translateX(130%); }
-}
-@keyframes rb-sparkle {
-  0%   { opacity: .3; }
-  100% { opacity: .9; }
+/* Text area */
+.rb-txt {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
 }
 
-/* ── Inline variant (leaderboard rows: rv-realm-badge) ───────── */
-.rv-realm-badge.realm-badge { font-size: 12px; padding: 1px 7px; border-radius: 6px; }
+.rb-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, transparent) !important;
+}
 
-/* ── Wuxia theme overrides ───────────────────────────────────── */
-.wuxia-theme .realm-badge-0 { background: #eee3cc; border-color: #d2bb94; color: #918064; }
-.wuxia-theme .realm-badge-1 { background: linear-gradient(135deg, #efe2c8, #e8dab4); border-color: #c5a97a; color: #7c5d2e; }
-.wuxia-theme .realm-badge-2 { background: linear-gradient(135deg, #f5e4bc, #ecd09a); border-color: #b89450; color: #6e4a0e; }
-.wuxia-theme .realm-badge-3 { background: linear-gradient(140deg, #efe0c0, #f0d8a0 50%, #e8c886); border-color: #b38d3f; color: #6a4510; }
-.wuxia-theme .realm-badge-4 { background: linear-gradient(140deg, #f5e19a, #e8c44a 40%, #d4a017 70%, #e8c44a); border-color: #a07a10; color: #5c3a00; }
-.wuxia-theme .realm-badge-4::before { background: linear-gradient(115deg, transparent 20%, #fff5d8cc 35%, #f5e19aaa 50%, #fff5d8aa 65%, transparent 80%); }
+.rb-stage {
+  font-size: 11px !important;
+  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, #cfcbbf) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.05em !important;
+}
 
-/* ── Reduced-motion: keep colors, drop animations ────────────── */
+/* ── SVG Animations from HTML design ────────────────────────── */
+.rb-o {
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+.rb-spin {
+  animation: rb-sp 24s linear infinite !important;
+}
+
+.rb-spinr {
+  animation: rb-sp 30s linear infinite reverse !important;
+}
+
+.rb-fast {
+  animation: rb-sp 9s linear infinite !important;
+}
+
+@keyframes rb-sp {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rb-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
+  50%      { opacity: 1; transform: scale(1.06); }
+}
+
+.rb-pl {
+  animation: rb-pulse 3.2s ease-in-out infinite !important;
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+@keyframes rb-draw {
+  0%       { stroke-dashoffset: 400; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
+
+.rb-draw-path {
+  animation: rb-draw 5s ease-in-out infinite alternate !important;
+}
+
+@keyframes rb-rise {
+  0%, 15%   { opacity: 0.08; }
+  35%, 100% { opacity: 1; }
+}
+
+.rb-rise-rect {
+  animation: rb-rise 4s ease-in-out infinite alternate !important;
+}
+
+@keyframes rb-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+.rb-breathe-circle {
+  animation: rb-breathe 3s ease-in-out infinite !important;
+  transform-box: view-box !important;
+  transform-origin: 100px 100px !important;
+}
+
+.rb-nascent-soul {
+  animation: rb-breathe 4s ease-in-out infinite !important;
+  transform-box: view-box !important;
+  transform-origin: 100px 108px !important;
+}
+
+@keyframes rb-ray {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+
+.rb-ray-line {
+  animation: rb-ray 2.6s ease-in-out infinite !important;
+}
+
+/* ── Social Card variant (名帖上的展示形态) ─────────────────── */
+.pc-realm.realm-badge {
+  margin: 6px 0 8px !important;
+  padding: 5px 16px 5px 8px !important;
+}
+
+.pc-realm.realm-badge .rb-insignia-wrap {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.pc-realm.realm-badge .rb-name {
+  font-size: 15px !important;
+  letter-spacing: 0.16em !important;
+}
+
+/* ── Inline variant (排行榜列表中的形态) ────────────────────── */
+.rv-realm-badge.realm-badge {
+  padding: 2px 9px 2px 4px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-insignia-wrap {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-name {
+  font-size: 11px !important;
+}
+
+/* ── Reduced-motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .realm-badge,
-  .realm-badge::before,
-  .realm-badge::after {
-    animation: none !important;
+  .rb-spin,
+  .rb-spinr,
+  .rb-fast,
+  .rb-pl,
+  .rb-draw-path,
+  .rb-rise-rect,
+  .rb-breathe-circle,
+  .rb-nascent-soul,
+  .rb-ray-line {
+    animation-duration: 60s !important;
   }
-  .realm-badge-1 { box-shadow: 0 0 6px 1px #b5a8e840; }
-  .realm-badge-3 { box-shadow: 0 0 8px 2px #c9a0f030; }
-  .realm-badge-4 { box-shadow: 0 0 10px 3px #ffd54f55; }
-  .realm-badge-2::before,
-  .realm-badge-3::before,
-  .realm-badge-4::before { opacity: .35; transform: none; }
-  .realm-badge-4::after { opacity: .5; }
-}
-
-/* ── Responsive ──────────────────────────────────────────────── */
-@media (max-width: 600px) {
-  .realm-badge { font-size: 11px; padding: 2px 7px; }
-  .rv-realm-badge.realm-badge { font-size: 11px; padding: 1px 6px; }
 }
