@@ -98,8 +98,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     <section className="pp-section" aria-label="比赛统计">
       <div className="pp-section-heading"><h3 className="pp-section-title">球场记录</h3><div className="pp-guide-actions"><FeatureGuide rules={rules} topic="rating" label="境界说明"/><FeatureGuide rules={rules} topic="state" label="状态说明"/></div></div>
       <div className="pp-stats">
-        <section className="pp-stat"><Trophy size={18} aria-hidden="true"/><span>比赛场次</span><strong>{state.games ?? 0}<small>场</small></strong><p>{state.wins ?? 0}胜 · {state.losses ?? 0}负</p></section>
-        <section className="pp-stat"><Activity size={18} aria-hidden="true"/><span>最近 {state.formGames ?? 0} 场状态</span><strong>{state.formValue == null ? '—' : `${state.formValue}%`}</strong><p>胜率形成状态值；少于5场显示样本不足</p></section>
+        <section className="pp-stat"><Trophy size={18} aria-hidden="true"/><span>累计小局</span><strong>{state.games ?? 0}<small>局</small></strong><p>{state.wins ?? 0}胜 · {state.losses ?? 0}负</p></section>
+        <section className="pp-stat"><Activity size={18} aria-hidden="true"/><span>最近 {state.formGames ?? 0} 局状态</span><strong>{state.formValue == null ? '—' : `${state.formValue}%`}</strong><p>胜率形成状态值；少于5局显示样本不足</p></section>
         <section className="pp-stat"><Flame size={18} aria-hidden="true"/><span>最长连胜 / 连败</span><strong>{state.maxWins ?? 0} / {state.maxLosses ?? 0}</strong><p>来自有效完整比赛</p></section>
       </div>
     </section>

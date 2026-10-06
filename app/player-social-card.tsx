@@ -46,7 +46,7 @@ export default function PlayerSocialCard({player,stats,monthly,photo,avatar,self
      <span className="pc-realm">{stats?.tier||'暂无境界'}<span>{stats?.provisional?' · 暂定':''}</span></span>
      <span className={'pc-motto'+(!motto?' pc-unfilled':'')} title={motto}>{motto?<><span aria-hidden="true">“</span>{motto}<span aria-hidden="true">”</span></>:'尚未填写个人口号'}</span>
      <span className="pc-front-racket"><RacketMark/><span><span>本命战拍</span><strong title={profile.racket}>{profile.racket||'战拍待填写'}</strong></span></span>
-     <span className="pc-stats"><span><b>{stats?.games??0}</b><span>累计出场</span></span><span><b>{stats?.games?Math.round(stats.rate*100)+'%':'—'}</b><span>胜率</span></span><span><b>{monthly?.points??0}</b><span>本月积分</span></span></span>
+     <span className="pc-stats"><span><b>{stats?.games??0}</b><span>累计小局</span></span><span><b>{stats?.games?Math.round(stats.rate*100)+'%':'—'}</b><span>胜率</span></span><span><b>{monthly?.points??0}</b><span>本月积分</span></span></span>
     </button>
     <div className="pc-controls"><button type="button" onClick={onProfile}>查看档案<ArrowUpRight size={14} aria-hidden="true"/></button><button type="button" onClick={()=>{flip(true)}} aria-label={'翻转'+player.name+'的卡片'}><RotateCw size={14} aria-hidden="true"/>翻面</button></div>
    </div>

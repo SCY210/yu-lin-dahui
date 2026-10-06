@@ -18,12 +18,12 @@ function match(id:string,at:string,a=21,b=10,teams=[['A','B'],['C','D']]):Match 
 }
 
 test('修仙境界采用更紧凑五级门槛，与积分排名分开',()=>{
- for(const [rating,realm] of [[899.999,'炼气'],[900,'筑基'],[1031.999,'筑基'],[1032,'金丹'],[1099.999,'金丹'],[1100,'元婴'],[1179.999,'元婴'],[1180,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
+ for(const [rating,realm] of [[59,'炼气'],[60,'筑基'],[179,'筑基'],[180,'金丹'],[399,'金丹'],[400,'元婴'],[799,'元婴'],[800,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
  const s=fixture();s.matches.push(match('loss','2026-06-01T13:00:00Z',10,21));
  const before=structuredClone(s.players);
  assert.equal(leaderboard(s,'2026-06')[0].playerId,'C');
  assert.equal(annualLeaderboard(s,2026)[0].playerId,'C');
- assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.realm,'化神');
+ assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.realm,'炼气');
  assert.deepEqual(s.players,before);
  assert.deepEqual(getFeatureGuide('rating').table?.rows,cultivationRealms.map(r=>[r.name,r.range]));
 });
@@ -53,7 +53,7 @@ test('年度全年胜率和净胜按计分场数加权，不平均月度比例',
  s.matches.push(match('jan','2026-01-01T12:00:00Z',21,10),match('feb1','2026-02-01T12:00:00Z',19,21),match('feb2','2026-02-02T12:00:00Z',18,21),match('feb3','2026-02-03T12:00:00Z',17,21));
  const r=annualLeaderboard(s,2026).find(r=>r.playerId==='A')!;
  assert.equal(r.rate,.25);assert.equal(r.margin,.5);
- assert.equal(r.games,4);assert.equal(r.points,3);
+ assert.equal(r.games,4);assert.equal(r.points,19);
 });
 
 test('年度所有启用球友都入榜，排除非计分和非完整赛，保留实际场数',()=>{
@@ -77,11 +77,11 @@ test('年度按积分、胜率、场均净胜排序，三项相同并列且稳�
 });
 
 test('年度同刻计分赛按 ID 取上限，说明公开年度榜并保持总结独立',()=>{
- const s=fixture();s.settings.rules.cap=1;
+ const s=fixture();s.settings.rules.cap=1;s.settings.rules.loss=0;
  s.matches.push(match('z-late-id','2026-07-01T12:00:00Z',21,0),match('a-first-id','2026-07-01T12:00:00Z',0,21));
  assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.points,0);
  const guide=getFeatureGuide('annualRanking');
- assert.equal(guide.title,'年度积分与排名');assert.ok(guide.sections.some(section=>section.paragraphs?.some(p=>p.includes('没有额外的全年场数上限'))));
+ assert.equal(guide.title,'年度积分与排名');assert.ok(guide.sections.some(section=>section.paragraphs?.some(p=>p.includes('没有额外的全年小局上限'))));
  assert.equal(getFeatureGuide('annual').title,'年度总结');
 });
 
@@ -114,5 +114,5 @@ test('季度保持并列、启用成员、空榜和排名说明的正确口径',
 });
 test('季度响应标识所选季度，普通成员看不到精确实力分',()=>{
  const s=fixture();s.matches.push(match('quarter-response','2026-05-01T12:00:00Z'));const account={id:'account',email:'',role:'member' as const,playerId:'A'};
- const data=projectClubState(s,account,'2026-06',2026);assert.equal(data.rankingQuarter,'2026-Q2');assert.equal(data.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,3);assert.ok(data.quarterlyLeaderboard.every(r=>r.rating===null));
+ const data=projectClubState(s,account,'2026-06',2026);assert.equal(data.rankingQuarter,'2026-Q2');assert.equal(data.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,10);assert.ok(data.quarterlyLeaderboard.every(r=>r.rating===null));
 });
