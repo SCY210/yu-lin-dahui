@@ -26,7 +26,7 @@ export type Rules={win:number;loss:number;minimum:number;cap:number;target:numbe
 export type Season={id:string;rules:Rules;version?:number};
 export type RatingChange={id:string;matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string;k:number};
 export type Audit={id:string;at:number;actor:string;action:string;reason:string;changes?:unknown};
-export type Settings={name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string};
+export type Settings={name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[]};
 export type State={revision:number;settings:Settings;accounts:Account[];players:Player[];events:Event[];bookings:Booking[];registrations:Registration[];attendance:Attendance[];rounds:Round[];matches:Match[];costs:Cost[];settlements:Settlement[];payments:Payment[];seasons:Season[];audits:Audit[];ratingChanges:RatingChange[];challenges:Challenge[];tagVotes:TagVote[];awardVotes:AwardVote[];photos:Photo[]};
 export const defaultRules:Rules={win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'};
 export function emptyState():State{return {revision:0,settings:{name:'羽林大会',inviteHash:'',rules:{...defaultRules},initialized:false},accounts:[],players:[],events:[],bookings:[],registrations:[],attendance:[],rounds:[],matches:[],costs:[],settlements:[],payments:[],seasons:[],audits:[],ratingChanges:[],challenges:[],tagVotes:[],awardVotes:[],photos:[]};}

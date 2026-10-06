@@ -32,6 +32,9 @@ try{
  const unchanged=await read(undefined,token);assert.equal(unchanged.status,304);assert.equal(await unchanged.text(),'');assert.equal(fixture.loads,1);assert.equal(fixture.metadata,1);assert.equal(unchanged.headers.get('Cache-Control'),'no-store');
  const changedMonth=await read('/api/club?month=2026-09&year=2026',token);assert.equal(changedMonth.status,200);assert.equal((await changedMonth.json()).period,'2026-09');
  state.revision++;const changed=await read(undefined,token);assert.equal(changed.status,200);assert.equal((await changed.json()).revision,11);
+ state.settings.name='Fixture View';state.settings.blockedWords=['Fixture'];state.revision++;
+ const filteredResponse=await read(undefined,changed.headers.get('ETag'));assert.equal(filteredResponse.status,200);const filtered=await filteredResponse.json();assert.equal(filtered.settings.name,'******* View');assert.deepEqual(filtered.settings.blockedWords,['Fixture']);assert.equal(filtered.me.id,account.id);
+ state.settings.blockedWords=[];state.revision++;
  const latest=changed.headers.get('ETag');state.accounts[0]={...account,role:'member'};state.audits=[{id:'hidden',at:1,actor:account.id,action:'fixture',reason:'private'}];
  const downgraded=await read(undefined,latest);assert.equal(downgraded.status,200);const member=await downgraded.json();assert.equal(member.me.role,'member');assert.deepEqual(member.audits,[]);assert.deepEqual(member.accounts,[]);
  const memberToken=downgraded.headers.get('ETag');state.accounts=[];assert.equal((await read(undefined,memberToken)).status,403);
