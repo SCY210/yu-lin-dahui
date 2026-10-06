@@ -1,11 +1,20 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createEventShare,eventShareTargets,shareEvent} from '../lib/client/event-sharing';
+import {createEventShare,eventShareTargets,isWeChatBrowser,shareEvent} from '../lib/client/event-sharing';
 import {ClubNavigation,readClubRoute,type NavigationPort} from '../lib/client/club-navigation';
 import type {Event} from '../lib/domain/types';
 
 const event:Event={id:'event /你好?&',title:'周末羽毛球 & 双打',start:Date.parse('2026-10-06T16:00:00Z'),end:Date.parse('2026-10-06T18:00:00Z'),venue:'球馆 & 朋友',address:'private address',note:'private note',status:'open',capacity:8,signupDeadline:0,cancelDeadline:0,courtMode:'equal',ballMode:'equal',creatorId:'private account'};
 const data=()=>createEventShare(event,'羽林大会','https://club.example/?token=private#private')!;
+
+test('WeChat webviews are recognized on iPhone, Android and desktop without assuming app installation',()=>{
+ for(const ua of ['Mozilla/5.0 (iPhone) Mobile MicroMessenger/8.0.65','Mozilla/5.0 (Linux; Android 14) Chrome/118.0 MicroMessenger/8.0.65','Mozilla/5.0 (Windows NT 10.0) MicroMessenger/3.9.12','micromessenger/8.0'])assert.equal(isWeChatBrowser(ua),true);
+ for(const ua of ['','Mozilla/5.0 Safari/605.1.15','Mozilla/5.0 Chrome/140.0.0.0','MQQBrowser/13.0','NotMicroMessenger/8.0'])assert.equal(isWeChatBrowser(ua),false);
+});
+
+test('WeChat uses its page-forwarding guide even if a web-share method is exposed',async()=>{
+ assert.equal(await shareEvent(data(),{userAgent:'Mozilla/5.0 MicroMessenger/8.0.65',canShare:()=>{assert.fail('WeChat must not probe another share sheet')},share:async()=>{assert.fail('WeChat must use its own forwarding menu')}}),'fallback');
+});
 
 test('share link encodes the event ID and opens its signup tab with no unrelated parameters',()=>{
  const shared=data(),url=new URL(shared.url),route=readClubRoute(shared.url);

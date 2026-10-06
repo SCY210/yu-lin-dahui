@@ -2,9 +2,12 @@ import type {Event} from '../domain/types';
 
 export type EventShareData = {title:string;text:string;url:string};
 type ShareEvent = Pick<Event,'id'|'title'|'start'|'end'|'venue'|'status'|'deletedAt'|'mergedInto'>;
-type SharePort = {share?:(data:EventShareData)=>Promise<void>;canShare?:(data:EventShareData)=>boolean};
+type SharePort = {userAgent?:string;share?:(data:EventShareData)=>Promise<void>;canShare?:(data:EventShareData)=>boolean};
 const statusNames = {open:'报名中',locked:'报名锁定',live:'进行中',ended:'已结束',cancelled:'已取消'};
 const date = (time:number)=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Europe/Madrid',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(time);
+
+/** Detect the WeChat webview, not whether the app is installed on the device. */
+export const isWeChatBrowser = (userAgent:string)=>/\bMicroMessenger\//i.test(userAgent);
 
 /** Share only a short event invitation, never rosters, notes or account data. */
 export function createEventShare(event:ShareEvent,clubName:string,origin:string):EventShareData|null {
@@ -20,6 +23,9 @@ export function createEventShare(event:ShareEvent,clubName:string,origin:string)
 /** Must be called directly from the click handler to retain user activation. */
 export async function shareEvent(data:EventShareData,port:SharePort):Promise<'shared'|'cancelled'|'fallback'> {
  try {
+  // WeChat forwards the current page using its own top-right menu. Do not
+  // replace that flow with another share sheet or an undocumented bridge call.
+  if(isWeChatBrowser(port.userAgent??''))return 'fallback';
   if(!port.share||port.canShare&&!port.canShare(data))return 'fallback';
   await port.share(data);
   return 'shared';

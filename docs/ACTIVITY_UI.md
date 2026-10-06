@@ -13,4 +13,4 @@
 
 ## Direct event sharing
 
-The signup summary now offers a Share event action that opens the device share sheet, with WhatsApp, Telegram, email, and link options as a browser fallback. See [event sharing](EVENT_SHARING.md) for invitation fields, access requirements, and verification.
+The signup summary now prioritizes sharing to WeChat groups. Inside WeChat it explains how to forward the current event using the top-right menu; outside WeChat it opens the device share sheet when available. Other apps and copying a link are fallback options. See [event sharing](EVENT_SHARING.md) for invitation fields, access requirements, and verification.
