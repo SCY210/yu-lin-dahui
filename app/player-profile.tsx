@@ -1,7 +1,7 @@
 'use client';
 import Deferred from './deferred';
 import RealmProgress from './realm-progress';
-
+import RealmBadge from './realm-badge';
 import {lazy,useState} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
@@ -61,7 +61,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <p className="pp-eyebrow"><span className="pp-perspective">{isOwn ? '我的档案' : p.name+'的档案'}</span></p>
         <h2>{p.name}</h2>
         <div className="pp-badges">
-          <span className="pp-tier">{state.tier || '暂无境界'}{state.provisional ? ' · 暂定' : ''}</span>
+          {state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.provisional ? '暂定' : undefined} /> : <span className="pp-tier">暂无境界</span>}
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
         <RealmProgress value={state.cultivation}/>

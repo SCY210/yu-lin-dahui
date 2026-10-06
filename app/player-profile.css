@@ -6,7 +6,6 @@
 .pp-identity h2{font-size:25px;line-height:1.4;margin:0 0 10px;color:#282348;overflow-wrap:anywhere}
 .pp-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pp-tier,.pp-state{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;line-height:1.55}
-.pp-tier{background:#e8e5ff;color:#5144b5;font-weight:600}
 .pp-state{background:#f1f1f7;color:#67637c}
 .pp-edit{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;min-height:44px;border:1px solid #d8d2f0;border-radius:11px;background:#fff;color:#5646b4;padding:10px 14px;font-size:14px;font-weight:600}
 .pp-edit:hover{background:#eeebff;border-color:#bcb2e7}
