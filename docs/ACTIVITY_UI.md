@@ -10,3 +10,7 @@
 
 验证：TypeScript通过；36项算法/权限回归通过，包括无入榜门槛、并列排名、改名保留邀请码。浮层、月份选择和活动内比赛流程需按本次浏览器验收结果核对。没有修改网站访问受众或支付流程。
 浏览器验收已完成：球馆下拉计算背景为rgb(255,255,255)，文字16px，选项行44px；年月面板选9月后对应榜单更新；活动内“分组 / 比赛”展示本场轮次、轮休和比分，底部无独立比赛入口。36项回归通过。
+
+## Direct event sharing
+
+The signup summary now offers a Share event action that opens the device share sheet, with WhatsApp, Telegram, email, and link options as a browser fallback. See [event sharing](EVENT_SHARING.md) for invitation fields, access requirements, and verification.
