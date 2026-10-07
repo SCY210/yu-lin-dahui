@@ -1,15 +1,21 @@
-// Raster app icons are derived from the editable SVG master; no bitmap editing.
-import {readFileSync,writeFileSync} from 'node:fs';
+// Reproducible PNG app icons from the three editable vector masters.
+import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-const require=createRequire(import.meta.url),sharp=require('sharp');
-const svg=readFileSync('public/yulin-mark.svg');
-writeFileSync('public/favicon.svg',svg);
-for(const [name,size]of [['app-192',192],['app-512',512],['apple-touch-icon',180]]){
- const icon=await sharp(svg).resize(size,size).png().toBuffer();
- writeFileSync(`public/icons/${name}.png`,icon);
- writeFileSync(`public/icons/${name}-feather.png`,icon);
+const sharp = createRequire(import.meta.url)('sharp');
+mkdirSync('public/icons', {recursive:true});
+for (const theme of ['classic','wuxia','aquarium']) {
+  const svg = readFileSync(`public/brand/${theme}-v3.svg`);
+  for (const [suffix,size] of [['192',192],['512',512],['apple',180],['maskable',512]]) {
+    const png = await sharp(svg).resize(size,size).flatten({background:'#ffffff'}).png().toBuffer();
+    writeFileSync(`public/icons/${theme}-${suffix}-v3.png`,png);
+  }
 }
-const mark=await sharp(svg).resize(448,448).png().toBuffer();
-const mask=await sharp({create:{width:512,height:512,channels:4,background:'#6c293d'}}).composite([{input:mark,left:32,top:32}]).png().toBuffer();
-writeFileSync('public/icons/app-maskable-512.png',mask);
-writeFileSync('public/icons/app-maskable-feather-512.png',mask);
+writeFileSync('public/favicon.svg',readFileSync('public/brand/classic-v3.svg'));
+writeFileSync('public/yulin-mark.svg',readFileSync('public/brand/classic-v3.svg'));
+for (const [name,suffix] of [['app-192','192'],['app-512','512'],['apple-touch-icon','apple'],['app-maskable-512','maskable']]) {
+  const png=readFileSync(`public/icons/classic-${suffix}-v3.png`);
+  writeFileSync(`public/icons/${name}.png`,png);
+  const old=name==='app-maskable-512'?'app-maskable-feather-512':name==='apple-touch-icon'?'apple-touch-icon-feather':`${name}-feather`;
+  writeFileSync(`public/icons/${old}.png`,png);
+}
+writeFileSync('public/apple-touch-icon.png',readFileSync('public/icons/classic-apple-v3.png'));

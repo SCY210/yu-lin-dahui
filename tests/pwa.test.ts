@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {secureResponse} from '../lib/security-headers';
+import {brandManifest, BRAND_THEMES, themeBrand} from '../lib/theme-brand';
+import {GET as getManifest} from '../app/manifest.webmanifest/route';
 
 function worker(){
  const handlers=new Map<string,(event:any)=>void>(),storage=new Map<string,Response>(),fetches:any[]=[],deleted:string[]=[];
@@ -19,12 +21,40 @@ function worker(){
 }
 
 test('App安装清单覆盖安卓图标和Apple触屏图标，独立窗口从首页启动',()=>{
- const manifest=JSON.parse(readFileSync('public/manifest.webmanifest','utf8'));
+ const manifest=brandManifest('classic');
  assert.equal(manifest.name,'羽林大会');assert.equal(manifest.id,'/');assert.equal(manifest.start_url,'/');assert.equal(manifest.scope,'/');assert.equal(manifest.display,'standalone');
  for(const icon of manifest.icons){const png=readFileSync('public'+icon.src),[width,height]=icon.sizes.split('x').map(Number);assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),width);assert.equal(png.readUInt32BE(20),height);assert.equal(width,height);assert.equal(icon.type,'image/png')}
  assert.ok(manifest.icons.some((icon:any)=>icon.sizes==='192x192'&&icon.purpose==='any'));
  assert.ok(manifest.icons.some((icon:any)=>icon.sizes==='512x512'&&icon.purpose==='maskable'));
  const apple=readFileSync('public/icons/apple-touch-icon.png');assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
+});
+
+test('三套主题图标均有独立PNG与Apple尺寸，切换主题保持同一App身份',()=>{
+ for(const theme of BRAND_THEMES){
+  const manifest=brandManifest(theme),brand=themeBrand(theme);
+  assert.equal(manifest.id,'/');assert.equal(manifest.start_url,'/');assert.equal(manifest.scope,'/');
+  for(const icon of manifest.icons){
+   assert.ok(icon.src.includes(theme));
+   const png=readFileSync('public'+icon.src),size=Number(icon.sizes.split('x')[0]);
+   assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),size);assert.equal(png.readUInt32BE(20),size);
+   assert.equal(png[25],2); // flattened RGB: no transparency around an app icon
+  }
+  const apple=readFileSync('public'+brand.apple);assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
+ }
+ assert.equal(new Set(BRAND_THEMES.map(theme=>themeBrand(theme).logo)).size,3);
+});
+
+test('主题安装清单按设备偏好隔离，非法或相似Cookie回退清雅，不接受外部图标地址',async()=>{
+ for(const theme of BRAND_THEMES){
+  const response=getManifest(new Request('https://club.example/manifest.webmanifest',{headers:{Cookie:'another=1; yulin_icon_theme='+theme}}));
+  assert.equal(response.headers.get('Cache-Control'),'private, no-store');assert.equal(response.headers.get('Vary'),'Cookie');
+  assert.match(response.headers.get('Content-Type')??'',/^application\/manifest\+json/);
+  const manifest=await response.json();assert.deepEqual(manifest,brandManifest(theme));
+ }
+ for(const cookie of ['', 'yulin_icon_theme=https://other.example/icon.png','yulin_icon_theme=__proto__','not_yulin_icon_theme=aquarium']){
+  const manifest=await getManifest(new Request('https://club.example/manifest.webmanifest',{headers:{Cookie:cookie}})).json();
+  assert.deepEqual(manifest,brandManifest('classic'));
+ }
 });
 
 test('Service Worker只预存断网页，安装请求不携带账号Cookie，激活不删除其他缓存',async()=>{

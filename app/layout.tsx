@@ -11,7 +11,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#202921',
+  themeColor: '#5048dc',
 };
 
 export const metadata: Metadata = {
@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   appleWebApp: {capable:true,title:'羽林大会',statusBarStyle:'default'},
   other: {'apple-mobile-web-app-capable':'yes'},
   icons: {
-    icon: "/favicon.svg?v=feather-v2",
-    shortcut: "/favicon.svg?v=feather-v2",
-    apple: '/icons/apple-touch-icon-feather.png',
+    icon: "/brand/classic-v3.svg",
+    shortcut: "/brand/classic-v3.svg",
+    apple: '/icons/classic-apple-v3.png',
   },
 };
 
@@ -35,7 +35,7 @@ export default async function RootLayout({
 }>) {
   const {allowed:aquariumAllowed,queen}=await aquariumAccess();
   return (
-    <html lang="zh-CN" className="wuxia-theme" suppressHydrationWarning>
+    <html lang="zh-CN" className="classic-theme" suppressHydrationWarning>
       <body className="antialiased"><VisualThemeProvider aquariumAllowed={aquariumAllowed} aquariumDefault={queen}><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}</VisualThemeProvider></body>
     </html>
   );
