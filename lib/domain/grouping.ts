@@ -1,4 +1,5 @@
 import {arenaStatus} from './social';
+import {balanceCost,compareBalance} from './match-balance';
 import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
@@ -15,8 +16,50 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){c
  const cohortValues=new Map(eligible.map(id=>[id,s.registrations.find(r=>r.eventId===e.id&&r.playerId===id)?.bookingSignups?.find(x=>x.status==='confirmed'&&x.arrival<=at&&x.departure>=at+duration*60000)?.bookingId]));
  const cohort=(id:string)=>cohortValues.get(id);
  const mixedCohorts=new Set(eligible.map(cohort).filter(Boolean)).size>1;
- const lastPartner=new Map<string,string>();for(const m of [...history].sort((a,b)=>(a.start??s.rounds.find(r=>r.id===a.roundId)?.start??0)-(b.start??s.rounds.find(r=>r.id===b.roundId)?.start??0)||a.id.localeCompare(b.id))){for(const t of [m.a,m.b]){lastPartner.set(t[0],t[1]);lastPartner.set(t[1],t[0])}}const penalty=(list:string[])=>{let cost=0;for(let i=0;i<list.length;i+=4){const a=list.slice(i,i+2),b=list.slice(i+2,i+4);if([...a,...b].some(id=>!canUse(courts[i/4].id,id)))return Infinity;if(mixedCohorts&&cohort(a[0])&&[...a,...b].every(id=>cohort(id)===cohort(a[0])))cost+=90;cost+=Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2);for(const team of [a,b]){if(lastPartner.get(team[0])===team[1]||lastPartner.get(team[1])===team[0])cost+=e.playMode==='koc'?1800:350;if(['mentor','carry'].includes(e.identityMode??''))cost-=Math.abs(rating(team[0])-rating(team[1]))*.6}for(const m of history){for(const team of [a,b])if([m.a,m.b].some(t=>team.every(id=>t.includes(id))))cost+=75;for(const x of a)for(const y of b)if((m.a.includes(x)&&m.b.includes(y))||(m.b.includes(x)&&m.a.includes(y)))cost+=12}}return cost};
- let rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};let best=[...selected],bestCost=penalty(best);for(let n=0;n<600;n++){const candidate=[...best];const i=fixed+Math.floor(rand()*(candidate.length-fixed)),j=fixed+Math.floor(rand()*(candidate.length-fixed));[candidate[i],candidate[j]]=[candidate[j],candidate[i]];if(fixed&&candidate.slice(2,4).some(id=>arenaLosers.includes(id)))continue;const cost=penalty(candidate);if(cost<bestCost||(cost===bestCost&&rand()<.1)){best=candidate;bestCost=cost}}
- return {eligible,rest,courts:courts.slice(0,best.length/4).map((court,i)=>({courtId:court.id,a:best.slice(i*4,i*4+2),b:best.slice(i*4+2,i*4+4)})),stats:Object.fromEntries(eligible.map(id=>[id,debt(id)])),penalty:bestCost};
+ const lastPartner=new Map<string,string>();for(const m of [...history].sort((a,b)=>(a.start??s.rounds.find(r=>r.id===a.roundId)?.start??0)-(b.start??s.rounds.find(r=>r.id===b.roundId)?.start??0)||a.id.localeCompare(b.id))){for(const t of [m.a,m.b]){lastPartner.set(t[0],t[1]);lastPartner.set(t[1],t[0])}}const penalty=(list:string[])=>{
+  let variety=0;const gaps:number[]=[];
+  for(let i=0;i<list.length;i+=4){
+   const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
+   if([...a,...b].some(id=>!canUse(courts[i/4].id,id)))return balanceCost([Infinity],Infinity);
+   gaps.push(Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2));
+   if(mixedCohorts&&cohort(a[0])&&[...a,...b].every(id=>cohort(id)===cohort(a[0])))variety+=90;
+   for(const team of [a,b]){
+    if(lastPartner.get(team[0])===team[1]||lastPartner.get(team[1])===team[0])variety+=e.playMode==='koc'?1800:350;
+    if(['mentor','carry'].includes(e.identityMode??''))variety-=Math.abs(rating(team[0])-rating(team[1]))*.6;
+   }
+   for(const m of history){
+    for(const team of [a,b])if([m.a,m.b].some(t=>team.every(id=>t.includes(id))))variety+=75;
+    for(const x of a)for(const y of b)if((m.a.includes(x)&&m.b.includes(y))||(m.b.includes(x)&&m.a.includes(y)))variety+=12;
+   }
+  }
+  return balanceCost(gaps,variety);
+ };
+ // Check all three pairings on each court, including the unchanged one.
+ // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.
+ const pairCourts=(list:string[])=>{
+  const result=[...list];
+  for(let offset=fixed?4:0;offset<list.length;offset+=4){
+   const [a,b,c,d]=result.slice(offset,offset+4);let chosen=[...result],cost=penalty(chosen);
+   for(const pair of [[a,c,b,d],[a,d,b,c]]){
+    const next=[...result];next.splice(offset,4,...pair);const nextCost=penalty(next);
+    if(compareBalance(nextCost,cost)<0){chosen=next;cost=nextCost}
+   }
+   result.splice(offset,4,...chosen.slice(offset,offset+4));
+  }
+  return result;
+ };
+ let rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
+ let best=pairCourts(selected),bestCost=penalty(best);
+ for(let n=0;n<600;n++){
+  const candidate=[...best];const i=fixed+Math.floor(rand()*(candidate.length-fixed)),j=fixed+Math.floor(rand()*(candidate.length-fixed));
+  [candidate[i],candidate[j]]=[candidate[j],candidate[i]];
+  if(fixed&&candidate.slice(2,4).some(id=>arenaLosers.includes(id)))continue;
+  // Reject venue violations before the more expensive pairing search.
+  if(candidate.some((id,index)=>!canUse(courts[Math.floor(index/4)].id,id)))continue;
+  const paired=pairCourts(candidate),cost=penalty(paired),comparison=compareBalance(cost,bestCost);
+  if(comparison<0||(comparison===0&&rand()<.1)){best=paired;bestCost=cost}
+ }
+
+ return {eligible,rest,courts:courts.slice(0,best.length/4).map((court,i)=>({courtId:court.id,a:best.slice(i*4,i*4+2),b:best.slice(i*4+2,i*4+4)})),stats:Object.fromEntries(eligible.map(id=>[id,debt(id)])),penalty:bestCost.variety,balance:bestCost};
 }
 export function validateRound(s:State,eventId:string,start:number,duration:number,matches:Match[]){const ids=matches.flatMap(m=>[...m.a,...m.b]);if(new Set(ids).size!==ids.length)fail('同一轮有重复选手');const ready=readyIds(s,eventId,start,duration);const names=new Set<string>();for(const m of matches){if(m.a.length!==2||m.b.length!==2||[...m.a,...m.b].some(id=>!ready.includes(id)))fail('分组包含不在参加时段内或正在比赛的成员');const b=s.bookings.find(b=>b.id===m.courtId&&b.eventId===eventId&&b.start<=start&&b.end>=start+duration*60000);if(!b||names.has((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name))fail('场地不可用或重复');if([...m.a,...m.b].some(id=>!bookingAllowsPlayer(s,eventId,b.id,id,start,start+duration*60000)))fail('分组包含不在该球馆参加时段内的成员');names.add((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name)}}

@@ -1,0 +1,14 @@
+.app-disclosure{margin:16px 0;border:1px solid var(--border);border-radius:16px;background:var(--surface,#fff);color:var(--text,inherit)}
+.app-disclosure>summary{min-height:48px;padding:14px 16px;font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.app-disclosure>summary:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:16px}
+.app-disclosure[open]>summary{border-bottom:1px solid var(--border)}
+.app-disclosure-content{padding:16px;min-width:0}
+.app-disclosure-content>.card:first-child{margin-top:0}
+.app-disclosure-content>.card:last-child{margin-bottom:0}
+.pp-card>.app-disclosure{margin:18px 0 0}
+.pp-card>.app-disclosure .pp-section{border:0;margin:0;padding:0}
+.app-disclosure .app-disclosure{background:transparent}
+.round-section-title{margin-top:20px}
+.match-more{margin-top:12px}
+.match-more .actions{padding-top:4px}
+@media(max-width:640px){.app-disclosure-content{padding:12px}.app-disclosure>summary{padding:14px 12px}.event-toolbar>.app-disclosure{margin:0}.event-toolbar>.app-disclosure>summary{padding:10px 12px;min-height:44px}.event-toolbar>.app-disclosure .app-disclosure-content{max-width:280px}}

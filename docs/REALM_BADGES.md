@@ -2,6 +2,8 @@
 
 Profiles, social player cards and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the initial 炼气 · 初期 · 0% rule.
 
+The My page also displays this badge through `app/my-realm-card.tsx`, using the existing cultivation realm, stage and progress. On phones its realm card spans both statistic columns so the badge remains readable; points and attendance remain below it. This preserves the compact account panels and does not change growth calculations.
+
 The decorations pause when a badge leaves the viewport or the document is hidden. Observers and visibility listeners are removed on unmount. Without IntersectionObserver, visible-page animations remain available. Server-rendered badges start paused until visibility is known.
 
 `prefers-reduced-motion: reduce` removes decorative animation and hover movement completely, keeping the full static insignia visible. Foundation bars and spirit rays use per-element CSS delays so their staggered effects survive the animation declarations.

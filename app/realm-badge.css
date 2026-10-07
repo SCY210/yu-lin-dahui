@@ -189,6 +189,7 @@
   display: inline-flex !important;
   align-items: center !important;
   margin: 4px 0 6px !important;
+  max-width: 100%;
 }
 
 .me-realm-badge.realm-badge {
@@ -205,7 +206,20 @@
   letter-spacing: 0.14em !important;
 }
 
+.me-realm-badge.realm-badge .rb-stage {
+  font-size: 14px !important;
+}
+
 @media (max-width: 600px) {
+  .stats.me-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .me-stats .me-realm-card {
+    grid-column: 1 / -1;
+  }
+  .me-stats .card small {
+    font-size: 14px;
+  }
   .me-realm-badge.realm-badge {
     padding: 3px 10px 3px 4px !important;
     gap: 6px !important;
@@ -215,7 +229,7 @@
     height: 24px !important;
   }
   .me-realm-badge.realm-badge .rb-name {
-    font-size: 13px !important;
+    font-size: 14px !important;
   }
 }
 
