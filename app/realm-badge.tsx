@@ -11,11 +11,11 @@ export interface RankInfo {
 }
 
 export const RANKS: RankInfo[] = [
-  {n: '炼气', p: 'LIÀN QÌ', c: '#7fe3ff', t: '一缕灵气入体', k: 1},
-  {n: '筑基', p: 'ZHÙ JĪ', c: '#6ee7a0', t: '层层夯实道基', k: 2},
-  {n: '金丹', p: 'JĪN DĀN', c: '#ffc94d', t: '灵力凝结成丹', k: 3},
-  {n: '元婴', p: 'YUÁN YĪNG', c: '#b69cff', t: '丹碎婴生，神游', k: 4},
-  {n: '化神', p: 'HUÀ SHÉN', c: '#ff7a7a', t: '神念通天，睁眼开天', k: 5}
+  {n: '炼气', p: 'LIÀN QÌ', c: '#9bd7ff', t: '一缕灵气，渐入佳境', k: 1},
+  {n: '筑基', p: 'ZHÙ JĪ', c: '#b6b6ff', t: '三层道基，稳如磐石', k: 2},
+  {n: '金丹', p: 'JĪN DĀN', c: '#f3cf88', t: '灵光凝丹，日月相辉', k: 3},
+  {n: '元婴', p: 'YUÁN YĪNG', c: '#d6b3ff', t: '莲华初绽，神游球场', k: 4},
+  {n: '化神', p: 'HUÀ SHÉN', c: '#ffb4c5', t: '神光流转，自成天地', k: 5}
 ];
 
 export function getRankByRealm(realm: string): {rank: RankInfo; level: number} {
@@ -31,17 +31,17 @@ export function getRankByRealm(realm: string): {rank: RankInfo; level: number} {
 function InsigniaFrame({rank}: {rank: RankInfo}) {
   return (
     <>
-      <circle cx="100" cy="100" r="90" fill="none" stroke={rank.c} strokeOpacity="0.48" strokeWidth="1.2" />
-      <circle cx="100" cy="100" r="84" fill="none" stroke={rank.c} strokeOpacity="0.72" strokeWidth="1.4" strokeDasharray="2 7" className="rb-o rb-spinr" />
-      <g className={`rb-o ${rank.k > 3 ? 'rb-fast' : 'rb-spin'}`}>
+      <circle cx="100" cy="100" r="90" fill="none" stroke={rank.c} strokeOpacity="0.55" strokeWidth="2" />
+      <circle cx="100" cy="100" r="81" fill="none" stroke={rank.c} strokeOpacity="0.65" strokeWidth="1.8" strokeDasharray="45 12 4 12" className="rb-o rb-spinr" />
+      <g className="rb-o rb-spin">
         {Array.from({length: rank.k}).map((_, i) => {
           const a = (i / rank.k) * Math.PI * 2 - Math.PI / 2;
           const cx = 100 + 90 * Math.cos(a);
           const cy = 100 + 90 * Math.sin(a);
           return (
             <g key={i}>
-              <circle cx={cx} cy={cy} r="4.2" fill={rank.c} />
-              <circle cx={cx} cy={cy} r="8" fill="none" stroke={rank.c} strokeOpacity="0.55" strokeWidth="1.2" />
+              <circle cx={cx} cy={cy} r="7" fill={rank.c} fillOpacity="0.14" />
+              <circle cx={cx} cy={cy} r="3" fill="#fff8ee" />
             </g>
           );
         })}
@@ -66,7 +66,7 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
           d="M100 100 C100 92 108 92 108 100 C108 112 92 112 92 100 C92 84 116 84 116 100 C116 122 84 122 84 100 C84 76 124 76 124 100 C124 132 76 132 76 100 C76 68 132 68 132 100"
           fill="none"
           stroke={rank.c}
-          strokeWidth="3"
+          strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray="400"
           className="rb-draw-path"
@@ -108,15 +108,15 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
       <>
         <defs>
           <radialGradient id={gradId}>
-            <stop offset="0" stopColor="#fff6c8" />
-            <stop offset="0.5" stopColor={rank.c} />
-            <stop offset="1" stopColor="#b8741a" />
+            <stop offset="0" stopColor="#fffbea" />
+            <stop offset="0.45" stopColor={rank.c} />
+            <stop offset="1" stopColor="#a37033" />
           </radialGradient>
         </defs>
-        <circle cx="100" cy="100" r="52" fill="none" stroke={rank.c} strokeWidth="1.5" strokeDasharray="14 6" className="rb-o rb-spin" />
+        <g className="rb-o rb-spin"><ellipse cx="100" cy="100" rx="57" ry="26" fill="none" stroke={rank.c} strokeWidth="2" transform="rotate(-35 100 100)"/><circle cx="146" cy="76" r="4" fill="#fff5d5"/></g>
         <circle cx="100" cy="100" r="42" fill="none" stroke={rank.c} strokeOpacity="0.5" className="rb-pl" />
-        <circle cx="100" cy="100" r="30" fill={`url(#${gradId})`} className="rb-breathe-circle" />
-        <path d="M100 70 A15 15 0 0 1 100 100 A15 15 0 0 0 100 130" fill="none" stroke="#7a4a0c" strokeOpacity="0.55" strokeWidth="2.4" className="rb-o rb-fast" />
+        <circle cx="100" cy="100" r="31" fill={`url(#${gradId})`} className="rb-breathe-circle" />
+        <path d="M85 85a21 21 0 0 1 23-5" fill="none" stroke="#fffbea" strokeOpacity="0.75" strokeWidth="3" strokeLinecap="round"/>
       </>
     );
   }
@@ -130,20 +130,19 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
               key={i}
               cx="100"
               cy="64"
-              rx="9"
-              ry="22"
+              rx="12"
+              ry="28"
               fill={rank.c}
-              fillOpacity="0.2"
+              fillOpacity="0.12"
               stroke={rank.c}
-              strokeWidth="1.4"
+              strokeWidth="2"
               transform={`rotate(${i * 45} 100 100)`}
             />
           ))}
         </g>
         <g className="rb-nascent-soul">
-          <circle cx="100" cy="112" r="17" fill={rank.c} />
-          <circle cx="92" cy="92" r="8" fill={rank.c} />
-          <path d="M78 118 A24 24 0 0 0 122 118" fill="none" stroke="#fff" strokeOpacity="0.8" strokeWidth="2" strokeLinecap="round" />
+          <path d="M100 65c-12 16-21 23-21 37a21 21 0 0 0 42 0c0-14-9-21-21-37Z" fill={rank.c} fillOpacity="0.75" stroke="#f8eeff" strokeWidth="2"/>
+          <path d="M100 82c-6 10-9 14-9 21a9 9 0 0 0 18 0c0-7-3-11-9-21Z" fill="#fff3ff"/>
         </g>
       </>
     );
@@ -153,9 +152,9 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
   return (
     <>
       <g>
-        {Array.from({length: 24}).map((_, i) => {
-          const a = (i / 24) * Math.PI * 2;
-          const L = i % 2 ? 12 : 22;
+        {Array.from({length: 12}).map((_, i) => {
+          const a = (i / 12) * Math.PI * 2;
+          const L = i % 2 ? 12 : 24;
           return (
             <line
               key={i}
@@ -164,7 +163,7 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
               x2={100 + (52 + L) * Math.cos(a)}
               y2={100 + (52 + L) * Math.sin(a)}
               stroke={rank.c}
-              strokeWidth={i % 2 ? 1.5 : 2.6}
+              strokeWidth={i % 2 ? 2 : 3}
               strokeLinecap="round"
               className="rb-ray-line"
               style={{'--rb-delay': `${(i % 6) * 0.25}s`} as CSSProperties}
@@ -173,7 +172,7 @@ function InsigniaCore({level, rank, gradId}: {level: number; rank: RankInfo; gra
         })}
       </g>
       <circle cx="100" cy="100" r="46" fill="none" stroke={rank.c} strokeOpacity="0.45" className="rb-o rb-spinr" />
-      <path d="M60 100 Q100 62 140 100 Q100 138 60 100Z" fill="#1e2822" stroke={rank.c} strokeWidth="2.6" strokeLinejoin="round" />
+      <path d="M58 100 Q100 57 142 100 Q100 143 58 100Z" fill="#1c1b30" stroke={rank.c} strokeWidth="3" strokeLinejoin="round" />
       <circle cx="100" cy="100" r="15" fill={rank.c} className="rb-pl" />
       <ellipse cx="100" cy="100" rx="3" ry="13" fill="#fff" />
     </>
@@ -184,6 +183,9 @@ export function RealmInsigniaSvg({level, rank}: {level: number; rank: RankInfo})
   const gradId = useId().replace(/:/g, '');
   return (
     <svg viewBox="0 0 200 200" className="rb-svg" role="img" aria-label={`${rank.n}徽记`}>
+      <defs><radialGradient id={`rb-field-${gradId}`}><stop stopColor={rank.c} stopOpacity="0.2"/><stop offset="1" stopColor="#171628"/></radialGradient><radialGradient id={`rb-halo-${gradId}`}><stop stopColor={rank.c} stopOpacity="0.35"/><stop offset="1" stopColor={rank.c} stopOpacity="0"/></radialGradient></defs>
+      <circle cx="100" cy="100" r="96" fill={`url(#rb-field-${gradId})`}/>
+      <circle cx="100" cy="100" r="77" fill={`url(#rb-halo-${gradId})`} className="rb-halo"/>
       <InsigniaFrame rank={rank} />
       <InsigniaCore level={level} rank={rank} gradId={`rb-g3-${gradId}`} />
     </svg>
@@ -209,9 +211,11 @@ export default function RealmBadge({realm, stage, className = ''}: {realm: strin
     <span
       ref={badge}
       data-motion={moving?'running':'paused'}
+      title={`${rank.n} · ${rank.t}`}
       className={`realm-badge realm-badge-${level}${className ? ' ' + className : ''}`}
       style={{
         '--rb-c': rank.c,
+        '--rb-orbit': `${32 - level * 3}s`,
       } as CSSProperties}
     >
       <span className="rb-insignia-wrap" aria-hidden="true">
@@ -219,7 +223,7 @@ export default function RealmBadge({realm, stage, className = ''}: {realm: strin
       </span>
       <span className="rb-txt">
         <strong className="rb-name">{realm}</strong>
-        {stage && <span className="rb-stage">· {stage}</span>}
+        {stage && <span className="rb-stage">{stage}</span>}
       </span>
     </span>
   );

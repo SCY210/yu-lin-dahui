@@ -1,267 +1,40 @@
-/* ═══════════════════════════════════════════════════════════════════
-   修行段位徽记 · 练气至化神
-   Implementation based directly on 修行段位徽记 · 练气至化神.html
-   ═══════════════════════════════════════════════════════════════════ */
-
-.realm-badge {
-  position: relative !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  padding: 3px 14px 3px 6px !important;
-  border-radius: 9999px !important;
-  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 16%, #17201a) !important;
-  border: 1px solid color-mix(in srgb, var(--rb-c, #7fe3ff) 50%, #c4ab76) !important;
-  box-shadow:
-    0 2px 8px rgba(23, 32, 26, 0.22),
-    0 0 10px color-mix(in srgb, var(--rb-c, #7fe3ff) 22%, transparent),
-    inset 0 1px 1px rgba(255, 255, 255, 0.16) !important;
-  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
-  font-family: "Noto Serif SC", "Songti SC", "STKaiti", "KaiTi", serif !important;
-  letter-spacing: 0.12em !important;
-  white-space: nowrap !important;
-  user-select: none !important;
-  box-sizing: border-box !important;
-  text-decoration: none !important;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background 0.25s ease !important;
-}
-
-.realm-badge:hover {
-  transform: translateY(-1.5px) scale(1.04) !important;
-  background: color-mix(in srgb, var(--rb-c, #7fe3ff) 24%, #17201a) !important;
-  box-shadow:
-    0 4px 14px rgba(23, 32, 26, 0.3),
-    0 0 16px color-mix(in srgb, var(--rb-c, #7fe3ff) 36%, transparent),
-    inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
-}
-
-/* Insignia SVG wrapper */
-.rb-insignia-wrap {
-  width: 28px !important;
-  height: 28px !important;
-  flex: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.rb-svg {
-  width: 100% !important;
-  height: 100% !important;
-  display: block !important;
-  transform-box: view-box !important;
-  overflow: visible !important;
-}
-
-/* Text area */
-.rb-txt {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-
-.rb-name {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 75%, #ffffff) !important;
-  text-shadow: 0 0 8px color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, transparent) !important;
-}
-
-.rb-stage {
-  font-size: 12px !important;
-  color: color-mix(in srgb, var(--rb-c, #7fe3ff) 55%, #cfcbbf) !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* ── SVG Animations from HTML design ────────────────────────── */
-.rb-o {
-  transform-box: view-box !important;
-  transform-origin: 100px 100px !important;
-}
-
-.rb-spin {
-  animation: rb-sp 24s linear infinite;
-}
-
-.rb-spinr {
-  animation: rb-sp 30s linear infinite reverse;
-}
-
-.rb-fast {
-  animation: rb-sp 9s linear infinite;
-}
-
-@keyframes rb-sp {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes rb-pulse {
-  0%, 100% { opacity: 0.45; transform: scale(0.94); }
-  50%      { opacity: 1; transform: scale(1.06); }
-}
-
-.rb-pl {
-  animation: rb-pulse 3.2s ease-in-out infinite;
-  transform-box: view-box !important;
-  transform-origin: 100px 100px !important;
-}
-
-@keyframes rb-draw {
-  0%       { stroke-dashoffset: 400; }
-  60%, 100% { stroke-dashoffset: 0; }
-}
-
-.rb-draw-path {
-  animation: rb-draw 5s ease-in-out infinite alternate;
-}
-
-@keyframes rb-rise {
-  0%, 15%   { opacity: 0.08; }
-  35%, 100% { opacity: 1; }
-}
-
-.rb-rise-rect {
-  animation: rb-rise 4s ease-in-out infinite alternate;
-  animation-delay: var(--rb-delay, 0s);
-}
-
-@keyframes rb-breathe {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.08); }
-}
-
-.rb-breathe-circle {
-  animation: rb-breathe 3s ease-in-out infinite;
-  transform-box: view-box !important;
-  transform-origin: 100px 100px !important;
-}
-
-.rb-nascent-soul {
-  animation: rb-breathe 4s ease-in-out infinite;
-  transform-box: view-box !important;
-  transform-origin: 100px 108px !important;
-}
-
-@keyframes rb-ray {
-  0%, 100% { opacity: 0.25; }
-  50%      { opacity: 1; }
-}
-
-.rb-ray-line {
-  animation: rb-ray 2.6s ease-in-out infinite;
-  animation-delay: var(--rb-delay, 0s);
-}
-
-/* ── Social Card variant (名帖上的展示形态) ─────────────────── */
-.pc-realm.realm-badge {
-  margin: 6px 0 8px !important;
-  padding: 5px 16px 5px 8px !important;
-}
-
-.pc-realm.realm-badge .rb-insignia-wrap {
-  width: 36px !important;
-  height: 36px !important;
-}
-
-.pc-realm.realm-badge .rb-name {
-  font-size: 15px !important;
-  letter-spacing: 0.16em !important;
-}
-
-/* ── Inline variant (排行榜列表中的形态) ────────────────────── */
-.rv-realm-badge.realm-badge {
-  padding: 2px 9px 2px 4px !important;
-}
-
-.rv-realm-badge.realm-badge .rb-insignia-wrap {
-  width: 20px !important;
-  height: 20px !important;
-}
-
-.rv-realm-badge.realm-badge .rb-name {
-  font-size: 14px !important;
-}
-
-/* ── Me profile stats card variant (我的页面上的修仙境界展示) ─── */
-.me-realm-badge-wrap {
-  display: inline-flex !important;
-  align-items: center !important;
-  margin: 4px 0 6px !important;
-  max-width: 100%;
-}
-
-.me-realm-badge.realm-badge {
-  padding: 5px 16px 5px 8px !important;
-}
-
-.me-realm-badge.realm-badge .rb-insignia-wrap {
-  width: 34px !important;
-  height: 34px !important;
-}
-
-.me-realm-badge.realm-badge .rb-name {
-  font-size: 16px !important;
-  letter-spacing: 0.14em !important;
-}
-
-.me-realm-badge.realm-badge .rb-stage {
-  font-size: 14px !important;
-}
-
-@media (max-width: 600px) {
-  .stats.me-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .me-stats .me-realm-card {
-    grid-column: 1 / -1;
-  }
-  .me-stats .card small {
-    font-size: 14px;
-  }
-  .me-realm-badge.realm-badge {
-    padding: 3px 10px 3px 4px !important;
-    gap: 6px !important;
-  }
-  .me-realm-badge.realm-badge .rb-insignia-wrap {
-    width: 24px !important;
-    height: 24px !important;
-  }
-  .me-realm-badge.realm-badge .rb-name {
-    font-size: 14px !important;
-  }
-}
-
-/* Keep scrolled-away badges and background pages from running animations. */
-.realm-badge[data-motion='paused'] svg * {
-  animation-play-state: paused !important;
-}
-
-/* ── Reduced-motion ─────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .rb-spin,
-  .rb-spinr,
-  .rb-fast,
-  .rb-pl,
-  .rb-draw-path,
-  .rb-rise-rect,
-  .rb-breathe-circle,
-  .rb-nascent-soul,
-  .rb-ray-line {
-    animation: none !important;
-  }
-  .realm-badge,
-  .realm-badge:hover {
-    transition: none !important;
-    transform: none !important;
-  }
-  .rb-draw-path {
-    stroke-dashoffset: 0;
-  }
-  .rb-rise-rect,
-  .rb-ray-line,
-  .rb-pl {
-    opacity: 1;
-  }
-}
+/* Shared realm medallions: steady lettering, softly moving insignia. */
+.realm-badge{position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;gap:10px!important;padding:6px 13px 6px 6px!important;border-radius:16px!important;border:1px solid color-mix(in srgb,var(--rb-c,#9bd7ff) 32%,#414052)!important;background:linear-gradient(120deg,color-mix(in srgb,var(--rb-c,#9bd7ff) 9%,#252337),#191827)!important;box-shadow:inset 0 1px 0 #ffffff14,0 4px 12px #16122b16!important;color:#f8f5ff!important;font-family:inherit!important;letter-spacing:0!important;white-space:nowrap!important;box-sizing:border-box!important;max-width:100%;text-decoration:none!important;user-select:none;transition:border-color .25s ease,box-shadow .25s ease!important}
+@media(hover:hover){.realm-badge:hover{border-color:color-mix(in srgb,var(--rb-c) 65%,#686377)!important;box-shadow:inset 0 1px 0 #ffffff20,0 4px 18px color-mix(in srgb,var(--rb-c) 15%,transparent)!important}}
+.rb-insignia-wrap{position:relative!important;width:38px!important;height:38px!important;flex:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;border-radius:50%;box-shadow:0 0 14px color-mix(in srgb,var(--rb-c) 15%,transparent)}
+.rb-svg{width:100%!important;height:100%!important;display:block!important;overflow:visible!important;transform-box:view-box!important}
+.rb-txt{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:2px!important;line-height:1.3!important;min-width:0}
+.rb-name{font-size:14px!important;line-height:1.35!important;font-weight:650!important;letter-spacing:.08em!important;color:#faf6ff!important;text-shadow:none!important}
+.rb-stage{font-size:13px!important;line-height:1.3!important;font-weight:450!important;letter-spacing:.04em!important;color:color-mix(in srgb,var(--rb-c) 45%,#dbd6e7)!important}
+.rb-o{transform-box:view-box!important;transform-origin:100px 100px!important}
+.rb-spin{animation:rb-sp var(--rb-orbit,32s) linear infinite}
+.rb-spinr{animation:rb-sp 42s linear infinite reverse}
+@keyframes rb-sp{to{transform:rotate(360deg)}}
+.rb-halo{transform-box:view-box;transform-origin:100px 100px;animation:rb-halo-breathe 6s ease-in-out infinite}
+@keyframes rb-halo-breathe{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.04)}}
+.rb-pl{animation:rb-pulse 4.5s ease-in-out infinite;transform-box:view-box!important;transform-origin:100px 100px!important}
+@keyframes rb-pulse{0%,100%{opacity:.6;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}
+.rb-draw-path{animation:rb-draw 7s ease-in-out infinite alternate}
+@keyframes rb-draw{0%{stroke-dashoffset:280;opacity:.55}65%,100%{stroke-dashoffset:0;opacity:1}}
+.rb-rise-rect{animation:rb-rise 5s ease-in-out infinite alternate;animation-delay:var(--rb-delay,0s)}
+@keyframes rb-rise{0%,10%{opacity:.25}45%,100%{opacity:.85}}
+.rb-breathe-circle,.rb-nascent-soul{animation:rb-breathe 5s ease-in-out infinite;transform-box:view-box!important;transform-origin:100px 100px!important}
+@keyframes rb-breathe{0%,100%{transform:scale(.97)}50%{transform:scale(1.04)}}
+.rb-ray-line{animation:rb-ray 4.5s ease-in-out infinite;animation-delay:var(--rb-delay,0s)}
+@keyframes rb-ray{0%,100%{opacity:.28}50%{opacity:.85}}
+.pc-realm.realm-badge{margin:6px 0 8px!important;padding:7px 16px 7px 7px!important;border-radius:17px!important}
+.pc-realm .rb-insignia-wrap{width:42px!important;height:42px!important}
+.pc-realm .rb-name{font-size:15px!important}
+.rv-realm-badge.realm-badge{padding:4px 9px 4px 4px!important;gap:7px!important;border-radius:12px!important}
+.rv-realm-badge .rb-insignia-wrap{width:28px!important;height:28px!important}
+.rv-realm-badge .rb-txt{flex-direction:row!important;align-items:center!important;gap:6px!important}
+.rv-realm-badge .rb-name{font-size:14px!important;letter-spacing:.02em!important}
+.rv-realm-badge .rb-stage{font-size:12px!important}
+.me-realm-badge-wrap{display:inline-flex!important;align-items:center!important;margin:6px 0 8px!important;max-width:100%}
+.me-realm-badge.realm-badge{padding:8px 18px 8px 8px!important;gap:12px!important;border-radius:18px!important}
+.me-realm-badge .rb-insignia-wrap{width:48px!important;height:48px!important}
+.me-realm-badge .rb-name{font-size:17px!important}
+.me-realm-badge .rb-stage{font-size:14px!important}
+@media(max-width:600px){.stats.me-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.me-stats .me-realm-card{grid-column:1/-1}.me-stats .card small{font-size:14px}.me-realm-badge.realm-badge{padding:6px 14px 6px 6px!important;gap:10px!important}.me-realm-badge .rb-insignia-wrap{width:42px!important;height:42px!important}.me-realm-badge .rb-name{font-size:16px!important}}
+.realm-badge[data-motion='paused'] svg *{animation-play-state:paused!important}
+@media(prefers-reduced-motion:reduce){.realm-badge svg *{animation:none!important}.realm-badge,.realm-badge:hover{transition:none!important;transform:none!important}.rb-draw-path{stroke-dashoffset:0!important}.rb-halo,.rb-pl,.rb-rise-rect,.rb-ray-line{opacity:.85!important}}
