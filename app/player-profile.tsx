@@ -13,8 +13,9 @@ import './player-profile.css';
 const AchievementCollection=lazy(()=>import('./achievement-collection'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import CultivationOrnament from './cultivation-ornament';
+import {genderOptions,genderLabels,levelOptions,type ProfileGender} from '../lib/player-profile-options';
 
-const defaults = {years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', level:'beginner', racket:'', strings:''};
+const defaults = {gender:'undisclosed',years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', level:'beginner', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
 const optional = (key:string, label:string) => ({...text(key, label), optional:true});
@@ -42,7 +43,9 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   const range=tensionRange(p.profile);
   const unparsedLegacy=!range&&p.profile?.tension&&!('tensionMin' in p.profile||'tensionMax' in p.profile);
   const edit = () => ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
-    number('years', '球龄（年）'),
+    choice('gender', '性别（可不透露）', genderOptions.map(([value,label])=>[value,label])),
+    {...number('years', '球龄（年）'),min:0,max:80,step:'any'},
+    choice('level','自评水平（仅展示）',levelOptions.map(([value,label])=>[value,label])),
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
     optional('motto', (isOwn ? '我的口号' : '这位球友的口号')+'（最多80字）'),
@@ -76,10 +79,13 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     <section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
+        <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]}/>
         <Fact label="球龄" value={p.profile?.years != null ? `${p.profile.years}年` : null}/>
         <Fact label="惯用手" value={hands[p.profile?.hand]}/>
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
+        <Fact label="自评水平" value={levelOptions.find(([value])=>value===p.profile?.level)?.[1]}/>
       </dl>
+      <p className="hint">球龄、自评水平与性别仅作档案展示，不影响实力分或自动分组。</p>
       <div className="pp-style"><span>{isOwn ? '我的口号' : '这位球友的口号'}</span><p className={profile.motto ? '' : 'pp-unfilled'}>{profile.motto || '尚未填写'}</p></div>
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section>

@@ -1,4 +1,5 @@
 import {propose} from './grouping';
+import {balanceCost,compareBalance} from './match-balance';
 import {venueParticipation,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
 
@@ -28,9 +29,9 @@ export function proposeFixed(s:State,e:Event,at:number,duration:number,seed:numb
  const rating=(t:string[])=>t.reduce((sum,id)=>sum+(s.players.find(p=>p.id===id)?.rating??1000),0)/2;
  const history=s.matches.filter(m=>m.eventId===e.id&&!['draft','cancelled'].includes(m.status));
  const same=(a:string[],b:string[])=>a.every(id=>b.includes(id));
- const penalty=(list:string[][])=>{let cost=0;for(let i=0;i<list.length;i+=2){if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return Infinity;cost+=Math.abs(rating(list[i])-rating(list[i+1]));cost+=history.filter(m=>(same(m.a,list[i])&&same(m.b,list[i+1]))||(same(m.b,list[i])&&same(m.a,list[i+1]))).length*150}return cost};
+ const penalty=(list:string[][])=>{let variety=0;const gaps:number[]=[];for(let i=0;i<list.length;i+=2){if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(list[i])-rating(list[i+1])));variety+=history.filter(m=>(same(m.a,list[i])&&same(m.b,list[i+1]))||(same(m.b,list[i])&&same(m.a,list[i+1]))).length*150}return balanceCost(gaps,variety)};
  let rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  let best=[...selected],bestCost=penalty(best);
- for(let i=0;i<180;i++){const next=[...best],a=Math.floor(rand()*next.length),b=Math.floor(rand()*next.length);[next[a],next[b]]=[next[b],next[a]];const cost=penalty(next);if(cost<bestCost||(cost===bestCost&&rand()<0.1)){best=next;bestCost=cost}}
- const playing=new Set(best.flat());return {...base,rest:base.eligible.filter(id=>!playing.has(id)),courts:courts.slice(0,count).map((court,i)=>({courtId:court.courtId,a:best[i*2],b:best[i*2+1]})),penalty:bestCost};
+ for(let i=0;i<180;i++){const next=[...best],a=Math.floor(rand()*next.length),b=Math.floor(rand()*next.length);[next[a],next[b]]=[next[b],next[a]];const cost=penalty(next);if(compareBalance(cost,bestCost)<0||(compareBalance(cost,bestCost)===0&&rand()<0.1)){best=next;bestCost=cost}}
+ const playing=new Set(best.flat());return {...base,rest:base.eligible.filter(id=>!playing.has(id)),courts:courts.slice(0,count).map((court,i)=>({courtId:court.courtId,a:best[i*2],b:best[i*2+1]})),penalty:bestCost.variety,balance:bestCost};
 }
