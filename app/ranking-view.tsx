@@ -34,9 +34,9 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
   </div>
   <RankingPodium leaders={leaders} rankingRows={rows} players={data.players} onProfile={onProfile} loading={pendingPeriod}/>
   <section className="card ranking-card"><div className="section-title"><h2>全部排名</h2><span className="badge">{rows.length} 位球友</span></div>
-   {rows.map((r:any)=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')+(!player(r).avatarId?'no-avatar':'')} key={r.playerId}>
+   {rows.map((r:any)=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')} key={r.playerId}>
     <b className={'rank rank-'+(r.rank-1)}>{r.rank}</b>
-    {player(r).avatarId&&<button type="button" className="pp-rank-avatar-link" aria-label={'查看'+r.name+'的球员档案'} onClick={()=>onProfile?.(r.playerId)}><Avatar p={player(r)} size="ranking-avatar"/></button>}
+    {<button type="button" className="pp-rank-avatar-link" aria-label={'查看'+r.name+'的球员档案'} onClick={()=>onProfile?.(r.playerId)}><Avatar p={player(r)} size="ranking-avatar"/></button>}
     <div className="ranking-person"><strong><button type="button" className="rv-name-link" onClick={()=>onProfile?.(r.playerId)} aria-label={'查看'+r.name+'的球员档案'}>{r.name}</button>{r.playerId===data.me.playerId&&<span className="me-label">我</span>}</strong><div className="rv-realm-meta"><RealmBadge className="rv-realm-badge" realm={realm(r)} stage={cultivation(r)?.stage} />{r.provisional&&<span className="rv-provisional">暂定</span>}</div>{detailed&&cultivation(r)&&<div className="rv-progress" aria-label={`${realm(r)}修为 ${cultivation(r).progressPercent}%`}><span className="rv-progress-track" aria-hidden="true"><span style={{width:cultivation(r).progressPercent+'%'}}/></span><span>{cultivation(r).experience??0} 修为 · {cultivation(r).progressPercent}%</span></div>}<small>{r.games}局计分 · {r.wins}胜 {r.losses}负</small>{detailed&&r.total!==r.games&&<small>实际比赛 {r.total} 局</small>}</div>
     <div className="ranking-result"><strong>{r.points}<span> 分</span></strong><small>{r.games?Math.round(r.rate*100)+'% 胜率':annual?'本年暂无计分赛':'本季度暂无计分赛'}</small>{detailed&&<small>局均净胜 {r.margin.toFixed(1)}</small>}</div>
    </div>)}

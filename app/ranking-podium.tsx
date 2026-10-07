@@ -62,7 +62,7 @@ export default function RankingPodium({leaders, rankingRows, players, onProfile,
           <Avatar p={player} size="rp-avatar"/>
           <strong className="rp-name">{row.name}</strong>
         </>;
-        return <article key={row.playerId} className={`rp-slot rp-${slot} rp-metal-${row.rank}${!player.avatarId?' rp-without-avatar':''}`} aria-label={`${row.name}，${rankLabel}，${row.points} 积分`}>
+        return <article key={row.playerId} className={`rp-slot rp-${slot} rp-metal-${row.rank}`} aria-label={`${row.name}，${rankLabel}，${row.points} 积分`}>
           <div className="rp-person">
             <div className="rp-aura" aria-hidden="true"><span className="rp-halo"/><span className="rp-orbit"/><Feather side="left"/><Feather side="right"/><Sparkles className="rp-spark rp-spark-left"/><Sparkles className="rp-spark rp-spark-right"/></div>
             {onProfile ? <button type="button" className="rp-profile" onClick={() => onProfile(row.playerId)} aria-label={`查看${row.name}的球员档案`}>{info}</button> : <div className="rp-profile rp-profile-static">{info}</div>}

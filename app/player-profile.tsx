@@ -3,7 +3,8 @@ import Deferred from './deferred';
 import Disclosure from './disclosure';
 import RealmProgress from './realm-progress';
 import RealmBadge from './realm-badge';
-import {lazy,useState} from 'react';
+import {Avatar} from './avatar';
+import {lazy} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
 const PhotoGallery=lazy(()=>import('./photo-gallery'));
@@ -21,13 +22,7 @@ const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
 const optional = (key:string, label:string) => ({...text(key, label), optional:true});
 
-function ProfileAvatar({p}:any) {
-  const [failedId, setFailedId] = useState<string|null>(null);
-  const name:string = p.name || '球友';
-  return p.avatarId && p.avatarId !== failedId
-    ? <img className="pp-avatar" src={'/api/photos/'+p.avatarId} alt={name+'的头像'} onError={()=>setFailedId(p.avatarId)}/>
-    : null;
-}
+function ProfileAvatar({p}:any) {return <Avatar p={p} size="pp-avatar"/>;}
 
 function Fact({label, value}: {label:string; value:unknown}) {
   const filled = value !== null && value !== undefined && String(value).trim() !== '';
