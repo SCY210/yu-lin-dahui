@@ -4,7 +4,6 @@ import "./decor-layout.css";
 import "./wuxia-theme.css";
 import AppRuntime from './app-runtime';
 import {VisualThemeProvider,ThemeSwitcher} from './visual-theme';
-import {aquariumAccess} from '../lib/theme-access-server';
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -33,10 +32,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const {allowed:aquariumAllowed,queen}=await aquariumAccess();
-  return (
+ return (
     <html lang="zh-CN" className="classic-theme" suppressHydrationWarning>
-      <body className="antialiased"><VisualThemeProvider aquariumAllowed={aquariumAllowed} aquariumDefault={queen}><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}</VisualThemeProvider></body>
+      <body className="antialiased"><VisualThemeProvider><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}</VisualThemeProvider></body>
     </html>
   );
 }

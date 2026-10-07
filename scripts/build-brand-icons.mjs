@@ -1,9 +1,9 @@
-// Reproducible PNG app icons from the three editable vector masters.
+// Reproducible PNG app icons from the shared editable vector masters.
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 const sharp = createRequire(import.meta.url)('sharp');
 mkdirSync('public/icons', {recursive:true});
-for (const theme of ['classic','wuxia','aquarium']) {
+for (const theme of ['classic','wuxia']) {
   const svg = readFileSync(`public/brand/${theme}-v3.svg`);
   for (const [suffix,size] of [['192',192],['512',512],['apple',180],['maskable',512]]) {
     const png = await sharp(svg).resize(size,size).flatten({background:'#ffffff'}).png().toBuffer();

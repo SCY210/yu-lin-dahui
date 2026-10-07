@@ -1,15 +1,15 @@
-export const BRAND_THEMES = ['classic', 'wuxia', 'aquarium'] as const;
+export const BRAND_THEMES = ['classic', 'wuxia'] as const;
 export type BrandTheme = typeof BRAND_THEMES[number];
 export const BRAND_COOKIE = 'yulin_icon_theme';
 export function brandTheme(value: unknown): BrandTheme {
-  return value === 'wuxia' || value === 'aquarium' ? value : 'classic';
+  return value === 'wuxia' ? value : 'classic';
 }
 export function themeBrand(value: unknown) {
   const theme = brandTheme(value);
   return {
     theme,
-    color: {classic: '#5048dc', wuxia: '#32283f', aquarium: '#c4387e'}[theme],
-    background: {classic: '#f5f6fa', wuxia: '#f4eddf', aquarium: '#fff0f7'}[theme],
+    color: {classic: '#5048dc', wuxia: '#32283f'}[theme],
+    background: {classic: '#f5f6fa', wuxia: '#f4eddf'}[theme],
     logo: `/brand/${theme}-v3.svg`,
     apple: `/icons/${theme}-apple-v3.png`,
     icon192: `/icons/${theme}-192-v3.png`,

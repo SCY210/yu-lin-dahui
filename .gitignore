@@ -48,3 +48,10 @@ next-env.d.ts
 /.test-output/
 /preview-captures/
 *.tsbuildinfo
+
+# Private deployment customizations are not part of the shared repository.
+/assets/private-*/
+*aquarium*
+*AQUARIUM*
+*CAPYBARA*
+**/theme-access*

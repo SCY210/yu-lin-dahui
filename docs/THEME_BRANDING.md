@@ -1,6 +1,6 @@
 # Theme-aware identity
 
-The header, login screen, browser favicon and Apple touch icon share a modern shuttlecock mark. Classic uses violet, wuxia uses charcoal plum and champagne gold, and the restricted aquarium theme uses pink. New visitors default to classic; existing stored theme choices and aquarium permissions remain in place.
+The header, login screen, browser favicon and Apple touch icon share a modern shuttlecock mark. Classic uses violet; wuxia uses charcoal plum and champagne gold. New visitors default to classic; existing stored choices remain in place.
 
 Editable SVG masters are in `public/brand/`. Run `node scripts/build-brand-icons.mjs` to generate opaque 192/512 PNGs, 180px Apple icons and safe-zone maskable icons. Legacy icon URLs, Safari's root fallback and notification icons are refreshed too.
 

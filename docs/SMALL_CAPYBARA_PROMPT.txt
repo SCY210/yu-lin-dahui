@@ -1,4 +1,0 @@
-Generated with the built-in ImageGen tool (transparent background).
-Asset: assets/private-aquarium/capysmall.webp
-Prompt: Create one adorable baby capybara sitting upright, full body visible, softly rounded tan body, short paws, tiny ears, sleepy eyes, gentle smiling snout and blush cheeks. It holds one small pastel-pink plush heart against its belly with both front paws, with a tiny pink bow on one ear. Premium clean 3D clay-toy illustration, soft texture and studio lighting. Compact silhouette readable at 80 pixels tall. No giant face, outstretched arms, detached parts, separate foreground paws or oversized heart. Single isolated character with transparent background; no scenery, text, other animals or watermark.
-Preparation: Trim transparent padding, resize inside 220 by 280 pixels, encode WebP with alpha preserved. Artwork is served only through the existing protected theme API.

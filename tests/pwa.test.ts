@@ -29,7 +29,7 @@ test('App安装清单覆盖安卓图标和Apple触屏图标，独立窗口从首
  const apple=readFileSync('public/icons/apple-touch-icon.png');assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
 });
 
-test('三套主题图标均有独立PNG与Apple尺寸，切换主题保持同一App身份',()=>{
+test('共享主题图标均有独立PNG与Apple尺寸，切换主题保持同一App身份',()=>{
  for(const theme of BRAND_THEMES){
   const manifest=brandManifest(theme),brand=themeBrand(theme);
   assert.equal(manifest.id,'/');assert.equal(manifest.start_url,'/');assert.equal(manifest.scope,'/');
@@ -41,7 +41,7 @@ test('三套主题图标均有独立PNG与Apple尺寸，切换主题保持同一
   }
   const apple=readFileSync('public'+brand.apple);assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
  }
- assert.equal(new Set(BRAND_THEMES.map(theme=>themeBrand(theme).logo)).size,3);
+ assert.equal(new Set(BRAND_THEMES.map(theme=>themeBrand(theme).logo)).size,2);
 });
 
 test('主题安装清单按设备偏好隔离，非法或相似Cookie回退清雅，不接受外部图标地址',async()=>{
@@ -51,7 +51,7 @@ test('主题安装清单按设备偏好隔离，非法或相似Cookie回退清�
   assert.match(response.headers.get('Content-Type')??'',/^application\/manifest\+json/);
   const manifest=await response.json();assert.deepEqual(manifest,brandManifest(theme));
  }
- for(const cookie of ['', 'yulin_icon_theme=https://other.example/icon.png','yulin_icon_theme=__proto__','not_yulin_icon_theme=aquarium']){
+ for(const cookie of ['', 'yulin_icon_theme=https://other.example/icon.png','yulin_icon_theme=__proto__','not_yulin_icon_theme=wuxia']){
   const manifest=await getManifest(new Request('https://club.example/manifest.webmanifest',{headers:{Cookie:cookie}})).json();
   assert.deepEqual(manifest,brandManifest('classic'));
  }
