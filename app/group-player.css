@@ -1,0 +1,9 @@
+.group-player{display:flex;align-items:center;gap:4px;max-width:100%;border:1px solid var(--border);border-radius:14px;background:var(--surface,#fff)}
+.group-player.is-selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--accent)}
+.group-player-profile{display:flex;align-items:center;gap:8px;min-height:44px;min-width:0;padding:6px 10px;background:transparent;border:0;color:inherit;text-align:left;border-radius:14px}
+.group-player-profile>span{overflow-wrap:anywhere;min-width:0}
+.group-player-profile .avatar{width:28px;height:28px;flex-shrink:0;object-fit:cover;border-radius:50%;margin:0}
+.group-player-profile:hover{background:var(--accent)}
+.group-player-swap{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:6px;background:transparent;border:0;border-left:1px solid var(--border);border-radius:0 14px 14px 0;color:var(--primary)}
+.group-player-swap[aria-pressed=true]{background:var(--accent)}
+.group-player button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}

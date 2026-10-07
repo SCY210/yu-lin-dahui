@@ -1,4 +1,5 @@
 'use client';
+import Disclosure from './disclosure';
 import {useEffect,useState} from 'react';
 import {CalendarDays,Check,Shuffle} from 'lucide-react';
 import {canManageEvent} from '../lib/domain/permissions';
@@ -30,9 +31,9 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
  return <section className="card event-points-plan" aria-label="积分赛时段与搭档投票">
   <div className="row"><h3>积分赛安排</h3>{rounds.length>0&&<span className="badge">已预排 {rounds.length} 轮</span>}</div>
   <div className="points-phase-grid"><div><span>积分赛 · {minutes} 分钟</span><strong>{hm(window.start)}–{hm(window.end)}</strong></div>{free>0&&<div><span>自由打 · {free} 分钟</span><strong>{hm(window.end)}–{hm(e.end)}</strong></div>}</div>
-  <p className="hint">默认留最后半小时自由打，其他时间打积分赛。创建者可调整时长；进入自由打时段后，新开赛的比赛不计月积分或实力分。</p>
+<Disclosure label="参加时段与排场详情">  <p className="hint">默认留最后半小时自由打，其他时间打积分赛。创建者可调整时长；进入自由打时段后，新开赛的比赛不计月积分或实力分。</p>
   <h4>按时间混合排场</h4><div className="points-availability">{phases.map((phase,i)=><div className="points-availability-phase" key={i}><div><strong>{hm(phase.start)}–{hm(phase.end)}</strong><span>{phase.players.length} 人 · {phase.courts.length} 块场</span></div><p>{phase.usedCourts?`每轮最多 ${phase.playing} 人上场${phase.rest?'，'+phase.rest+' 人轮休':''}`:phase.courts.length?'同球馆人数不足4人，暂不能排双打':'没有可用场地'}</p><small>{phase.courts.map(c=>c.name).join(' · ')}</small></div>)}</div><p className="hint">接龙决定参加时间，同一时段跨场混合打。人数或场地变化时，每轮会在交接时间前结束；后半段继续照顾仍在场球友的上场机会。</p>
-  <h4>搭档方式投票{e.pointsChoice?.selectedMode?' · 已确认'+pointsModeLabels[e.pointsChoice.selectedMode]:''}</h4>
+</Disclosure>  <h4>搭档方式投票{e.pointsChoice?.selectedMode?' · 已确认'+pointsModeLabels[e.pointsChoice.selectedMode]:''}</h4>
   <div className="points-mode-options">{(['rotate','fixed'] as const).map(mode=><div className={'points-mode-option'+(e.pointsChoice?.selectedMode===mode?' is-selected':'')} key={mode}>
    <strong>{pointsModeLabels[mode]}</strong><p className="hint">{mode==='rotate'?'把同一时段球友混合搭配，兼顾上场机会和实力平衡。':'优先将参加时间相近的人组成固定搭档；落单或搭档离场时需要轮休。'}</p><span className="points-vote-count">{counts[mode]} 票</span>
    <div className="actions"><button type="button" className={'tag-button'+(mine?.mode===mode?' active':'')} aria-pressed={mine?.mode===mode&&canVote} disabled={!canVote||busy} onClick={()=>send('pointsModeVote',{eventId:e.id,mode:mine?.mode===mode?null:mode})}>{mine?.mode===mode?'撤回投票':'投这一种'}</button>
