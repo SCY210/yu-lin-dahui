@@ -12,6 +12,8 @@
 
 ## 运行
 
+For Windows testing, double-click **start-local-test.cmd** in the repository root. It runs the current checkout, prepares an isolated database for its Git branch, and opens the full app. It initializes only a local administrator; create whatever test data your feature needs. See [the local test launcher](docs/LOCAL_TEST_LAUNCHER.md).
+
 需要 Node.js >=22.13。进入本目录后：
 
 ```powershell
