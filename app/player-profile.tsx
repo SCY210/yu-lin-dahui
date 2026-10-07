@@ -1,5 +1,6 @@
 'use client';
 import Deferred from './deferred';
+import Disclosure from './disclosure';
 import RealmProgress from './realm-progress';
 import RealmBadge from './realm-badge';
 import {lazy,useState} from 'react';
@@ -90,7 +91,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section>
 
-    <section className="pp-section" aria-label="装备信息">
+    <Disclosure label="战拍与装备"><section className="pp-section" aria-label="装备信息">
       <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : '这位球友的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
       <dl className="pp-facts pp-equipment-facts">
         <Fact label="战拍品牌 / 型号" value={profile.racket}/>
@@ -99,18 +100,18 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </dl>
       <div className="pp-equipment-note"><span>其他装备与备注</span><p className={profile.equipment ? '' : 'pp-unfilled'}>{profile.equipment || '尚未填写'}</p></div>
       <Deferred><RacketGallery ctx={ctx} playerId={p.id}/></Deferred>
-    </section>
+    </section></Disclosure>
 
-    <section className="pp-section" aria-label="比赛统计">
+    <Disclosure label="比赛统计"><section className="pp-section" aria-label="比赛统计">
       <div className="pp-section-heading"><h3 className="pp-section-title">球场记录</h3><div className="pp-guide-actions"><FeatureGuide rules={rules} topic="rating" label="境界说明"/><FeatureGuide rules={rules} topic="state" label="状态说明"/></div></div>
       <div className="pp-stats">
         <section className="pp-stat"><Trophy size={18} aria-hidden="true"/><span>累计小局</span><strong>{state.games ?? 0}<small>局</small></strong><p>{state.wins ?? 0}胜 · {state.losses ?? 0}负</p></section>
         <section className="pp-stat"><Activity size={18} aria-hidden="true"/><span>最近 {state.formGames ?? 0} 局状态</span><strong>{state.formValue == null ? '—' : `${state.formValue}%`}</strong><p>胜率形成状态值；少于5局显示样本不足</p></section>
         <section className="pp-stat"><Flame size={18} aria-hidden="true"/><span>最长连胜 / 连败</span><strong>{state.maxWins ?? 0} / {state.maxLosses ?? 0}</strong><p>来自有效完整比赛</p></section>
       </div>
-    </section>
+    </section></Disclosure>
 
-    <Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred>
+    <Disclosure label={'成就 · 已点亮 '+(ctx.data.achievements?.[p.id]?.unlockedCount??0)}><Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred></Disclosure>
     {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }
