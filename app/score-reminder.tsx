@@ -44,4 +44,3 @@ export default function ScoreReminder({ctx,blocked=false}:{ctx:Context;blocked?:
   {selection?.mode==='score'&&match&&<Deferred><ScoreDialog key={match.id} m={match} ctx={ctx} close={dismiss} pendingMatches={pending} choose={(id:string)=>setSelection({id,mode:'score'})}/></Deferred>}
  </>;
 }
-
