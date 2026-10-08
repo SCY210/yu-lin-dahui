@@ -95,6 +95,7 @@ html{background:var(--background)}
 .wuxia-theme .home-heading .actions>button[aria-label="功能说明"]{background:#15251b70!important;border-color:#c2ad7a;color:#f1dfbc;border-radius:3px}
 .wuxia-theme .event-card .event-info .badge{background:#e9dcc0;color:#786035;border-color:#c8ad7c}
 .wuxia-theme .realm-progress{color:#81663d}.wuxia-theme .realm-progress-label b{color:#805b2c}.wuxia-theme .realm-progress-track{background:#dfd1b4;border-radius:2px}.wuxia-theme .realm-progress-track>span{background:linear-gradient(90deg,#c1a168,#8c6733);border-radius:2px}.wuxia-theme .realm-progress>small{color:#9b8865}
+.wuxia-theme .rv-progress{color:#81663d}.wuxia-theme .rv-progress-track{background:#dfd1b4;border-radius:2px}.wuxia-theme .rv-progress-track>span{background:linear-gradient(90deg,#c1a168,#8c6733);border-radius:2px}
 
 .wuxia-theme .rp-root{background:radial-gradient(ellipse at 50% 0%,#e8d6a552,transparent 55%),linear-gradient(180deg,#fbf5e8,#f1e5cc);border-color:#c7ad7c;border-radius:5px}
 .wuxia-theme .rp-root .rp-avatar{background:#e8d8b7;color:#785b30;border-color:#fff6df;border-radius:4px;box-shadow:0 0 0 1px #b69a63,0 4px 12px #8a6d3520}
