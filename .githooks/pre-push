@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+import('../scripts/check-shared-source.mjs').then(({checkSharedSource})=>checkSharedSource()).catch(error=>{console.error(error.message);process.exitCode=1});

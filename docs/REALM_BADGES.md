@@ -6,7 +6,7 @@ The My page shows this badge through `app/my-realm-card.tsx`, using the existing
 
 ## Look
 
-Each badge is a pigment seal on a paper tag. The tag takes its paper from the active theme's `--card` colour and is only lightly washed with the realm pigment, so it sits inside 清雅原版, 水墨江湖 and 粉粉水族馆 instead of floating above them. 水墨江湖 squares the tag corners and sets the realm name in brush script; the stage keeps the page font for legibility.
+Each badge is a pigment seal on a paper tag. The tag takes its paper from the active theme's `--card` colour and is only lightly washed with the realm pigment, so it sits inside each theme instead of floating above it. 水墨江湖 squares the tag corners and sets the realm name in brush script; the stage keeps the page font for legibility.
 
 | 境界 | Pigment | Seal | Core art |
 | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ Every realm moves, and each realm adds splendour, so a higher realm is always vi
 | 元婴 | starlit violet tag; the name glows and breathes violet; orbit and lotus seat turn; spirit ripples spread and four motes rise beside the seal; light passes more often; violet aura |
 | 化神 | ink thunderclouds lit with gold: pale ink clouds drift irregularly inside the tag and smoke wreathes its edges; two silver-gold bolts strike on unrelated rhythms with a double flicker and light the clouds; the gold name glows and flares with the strike; lightning arcs crackle round the heavenly-eye seal while its rays wheel; gold aura. One set of CSS variables on `.realm-badge-4` holds the whole storm palette |
 
-Ranking-row progress bars follow the 水墨江湖 and 粉粉水族馆 progress colours, and narrow progress labels wrap the percentage as a whole.
+Ranking-row progress bars follow the 水墨江湖 progress colours, and narrow progress labels wrap the percentage as a whole.
 
 ## Motion
 
@@ -36,4 +36,4 @@ The decorations pause when a badge leaves the viewport or the document is hidden
 
 `prefers-reduced-motion: reduce` removes decorative animation completely, keeping the full static insignia visible: the spiral fully drawn, every foundation course and ray at full strength, no passing light, ripples, rising motes, lightning or arcs. 金丹 and 元婴 keep a static glowing name, and 化神 keeps its ink sky, still clouds and glowing gold name, so the ranking of ornament survives without motion. This follows the viewer's own system setting; everyone else sees every realm animated. Foundation courses and rays use per-element CSS delays so their staggered effects survive the animation declarations.
 
-The dependency lock matches the unchanged main-branch package manifest; no dependency upgrade is needed for the badges. Verify a clean `npm ci`, unit/API regressions, type checking and production build. Browser verification covers 320px and 390px layouts in all three themes, normal and reduced-motion CSS, staggered delays, and offscreen animation pauses using fictional data.
+The dependency lock matches the unchanged main-branch package manifest; no dependency upgrade is needed for the badges. Verify a clean `npm ci`, unit/API regressions, type checking and production build. Browser verification covers 320px and 390px layouts in each theme, normal and reduced-motion CSS, staggered delays, and offscreen animation pauses using fictional data.
