@@ -1,4 +1,4 @@
-import {BRAND_COOKIE, themeBrand} from '../theme-brand';
+import {BRAND_COOKIE,BRAND_CHANGE_EVENT,brandManifestUrl,themeBrand} from '../theme-brand';
 
 /** All links stay same-origin; this cookie stores only a device's icon palette. */
 export function syncThemeBrand(document: Document, theme: string) {
@@ -13,13 +13,16 @@ export function syncThemeBrand(document: Document, theme: string) {
     link.href = brand.apple;
     link.sizes.value = '180x180';
   }
-  // Reinsert the same manifest URL so fresh installation can read the chosen
-  // palette. Preserve its location and app ID for existing installations.
+  // Put the palette in the URL: native install fetches may omit cookies.
+  // The manifest's app ID and start URL remain unchanged.
   const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-  if (manifest) {
+  const next=brandManifestUrl(brand.theme);
+  if (manifest && manifest.getAttribute('href')!==next) {
     const replacement = manifest.cloneNode(false) as HTMLLinkElement;
-    replacement.href = '/manifest.webmanifest';
+    replacement.href = next;
     replacement.crossOrigin = 'use-credentials';
     manifest.replaceWith(replacement);
+    const browser=document.defaultView;
+    if(browser)browser.dispatchEvent(new Event(BRAND_CHANGE_EVENT));
   }
 }

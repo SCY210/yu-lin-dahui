@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {secureResponse} from '../lib/security-headers';
-import {brandManifest, BRAND_THEMES, themeBrand} from '../lib/theme-brand';
+import {brandManifest,brandManifestUrl,brandMetadata,BRAND_CHANGE_EVENT, BRAND_THEMES, themeBrand} from '../lib/theme-brand';
+import {syncThemeBrand} from '../lib/client/theme-brand';
 import {GET as getManifest} from '../app/manifest.webmanifest/route';
 
 function worker(){
@@ -56,6 +57,34 @@ test('主题安装清单按设备偏好隔离，非法或相似Cookie回退清�
   const manifest=await getManifest(new Request('https://club.example/manifest.webmanifest',{headers:{Cookie:cookie}})).json();
   assert.deepEqual(manifest,brandManifest('classic'));
  }
+});
+
+test('安装清单URL显式选色，不带Cookie或带旧蓝色Cookie也得到所选主题',async()=>{
+ for(const theme of BRAND_THEMES)for(const cookie of ['', 'yulin_icon_theme=classic']){
+  const response=getManifest(new Request('https://club.example'+brandManifestUrl(theme),{headers:{Cookie:cookie}}));
+  assert.deepEqual(await response.json(),brandManifest(theme));
+  assert.equal(response.headers.get('Cache-Control'),'private, no-store');
+  const meta=brandMetadata(theme);assert.equal(meta.manifest,brandManifestUrl(theme));assert.equal(meta.icons.apple[0].url,themeBrand(theme).apple);
+ }
+});
+
+test('无效安装主题回退合法Cookie，全部图标地址同源且应用身份不变',async()=>{
+ for(const value of ['https://attacker.invalid/a.png','__proto__','WUXIA']){
+  const url='https://club.example/manifest.webmanifest?theme='+encodeURIComponent(value);
+  const manifest=await getManifest(new Request(url,{headers:{Cookie:'yulin_icon_theme=wuxia'}})).json();
+  assert.deepEqual(manifest,brandManifest('wuxia'));
+ }
+ for(const theme of BRAND_THEMES){const manifest=brandManifest(theme);assert.equal(manifest.id,'/');assert.equal(manifest.start_url,'/');assert.ok(manifest.icons.every(i=>i.src.startsWith('/icons/')))}
+});
+
+test('切换主题同步Apple图标和显式安装地址，只在地址变化时撤销旧安装提示',()=>{
+ const events:string[]=[],writes:string[]=[],icon={href:''},apple={href:'',sizes:{value:''}},meta={setAttribute(){}};
+ const element=(href:string):any=>({href,crossOrigin:'',getAttribute(key:string){return this[key]},cloneNode(){return element(this.href)},replaceWith(next:any){manifest=next}});
+ let manifest=element('/manifest.webmanifest');
+ const doc={location:{protocol:'https:'},set cookie(v:string){writes.push(v)},querySelector(selector:string){return selector.includes('manifest')?manifest:meta},querySelectorAll(selector:string){return selector.includes('apple-touch-icon')?[apple]:[icon]},defaultView:{dispatchEvent(event:Event){events.push(event.type)}}} as unknown as Document;
+ syncThemeBrand(doc,'wuxia');assert.equal(manifest.href,brandManifestUrl('wuxia'));assert.equal(manifest.crossOrigin,'use-credentials');assert.equal(icon.href,themeBrand('wuxia').logo);assert.equal(apple.href,themeBrand('wuxia').apple);assert.equal(apple.sizes.value,'180x180');assert.deepEqual(events,[BRAND_CHANGE_EVENT]);assert.match(writes[0],/^yulin_icon_theme=wuxia;.*Secure/);
+ syncThemeBrand(doc,'wuxia');assert.equal(events.length,1);
+ syncThemeBrand(doc,'classic');assert.equal(manifest.href,brandManifestUrl('classic'));assert.equal(events.length,2);assert.ok(writes.every(w=>!w.includes('session')));
 });
 
 test('Service Worker只预存断网页，安装请求不携带账号Cookie，激活不删除其他缓存',async()=>{

@@ -6,6 +6,7 @@ const suites=["match-scoring","point-grants","shared-source","local-test-launche
 await build({entryPoints:suites.map(name=>`tests/${name}.test.ts`),bundle:true,platform:'node',format:'esm',outdir:'.test-output',outExtension:{'.js':'.mjs'}});
 const r=spawnSync(process.execPath,['--test',...suites.map(name=>`.test-output/${name}.test.mjs`)],{stdio:'inherit'});
 if(r.status!==0)process.exit(r.status??1);
+const installApi=spawnSync(process.execPath,['tests/install-theme-api.mjs'],{stdio:'inherit'});if(installApi.status!==0)process.exit(installApi.status??1);
 const scoringApi=spawnSync(process.execPath,['tests/match-scoring-api.mjs'],{stdio:'inherit'});if(scoringApi.status!==0)process.exit(scoringApi.status??1);
 const grantsApi=spawnSync(process.execPath,['tests/point-grants-api.mjs'],{stdio:'inherit'});if(grantsApi.status!==0)process.exit(grantsApi.status??1);
 const readApi=spawnSync(process.execPath,['tests/club-read-api.mjs'],{stdio:'inherit'});if(readApi.status!==0)process.exit(readApi.status??1);

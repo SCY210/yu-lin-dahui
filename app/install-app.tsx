@@ -1,5 +1,6 @@
 'use client';
 import {lazy,Suspense,useEffect,useRef,useState} from 'react';
+import {BRAND_CHANGE_EVENT} from '../lib/theme-brand';
 import {Download} from 'lucide-react';
 
 interface InstallPrompt extends Event {
@@ -17,8 +18,9 @@ export default function InstallApp(){
   detect();mode.addEventListener('change',detect);
   const offered=(event:Event)=>{event.preventDefault();prompt.current=event as InstallPrompt;setReady(true)};
   const done=()=>{prompt.current=null;setReady(false);setInstalled(true);setOpen(false)};
-  window.addEventListener('beforeinstallprompt',offered);window.addEventListener('appinstalled',done);
-  return()=>{mode.removeEventListener('change',detect);window.removeEventListener('beforeinstallprompt',offered);window.removeEventListener('appinstalled',done)};
+  const changed=()=>{prompt.current=null;setReady(false)};
+  window.addEventListener(BRAND_CHANGE_EVENT,changed);window.addEventListener('beforeinstallprompt',offered);window.addEventListener('appinstalled',done);
+  return()=>{window.removeEventListener(BRAND_CHANGE_EVENT,changed);mode.removeEventListener('change',detect);window.removeEventListener('beforeinstallprompt',offered);window.removeEventListener('appinstalled',done)};
  },[]);
  const changeOpen=(value:boolean)=>{setOpen(value);if(!value)requestAnimationFrame(()=>trigger.current?.focus())};
  async function install(){

@@ -2,11 +2,12 @@
 import {useEffect,useState,type ReactNode} from 'react';
 import {ThemeProvider,useTheme} from 'next-themes';
 import {Palette} from 'lucide-react';
+import {brandTheme,type BrandTheme} from '../lib/theme-brand';
 import {syncThemeBrand} from '../lib/client/theme-brand';
 import './visual-theme.css';
 
-export function VisualThemeProvider({children}:{children:ReactNode}){
- return <ThemeProvider attribute="class" themes={['classic','wuxia']} value={{classic:'classic-theme',wuxia:'wuxia-theme'}} defaultTheme="classic" storageKey="yulin-ui-theme" enableSystem={false} enableColorScheme={false} disableTransitionOnChange>
+export function VisualThemeProvider({children,initialTheme='classic'}:{children:ReactNode;initialTheme?:BrandTheme}){
+ return <ThemeProvider attribute="class" themes={['classic','wuxia']} value={{classic:'classic-theme',wuxia:'wuxia-theme'}} defaultTheme={brandTheme(initialTheme)} storageKey="yulin-ui-theme" enableSystem={false} enableColorScheme={false} disableTransitionOnChange>
   <ThemeBrowserColor/>{children}
  </ThemeProvider>;
 }
