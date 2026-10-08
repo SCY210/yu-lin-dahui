@@ -18,7 +18,7 @@ const schemas:Record<string,z.ZodTypeAny>={
 export async function applyPointsPlan(s:State,a:Account,action:string,input:unknown,now:number){
  const schema=Object.hasOwn(schemas,action)?schemas[action]:undefined;if(!schema)return false;
  const p=schema.parse(input) as any;authorizeEventAction(s,a,action,p);
- const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
+ const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');if(e.livePlay?.enabled)fail('本活动使用实时排场，不再按预计时间预排比赛');
  if(['draft','ended','cancelled'].includes(e.status))fail('请在活动开放后、结束前安排积分赛');
  if(s.matches.some(m=>m.eventId===e.id&&['playing','complete','forfeit'].includes(m.status)))fail('已有比赛开始或完成，请保留现有安排；积分赛须在开打前一次分配');
  if(action==='publishPoints'){
