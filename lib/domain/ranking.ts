@@ -13,7 +13,8 @@ export function leaderboard(s:State,season:string){return aggregateLeaderboard(s
 function aggregateLeaderboard(s:State,periods:string[]){
  const chosen=new Set(periods),growth=cultivationSnapshot(s),grants=pointGrants(s),bonus=new Map<string,number>();
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
- const rows=s.players.filter(p=>p.enabled).map(p=>{
+ const members=new Set(s.accounts.map(account=>account.playerId));
+ const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{
   const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&gameFacts(m).length>0);
   let games=0,wins=0,net=0,score=0;
   for(const period of periods){const rules=s.seasons.find(x=>x.id===period)?.rules??s.settings.rules;

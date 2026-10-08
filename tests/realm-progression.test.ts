@@ -6,7 +6,7 @@ import {leaderboard,annualLeaderboard,quarterlyLeaderboard,replayRating} from '.
 import {playerStats,personality} from '../lib/domain/social';
 import {emptyState,type Match,type Event} from '../lib/domain/types';
 const start=Date.parse('2026-10-04T13:00:00Z'),now=start+20*86400000;
-function fixture(){const s=emptyState();for(const id of ['A','B','C','D'])s.players.push({id,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});return s}
+function fixture(){const s=emptyState();for(const id of ['A','B','C','D'])s.players.push({id,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});s.accounts=s.players.map(p=>({id:p.ownerId,email:'',role:'member',playerId:p.id}));return s}
 function match(id:string,at=start,win=true):Match{return {id,eventId:'event',roundId:'round',courtId:'court',a:['A','B'],b:['C','D'],status:'complete',start:at,end:at+60000,scoreA:win?21:19,scoreB:win?19:21,monthly:true,elo:true,locked:false,enteredBy:'admin',games:[{a:win?21:19,b:win?19:21}]}}
 test('修为门槛及进度使用长期成长，低值和无穷值保持有效',()=>{
  assert.deepEqual(cultivationRealms.map(r=>r.minimum),[0,60,180,400,800]);

@@ -6,16 +6,54 @@ import {rankingQuarter,quarterMonths,quarterLabel} from '../lib/ranking-quarter'
 import {cultivationRealm,cultivationRealms} from '../lib/domain/cultivation';
 import {getFeatureGuide} from '../lib/feature-guides';
 import {projectClubState} from '../lib/club-view';
+import {apply} from '../lib/domain/commands';
 
 function fixture() {
  const s=emptyState();
  for(const [i,id] of ['A','B','C','D','E','F','G','H'].entries())s.players.push({id,name:id,ownerId:'account',initialRating:1400-i*100,rating:1400-i*100,ratedGames:i,enabled:true,ratingReason:'test'});
+ s.accounts=s.players.map(p=>({id:'account-'+p.id,email:'',role:'member',playerId:p.id}));
  return s;
 }
 function match(id:string,at:string,a=21,b=10,teams=[['A','B'],['C','D']]):Match {
  const start=Date.parse(at);
  return {id,eventId:'event',roundId:'round',courtId:'court',a:teams[0],b:teams[1],status:'complete',start,end:start+60000,scoreA:a,scoreB:b,monthly:true,elo:true,locked:false,enteredBy:'account',games:[{a,b}]};
 }
+
+test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受影响且名次重新排列',async()=>{
+ const s=fixture(),actor=s.accounts[0];
+ s.settings.rules={...s.settings.rules,win:10,loss:3,cap:0};
+ await apply(s,actor,'friend',{name:'邀请朋友'},Date.parse('2026-10-06T12:00:00Z'));
+ const guest=s.players.at(-1)!;
+ assert.equal(guest.ownerId,actor.id);
+ s.matches.push(match('with-guest','2026-10-06T13:00:00Z',21,19,[[guest.id,'A'],['B','C']]));
+ const before=structuredClone(s);
+ for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)]){
+  assert.equal(rows.length,8);assert.ok(!rows.some(row=>row.playerId===guest.id));
+  assert.equal(rows.find(row=>row.playerId==='A')!.points,10);
+  assert.equal(rows.find(row=>row.playerId==='B')!.points,3);
+  assert.equal(rows.find(row=>row.playerId==='C')!.points,3);
+  assert.deepEqual(rows.slice(0,3).map(row=>row.rank),[1,2,2]);
+  assert.equal(rows[3].rank,4);
+ }
+ for(const role of ['admin','member'] as const){
+  const view=projectClubState(s,{...actor,role},'2026-10',2026);
+  for(const rows of [view.leaderboard,view.quarterlyLeaderboard,view.annualLeaderboard])assert.ok(!rows.some(row=>row.playerId===guest.id));
+  assert.ok(view.players.some(p=>p.id===guest.id));
+  assert.equal(view.social.stats.find(p=>p.playerId===guest.id)!.games,1);
+ }
+ assert.deepEqual(s,before);
+});
+
+test('朋友开通正式账号后能按原有比赛记录入榜，停用成员仍不入榜',()=>{
+ const s=fixture(),guest={...s.players[0],id:'guest',name:'代报名朋友',ownerId:s.accounts[0].id};s.players.push(guest);
+ s.matches.push(match('guest-history','2026-10-06T13:00:00Z',21,19,[[guest.id,'A'],['B','C']]));
+ const history=structuredClone(s.matches);
+ assert.ok(!annualLeaderboard(s,2026).some(row=>row.playerId===guest.id));
+ s.accounts.push({id:'guest-login',email:'',role:'member',playerId:guest.id});guest.ownerId='guest-login';
+ for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)])assert.equal(rows.find(row=>row.playerId===guest.id)!.games,1);
+ guest.enabled=false;assert.ok(!annualLeaderboard(s,2026).some(row=>row.playerId===guest.id));
+ assert.deepEqual(s.matches,history);
+});
 
 test('修仙境界采用更紧凑五级门槛，与积分排名分开',()=>{
  for(const [rating,realm] of [[59,'炼气'],[60,'筑基'],[179,'筑基'],[180,'金丹'],[399,'金丹'],[400,'元婴'],[799,'元婴'],[800,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
