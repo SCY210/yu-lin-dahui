@@ -1,0 +1,50 @@
+// Real API/store against isolated in-memory SQLite; no production grants.
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+mkdirSync('.test-output',{recursive:true});
+const fixture=globalThis.__scoringTest={env:{},user:null};
+writeFileSync('.test-output/scoring-entry.ts',`export {GET,POST} from '../app/api/club/route';export {load,save,committed} from '../lib/store';export {emptyState,month} from '../lib/domain/types';export {loadClubState} from '../lib/club-maintenance';`);
+await build({entryPoints:['.test-output/scoring-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/scoring-api-bundle.mjs',plugins:[{name:'isolated-scoring',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'scoring-fixture'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'scoring-fixture'}));b.onLoad({filter:/.*/,namespace:'scoring-fixture'},a=>({contents:a.path==='env'?'export const env=globalThis.__scoringTest.env;':'export const getAppUser=async()=>globalThis.__scoringTest.user;export const passwordEnabled=async()=>true;',loader:'js'}))}}]});
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
+function statement(query,parameters=[]){return {query,parameters,bind(...args){return statement(query,args)},async first(){return sql.prepare(query).get(...parameters)??null},async all(){return {results:sql.prepare(query).all(...parameters)}},async run(){const r=sql.prepare(query).run(...parameters);return {meta:{changes:Number(r.changes)},results:[]}}}}
+fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
+const api=await import(pathToFileURL(resolve('.test-output/scoring-api-bundle.mjs')).href);
+await build({entryPoints:['app/match-card.tsx'],bundle:true,platform:'node',format:'esm',jsx:'automatic',banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},external:['react','react/*','react-dom','react-dom/*'],loader:{'.css':'empty'},outfile:'.test-output/scoring-card.mjs'});
+const MatchCard=(await import(pathToFileURL(resolve('.test-output/scoring-card.mjs')).href)).default;
+try{
+ const empty=api.emptyState(),s=api.emptyState(),now=Date.now(),start=now-3600000,period=api.month(now);
+ s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.rankingVersion='signed-v1';
+ s.accounts=['owner','partner','member','opponent','waiting','outsider'].map((id,i)=>({id,email:'',role:i===0?'admin':'member',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
+ const event={id:'event',creatorId:'owner',title:'虚构本地积分局',start,end:now+3600000,venue:'虚构球馆',address:'',capacity:4,signupDeadline:now,cancelDeadline:start,note:'',status:'live',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};s.events.push(event);s.bookings.push({id:'court',eventId:event.id,name:'一号场',start,end:event.end,pricing:'total',cents:1000});
+ s.registrations=s.players.slice(0,5).map((p,i)=>({id:'r'+i,eventId:event.id,playerId:p.id,sequence:i+1,status:i===4?'waitlist':'confirmed',arrival:start,departure:event.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''},...(i===2?{bookingSignups:[{bookingId:'court',sequence:i+1,status:'confirmed',arrival:start,departure:event.end,note:'',cancelRequested:false,registeredAt:start,joinedAsWaitlist:false}]}:{})}));
+ s.rounds.push({id:'round',eventId:event.id,start,duration:15,status:'playing',eligible:['p0','p1','p2','p3'],rest:['p4'],seed:1});s.matches.push({id:'match',eventId:event.id,roundId:'round',courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'playing',start,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]});await api.save(s,'seed',empty);
+ // Render the actual card component: members must see the same control allowed
+ // by the server; the read-only homepage and unrelated accounts must not.
+ for(const a of s.accounts){const ctx={data:{...s,me:a,social:{matchLevels:{}}},name:id=>s.players.find(p=>p.id===id).name,admin:a.role==='admin'};const html=renderToStaticMarkup(createElement(MatchCard,{m:s.matches[0],ctx}));assert.equal(html.includes('录入比分'),a.id!=='outsider');if(a.role!=='admin')assert.equal(html.includes('比赛管理'),false);const readonly=renderToStaticMarkup(createElement(MatchCard,{m:s.matches[0],ctx:{...ctx,readOnly:true}}));assert.equal(readonly.includes('录入比分'),false)}
+ const origin='https://club.example',user=id=>fixture.user=id?{userId:id,displayName:id,method:'password'}:null;
+ const payload={matchId:'match',a:21,b:19,games:[{a:21,b:19}],end:now-1800000,reason:"实比分核对 '); DROP TABLE matches; --"};
+ const body=(revision,values=payload,requestId=crypto.randomUUID())=>({action:'score',payload:values,revision,requestId});
+ const post=(b,headers={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:JSON.stringify(b)}));
+ const get=()=>api.GET(new Request(origin+'/api/club?month='+period+'&year='+period.slice(0,4)));
+ user(null);assert.equal((await post(body(s.revision))).status,401);user('outsider');assert.equal((await post(body(s.revision,{...payload,isOwner:true,playerId:'p2',eventId:'event'}))).status,403);
+ user('member');assert.equal((await post(body(s.revision),{Origin:'https://attacker.invalid'})).status,403);assert.equal((await post(body(s.revision,{...payload,games:[{a:21,b:20}]}))).status,400);assert.equal((await post(body(s.revision-1))).status,409);
+ const read=await get(),etag=read.headers.get('ETag');const first=body(s.revision);assert.equal((await post(first)).status,200);assert.equal((await post(first)).status,200);
+ let stored=await api.load();assert.equal(stored.revision,s.revision+1);assert.equal(stored.matches[0].enteredBy,'member');assert.equal(stored.audits.filter(a=>a.action==='score').length,1);assert.equal(stored.audits[0].reason,payload.reason);assert.equal(stored.players.length,6);
+ const refresh=await api.GET(new Request(origin+'/api/club?month='+period+'&year='+period.slice(0,4),{headers:{'If-None-Match':etag}}));assert.equal(refresh.status,200);const initialView=await refresh.json();assert.equal(initialView.leaderboard.find(r=>r.playerId==='p2').points,-3);assert.equal(initialView.leaderboard.find(r=>r.playerId==='p0').points,10);
+ // Every signed-up account can help record; the waitlisted player isn't on court.
+ user('waiting');assert.equal((await post(body(stored.revision))).status,200);stored=await api.load();assert.equal(stored.matches[0].enteredBy,'waiting');assert.equal((await (await get()).json()).leaderboard.find(r=>r.playerId==='p0').points,10);
+ for(const actor of ['owner','partner','opponent']){user(actor);assert.equal((await post(body(stored.revision))).status,200);stored=await api.load();assert.equal(stored.matches[0].enteredBy,actor);assert.equal((await (await get()).json()).leaderboard.find(r=>r.playerId==='p0').points,10)}user('waiting');
+ const correction={...payload,a:19,b:21,games:[{a:19,b:21}],reason:'双方确认修正'};const concurrent=await Promise.all([post(body(stored.revision,correction)),post(body(stored.revision,payload))]);assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);stored=await api.load();const final=(await (await get()).json()).leaderboard;assert.equal(final.find(r=>r.playerId==='p2').points,10);assert.equal(final.find(r=>r.playerId==='p0').points,-3);assert.equal(final.find(r=>r.playerId==='p2').games,1);assert.equal(stored.players.find(p=>p.id==='p2').rating,1016);
+ assert.equal((await post({...body(stored.revision),action:'void',payload:{matchId:'match',status:'cancelled',reason:'越权'}})).status,403);
+ const failed=structuredClone(stored);failed.matches[0].scoreA=0;await assert.rejects(()=>api.save(failed,'member:'+first.requestId,stored),/UNIQUE/);assert.equal((await api.load()).matches[0].scoreA,19);
+ // Current-month migration uses real persisted settings, is atomic and once-only.
+ const before=await api.load(),old=structuredClone(before);delete old.settings.rankingVersion;old.settings.rules.loss=3;const prior=api.month(now-40*86400000);old.seasons=[{id:period,rules:{...old.settings.rules}},{id:prior,rules:{...old.settings.rules}}];await api.save(old,'old-rules',before);
+ const ratings=old.players.map(p=>p.rating),migration=await api.loadClubState();assert.equal(migration.settings.rules.loss,-3);assert.equal(migration.seasons.find(x=>x.id===period).rules.loss,-3);assert.equal(migration.seasons.find(x=>x.id===prior).rules.loss,3);assert.deepEqual(migration.players.map(p=>p.rating),ratings);assert.equal(migration.audits.filter(a=>a.action==='enableSignedRanking').length,1);assert.equal((await api.loadClubState()).revision,migration.revision);
+ console.log('PASS match scoring API: real stored legacy/court/waitlist signup authorization, denied outsider and management actions, validation, CSRF, signed automatic points, correction/Elo replay, no duplicate credits, concurrent conflict, SQLite rollback, cache invalidation and once-only historical-safe migration');
+}finally{sql.close();delete globalThis.__scoringTest}
