@@ -1,6 +1,7 @@
 import {blockedWordsInput,normalizeBlockedWords,restoreMaskedEdits} from './blocked-words';
 import {assertPlayerMutable,assertAccountMutable,clubOwnerId,isClubOwner} from './ownership';
 import {z} from 'zod';
+import {pointGrantInput} from './point-grants';
 import {upgradeActivitySignups} from './event-merge';
 import {applyCourtSignup} from './court-commands';
 import {bookingRows,promoteBooking,promoteLegacy} from './booking-signups';
@@ -24,6 +25,7 @@ const rulesSchema=z.object({win:z.number().int().min(0).max(100),loss:z.number()
 export async function digest(v:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))).map(x=>x.toString(16).padStart(2,'0')).join('')}
 export function authorized(a:Account,action:string){if(!['register','cancel','courtRegister','courtCancel','courtMoveQueue','friend','event','shuttleVote','pointsModeVote',...memberSocialActions].includes(action)&&!isEventAction(action)&&a.role!=='admin')fail('403: 仅管理员可以执行此操作')}
 const schemas:Record<string,z.ZodTypeAny>={
+ grantPoints:pointGrantInput,
  profile:z.object({name:text,playerId:pid.optional()}),friend:z.object({name:text}),
  event:z.object({title:text,start:time,end:time,venue:text,address:z.string().max(300),capacity:z.number().int().min(1).max(500),signupDeadline:time.optional(),cancelDeadline:time,note:z.string().max(2000),status:z.enum(['draft','open']),bookings:z.array(z.object({name:text,start:time,end:time,pricing:z.enum(['hourly','total']),cents,signupCapacity:z.number().int().min(1).max(500).optional()})).min(1).max(20)}),
  eventStatus:z.object({eventId:pid,status:z.enum(['draft','open','locked','live','ended','cancelled'])}),
@@ -48,7 +50,8 @@ const schemas:Record<string,z.ZodTypeAny>={
 };
 export async function apply(s:State,a:Account,action:string,input:unknown,now:number){authorized(a,action);input=restoreMaskedEdits(s,a,action,input);if(await applyCourtSignup(s,a,action,input,now))return null;if(await applyPointsChoice(s,a,action,input,now))return null;if(await applyPointsPlan(s,a,action,input,now))return null;if(await applyShuttles(s,a,action,input,now))return null;if(await applySocial(s,a,action,input,now))return null;const schema=Object.hasOwn(schemas,action)?schemas[action]:undefined;if(!schema)fail('未知操作');const p=schema.parse(input) as any;authorizeEventAction(s,a,action,p);if(['settings','historyRules','historyPreview'].includes(action))p.rules.minimum=0;if(['event','eventEdit','booking','bookingEdit'].includes(action)){const venue=p.venue?findVenue(p.venue):undefined;if(venue){p.venue=venue.name;p.address=venue.address}}const before=['score','void','historyRules','rating','attendanceEdit'].includes(action)?{matches:structuredClone(s.matches.filter(m=>m.id===p.matchId)),attendance:structuredClone(s.attendance.filter(a=>a.id===p.attendanceId)),seasons:structuredClone(s.seasons.filter(x=>x.id===p.season)),players:structuredClone(s.players.filter(x=>x.id===p.playerId))}:undefined;
  const event=(e:string)=>s.events.find(x=>x.id===e&&x.deletedAt===undefined)??fail('活动不存在或已删除');const player=(p:string)=>s.players.find(x=>x.id===p)??fail('参赛者不存在');const own=(p:string)=>{if(a.role!=='admin'&&player(p).ownerId!==a.id)fail('403: 只能管理自己及自己代报的朋友')};const reg=(e:string,p:string)=>s.registrations.find(r=>r.eventId===e&&r.playerId===p)??fail('未找到报名');const round=(r:string)=>s.rounds.find(x=>x.id===r)??fail('轮次不存在');
- if(action==='profile'){const target=p.playerId??a.playerId;assertPlayerMutable(s,a,target);player(target).name=p.name;}
+ if(action==='grantPoints'){if(!isClubOwner(s,a))fail('403: 只有群主可以加积分');if(!player(p.playerId).enabled)fail('该球友已停用，不能加积分');}
+ else if(action==='profile'){const target=p.playerId??a.playerId;assertPlayerMutable(s,a,target);player(target).name=p.name;}
  else if(action==='friend')s.players.push({id:id(),ownerId:a.id,name:p.name,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'新成员默认初值'});
  else if(action==='event'){if(p.end<=p.start||p.cancelDeadline>p.end)fail('请检查活动起止时间');for(const b of p.bookings)checkBooking(p,b);const e={...p,signupDeadline:p.end,cancelDeadline:cancellationDeadline(p),id:id(),creatorId:a.id,attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};delete e.bookings;e.pointsPlan={start:e.start,end:e.start+defaultPointsMinutes(e)*60000,roundMinutes:15};s.events.push(e);for(const b of p.bookings)s.bookings.push({...b,signupCapacity:b.signupCapacity??e.capacity,id:id(),eventId:e.id})}
  else if(action==='eventStatus'){const e=event(p.eventId);if(p.status==='cancelled'&&s.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('请先结束或作废进行中的比赛');if(p.status==='cancelled'&&e.status!=='cancelled')for(const r of s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'))archiveDefaultAttendance(s,e,r.playerId,now);e.status=p.status}

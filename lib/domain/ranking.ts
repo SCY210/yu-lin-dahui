@@ -1,4 +1,5 @@
 import {winner} from './social';
+import {pointGrants} from './point-grants';
 import {cultivationSnapshot} from './cultivation';
 import {gameFacts} from './game-facts';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
@@ -10,7 +11,8 @@ export function replayRating(s:State){for(const p of s.players){p.rating=p.initi
 }
 export function leaderboard(s:State,season:string){return aggregateLeaderboard(s,[season])}
 function aggregateLeaderboard(s:State,periods:string[]){
- const chosen=new Set(periods),growth=cultivationSnapshot(s);
+ const chosen=new Set(periods),growth=cultivationSnapshot(s),grants=pointGrants(s),bonus=new Map<string,number>();
+ for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
  const rows=s.players.filter(p=>p.enabled).map(p=>{
   const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&gameFacts(m).length>0);
   let games=0,wins=0,net=0,score=0;
@@ -21,7 +23,7 @@ function aggregateLeaderboard(s:State,periods:string[]){
    games+=scored.length;wins+=periodWins;score+=periodWins*rules.win+(scored.length-periodWins)*rules.loss;
   }
   const cultivation=growth.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:cultivation.realm,cultivation,provisional:false,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:cultivation.realm,cultivation,provisional:false,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
