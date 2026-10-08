@@ -19,15 +19,17 @@ export const achievementRanks=[
  {level:5,name:'钻石',description:'晶钻冠饰 · 生涯里程碑'},
 ] as const;
 export const achievementTargets:Record<AchievementId,readonly [number,number,number,number,number]>={
- 'first-flight':[1,3,5,10,20],'first-victory':[1,3,5,10,20],
- 'ten-matches':[2,4,6,8,12],'fifty-matches':[1,3,7,15,30],
- 'ten-victories':[1,3,5,10,20],'three-streak':[3,4,5,6,8],
- 'five-partners':[5,6,8,10,12],'three-game-victory':[1,3,5,10,20],
+ 'first-flight':[1,20,60,150,300],'first-victory':[1,10,35,100,220],
+ 'ten-matches':[2,5,9,14,20],'fifty-matches':[1,6,16,35,60],
+ 'ten-victories':[1,8,25,60,120],'three-streak':[3,6,10,15,21],
+ 'five-partners':[5,8,12,16,20],'three-game-victory':[1,5,12,25,50],
 };
+// A long session cannot replace repeated participation on different dates.
+export const achievementParticipationDays=[1,3,8,20,40] as const;
 export type AchievementProgress={current:number;unlockedAt:number|null;level:number;levelUnlockedAt:(number|null)[];partnerId?:string};
-export type AchievementSummary={unlockedCount:number;totalLevels:number;progress:Record<AchievementId,AchievementProgress>};
+export type AchievementSummary={unlockedCount:number;totalLevels:number;matchDays:number;progress:Record<AchievementId,AchievementProgress>};
 export const rankImage=(level:number)=>'/badges/ranks/level-'+Math.max(1,Math.min(5,level))+'.webp';
-export function achievementLevel(id:AchievementId,current:number){return achievementTargets[id].filter(target=>current>=target).length}
+export function achievementLevel(id:AchievementId,current:number,matchDays:number){return achievementTargets[id].filter((target,index)=>current>=target&&matchDays>=achievementParticipationDays[index]).length}
 export function achievementGoal(id:AchievementId,target:number){
  const metric=achievementCatalog.find(a=>a.id===id)!.metric;
  if(metric==='matches')return '累计完成 '+target+' 场有效比赛';

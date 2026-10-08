@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {achievementSnapshot} from '../lib/domain/achievements';
-import {achievementCatalog,achievementTargets,achievementRanks,achievementLevel,achievementGoal,rankImage} from '../lib/achievement-catalog';
+import {achievementCatalog,achievementTargets,achievementParticipationDays,achievementRanks,achievementLevel,achievementGoal,rankImage} from '../lib/achievement-catalog';
 import {projectClubState} from '../lib/club-view';
 import {clubViewValidUntil} from '../lib/club-read-cache';
 import {emptyState,type Match,type State,type Event} from '../lib/domain/types';
@@ -84,31 +84,38 @@ test('every badge has a real 256px generated WebP asset and the complete collect
 
 test('each achievement has five increasing, finite goals matching its first unlock',()=>{
  assert.equal(achievementRanks.length,5);
+ assert.deepEqual(achievementParticipationDays,[1,3,8,20,40]);
  for(const a of achievementCatalog){const targets=achievementTargets[a.id];assert.equal(targets.length,5);assert.equal(targets[0],a.target);
-  for(const [i,target]of targets.entries()){assert.ok(Number.isSafeInteger(target)&&target>0);if(i)assert.ok(target>targets[i-1]);assert.equal(achievementLevel(a.id,target),i+1);assert.equal(achievementLevel(a.id,target-1),i);assert.ok(achievementGoal(a.id,target).includes(String(target)))}
+  for(const [i,target]of targets.entries()){assert.ok(Number.isSafeInteger(target)&&target>0);if(i)assert.ok(target>targets[i-1]);assert.equal(achievementLevel(a.id,target,achievementParticipationDays[i]),i+1);assert.equal(achievementLevel(a.id,target-1,achievementParticipationDays[i]),i);assert.equal(achievementLevel(a.id,target,achievementParticipationDays[i]-1),i);assert.ok(achievementGoal(a.id,target).includes(String(target)))}
  }
 });
 
-test('past results backfill every tier with its own factual date; max level has no nonexistent next goal',()=>{
- const s=fixture();for(let i=0;i<20;i++)s.matches.push(game('tier-'+String(i).padStart(2,'0'),now-100000+i*1000));
- const result=summary(s),p=result.progress['first-flight'];assert.equal(p.level,5);assert.equal(achievementLevel('first-flight',p.current),5);
- assert.deepEqual(p.levelUnlockedAt,[0,2,4,9,19].map(i=>s.matches[i].end));assert.equal(result.progress['first-victory'].level,5);
- assert.equal(result.totalLevels,Object.values(result.progress).reduce((sum,p)=>sum+p.level,0));
- assert.equal(achievementLevel('first-flight',2000),5);
+test('gold needs both sixty completed matches and eight real Madrid play dates',()=>{
+ const s=fixture();for(let i=0;i<60;i++)s.matches.push(game('tier-'+String(i).padStart(3,'0'),now-(8-Math.floor(i/8))*86400000+(i%8)*900000));
+ const result=summary(s),p=result.progress['first-flight'];assert.equal(result.matchDays,8);assert.equal(p.level,3);assert.equal(p.levelUnlockedAt[1],s.matches[19].end);assert.equal(p.levelUnlockedAt[2],s.matches[59].end);assert.equal(p.levelUnlockedAt[3],null);assert.equal(achievementLevel('first-flight',p.current,result.matchDays),3);
+ assert.equal(result.totalLevels,Object.values(result.progress).reduce((sum,p)=>sum+p.level,0));assert.equal(achievementLevel('first-flight',2000,40),5);
 });
 
-test('corrections revoke only unsupported tiers while a later loss retains the historical best streak',()=>{
- const s=fixture();for(let i=0;i<5;i++)s.matches.push(game('w'+i,now-10000+i*1000));
- assert.equal(summary(s).progress['three-streak'].level,3);
- s.matches.push(game('lost',now-1000,false));assert.equal(summary(s).progress['three-streak'].level,3);
- s.matches[1].status='cancelled';const p=summary(s).progress['three-streak'];assert.equal(p.level,2);assert.equal(p.levelUnlockedAt[2],null);
- assert.equal(summary(s).progress['first-victory'].level,2);
+test('a two-hour eight-game session cannot earn silver or gold even with perfect wins and rotating partners',()=>{
+ const s=fixture();for(let i=0;i<8;i++){const mate='mate'+i;for(const id of [mate,'foe'+i,'foe'+(i+8)])s.players.push({id,name:id,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});const m=game('short'+i,now-7200000+(i+1)*900000,true,mate);m.b=['foe'+i,'foe'+(i+8)];s.matches.push(m)}
+ const result=summary(s);assert.equal(result.matchDays,1);assert.equal(result.progress['first-flight'].current,8);assert.equal(result.progress['three-streak'].current,8);assert.equal(result.progress['ten-matches'].current,16);for(const p of Object.values(result.progress))assert.ok(p.level<=1);
 });
 
-test('the complete forty-stage collection is attainable across thirty dates, real opponents and recurring partners',()=>{
- const s=fixture();s.events[0].start=now-31*86400000;for(let i=0;i<12;i++)for(const prefix of ['mate','foe'])s.players.push({id:prefix+i,name:prefix+i,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
- for(let i=0;i<240;i++){const m=game('full'+String(i).padStart(3,'0'),now-(30-Math.floor(i/8))*86400000+(i%8)*1000,true,'mate'+i%12);m.b=['foe'+i%12,'foe'+(i+1)%12];if(i<20){m.games=[{a:21,b:15},{a:15,b:21},{a:21,b:17}];m.scoreA=2;m.scoreB=1}s.matches.push(m)}
- const p=summary(s);assert.equal(p.unlockedCount,8);assert.equal(p.totalLevels,40);for(const result of Object.values(p.progress)){assert.equal(result.level,5);assert.ok(result.levelUnlockedAt.every(at=>at!==null))}
+test('repeating many matches on one date cannot substitute for the silver participation requirement',()=>{
+ const s=fixture();for(let i=0;i<30;i++)s.matches.push(game('same-day'+i,now-3600000+i*60000));assert.equal(summary(s).progress['first-flight'].level,1);
+ s.matches.push(game('day-two',now-86400000),game('day-three',now-2*86400000));const result=summary(s);assert.equal(result.matchDays,3);assert.equal(result.progress['first-flight'].level,2);assert.equal(result.progress['first-flight'].levelUnlockedAt[1],s.matches[17].end);
+});
+
+test('corrections revoke unsupported streak tiers; a later loss keeps supported lifetime milestones',()=>{
+ const s=fixture();for(let i=0;i<10;i++)s.matches.push(game('w'+i,now-(10-i)*86400000));
+ assert.equal(summary(s).progress['three-streak'].level,3);s.matches.push(game('lost',now-1000,false));assert.equal(summary(s).progress['three-streak'].level,3);
+ s.matches[1].status='cancelled';const result=summary(s),p=result.progress['three-streak'];assert.equal(p.level,2);assert.equal(p.levelUnlockedAt[2],null);assert.equal(result.progress['first-victory'].level,1);
+});
+
+test('the forty-stage collection remains attainable with months of matches and long-term chemistry',()=>{
+ const s=fixture();s.events[0].start=now-80*86400000;for(let i=0;i<20;i++)for(const prefix of ['mate','foe'])s.players.push({id:prefix+i,name:prefix+i,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
+ for(let i=0;i<600;i++){const m=game('full'+String(i).padStart(3,'0'),now-(75-Math.floor(i/8))*86400000+(i%8)*900000,true,'mate'+(i<120?0:i%20));m.b=['foe'+i%20,'foe'+(i+1)%20];if(i<50){m.games=[{a:21,b:15},{a:15,b:21},{a:21,b:17}];m.scoreA=2;m.scoreB=1}s.matches.push(m)}
+ const p=summary(s);assert.equal(p.matchDays,75);assert.equal(p.unlockedCount,8);assert.equal(p.totalLevels,40);for(const result of Object.values(p.progress)){assert.equal(result.level,5);assert.ok(result.levelUnlockedAt.every(at=>at!==null))}
 });
 
 test('rank frames are real generated WebP assets and are shared across all eight achievement themes',()=>{
@@ -130,7 +137,7 @@ test('opponent breadth counts only distinct defeated opposing players, across ei
  const different=game('different',now-3000);different.b=['c','e'];
  const otherSide=game('other-side',now-2000);otherSide.a=['a','b'];otherSide.b=['p','c'];otherSide.scoreA=15;otherSide.scoreB=21;otherSide.games=[{a:15,b:21}];
  s.matches=[first,repeat,loss,different,otherSide,{...first}];const result=summary(s);
- assert.equal(result.progress['ten-matches'].current,4);assert.equal(result.progress['ten-matches'].level,2);assert.equal(result.progress['ten-matches'].levelUnlockedAt[1],different.end);
+ assert.equal(result.progress['ten-matches'].current,4);assert.equal(result.progress['ten-matches'].level,1);assert.equal(result.progress['ten-matches'].levelUnlockedAt[1],null);
  assert.equal(result.progress['first-victory'].current,4);assert.equal(result.progress['first-flight'].current,5);
  s.matches[3].status='cancelled';assert.equal(summary(s).progress['ten-matches'].current,2);assert.equal(summary(s).progress['ten-matches'].levelUnlockedAt[1],null);
 });
@@ -138,6 +145,11 @@ test('opponent breadth counts only distinct defeated opposing players, across ei
 test('partner chemistry tracks the best individual partner rather than combining all wins or teammate breadth',()=>{
  const s=fixture();for(const [i,partner]of ['partner','c','partner','c','d'].entries())s.matches.push(game('partner'+i,now-10000+i*1000,true,partner));
  let result=summary(s);assert.equal(result.progress['first-victory'].current,5);assert.equal(result.progress['five-partners'].current,3);assert.equal(result.progress['ten-victories'].current,2);assert.equal(result.progress['ten-victories'].partnerId,'partner');
- const third=game('third-c',now-1000,true,'c');s.matches.push(third);result=summary(s);assert.equal(result.progress['ten-victories'].current,3);assert.equal(result.progress['ten-victories'].partnerId,'c');assert.equal(result.progress['ten-victories'].levelUnlockedAt[1],third.end);
+ const third=game('third-c',now-1000,true,'c');s.matches.push(third);result=summary(s);assert.equal(result.progress['ten-victories'].current,3);assert.equal(result.progress['ten-victories'].partnerId,'c');assert.equal(result.progress['ten-victories'].levelUnlockedAt[1],null);
  third.scoreA=15;third.scoreB=21;third.games=[{a:15,b:21}];result=summary(s);assert.equal(result.progress['ten-victories'].current,2);assert.equal(result.progress['ten-victories'].partnerId,'partner');assert.equal(result.progress['ten-victories'].levelUnlockedAt[1],null);
+});
+
+test('silver partner chemistry is one partner record across three play dates, not combined wins',()=>{
+ const s=fixture();for(let i=0;i<8;i++)s.matches.push(game('chemistry'+i,now-(3-Math.floor(i/3))*86400000+(i%3)*900000));const p=summary(s);assert.equal(p.matchDays,3);assert.equal(p.progress['ten-victories'].current,8);assert.equal(p.progress['ten-victories'].level,2);assert.equal(p.progress['ten-victories'].levelUnlockedAt[1],s.matches[7].end);
+ s.matches[0].status='cancelled';assert.equal(summary(s).progress['ten-victories'].level,1);
 });
