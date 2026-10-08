@@ -53,7 +53,10 @@ export async function GET(req:Request){try{
  const token=readCache.remember({revision:s.revision,settings:s.settings,account:a},identity,period,year,clubViewValidUntil(s,a,now),now);
  return Response.json(data,{headers:{'Cache-Control':'no-store',...(token?{'ETag':token}:{})}});
 }catch(e){return error(e)}finally{await releaseRejectedWriteBody(req)}}
-export async function POST(req:Request){try{assertWriteRequest(req);const ip=trustedClientIP(req);await cleanExpiredRateLimits();await consumeRateLimit('club-ip:'+ip,600,5*60000,{message:'当前网络操作较多，请稍后重试'});const user=await getAppUser();if(!user)return response({error:'请先登录'},401);await consumeRateLimit('club-actor:'+user.userId,120,5*60000,{message:'操作较频繁，请稍后再试'});const body=z.object({action:z.string().max(40),payload:z.unknown(),requestId:z.string().uuid(),revision:z.number().int().nonnegative().optional()}).parse(await readJsonBody(req));const key=user.userId+':'+body.requestId;
+export async function POST(req:Request){try{assertWriteRequest(req);const ip=trustedClientIP(req);await cleanExpiredRateLimits();await consumeRateLimit('club-ip:'+ip,600,5*60000,{message:'当前网络操作较多，请稍后重试'});const user=await getAppUser();if(!user)return response({error:'请先登录'},401);await consumeRateLimit('club-actor:'+user.userId,120,5*60000,{message:'操作较频繁，请稍后再试'});const body=z.object({action:z.string().max(40),payload:z.unknown(),requestId:z.string().uuid(),revision:z.number().int().nonnegative().optional(),actor:z.string().min(1).max(200).optional()}).parse(await readJsonBody(req));
+ // requestId is only unique per account: a write resent after the browser switched accounts must not run as the new account.
+ if(body.actor!==undefined&&body.actor!==user.userId)return response({error:'登录账号已切换，本次操作未保存。请确认当前账号后再操作',actorMismatch:true},409);
+ const key=user.userId+':'+body.requestId;
  if(body.action==='friend'||body.action==='event'){
   const account=await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{role:string}>();
   if(!account)return response({error:'请先加入群组'},403);
