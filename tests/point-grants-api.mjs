@@ -23,7 +23,7 @@ try{
  user(null);assert.equal((await post(command(s.revision))).status,401);
  for(const id of ['admin','member']){user(id);assert.equal((await post(command(s.revision,undefined,{...payload,isOwner:true,actor:'owner'}))).status,403)}
  user('owner');assert.equal((await post(command(s.revision),{Origin:'https://attacker.invalid'})).status,403);
- assert.equal((await post(command(s.revision,undefined,{...payload,points:-1}))).status,400);
+ assert.equal((await post(command(s.revision,undefined,{...payload,points:-1001}))).status,400);
  assert.equal((await post(command(s.revision-1))).status,409);
  const body=command(s.revision);assert.equal((await post(body)).status,200);assert.equal((await post(body)).status,200);
  const stored=await api.load();assert.equal(stored.audits.filter(a=>a.action==='grantPoints').length,1);assert.equal(stored.revision,s.revision+1);assert.equal(stored.players.length,3);assert.equal(stored.audits[0].changes.reason,payload.reason);
@@ -34,5 +34,9 @@ try{
  const concurrent=await Promise.all([post(command(stored.revision)),post(command(stored.revision))]);assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
  assert.equal((await api.load()).audits.length,2);const revalidate=await api.GET(new Request(origin+'/api/club?month=2026-10&year=2026',{headers:{'If-None-Match':etag}}));assert.equal(revalidate.status,200);assert.equal((await revalidate.json()).leaderboard.find(r=>r.playerId==='p2').points,50);
  user('member');const member=await (await get()).json();assert.deepEqual(member.pointGrants,[]);assert.equal(member.leaderboard.find(r=>r.playerId==='p2').manualPoints,50);assert.equal(member.leaderboard.find(r=>r.playerId==='p2').games,0);
+ const beforeDeduction=await api.load();for(const id of ['admin','member']){user(id);assert.equal((await post(command(beforeDeduction.revision,undefined,{...payload,points:-75}))).status,403)}
+ user('owner');const deduction=command(beforeDeduction.revision,undefined,{...payload,points:-75,reason:'纠正积分'});assert.equal((await post(deduction)).status,200);assert.equal((await post(deduction)).status,200);
+ const deducted=await api.load();assert.equal(deducted.audits.length,3);assert.equal(deducted.audits.at(-1).changes.points,-75);assert.equal(deducted.audits.at(-1).actor,'owner');const deductionView=await (await get()).json();for(const rows of [deductionView.leaderboard,deductionView.quarterlyLeaderboard,deductionView.annualLeaderboard])assert.equal(rows.find(r=>r.playerId==='p2').points,-25);assert.equal(deductionView.pointGrants.length,3);
+ const rollbackDeduction=structuredClone(deducted);rollbackDeduction.audits.push({...deducted.audits.at(-1),id:crypto.randomUUID()});await assert.rejects(()=>api.save(rollbackDeduction,'owner:'+deduction.requestId,deducted),/UNIQUE/);assert.equal((await api.load()).audits.length,3);
  console.log('PASS grants API: stored-owner authorization, CSRF, validation, SQL parameter binding, durable reload, request idempotence, optimistic concurrency, rollback, cache invalidation and private ledger projection');
 }finally{sql.close();delete globalThis.__grantsTest}
