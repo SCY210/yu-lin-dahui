@@ -18,6 +18,8 @@ Each badge is a pigment seal on a paper tag. The tag takes its paper from the ac
 
 The orbit around each seal carries one node per realm (1–5), so the tier stays readable even at 22px.
 
+Stage text uses the deep realm ink with a small paper wash, preserving contrast on the light surfaces. Ranking names remain 14px and stage metadata 12px; the pigment wash must not replace the stage's deeper ink.
+
 Every realm moves, and each realm adds splendour, so a higher realm is always visibly grander than a lower one:
 
 | 境界 | Look and motion |

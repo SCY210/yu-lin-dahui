@@ -85,7 +85,7 @@
   font-size: 12px !important;
   font-weight: 500 !important;
   letter-spacing: 0.04em !important;
-  color: color-mix(in srgb, var(--rb-d) 72%, var(--rb-paper)) !important;
+  color: color-mix(in srgb, var(--rb-d) 95%, var(--rb-paper)) !important;
 }
 
 /* ── Shared motion ────────────────────────────────────────────── */
@@ -209,7 +209,7 @@
 }
 
 .realm-badge-3 .rb-stage {
-  color: color-mix(in srgb, var(--rb-c) 85%, var(--rb-paper)) !important;
+  color: color-mix(in srgb, var(--rb-d) 95%, var(--rb-paper)) !important;
 }
 
 /* The lotus seat revolves beneath the nascent soul. */
@@ -550,11 +550,11 @@
 }
 
 .rv-realm-badge.realm-badge .rb-name {
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 .rv-realm-badge.realm-badge .rb-stage {
-  font-size: 11px !important;
+  font-size: 12px !important;
 }
 
 /* 我的 · 境界卡 */
