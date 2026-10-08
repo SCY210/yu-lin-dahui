@@ -2,7 +2,7 @@ import {build} from 'esbuild';
 import {mkdirSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 mkdirSync('.test-output',{recursive:true});
-const suites=["live-play","match-scoring","point-grants","shared-source","wake-recovery","local-test-launcher","reminders","blocked-words","event-capacity","trial-cleanup","push","achievements","mixed-points","event-merge","court-signup","domain","match-grouping","member-permissions","club-view","ranking-periods","activity-voting","event-date-repair","shuttles","points-plan","photo-deletion","cancellation","default-attendance","realm-progression","time-planning","navigation","event-deletion","club-refresh","request-safety","ownership","username-policy","session-sync","security-headers","image-validation","timestamp-safety","club-read-cache","pwa"];
+const suites=["live-play","match-scoring","point-grants","shared-source","wake-recovery","local-test-launcher","reminders","blocked-words","event-capacity","trial-cleanup","push","achievements","mixed-points","event-merge","court-signup","domain","match-grouping","member-permissions","club-view","ranking-periods","activity-voting","event-date-repair","settlement-state","shuttles","points-plan","photo-deletion","cancellation","default-attendance","realm-progression","time-planning","navigation","event-deletion","club-refresh","request-safety","ownership","username-policy","session-sync","security-headers","image-validation","timestamp-safety","club-read-cache","pwa"];
 await build({entryPoints:suites.map(name=>`tests/${name}.test.ts`),bundle:true,platform:'node',format:'esm',outdir:'.test-output',outExtension:{'.js':'.mjs'}});
 const r=spawnSync(process.execPath,['--test',...suites.map(name=>`.test-output/${name}.test.mjs`)],{stdio:'inherit'});
 if(r.status!==0)process.exit(r.status??1);
@@ -13,6 +13,8 @@ const grantsApi=spawnSync(process.execPath,['tests/point-grants-api.mjs'],{stdio
 const allRankedApi=spawnSync(process.execPath,['tests/all-ranked-api.mjs'],{stdio:'inherit'});if(allRankedApi.status!==0)process.exit(allRankedApi.status??1);
 const awardApi=spawnSync(process.execPath,['tests/award-voting-api.mjs'],{stdio:'inherit'});if(awardApi.status!==0)process.exit(awardApi.status??1);
 const dateRepairApi=spawnSync(process.execPath,['tests/event-date-repair-api.mjs'],{stdio:'inherit'});if(dateRepairApi.status!==0)process.exit(dateRepairApi.status??1);
+const settlementApi=spawnSync(process.execPath,['tests/settlement-api.mjs'],{stdio:'inherit'});if(settlementApi.status!==0)process.exit(settlementApi.status??1);
+const equalSplitApi=spawnSync(process.execPath,['tests/requested-thursday-split-api.mjs'],{stdio:'inherit'});if(equalSplitApi.status!==0)process.exit(equalSplitApi.status??1);
 const retryApi=spawnSync(process.execPath,['tests/write-retry-api.mjs'],{stdio:'inherit'});if(retryApi.status!==0)process.exit(retryApi.status??1);
 const readApi=spawnSync(process.execPath,['tests/club-read-api.mjs'],{stdio:'inherit'});if(readApi.status!==0)process.exit(readApi.status??1);
 const mergeApi=spawnSync(process.execPath,['tests/requested-event-merge-api.mjs'],{stdio:'inherit'});if(mergeApi.status!==0)process.exit(mergeApi.status??1);
