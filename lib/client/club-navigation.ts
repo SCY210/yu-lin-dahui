@@ -1,9 +1,9 @@
-export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin';
+export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders';
 export type EventTab = 'overview'|'signup'|'rounds'|'fees'|'social';
 export type SocialTab = 'players'|'network'|'challenges'|'funny';
 export type ClubRoute = {page:ClubPage; eventId:string; tab:EventTab; playerId:string; socialTab:SocialTab};
 export const homeRoute:ClubRoute = {page:'home',eventId:'',tab:'overview',playerId:'',socialTab:'players'};
-const pages = new Set(['home','events','ranking','me','social','admin']);
+const pages = new Set(['home','events','ranking','me','social','admin','reminders']);
 const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';
@@ -25,7 +25,7 @@ export function clubRouteUrl(href:string,route:ClubRoute):string {
  return url.pathname+url.search+url.hash;
 }
 export const sameRoute = (a:ClubRoute,b:ClubRoute)=>JSON.stringify(a)===JSON.stringify(b);
-export type RankingSelection={period:string;year:number;rankingPeriod:'monthly'|'annual'};
+export type RankingSelection={period:string;year:number;rankingPeriod:'quarterly'|'annual'};
 export type ProfileSource={route:ClubRoute;scrollY:number;ranking?:RankingSelection};
 type Frame = {route:ClubRoute;dialog:string|null;scrollY:number;profileSource?:ProfileSource;ranking?:RankingSelection};
 type Marker = {session:string;owner:string;index:number;route:ClubRoute;dialog:string|null;scrollY?:number;profileSource?:ProfileSource;ranking?:RankingSelection};
@@ -38,8 +38,8 @@ const safeScroll=(value:unknown)=>typeof value==='number'&&Number.isFinite(value
 const rankingOf=(value:unknown):RankingSelection|undefined=>{
  if(!value||typeof value!=='object')return;
  const v=value as any;
- if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['monthly','annual'].includes(v.rankingPeriod))return;
- return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod};
+ if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['quarterly','monthly','annual'].includes(v.rankingPeriod))return;
+ return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod==='annual'?'annual':'quarterly'};
 };
 const sourceOf=(value:unknown):ProfileSource|undefined=>{
  if(!value||typeof value!=='object')return;

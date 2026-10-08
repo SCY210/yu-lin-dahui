@@ -44,3 +44,7 @@ No action in this change directly accesses or deletes another owner's local file
 It does not hide normal source, migrations, shared instructions, licenses, or hosting configuration. Credentials and production exports must never enter Git. If a real secret was committed previously, ignoring/deleting the current file is insufficient: rotate it and handle history separately with the owner's authorization.
 
 Run npm run check:repo to detect prohibited tracked paths, non-English shared Markdown containing Han characters, and broken relative documentation links. This heuristic does not certify translation quality; reviewers still check meaning. Ignored personal reports may keep their original language.
+
+## Existing documentation compatibility
+
+New and rewritten documents are checked for English. Existing untranslated notes are explicitly listed in scripts/legacy-markdown.json so current behavior descriptions are retained rather than replaced by older translations. Tracked-state restrictions and relative-link validation apply to every shared document, including those notes. Remove an exemption when its note is deliberately translated.

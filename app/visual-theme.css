@@ -1,0 +1,7 @@
+.ui-theme-toolbar{display:flex;justify-content:flex-end;width:min(1100px,calc(100% - 80px));margin:14px auto 0}
+.visual-theme-picker{display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin-left:auto;color:var(--muted-foreground);font-size:14px;letter-spacing:0;flex-shrink:0}
+.visual-theme-picker select{width:auto;min-width:122px;min-height:36px;padding:5px 7px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--foreground);font:inherit;cursor:pointer}
+.visual-theme-picker select:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+.wuxia-theme .visual-theme-picker select{border-radius:2px}
+@media(max-width:850px){.ui-theme-toolbar{width:calc(100% - 48px)}}
+@media(max-width:600px){.ui-theme-toolbar{width:calc(100% - 36px);margin-top:10px}.visual-theme-picker select{min-width:115px;min-height:38px}}

@@ -15,9 +15,15 @@
 
 ## Shared documentation and local state
 
-- Write shared Markdown documentation in English. This does not require translating the application UI, user data, test fixtures, or third-party license notices.
+- Write new or rewritten shared Markdown documentation in English. Existing untranslated notes listed in scripts/legacy-markdown.json may retain their language; preserve their up-to-date behavior descriptions when resolving conflicts. This does not require translating the application UI, user data, test fixtures, or third-party license notices.
 - Keep source code, reproducible tests, migrations, licenses, and required hosting configuration tracked.
 - Keep personal agent/editor state, credentials, local databases, generated outputs, and per-checkout reports ignored.
 - To stop tracking local files, preserve their contents and use git rm --cached. Never delete another contributor's local working files.
 - Git may remove formerly tracked files when another checkout pulls a deletion. Document a backup procedure before merging such a change; ignoring a path alone does not preserve it during checkout.
 - Legal notices must describe actual processing and real operator details. Do not invent identities, legal bases, consent, retention rules, or compliance guarantees.
+
+## Privately customized material stays outside GitHub
+
+- GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the Sites deployment repository. Do not upload them to GitHub.
+- Do not merge deployment repository history or copy its complete source over the shared version. Port shared functionality separately and inspect each change.
+- Before pushing, run node scripts/check-shared-source.mjs --check. Preserve that check and the local push hook.

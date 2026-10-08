@@ -15,3 +15,6 @@
 @media(max-width:600px){.cultivation-ornament-hero{width:95px;margin:-9px 0 -8px}.cultivation-ornament-hero img{width:95px;height:95px}.cultivation-seal-caption{font-size:9px;bottom:0;letter-spacing:1.5px}.cultivation-ornament-ribbon{padding:8px 19px;gap:7px}.cultivation-ribbon-title{letter-spacing:.6px}.cultivation-ribbon-motto{font-size:10px;letter-spacing:0}}
 @media(max-width:380px){.cultivation-ribbon-motto{display:none}}
 @media(prefers-reduced-motion:reduce){.cultivation-ornament{animation:none;transition:none}}
+
+/* The compact emblem is the brand mark, with its own colors in both themes. */
+.cultivation-ornament.cultivation-ornament-compact.brand-mark{width:44px;height:44px;display:block;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible;color:inherit}.cultivation-ornament.brand-mark::before{content:none!important;display:none!important}.cultivation-ornament.brand-mark img{display:block!important;width:100%;height:100%;filter:none!important;opacity:1!important;transform:none!important}.brand-lockup .cultivation-ornament.brand-mark{width:44px;height:44px}@media(max-width:600px){.brand-lockup .cultivation-ornament.brand-mark{width:36px;height:36px}}

@@ -6,7 +6,6 @@
 .pp-identity h2{font-size:25px;line-height:1.4;margin:0 0 10px;color:#282348;overflow-wrap:anywhere}
 .pp-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pp-tier,.pp-state{display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:13px;line-height:1.55}
-.pp-tier{background:#e8e5ff;color:#5144b5;font-weight:600}
 .pp-state{background:#f1f1f7;color:#67637c}
 .pp-edit{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;min-height:44px;border:1px solid #d8d2f0;border-radius:11px;background:#fff;color:#5646b4;padding:10px 14px;font-size:14px;font-weight:600}
 .pp-edit:hover{background:#eeebff;border-color:#bcb2e7}
@@ -23,7 +22,7 @@
 .pp-section-heading .pp-section-title{margin:0}
 .pp-section-note{font-size:12px;color:#8b849d}
 .pp-facts{display:grid;margin:0;gap:13px}
-.pp-personal-facts{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pp-personal-facts{grid-template-columns:repeat(3,minmax(0,1fr))}
 .pp-fact{min-width:0;padding:14px 15px;background:#f8f8fc;border:1px solid #eeeef6;border-radius:12px}
 .pp-fact dt{color:#8a839b;font-size:12px;margin-bottom:5px;font-weight:500}
 .pp-fact dd{margin:0;color:#393253;font-size:16px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;font-weight:500}

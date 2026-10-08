@@ -30,6 +30,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.dev.vars*
 
 # vercel
 .vercel
@@ -47,6 +48,13 @@ next-env.d.ts
 /.test-output/
 /preview-captures/
 *.tsbuildinfo
+
+# Private deployment customizations are not part of the shared repository.
+/assets/private-*/
+*aquarium*
+*AQUARIUM*
+*CAPYBARA*
+**/theme-access*
 
 # Personal editor/agent state, caches, databases and local backups.
 .vscode/

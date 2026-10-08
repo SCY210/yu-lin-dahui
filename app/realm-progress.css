@@ -1,5 +1,7 @@
 .realm-progress{width:100%;max-width:320px;margin-top:12px;color:#786288}
 .realm-progress-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.5}
+/* Narrow stat cards wrap the percentage as a whole instead of letter by letter. */
+.realm-progress-label{flex-wrap:wrap;row-gap:0}.realm-progress-label b{margin-left:auto;white-space:nowrap}
 .realm-progress-label b{font-weight:600;color:#7350a0}
 .realm-progress-track{height:5px;overflow:hidden;border-radius:99px;background:#eee8f5;margin:6px 0}
 .realm-progress-track>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ad91d3,#7751aa)}

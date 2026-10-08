@@ -1,9 +1,7 @@
-.rv-realm-0 { color: #81768f; }.rv-realm-1 { color: #72669b; }.rv-realm-2 { color: #735698; }.rv-realm-3 { color: #634a9e; }.rv-realm-4 { color: #713a9c; }
 .rv-name-link{border:0;background:transparent;padding:2px 0;min-height:44px;text-align:left;color:inherit;font:inherit;font-weight:inherit;line-height:1.4;overflow-wrap:anywhere;cursor:pointer}
 .rv-name-link:hover{color:#735098}
 .rv-name-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px;border-radius:5px}
 .rv-realm-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-.rv-realm-badge { display: inline-block; border: 1px solid #ded2ed; background: #f5effa; border-radius: 6px; padding: 1px 7px; font-size: 12px; line-height: 1.6; font-weight: 600; }
 .rv-provisional { color: #93859e; font-size: 11px; }
 .rv-calculation { margin: 20px 0; padding: 19px 22px; border: 1px solid #e4ddeb; border-radius: 16px; background: #fcfaff; color: #7f728c; font-size: 13px; line-height: 1.8; }
 .rv-calculation>strong { display: block; font-size: 14px; color: #625073; }.rv-calculation p { margin: 7px 0 0; }
@@ -30,6 +28,9 @@
 .rv-progress-track { width:64px; height:4px; border-radius:4px; background:#ede4f4; overflow:hidden; }
 .rv-progress-track>span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#c5a4d6,#9675b9); }
 @media(max-width:600px) {
+ .leaderboard-row{grid-template-columns:21px 38px minmax(0,1fr)}
+ .ranking-result{grid-column:3;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;text-align:left;white-space:normal}
+ .ranking-result small{margin-top:0}
  .rv-heading { gap:10px; margin-top:18px; }
  .rv-title h1 { font-size:24px; line-height:1.25; }
  .rv-title .eyebrow { font-size:8px; letter-spacing:1px; margin-bottom:5px; }

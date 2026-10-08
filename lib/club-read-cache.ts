@@ -43,8 +43,6 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  for(const e of events){
   if(e.start<=now&&now<e.end)return now;
   boundary(e.start);boundary(e.end);
-  // floor((end-now)/duration) loses a round immediately after each exact boundary.
-  if(e.end>now)boundary(now+(e.end-now)%roundDuration+1);
   for(const attendance of attendanceForEvent(s,e)){
    boundary(attendance.start);
    if(attendance.end!==null){boundary(attendance.end);boundary(attendance.end-roundDuration+1)}
@@ -53,5 +51,9 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
    boundary(booking.start);boundary(booking.end-roundDuration+1);
   }
  }
+ // A historical score can be entered with a future end time. Achievements only
+ // unlock when that completed fact has actually happened.
+ const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
+ for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
  return expires;
 }

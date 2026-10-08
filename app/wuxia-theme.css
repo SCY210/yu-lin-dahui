@@ -1,0 +1,123 @@
+/* Local visual direction: ink, mineral green, rice paper and cinnabar. */
+html.wuxia-theme{--background:#ece6d8;--foreground:#262a22;--card:#f9f5eb;--card-foreground:#262a22;--primary:#8d3429;--primary-foreground:#fff9eb;--secondary:#e3dbc9;--secondary-foreground:#353a2e;--muted:#e9e1d1;--muted-foreground:#746b59;--accent:#e8ddc7;--accent-foreground:#3e3c2e;--border:#cfc3ab;--input:#bfb196;--ring:#aa7c43;--destructive:#9b372b;--popover:#fbf7ee;--radius:.25rem;--ink:#1e2822;--gold:#b7985f;--paper:#f9f5eb;--cinnabar:#8d3429}
+html{background:var(--background)}
+.wuxia-theme body{background-color:var(--background);background-image:radial-gradient(ellipse at 12% 5%,#faf5e7a3,transparent 47%),repeating-linear-gradient(0deg,#80683c03 0 1px,transparent 1px 4px);color:var(--foreground);font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.75}
+.wuxia-theme h1,.wuxia-theme h2,.wuxia-theme h3,.wuxia-theme h4,.wuxia-theme .brand,.wuxia-theme .pc-player-name,.wuxia-theme .pc-back-name,.wuxia-theme .pc-weapon-model{font-family:'KaiTi','STKaiti','Kaiti SC','Songti SC','SimSun',serif;font-weight:600;letter-spacing:.075em}
+.wuxia-theme h1{font-size:36px}.wuxia-theme h2{font-size:25px}.wuxia-theme h3{font-size:22px}
+.wuxia-theme .shell{max-width:1180px;padding:22px 40px 130px}
+.wuxia-theme .topbar{margin-bottom:24px;padding-bottom:19px;border-bottom:1px solid #bba887;align-items:center}
+.wuxia-theme .brand{color:var(--ink);font-size:32px;line-height:1.2}
+.wuxia-theme .brand span{font-family:'Songti SC','SimSun',serif;font-size:11px;letter-spacing:.35em;color:#89734e;margin-top:9px}
+.wuxia-theme .topbar .badge{background:#8d34290d;border:1px solid #8d342945;border-radius:2px;color:var(--cinnabar);font-size:12px;letter-spacing:.12em}
+.wuxia-theme .cultivation-ornament img{filter:grayscale(1) sepia(.5);opacity:.8}
+.wuxia-theme .cultivation-ornament-compact{border-color:#bb9a6250;background:transparent;box-shadow:none}
+.wuxia-theme .cultivation-seal-caption,.wuxia-theme .cultivation-ribbon-title,.wuxia-theme .cultivation-ribbon-motto{color:#8b7654}
+.wuxia-theme .eyebrow{color:#8f5b37;font-family:'Songti SC','SimSun',serif;font-size:12px;letter-spacing:.3em;font-weight:500}
+.wuxia-theme .shell .home-heading{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;min-height:210px;margin:24px 0 18px;padding:28px 38px;background:#202c25 url('/wuxia-hero.png') center/cover;border:1px solid #807353;color:var(--paper);border-radius:3px;box-shadow:0 12px 30px #28251312}
+.wuxia-theme .shell .home-heading:after{content:'羽林 · 同修';position:absolute;right:28px;top:27px;writing-mode:vertical-rl;letter-spacing:.45em;font-family:'Songti SC','SimSun',serif;font-size:13px;color:#f4e8c3a3;border-right:1px solid #f4e8c34a;padding-right:9px;pointer-events:none}
+.wuxia-theme .shell .home-heading>div:first-child{grid-column:1;grid-row:1;padding-right:80px;max-width:720px}
+.wuxia-theme .shell .home-heading .eyebrow{color:#d6bd86;margin-bottom:12px;font-size:12px}
+.wuxia-theme .shell .home-heading h1{font-size:43px;line-height:1.35;letter-spacing:.06em;margin:0;color:#fbf6e9;text-shadow:0 2px 12px #0004}
+.wuxia-theme .shell .home-heading .home-shuttle{display:none}
+.wuxia-theme .shell .home-heading>.actions{grid-column:1;grid-row:2;gap:14px;justify-content:flex-start;z-index:1}
+.wuxia-theme .shell .home-heading .primary{background:#e7d5ad;color:#263029;border:1px solid #dfc590;box-shadow:none;min-width:146px}
+.wuxia-theme .shell .home-heading .secondary{background:#16211b73;color:#f4ead4;border:1px solid #dac69880;box-shadow:none;min-width:114px}
+.wuxia-theme .dashboard-grid{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:25px}
+.wuxia-theme .card,.wuxia-theme .match-card,.wuxia-theme .mini-stat,.wuxia-theme .rv-table-card,.wuxia-theme .ranking-card{background:var(--paper);border-color:var(--border);border-radius:5px;box-shadow:0 3px 12px #3d342806}
+.wuxia-theme .card{padding:25px}.wuxia-theme .section-title{border-bottom:1px solid #cabea5;margin-bottom:15px;padding-bottom:3px}
+.wuxia-theme .section-title h2,.wuxia-theme .section-title h3{color:#2e352a}
+.wuxia-theme .primary{background:var(--ink);color:#fbf0d4;border:1px solid #29372d;border-radius:3px;font-weight:500;box-shadow:none;letter-spacing:.04em;min-height:46px}
+.wuxia-theme .primary:hover:not(:disabled){background:#344536;box-shadow:0 4px 12px #242d241b;transform:translateY(-1px)}
+.wuxia-theme .secondary{background:#f3ead8;border:1px solid #bba680;border-radius:3px;color:#524631;font-weight:500;box-shadow:none}
+.wuxia-theme .secondary:hover:not(:disabled){background:#e9ddc5;border-color:#94754d;box-shadow:none}
+.wuxia-theme .ghost{color:#705a3c;border-radius:3px}.wuxia-theme .ghost:hover{background:#e8ddc5}.wuxia-theme .danger{color:var(--cinnabar)}
+.wuxia-theme .event-card{background:#f9f5eafa;border:1px solid #c9b999;border-radius:5px;box-shadow:none;padding:21px;margin:14px 0}
+.wuxia-theme .event-card:hover{background:#fff9eb;border-color:#927d52;box-shadow:0 6px 16px #4d3e2510}
+.wuxia-theme .date-box{background:var(--ink);color:#d9c197;border-radius:2px;border:1px solid #7b7353;min-width:72px;padding:9px}
+.wuxia-theme .date-box b{font-family:'Songti SC','SimSun',serif;font-weight:500;font-size:35px}.wuxia-theme .date-box span{color:#d1c5a7;font-size:12px}
+.wuxia-theme .event-info h3{font-size:22px;letter-spacing:.05em;color:#31382c}.wuxia-theme .event-info p{color:#7a705d;font-size:14px}
+.wuxia-theme .badge{background:#e8dec9;border:1px solid #d3c5a6;color:#6e5838;border-radius:2px;font-size:13px;font-weight:400}
+.wuxia-theme .rank-line{border-bottom-color:#ded3bb;padding:16px 0}.wuxia-theme .rank{color:#9a553c;font-family:'Songti SC',serif}
+.wuxia-theme .rank-line strong,.wuxia-theme .ranking-result>strong{color:#6e452d}.wuxia-theme .rank-line small{color:#8b7a5b}
+.wuxia-theme .avatar{background:#e6dac2;color:#766035;border:1px solid #c9b58d;border-radius:3px}
+.wuxia-theme small,.wuxia-theme .muted,.wuxia-theme .hint{color:#80715a}
+.wuxia-theme .bottom-nav{bottom:16px;width:min(620px,calc(100% - 40px));background:#1f2a23;border:1px solid #958058;border-radius:4px;padding:7px 12px;box-shadow:0 8px 28px #141c2530}
+.wuxia-theme .bottom-nav button{color:#bcbaa3;border-radius:2px;min-height:56px;min-width:64px;padding:7px 12px;font-size:13px;letter-spacing:.08em}
+.wuxia-theme .bottom-nav button.active{background:#f5e7bc0b;color:#e2c28a;font-weight:500;box-shadow:inset 0 -2px #9d4936}
+.wuxia-theme .bottom-nav button:hover{background:#fbebbc0c}.wuxia-theme .bottom-nav svg{stroke-width:1.5}
+.wuxia-theme input,.wuxia-theme .pick,.wuxia-theme select,.wuxia-theme textarea{background:#fffaf0;color:#343b2e;border-color:#c4b491;border-radius:3px}
+.wuxia-theme label{color:#6c5d43}.wuxia-theme button:focus-visible,.wuxia-theme a:focus-visible,.wuxia-theme input:focus-visible{outline-color:#a47d49}
+.wuxia-theme .feature-actions button{border-color:#cbb994;background:#f8f1e2;color:#7c603c;border-radius:3px}
+.wuxia-theme .feature-guide-panel,.wuxia-theme .app-dialog,.wuxia-theme [data-slot=alert-dialog-content],.wuxia-theme [data-slot=select-content]{background:#fbf7ed!important;border-color:#c8b894!important;border-radius:6px!important;color:#2d352b}
+.wuxia-theme .feature-guide-panel [role=region]{scrollbar-color:#bba17a transparent}.wuxia-theme .feature-guide-done{background:var(--ink)!important;color:#f7ecd1!important}
+.wuxia-theme .stats .card,.wuxia-theme .mini-stat{background:#f4ecd9;border-color:#d2c3a5;border-radius:4px}.wuxia-theme .stats strong,.wuxia-theme .mini-stat strong{color:#685238;font-family:'Songti SC','SimSun',serif}
+.wuxia-theme .pp-card{background:var(--paper);border-color:#cbb996;border-radius:5px;box-shadow:none}.wuxia-theme .pp-header{background:#e8ddc63d;border-bottom:1px solid #d5c6a8}
+.wuxia-theme .pp-section{border-color:#dfd3bb}.wuxia-theme .pp-eyebrow,.wuxia-theme .pp-perspective,.wuxia-theme .pp-section-note{color:#8e7853}
+.wuxia-theme .pp-avatar,.wuxia-theme .pp-avatar-fallback{border-radius:5px;background:#e7dac0;border-color:#c2ac7d;color:#7c5a31;box-shadow:none}
+.wuxia-theme .pp-state{background:#ece0c8;border:1px solid #d2bc94;color:#806139;border-radius:2px}
+.wuxia-theme .pp-fact{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px}.wuxia-theme .pp-fact dt{color:#887353}.wuxia-theme .pp-fact dd{color:#413e30}
+.wuxia-theme .pp-style,.wuxia-theme .pp-equipment-note,.wuxia-theme .pp-stat{background:#f7efdf;border-color:#dbc8a7;border-radius:3px}
+.wuxia-theme .pp-edit,.wuxia-theme .pp-rename,.wuxia-theme .pl-back{background:#f1e4cb;border-color:#bfa577;color:#765532;border-radius:3px}
+.wuxia-theme .racket-photo{border-color:#cdb991;border-radius:3px}.wuxia-theme .racket-photo-link,.wuxia-theme .racket-empty{background:#ede3ce;border-color:#d4c19c;color:#88714a}
+.wuxia-theme .racket-upload-button{background:var(--ink);color:#eddfc0;border-radius:3px}.wuxia-theme .racket-upload-details{background:#f4ead5;border-color:#cdb991;border-radius:3px}
+.wuxia-theme .pl-directory-heading h2{color:#323a2e}.wuxia-theme .pl-directory-heading p{color:#807259}.wuxia-theme .pl-count{background:#eee3cc;color:#7c6240;border-color:#ceb68d;border-radius:3px}
+.wuxia-theme .pc-scene{height:530px}.wuxia-theme .pc-face{border-radius:5px;border-color:#bea475;box-shadow:0 6px 18px #382c1c0a}
+.wuxia-theme .pc-front{background:linear-gradient(145deg,#fbf5e8,#f3e8d2);color:#4e4e39}.wuxia-theme .pc-front:before{border-color:#c1a67a6b;border-radius:1px;inset:8px}.wuxia-theme .pc-front:after{display:none}
+.wuxia-theme .pc-heading,.wuxia-theme .pc-back-heading{font-family:'Songti SC','SimSun',serif;color:#8e7042;font-size:12px;letter-spacing:.18em}
+.wuxia-theme .pc-portrait{border-color:#bda06a;box-shadow:0 0 0 5px #bda06a12}.wuxia-theme .pc-portrait .avatar{background:#ead9b8;border-color:#fffaed;color:#806132}
+.wuxia-theme .pc-player-name{color:#433f2d;font-size:25px}
+.wuxia-theme .pc-motto,.wuxia-theme .pc-back-motto{color:#8a7045;font-size:14px}.wuxia-theme .pc-front .pc-unfilled,.wuxia-theme .pc-back .pc-unfilled{color:#9b8b6c}
+.wuxia-theme .pc-front-racket{background:#eee0c5;border-color:#d1b990;border-radius:3px}.wuxia-theme .pc-front-racket strong{color:#6f512e;font-size:14px}
+.wuxia-theme .pc-front-racket>span>span,.wuxia-theme .pc-stats>span>span{color:#917751;font-size:12px}.wuxia-theme .pc-racket-mark{color:#a0824e}
+.wuxia-theme .pc-stats b{color:#816138;font-family:'Songti SC','SimSun',serif}.wuxia-theme .pc-stats>span+span,.wuxia-theme .pc-controls{border-color:#d8c298}
+.wuxia-theme .pc-controls button{color:#8a6538}.wuxia-theme .pc-controls button:hover{background:#e4d2b0}.wuxia-theme .pc-back{background:linear-gradient(140deg,#faf3e3,#ecdfc4);color:#615234}
+.wuxia-theme .pc-back-name,.wuxia-theme .pc-weapon-model{color:#655030}.wuxia-theme .pc-weapon-image{background:#f3e7d2;border-color:#d1b88b;border-radius:3px}
+.wuxia-theme .pc-weapon-details{border-color:#d8c39d}.wuxia-theme .pc-weapon-details strong,.wuxia-theme .pc-back-hint{color:#80653d}
+.wuxia-theme .pc-back-profile{background:#e8d7b5;border-color:#bea475;color:#6a4d2c;border-radius:3px}
+.wuxia-theme .ps-navigation>button{background:#f7edd8;border-color:#bba175;color:#7c5d30;box-shadow:none}.wuxia-theme .ps-position b{color:#715230}
+.wuxia-theme .rv-period-switch,.wuxia-theme .rv-period-switch button{border-color:#c9b58e;color:#8b734c;background:#f4ead4;border-radius:3px}
+.wuxia-theme .rv-period-switch button[aria-pressed=true]{background:var(--ink);color:#eddfbd}.wuxia-theme .rv-tabs button[aria-pressed=true]{background:#e5d3ae;color:#72522b}
+.wuxia-theme .podium-card,.wuxia-theme .rp-podium-card{background:#f6ecd7;border-color:#c6ac7b;border-radius:4px;box-shadow:none}.wuxia-theme .podium-1{background:#ede0be;border-color:#ab8c53}
+.wuxia-theme .leaderboard-row.is-me{background:#eadbb9}.wuxia-theme .me-label{background:#dfc493;color:#6f512c;border-radius:2px}
+.wuxia-theme .tag-button{background:#f7eedb;border-color:#c5af85;color:#7c603b;border-radius:3px}.wuxia-theme .tag-button.active{background:var(--ink);color:#f4e7c8;border-color:#516145}
+.wuxia-theme .points-phase-grid>div,.wuxia-theme .points-mode-option.is-selected,.wuxia-theme .shuttle-selected{background:#ebdfc6;border-color:#bca373;color:#594a32;border-radius:3px}
+.wuxia-theme .points-phase-grid>div+div{background:#e2e1d2}.wuxia-theme .points-vote-count{color:#8d4a2e}.wuxia-theme .points-mode-option,.wuxia-theme .shuttle-option{border-color:#cbbb9a;border-radius:3px}
+.wuxia-theme .event-tabs,.wuxia-theme .social-tabs{background:#f1e8d6!important;border-color:#bdaa83;border-radius:3px}.wuxia-theme .event-tabs button,.wuxia-theme .social-tabs button{color:#807354}
+.wuxia-theme .event-tabs button[data-state=active],.wuxia-theme .social-tabs button[data-state=active]{color:#8b392a;border-bottom-color:#8b392a}
+.wuxia-theme .court-tag,.wuxia-theme .player-pill{background:#e8dcc1;border-color:#c3ad85;color:#655432;border-radius:3px}.wuxia-theme .player-pill.selected{background:var(--ink);color:#efdfb8}
+.wuxia-theme .auth-card{position:relative;background:#faf4e5;border:1px solid #c8b387;border-radius:5px;box-shadow:0 20px 60px #302a2312;padding:38px;max-width:470px;margin:50px auto}
+.wuxia-theme .auth-card:before{content:'';display:block;height:100px;margin:-38px -38px 28px;background:#243126 url('/wuxia-hero.png') center/cover;border-bottom:1px solid #947d55}
+.wuxia-theme .auth-decoration{display:none}.wuxia-theme .auth-card h1{font-size:32px;color:#293529;letter-spacing:.12em}
+.wuxia-theme .connection-note{background:#f0e4cc;border-color:#cab389;color:#6f5837;border-radius:3px}
+@media(max-width:850px){.wuxia-theme .shell{padding:18px 24px 122px}.wuxia-theme .dashboard-grid{grid-template-columns:1fr}.wuxia-theme .shell .home-heading{padding:28px;min-height:210px}.wuxia-theme .shell .home-heading h1{font-size:36px}}
+@media(max-width:600px){.wuxia-theme .shell{padding:16px 18px 118px}.wuxia-theme .brand{font-size:27px}.wuxia-theme .brand span{font-size:10px;letter-spacing:.22em}.wuxia-theme .topbar{margin-bottom:20px}.wuxia-theme .topbar .badge{font-size:11px;padding:4px 7px}.wuxia-theme .shell .home-heading{padding:27px 23px;gap:24px;min-height:225px;background-position:57% center}.wuxia-theme .shell .home-heading>div:first-child{padding-right:36px}.wuxia-theme .shell .home-heading h1{font-size:30px;line-height:1.45}.wuxia-theme .shell .home-heading:after{right:13px;top:22px;font-size:11px;padding-right:4px}.wuxia-theme .shell .home-heading>.actions{gap:9px}.wuxia-theme .shell .home-heading .primary{min-width:135px}.wuxia-theme .shell .home-heading .secondary{min-width:104px}.wuxia-theme h2{font-size:23px}.wuxia-theme h3{font-size:20px}.wuxia-theme .card{padding:20px}.wuxia-theme .event-card{padding:16px;gap:12px}.wuxia-theme .date-box{min-width:61px}.wuxia-theme .event-info h3{font-size:20px}.wuxia-theme .bottom-nav{bottom:12px;width:calc(100% - 28px);padding:5px 9px}.wuxia-theme .bottom-nav button{font-size:12px;min-width:52px;padding:6px 9px}.wuxia-theme .pc-scene{height:530px}.wuxia-theme .auth-card{padding:27px;margin:28px auto}.wuxia-theme .auth-card:before{margin:-27px -27px 23px}}
+
+.wuxia-theme .home-heading .actions>button[aria-label="功能说明"]{background:#15251b70!important;border-color:#c2ad7a;color:#f1dfbc;border-radius:3px}
+.wuxia-theme .event-card .event-info .badge{background:#e9dcc0;color:#786035;border-color:#c8ad7c}
+.wuxia-theme .realm-progress{color:#81663d}.wuxia-theme .realm-progress-label b{color:#805b2c}.wuxia-theme .realm-progress-track{background:#dfd1b4;border-radius:2px}.wuxia-theme .realm-progress-track>span{background:linear-gradient(90deg,#c1a168,#8c6733);border-radius:2px}.wuxia-theme .realm-progress>small{color:#9b8865}
+.wuxia-theme .rv-progress{color:#81663d}.wuxia-theme .rv-progress-track{background:#dfd1b4;border-radius:2px}.wuxia-theme .rv-progress-track>span{background:linear-gradient(90deg,#c1a168,#8c6733);border-radius:2px}
+
+.wuxia-theme .rp-root{background:radial-gradient(ellipse at 50% 0%,#e8d6a552,transparent 55%),linear-gradient(180deg,#fbf5e8,#f1e5cc);border-color:#c7ad7c;border-radius:5px}
+.wuxia-theme .rp-root .rp-avatar{background:#e8d8b7;color:#785b30;border-color:#fff6df;border-radius:4px;box-shadow:0 0 0 1px #b69a63,0 4px 12px #8a6d3520}
+.wuxia-theme .rp-profile{color:#473f2d;border-radius:3px}.wuxia-theme .rp-profile:hover{background:#d5bb8830}.wuxia-theme .rp-name{font-family:'KaiTi','STKaiti','SimSun',serif;font-size:19px}.wuxia-theme .rp-score{color:#7b582d}.wuxia-theme .rp-score b{font-family:'Songti SC','SimSun',serif;font-weight:600}.wuxia-theme .rp-score span,.wuxia-theme .rp-record{color:#97805a}
+.wuxia-theme .rp-pedestal{background:linear-gradient(145deg,#eaddc0,#d9c5a0);border-color:#bba16d;border-radius:4px 4px 0 0;box-shadow:inset 0 1px #fff6}.wuxia-theme .rp-metal-1 .rp-pedestal{background:linear-gradient(135deg,#ebd6a3,#d7bc7e)}.wuxia-theme .rp-metal-2 .rp-pedestal{background:linear-gradient(135deg,#e8e2d3,#cdcbb9)}.wuxia-theme .rp-metal-3 .rp-pedestal{background:linear-gradient(135deg,#ebd8c0,#d3b898)}
+.wuxia-theme .rp-aura,.wuxia-theme .rp-pedestal svg{filter:grayscale(.6) sepia(.6)}.wuxia-theme .rp-place{color:#785d34}.wuxia-theme .rp-number{color:#9a7b4855}
+.wuxia-theme .month-picker,.wuxia-theme .month-panel{background:#f8efdc;border-color:#c5ac7b;border-radius:3px;color:#765a32;box-shadow:none}.wuxia-theme .month-current,.wuxia-theme .month-arrow{color:#765a32}.wuxia-theme .month-current svg{color:#907044}.wuxia-theme .month-grid button.selected{background:#26342a;color:#eed8ad}
+.wuxia-theme .cultivation-ornament img{filter:grayscale(1) sepia(.7) brightness(.65);opacity:.9}
+
+.wuxia-theme .cultivation-ornament-compact{width:36px;height:39px;display:flex;align-items:center;justify-content:center;background:#8d3429;border:1px solid #7a2b22;border-radius:1px;box-shadow:inset 0 0 0 3px #b165462d;color:#f0e4c9}.wuxia-theme .cultivation-ornament-compact:before{content:'羽';font-family:'KaiTi','STKaiti','SimSun',serif;font-size:25px;line-height:1}.wuxia-theme .cultivation-ornament-compact img{display:none}
+@media(max-width:600px){.wuxia-theme .wuxia-greeting-name{display:block;font-size:24px;color:#e3d7bb;margin-bottom:3px}.wuxia-theme .wuxia-greeting-line{display:block;font-size:32px}.wuxia-theme .shell .home-heading>.actions>.primary{flex:none;padding:9px 12px;min-width:122px;font-size:14px}.wuxia-theme .shell .home-heading>.actions>.secondary{flex:none;padding:9px 12px;min-width:92px;font-size:14px}}
+
+.wuxia-theme .pc-weapon-image>span,.wuxia-theme .pc-weapon-details>span>span,.wuxia-theme .pc-heading>span:last-child{color:#9a8156}
+
+/* No artificial surname tiles: unpictured players are represented by their full name. */
+.pc-portrait:empty{display:none}
+.pc-front-trigger:has(.pc-portrait:empty) .pc-player-name{margin-top:34px;margin-bottom:10px;font-size:28px}
+.pc-front-trigger:has(.pc-portrait:empty) .pc-motto{margin-top:22px;margin-bottom:22px}
+.rp-without-avatar .rp-aura{display:none}
+.rp-without-avatar .rp-person{padding-top:22px}
+.rp-without-avatar .rp-name{font-size:22px;min-height:2.5em}
+.leaderboard-row.no-avatar{grid-template-columns:30px minmax(0,1fr) auto}
+.me-profile>div:not(.me-profile-actions){flex:1;min-width:0}
+.signup-index-link .signup-position{position:static;min-width:0;height:auto;padding:0;border:0;background:none;color:var(--primary);font-size:19px;font-weight:500;line-height:1.5}
+@media(max-width:600px){.leaderboard-row.no-avatar{grid-template-columns:21px minmax(0,1fr) auto}.rp-without-avatar .rp-name{font-size:19px}.rp-without-avatar .rp-person{padding-top:14px}}

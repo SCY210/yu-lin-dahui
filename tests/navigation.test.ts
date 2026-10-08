@@ -30,7 +30,7 @@ test('direct profile/detail links replace with a list instead of adding a return
 });
 test('legacy event links and every social/event tab round-trip through the URL',()=>{
  assert.equal(readClubRoute('https://club.example/?event=E').page,'events');assert.equal(readClubRoute('https://club.example/?event=E&tab=matches').tab,'rounds');
- for(const route of [{page:'me'},{page:'admin'},{page:'ranking'},{page:'events',eventId:'event /你好',tab:'fees'},{page:'social',socialTab:'network'},{page:'social',socialTab:'challenges'},{page:'social',socialTab:'funny'},{page:'social',playerId:'player ?你好'}]){
+ for(const route of [{page:'reminders'},{page:'me'},{page:'admin'},{page:'ranking'},{page:'events',eventId:'event /你好',tab:'fees'},{page:'social',socialTab:'network'},{page:'social',socialTab:'challenges'},{page:'social',socialTab:'funny'},{page:'social',playerId:'player ?你好'}]){
   const expected=normalizeRoute(route as any),url=clubRouteUrl('https://club.example/?campaign=friend',expected);assert.deepEqual(readClubRoute(new URL(url,'https://club.example').href),expected);assert.equal(new URL(url,'https://club.example').searchParams.get('campaign'),'friend');
  }
  assert.deepEqual(readClubRoute('https://club.example/?page=bogus&player=P'),homeRoute);
@@ -75,7 +75,7 @@ test('annual ranking profile return preserves ranking year, month selection and 
 });
 
 test('refreshing a profile keeps a safe source; return without memory frames replaces that source and preserves filters',()=>{
- const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(510);const selection={period:'2024-02',year:2024,rankingPeriod:'monthly' as const};b.navigation.openPlayer('peer',selection);
+ const b=browser();b.navigation.navigate({page:'ranking'});b.setScroll(510);const selection={period:'2024-02',year:2024,rankingPeriod:'quarterly' as const};b.navigation.openPlayer('peer',selection);
  const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.equal(reloaded.profileBackLabel,'返回榜单');assert.deepEqual(reloaded.rankingSelection,selection);
  reloaded.returnFromProfile();assert.equal(reloaded.route.page,'ranking');assert.equal(b.scroll,510);assert.equal(b.moves.length,0);assert.equal(b.entries.length,3);
  assert.deepEqual(reloaded.rankingSelection,selection);
@@ -101,8 +101,14 @@ test('changing ranking filters after returning from a profile persists latest se
  assert.equal(emitted,count,'Updating a filter must not emit a route restoration that resets React state');assert.equal(b.entries.length,3,'Filters update this ranking entry rather than pushing another route');
  b.navigation.navigate({page:'me'});b.back();assert.equal(b.navigation.route.page,'ranking');assert.deepEqual(b.navigation.rankingSelection,latest);
  const reloaded=new ClubNavigation(b.port,'member-A','session-two');assert.deepEqual(reloaded.rankingSelection,latest);
- reloaded.updateRankingSelection({...latest,rankingPeriod:'monthly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'monthly');
+ reloaded.updateRankingSelection({...latest,rankingPeriod:'quarterly'});assert.equal(reloaded.rankingSelection!.rankingPeriod,'quarterly');
  unsubscribe();
+});
+
+test('旧月榜历史记录升级为所属季度，季度筛选返回球友档案后保留',()=>{
+ const state={__yulinNavigation:{session:'old',owner:'member-A',index:0,route:normalizeRoute({page:'ranking'}),dialog:null,ranking:{period:'2025-08',year:2025,rankingPeriod:'monthly'}}};
+ const b=browser('https://club.example/?page=ranking',state);assert.deepEqual(b.navigation.rankingSelection,{period:'2025-08',year:2025,rankingPeriod:'quarterly'});
+ const selection={period:'2024-10',year:2024,rankingPeriod:'quarterly' as const};b.navigation.openPlayer('peer',selection);b.navigation.returnFromProfile();b.flush();assert.deepEqual(b.navigation.rankingSelection,selection);
 });
 test('保存中的弹窗拒绝手机返回时恢复原历史位置，完成后可正常返回且不重复关闭',()=>{
  const b=browser();let busy=true,closed=0;b.navigation.navigate({page:'events'});
@@ -112,3 +118,5 @@ test('保存中的弹窗拒绝手机返回时恢复原历史位置，完成后�
  busy=false;b.back();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);assert.equal(b.navigation.route.page,'events');
  b.forward();assert.equal(closed,1);assert.equal((b.port.state() as any).__yulinNavigation.dialog,null);
 });
+
+ test('reminder center, activity detail and mobile back restore the exact source',()=>{const b=browser();b.navigation.navigate({page:'reminders'});b.setScroll(300);b.navigation.navigate({page:'events',eventId:'event',tab:'fees'});b.back();assert.equal(b.navigation.route.page,'reminders');assert.equal(b.scroll,300);b.forward();assert.equal(b.navigation.route.tab,'fees')});

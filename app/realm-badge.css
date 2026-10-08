@@ -1,0 +1,656 @@
+/* ═══════════════════════════════════════════════════════════════════
+   修行段位徽记 · 炼气至化神
+   A pigment seal on a paper tag. The tag takes its paper from the active
+   theme (--card), so it reads as part of every theme; only the five realm
+   pigments stay fixed.
+   Every realm moves, and each adds splendour: 金丹 gold leaf, 元婴 a
+   starlit sky, 化神 thunderclouds with drifting mist and lightning.
+   Rules use !important because the badge shares class names with older
+   tag styles (.pp-tier, .pc-realm, .rv-realm-badge, .stats span/strong).
+   ═══════════════════════════════════════════════════════════════════ */
+
+.realm-badge {
+  --rb-paper: var(--card, #fff);
+  --rb-radius: 999px;
+  --rb-ink: color-mix(in srgb, var(--rb-d) 92%, #000);
+  position: relative !important;
+  isolation: isolate;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 2px 11px 2px 3px !important;
+  border-radius: var(--rb-radius) !important;
+  background: color-mix(in srgb, var(--rb-c) 8%, var(--rb-paper)) !important;
+  border: 1px solid color-mix(in srgb, var(--rb-c) 30%, var(--rb-paper)) !important;
+  box-shadow: none !important;
+  color: var(--rb-ink) !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.06em !important;
+  white-space: nowrap !important;
+  vertical-align: middle;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  text-decoration: none !important;
+  transform: none !important;
+}
+
+/* 水墨江湖: square seal tags and a brush-script realm name, like the theme's headings. */
+.wuxia-theme .realm-badge {
+  --rb-radius: 3px;
+}
+
+.wuxia-theme .realm-badge .rb-name {
+  font-family: 'KaiTi', 'STKaiti', 'Kaiti SC', 'Songti SC', 'SimSun', serif !important;
+}
+
+/* Insignia SVG wrapper */
+.rb-insignia-wrap {
+  position: relative !important;
+  z-index: 1;
+  width: 26px !important;
+  height: 26px !important;
+  flex: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0 !important;
+}
+
+.rb-svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  overflow: visible !important;
+}
+
+.rb-txt {
+  position: relative !important;
+  z-index: 1;
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3px !important;
+  font-size: 12px !important;
+  color: inherit !important;
+}
+
+.rb-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1em !important;
+  color: var(--rb-ink) !important;
+}
+
+.rb-stage {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
+  color: color-mix(in srgb, var(--rb-d) 95%, var(--rb-paper)) !important;
+}
+
+/* ── Shared motion ────────────────────────────────────────────── */
+/* Rings and orbit nodes turn around the seal centre. */
+.rb-o {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+}
+
+@keyframes rb-turn {
+  to { transform: rotate(360deg); }
+}
+
+/* Pulses and breaths scale around each shape's own centre. */
+.rb-pl,
+.rb-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rb-pl { animation: rb-pulse 3.2s ease-in-out infinite; }
+
+@keyframes rb-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+.rb-breathe { animation: rb-breathe 4s ease-in-out infinite; }
+
+@keyframes rb-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+.rb-spinr { animation: rb-turn 36s linear infinite reverse; }
+.rb-fast  { animation: rb-turn 10s linear infinite; }
+
+/* Every realm's orbit turns, faster with each realm. */
+.rb-orbit { animation: rb-turn 60s linear infinite; }
+.realm-badge-1 .rb-orbit { animation-duration: 45s; }
+.realm-badge-2 .rb-orbit { animation-duration: 32s; }
+.realm-badge-3 .rb-orbit { animation-duration: 22s; }
+.realm-badge-4 .rb-orbit { animation-duration: 14s; }
+
+/* ── 炼气 · 筑基: quiet paper tags, living seals ─────────────────── */
+/* 炼气: qi spirals inward over a faint trace while the core breathes. */
+.rb-draw { animation: rb-draw 5s ease-in-out infinite alternate; }
+
+@keyframes rb-draw {
+  0%        { stroke-dashoffset: 1; }
+  75%, 100% { stroke-dashoffset: 0; }
+}
+
+/* 筑基: foundation courses settle one after another; the spirit pillar pulses. */
+.rb-rise {
+  animation: rb-rise 4s ease-in-out infinite alternate;
+  animation-delay: var(--rb-delay, 0s);
+}
+
+@keyframes rb-rise {
+  0%, 20%   { opacity: 0.35; }
+  45%, 100% { opacity: 1; }
+}
+
+/* ── 金丹: gold leaf ──────────────────────────────────────────── */
+.realm-badge-2 {
+  background: linear-gradient(115deg,
+    color-mix(in srgb, var(--rb-c) 8%, var(--rb-paper)),
+    color-mix(in srgb, var(--rb-l) 42%, var(--rb-paper)) 55%,
+    color-mix(in srgb, var(--rb-c) 16%, var(--rb-paper))) !important;
+  border-color: color-mix(in srgb, var(--rb-c) 55%, var(--rb-paper)) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 75%, transparent),
+    0 1px 4px color-mix(in srgb, var(--rb-c) 28%, transparent) !important;
+}
+
+/* The sun seal turns, the halo pulses with the pill's heat. */
+.rb-sun { animation: rb-turn 30s linear infinite; }
+.rb-glow { opacity: 0.6; animation: rb-glow 3.2s ease-in-out infinite; }
+
+@keyframes rb-glow {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+
+/* A warm golden glow breathes on the name. */
+.realm-badge-2 .rb-name {
+  animation: rb-gold-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes rb-gold-glow {
+  0%, 100% { text-shadow: 0 0 3px color-mix(in srgb, var(--rb-l) 80%, transparent); }
+  50%      { text-shadow: 0 0 4px color-mix(in srgb, #fff 70%, var(--rb-l)), 0 0 10px color-mix(in srgb, var(--rb-c) 60%, transparent); }
+}
+
+/* ── 元婴: a starlit sky ──────────────────────────────────────── */
+.realm-badge-3 {
+  background:
+    radial-gradient(1.4px 1.4px at 56% 26%, #fff 55%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 74% 72%, #fff 55%, transparent 100%),
+    radial-gradient(1.6px 1.6px at 88% 32%, color-mix(in srgb, #fff 60%, var(--rb-l)) 55%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 40% 78%, #fff 55%, transparent 100%),
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--rb-c) 12%, var(--rb-paper)),
+      color-mix(in srgb, var(--rb-c) 26%, var(--rb-paper)) 60%,
+      color-mix(in srgb, var(--rb-l) 40%, var(--rb-paper))) !important;
+  border-color: color-mix(in srgb, var(--rb-c) 60%, var(--rb-paper)) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent),
+    0 1px 4px color-mix(in srgb, var(--rb-c) 30%, transparent) !important;
+}
+
+/* The name glows violet, breathing. */
+.realm-badge-3 .rb-name {
+  animation: rb-violet-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes rb-violet-glow {
+  0%, 100% { text-shadow: 0 0 3px color-mix(in srgb, var(--rb-l) 80%, transparent), 0 0 8px color-mix(in srgb, var(--rb-c) 40%, transparent); }
+  50%      { text-shadow: 0 0 4px #fff, 0 0 9px color-mix(in srgb, var(--rb-l) 100%, transparent), 0 0 18px color-mix(in srgb, var(--rb-c) 85%, transparent); }
+}
+
+.realm-badge-3 .rb-stage {
+  color: color-mix(in srgb, var(--rb-d) 95%, var(--rb-paper)) !important;
+}
+
+/* The lotus seat revolves beneath the nascent soul. */
+.realm-badge-3 .rb-spinr { animation-duration: 30s; }
+.rb-lotus { animation: rb-turn 48s linear infinite; }
+
+/* Spirit ripples spread from the seal. */
+.rb-ripple {
+  position: absolute !important;
+  inset: 2px !important;
+  z-index: -1;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+}
+
+.rb-ripple::before,
+.rb-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--rb-l) 85%, transparent);
+  opacity: 0;
+  animation: rb-ripple 3.6s ease-out infinite;
+}
+
+.rb-ripple::after { animation-delay: -1.8s; }
+
+@keyframes rb-ripple {
+  0%   { transform: scale(0.75); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ── 金丹 and 元婴: passing light, rising motes ───────────────── */
+.rb-sheen {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0;
+  overflow: hidden !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+}
+
+.rb-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -45%;
+  width: 45%;
+  background: linear-gradient(105deg,
+    transparent 20%,
+    color-mix(in srgb, #fff 75%, var(--rb-l)) 50%,
+    transparent 80%);
+  opacity: 0.85;
+  transform: translateX(0);
+  animation: rb-sheen 7s ease-in-out infinite;
+}
+
+.realm-badge-3 .rb-sheen::after { animation-duration: 5.5s; }
+
+@keyframes rb-sheen {
+  0%, 55%  { transform: translateX(0); }
+  100%     { transform: translateX(330%); }
+}
+
+/* Motes rise beside the seal, never across its face: 金丹 embers, 元婴 spirit light. */
+.rb-motes {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+
+.rb-motes i {
+  position: absolute;
+  bottom: 8%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--rb-l);
+  box-shadow: 0 0 4px var(--rb-c);
+  opacity: 0;
+  animation: rb-mote 3.4s ease-out infinite;
+}
+
+.rb-motes i:nth-child(1) { left: -16%; }
+.rb-motes i:nth-child(2) { right: -22%; bottom: 18%; animation-delay: -1.1s; }
+.rb-motes i:nth-child(3) { right: -10%; bottom: -4%; animation-delay: -2.2s; }
+.rb-motes i:nth-child(4) { left: -6%; bottom: -8%; animation-delay: -0.55s; }
+
+.realm-badge-2 .rb-motes i {
+  background: #ffe1a0;
+  box-shadow: 0 0 4px #e3962c;
+  animation-duration: 3s;
+}
+
+@keyframes rb-mote {
+  0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+  25%  { opacity: 1; }
+  100% { transform: translateY(-18px) scale(1); opacity: 0; }
+}
+
+/* 元婴 and 化神: an aura breathes around the tag. */
+.realm-badge-3::before,
+.realm-badge-4::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow:
+    0 0 6px 0 color-mix(in srgb, var(--rb-c) 50%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--rb-l) 40%, transparent);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: rb-aura 3.4s ease-in-out infinite;
+}
+
+@keyframes rb-aura {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+/* ── 化神: ink thunderclouds lit with gold ────────────────────── */
+/* One palette drives the whole storm: ink sky, pale ink clouds, silver bolts, gold light. */
+.realm-badge-4 {
+  --rb-sky: linear-gradient(115deg, #45423a 0%, #27251f 42%, #36332b 72%, #1c1b17 100%);
+  --rb-cloud: 236, 230, 214;
+  --rb-wisp: 128, 118, 98;
+  --rb-bolt: #fffaf0;
+  --rb-bolt-glow: #f3dd9c;
+  --rb-bolt-halo: #c99a3e;
+  --rb-flash: 255, 246, 220;
+  --rb-glow: 222, 182, 96;
+  --rb-name: #f6dc95;
+  --rb-stage-c: #ddd3b8;
+  --rb-ink: var(--rb-name);
+  background: var(--rb-sky) !important;
+  border: 1px solid rgba(var(--rb-glow), 0.7) !important;
+  box-shadow:
+    inset 0 0 8px rgba(var(--rb-glow), 0.25),
+    0 2px 8px rgba(30, 26, 18, 0.3) !important;
+}
+
+.realm-badge-4::before {
+  box-shadow:
+    0 0 6px 1px rgba(var(--rb-glow), 0.6),
+    0 0 18px 4px rgba(var(--rb-glow), 0.25);
+  animation-duration: 3s;
+}
+
+/* Clouds drift irregularly inside the sky; layers at different speeds never repeat in step. */
+.rb-storm {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0;
+  overflow: hidden !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+}
+
+.rb-storm i {
+  position: absolute;
+  top: -30%;
+  width: 70%;
+  height: 150%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--rb-cloud), 0.42), rgba(var(--rb-cloud), 0));
+  animation: rb-drift 9s ease-in-out infinite alternate;
+}
+
+.rb-storm i:nth-child(1) { left: -22%; }
+.rb-storm i:nth-child(2) { left: 28%; top: 5%; width: 58%; animation: rb-drift-b 12s ease-in-out -4s infinite alternate; }
+.rb-storm i:nth-child(3) { left: 62%; top: -50%; animation-duration: 10.5s; animation-delay: -7s; }
+.rb-storm i:nth-child(4) { left: 6%; top: 35%; width: 48%; height: 120%; animation: rb-drift-b 14s ease-in-out -2s infinite alternate; }
+
+@keyframes rb-drift {
+  0%   { transform: translateX(-18%) scale(1, 0.85); opacity: 0.45; }
+  50%  { opacity: 0.95; }
+  100% { transform: translateX(28%) scale(1.3, 1.1); opacity: 0.55; }
+}
+
+@keyframes rb-drift-b {
+  0%   { transform: translate(22%, 8%) scale(1.2, 1); opacity: 0.7; }
+  100% { transform: translate(-26%, -8%) scale(0.85, 1.2); opacity: 0.35; }
+}
+
+/* Mist wreathes the tag outside its edges. */
+.rb-mist {
+  position: absolute !important;
+  inset: -7px -10px !important;
+  z-index: 0;
+  pointer-events: none !important;
+}
+
+.rb-mist i {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--rb-wisp), 0.26), rgba(var(--rb-wisp), 0));
+  animation: rb-wisp 11s ease-in-out infinite alternate;
+}
+
+.rb-mist i:nth-child(1) { left: -6%; top: -8%; width: 44%; height: 55%; }
+.rb-mist i:nth-child(2) { right: -4%; bottom: -12%; width: 50%; height: 60%; animation: rb-wisp-b 13s ease-in-out -5s infinite alternate; }
+.rb-mist i:nth-child(3) { left: 30%; bottom: -20%; width: 40%; height: 50%; animation-duration: 9s; animation-delay: -3s; }
+.rb-mist i:nth-child(4) { right: 16%; top: -22%; width: 38%; height: 48%; animation: rb-wisp-b 15s ease-in-out -8s infinite alternate; }
+.rb-mist i:nth-child(5) { left: -10%; bottom: -16%; width: 34%; height: 52%; animation-duration: 12s; animation-delay: -6s; }
+
+@keyframes rb-wisp {
+  0%   { transform: translateX(-14%) scale(0.85, 1); opacity: 0.3; }
+  50%  { opacity: 0.9; }
+  100% { transform: translateX(18%) scale(1.2, 0.9); opacity: 0.45; }
+}
+
+@keyframes rb-wisp-b {
+  0%   { transform: translate(12%, 6%) scale(1.15, 0.9); opacity: 0.8; }
+  100% { transform: translate(-16%, -6%) scale(0.9, 1.15); opacity: 0.3; }
+}
+
+/* Two bolts strike on unrelated rhythms, each with a double flicker, and light up the clouds. */
+.rb-bolts {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+  filter: drop-shadow(0 0 1.5px var(--rb-bolt-glow)) drop-shadow(0 0 4px var(--rb-bolt-halo));
+}
+
+.rb-bolt {
+  fill: none;
+  stroke: var(--rb-bolt);
+  stroke-width: 1.4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  animation: rb-strike 4.8s linear infinite;
+}
+
+.rb-bolt-b { animation-duration: 6.6s; animation-delay: -2.3s; }
+
+.rb-flash {
+  position: absolute;
+  inset: -20% -10%;
+  opacity: 0;
+  background: radial-gradient(40% 90% at 58% 40%, rgba(var(--rb-flash), 0.6), transparent 70%);
+  animation: rb-strike 4.8s linear infinite;
+}
+
+.rb-flash-b {
+  background: radial-gradient(30% 90% at 86% 40%, rgba(var(--rb-flash), 0.5), transparent 70%);
+  animation-duration: 6.6s;
+  animation-delay: -2.3s;
+}
+
+@keyframes rb-strike {
+  0%, 62%   { opacity: 0; }
+  63%       { opacity: 1; }
+  65%       { opacity: 0.15; }
+  67%       { opacity: 1; }
+  73%, 100% { opacity: 0; }
+}
+
+/* The name glows gold and flares bright when the first bolt strikes. */
+.realm-badge-4 .rb-name {
+  text-shadow: 0 0 4px rgba(var(--rb-glow), 0.8), 0 0 10px rgba(var(--rb-glow), 0.5);
+  animation: rb-thunder-name 4.8s linear infinite;
+}
+
+@keyframes rb-thunder-name {
+  0%, 62%, 73%, 100% { text-shadow: 0 0 4px rgba(var(--rb-glow), 0.8), 0 0 10px rgba(var(--rb-glow), 0.5); }
+  63%, 67% { text-shadow: 0 0 3px #fff, 0 0 8px rgba(var(--rb-flash), 1), 0 0 16px rgba(var(--rb-glow), 1), 0 0 26px rgba(var(--rb-glow), 0.8); }
+  65%      { text-shadow: 0 0 4px rgba(var(--rb-flash), 0.9), 0 0 12px rgba(var(--rb-glow), 0.8); }
+}
+
+.realm-badge-4 .rb-stage {
+  color: var(--rb-stage-c) !important;
+  text-shadow: 0 0 6px rgba(var(--rb-glow), 0.5);
+}
+
+.realm-badge-4 .rb-arc-glow { stroke: var(--rb-bolt-halo); }
+.realm-badge-4 .rb-arc-core { stroke: var(--rb-bolt); }
+
+/* The heavenly eye pulses, rays wheel and lightning arcs crackle round the seal. */
+.rb-rays { animation: rb-turn 50s linear infinite; }
+
+.rb-ray {
+  animation: rb-ray 2.4s ease-in-out infinite;
+  animation-delay: var(--rb-delay, 0s);
+}
+
+@keyframes rb-ray {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+.rb-arc {
+  opacity: 0;
+  animation: rb-arc var(--rb-arc, 2.3s) linear var(--rb-delay, 0s) infinite;
+}
+
+@keyframes rb-arc {
+  0%, 78%   { opacity: 0; }
+  80%       { opacity: 1; }
+  83%       { opacity: 0.2; }
+  86%       { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+
+/* ── Placements ───────────────────────────────────────────────── */
+/* 名帖 */
+.pc-realm.realm-badge {
+  margin: 6px 0 8px !important;
+  padding: 3px 14px 3px 4px !important;
+  gap: 7px !important;
+}
+
+.pc-realm.realm-badge .rb-insignia-wrap {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.pc-realm.realm-badge .rb-name {
+  font-size: 15px !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* 排行榜 */
+.rv-realm-badge.realm-badge {
+  padding: 1px 9px 1px 2px !important;
+  gap: 5px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-insignia-wrap {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-name {
+  font-size: 14px !important;
+}
+
+.rv-realm-badge.realm-badge .rb-stage {
+  font-size: 12px !important;
+}
+
+/* 我的 · 境界卡 */
+.me-realm-badge-wrap {
+  display: flex !important;
+  align-items: center !important;
+  margin: 4px 0 6px !important;
+  max-width: 100%;
+}
+
+.me-realm-badge.realm-badge {
+  padding: 3px 14px 3px 4px !important;
+  gap: 7px !important;
+}
+
+.me-realm-badge.realm-badge .rb-insignia-wrap {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.me-realm-badge.realm-badge .rb-name {
+  font-size: 16px !important;
+  letter-spacing: 0.12em !important;
+}
+
+.me-realm-badge.realm-badge .rb-stage {
+  font-size: 14px !important;
+}
+
+/* Phones show two stat columns and the realm card spans both,
+   so the badge keeps its full row layout with the stage. */
+@media (max-width: 600px) {
+  .stats.me-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .me-stats .me-realm-card {
+    grid-column: 1 / -1;
+  }
+  .me-stats .card small {
+    font-size: 14px;
+  }
+  .me-realm-badge.realm-badge {
+    padding: 3px 12px 3px 4px !important;
+    gap: 6px !important;
+  }
+  .me-realm-badge.realm-badge .rb-insignia-wrap {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .me-realm-badge.realm-badge .rb-name {
+    font-size: 15px !important;
+  }
+  .me-realm-badge.realm-badge .rb-stage {
+    font-size: 13px !important;
+  }
+}
+
+/* Keep scrolled-away badges and background pages from running animations.
+   Server-rendered badges start paused until visibility is known. */
+.realm-badge[data-motion='paused']::before,
+.realm-badge[data-motion='paused'] *,
+.realm-badge[data-motion='paused'] *::before,
+.realm-badge[data-motion='paused'] *::after {
+  animation-play-state: paused !important;
+}
+
+/* ── Reduced motion: the full static insignia, no decoration moving ── */
+@media (prefers-reduced-motion: reduce) {
+  .realm-badge::before,
+  .realm-badge *,
+  .realm-badge *::before,
+  .realm-badge *::after {
+    animation: none !important;
+  }
+  .rb-sheen,
+  .rb-motes,
+  .rb-ripple,
+  .rb-bolts,
+  .rb-flash,
+  .rb-arc {
+    display: none !important;
+  }
+  .rb-draw {
+    stroke-dashoffset: 0;
+  }
+  .rb-glow,
+  .realm-badge-3::before,
+  .realm-badge-4::before,
+  .rb-storm i,
+  .rb-mist i {
+    opacity: 0.7;
+  }
+  .realm-badge-2 .rb-name {
+    text-shadow: 0 0 4px color-mix(in srgb, #fff 70%, var(--rb-l)), 0 0 8px color-mix(in srgb, var(--rb-c) 45%, transparent);
+  }
+  .realm-badge-3 .rb-name {
+    text-shadow: 0 0 4px #fff, 0 0 8px color-mix(in srgb, var(--rb-l) 100%, transparent), 0 0 14px color-mix(in srgb, var(--rb-c) 65%, transparent);
+  }
+}

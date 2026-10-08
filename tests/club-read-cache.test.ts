@@ -47,13 +47,13 @@ test('validator cache is bounded, expires, and a new Worker safely falls back to
  assert.equal(cache.remember(version,identity,'2026-10',2026,now,now),null);
 });
 
-test('pre-activity projections expire as soon as remaining rounds change',()=>{
+test('future rounds start at the activity, with no phantom pre-activity countdown changes',()=>{
  const {s,a,e}=fixture();
  // Use a time just before a 20-minute boundary, away from activity start.
  const before=e.start-duration-1000,next=clubViewValidUntil(s,a,before);
- assert.equal(next,e.start-duration+1);
+ assert.equal(next,before+300000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,before),projectClubState(s,a,'2026-10',2026,next-1));
- assert.notDeepEqual(projectClubState(s,a,'2026-10',2026,before).rotationPlans,projectClubState(s,a,'2026-10',2026,next).rotationPlans);
+ assert.deepEqual(projectClubState(s,a,'2026-10',2026,before).rotationPlans,projectClubState(s,a,'2026-10',2026,next).rotationPlans);
 });
 
 test('arrival, booking and live fee boundaries never return a stale unchanged view',()=>{
@@ -76,4 +76,13 @@ test('completed history remains stable and another creator private activity does
  assert.equal(expires,now+300000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,now),projectClubState(s,a,'2026-10',2026,expires-1));
  assert.equal(clubViewValidUntil(s,{...a,role:'admin'},now),now);
+});
+
+test('a clock boundary changes the returned activity status without a write or reusable old validator',()=>{
+ const {s,a,e,version,identity}=fixture(),cache=createClubReadCache();
+ const before=e.start-1,token=cache.remember(version,identity,'2026-10',2026,clubViewValidUntil(s,a,before),before)!;
+ assert.ok(token);assert.equal(cache.matches(token,version,identity,'2026-10',2026,e.end),false);
+ assert.equal(projectClubState(s,a,'2026-10',2026,e.end-1).events[0].status,'open');
+ assert.equal(projectClubState(s,a,'2026-10',2026,e.end).events[0].status,'ended');
+ assert.equal(s.events[0].status,'open');assert.equal(s.revision,4);
 });

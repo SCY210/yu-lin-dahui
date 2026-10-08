@@ -1,11 +1,9 @@
-# Rankings
+# 排行榜更新
 
-Monthly rankings and home summaries include player avatars. A missing or failed image falls back to the first Unicode character of the display name. The top three are emphasized; the complete list includes points, counted/total games, wins/losses, win rate, average point difference, and the current-player marker.
+月榜和首页榜单摘要加入球友头像。上传过头像时展示真实图片；没有头像或图片加载失败时展示昵称首字默认头像。排行榜顶部突出前三名，完整列表展示头像、积分、计分/实际场数、胜负、胜率与场均净胜分，并标记本人。
 
-All enabled players appear in the same ranking without a minimum-game threshold, including zero-game players. Historical minimum values do not split an official and provisional monthly table. Points, win rate, and average difference break ties; identical results share rank.
+入榜最低场数已取消，有正式账号的启用球友在同一榜单；代报名邀请来的朋友不入榜。其报名、比赛和费用记录保留；为原档案开通正式账号后，可按原比赛记录入榜。旧赛季保存过最低6场等规则也不再分成正式/暂定榜；本月0场的球友会显示0分及“本月暂无计分赛”。积分、勝率与净胜分的同分规则保留，完全相同仍并列。
 
-The per-player monthly counting cap remains (default: first twelve eligible games). Historical match facts are unchanged. rules.minimum remains for compatibility, defaults to zero, and is not offered as an entry threshold setting.
+本次没有改变个人月计分上限（默认前12场）或历史比赛事实，仅取消入榜资格门槛。原规则的minimum字段为兼容旧数据保留，新默认值为0，设置页不再提供入榜门槛设置。
 
-Numeric Elo is available to administrators; ordinary members receive tiers rather than exact ratings. Elo provisional status is separate from monthly-ranking inclusion.
-
-Use ranking, ranking-periods, and member-permissions regressions and verify avatars, complete lists, ties, zero-game states, and mobile layout.
+TypeScript检查通过；35项算法回归通过，其中新增旧赛季最低6场、1场/0场球友同榜及并列排名验证。浏览器头像、完整榜单和手机排版按本次预览检查。

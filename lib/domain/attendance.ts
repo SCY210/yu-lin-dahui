@@ -1,4 +1,5 @@
 import type {Attendance,Event,State} from './types';
+import {registrationSpans} from './booking-signups';
 
 export function usesAutomaticAttendance(e:Event){return e.attendanceMode==='automatic'}
 
@@ -14,11 +15,7 @@ export function enableDefaultAttendance(s:State,now:number){
 export function attendanceForEvent(s:State,e:Event):Attendance[]{
  if(!usesAutomaticAttendance(e))return s.attendance.filter(a=>a.eventId===e.id);
  const regs=s.registrations.filter(r=>r.eventId===e.id);
- const spans:Attendance[]=regs.filter(r=>r.status==='confirmed'&&e.status!=='cancelled').map(r=>({
-  id:`automatic:${e.id}:${r.playerId}`,eventId:e.id,playerId:r.playerId,
-  start:Math.max(e.start,r.arrival,r.registeredAt??e.start,r.joinedAsWaitlist?(r.promotedAt??e.start):e.start),
-  end:Math.min(e.end,r.departure),state:'ready',source:'automatic',
- }));
+ const spans:Attendance[]=e.status==='cancelled'?[]:regs.flatMap(r=>registrationSpans(s,e,r));
  // Cancellation archives preserve participation already incurred. Old manual
  // records remain stored, but do not override the new default for formal members.
  spans.push(...s.attendance.filter(a=>a.eventId===e.id&&a.end!==null&&(a.source==='automatic'||regs.some(r=>r.playerId===a.playerId&&r.status==='cancelled'))));
@@ -42,7 +39,8 @@ export function applyDefaultAttendance(s:State){
 
 export function archiveDefaultAttendance(s:State,e:Event,playerId:string,now:number){
  if(!usesAutomaticAttendance(e))return;
- for(const a of attendanceForEvent(s,e).filter(a=>a.playerId===playerId)){
+ const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===playerId);
+ for(const a of r?.bookingSignups?registrationSpans(s,e,r):attendanceForEvent(s,e).filter(a=>a.playerId===playerId)){
   const end=Math.min(now,a.end??e.end,e.end);
   if(end>a.start)s.attendance.push({...a,id:crypto.randomUUID(),end,state:'left',source:'automatic'});
  }

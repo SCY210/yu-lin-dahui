@@ -6,7 +6,14 @@ Canonical source: [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui).
 
 See [collaboration and checkout hygiene](docs/REPOSITORY_HYGIENE.md), [security](docs/SECURITY.md), and [privacy and legal readiness](docs/LEGAL_READINESS.md). Collaborators submit PRs for SCY210's review.
 
+## Current application flows
+
+Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, signed per-game ranking and weekly cultivation remain available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
+
 ## Local setup
+
+On Windows, double-click start-local-test.cmd to run this checkout against an isolated local branch database. It never uses production data. See [the local test launcher](docs/LOCAL_TEST_LAUNCHER.md).
+
 
 Requires Node.js >=22.13.0. Use a supported Node executable in your own environment; do not copy another developer's absolute runtime paths.
 
@@ -64,7 +71,7 @@ Writes use atomic D1 batches with a unique revision and idempotency key. Registr
 - lib/domain/money.ts supports equal, duration, and interval splits. BigInt rational arithmetic and deterministic largest-remainder allocation reconcile cents. Item totals round half-up before allocation. Estimated shuttle intervals are marked when precise consumption times are absent.
 - lib/domain/ranking.ts treats matches as the factual source. Monthly points use the first 12 eligible matches by Madrid start time and stable ID by default. All enabled players appear without a minimum-game threshold. Ties use points, win rate, and average point difference. Elo replays by completion time and ID; the four-player change sums to zero. The first ten rated games are provisional.
 
-Default rules: initial Elo 1000, K=32, win=3, loss=0, target=21, lead=2, ceiling=30. Rules are bound to a month; default updates do not rewrite historical months. Historical changes require preview and explicit confirmation and retain an audit trail.
+Current startup defaults use win=10, loss=-3 and no monthly cap, while historical months retain their saved rules. Hidden Elo starts at 1000 with K=32; target=21, lead=2 and ceiling=30. Rules are bound to a month; default updates do not rewrite historical months. Historical changes require preview and explicit confirmation and retain an audit trail.
 
 ## Verification
 
