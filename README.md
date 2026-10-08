@@ -116,7 +116,7 @@ node tests/api.mjs
 
 球馆选择与地图入口详见 [VENUES.md](docs/VENUES.md)。
 
-最新排行榜规则：所有启用球友同榜、无最低场数门槛，并展示头像，详见 [RANKING.md](docs/RANKING.md)。
+最新排行榜规则：所有启用球友同榜、无最低场数门槛，并展示头像，详见 [RANKING.md](docs/RANKING.md)；单打榜只统计一对一比赛，详见 [SINGLES_RANKING.md](docs/SINGLES_RANKING.md)。
 
 最新活动入口和界面说明见 [ACTIVITY_UI.md](docs/ACTIVITY_UI.md)。
 功能说明入口已加入首页、排名、活动各页签、球友圈、相册和账号管理。积分公式、段位门槛、称号口径和15个主题详见 [FEATURE_GUIDES.md](docs/FEATURE_GUIDES.md)。装饰图的内置imagegen提示词及项目路径见 [VISUAL_ASSETS.md](docs/VISUAL_ASSETS.md)。
