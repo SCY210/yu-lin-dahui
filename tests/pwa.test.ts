@@ -6,6 +6,7 @@ import {secureResponse} from '../lib/security-headers';
 import {brandManifest,brandManifestUrl,brandMetadata,BRAND_CHANGE_EVENT, BRAND_THEMES, themeBrand} from '../lib/theme-brand';
 import {syncThemeBrand} from '../lib/client/theme-brand';
 import {GET as getManifest} from '../app/manifest.webmanifest/route';
+import nextConfig from '../next.config';
 
 function worker(){
  const handlers=new Map<string,(event:any)=>void>(),storage=new Map<string,Response>(),fetches:any[]=[],deleted:string[]=[];
@@ -79,12 +80,34 @@ test('无效安装主题回退合法Cookie，全部图标地址同源且应用�
 
 test('切换主题同步Apple图标和显式安装地址，只在地址变化时撤销旧安装提示',()=>{
  const events:string[]=[],writes:string[]=[],icon={href:''},apple={href:'',sizes:{value:''}},meta={setAttribute(){}};
- const element=(href:string):any=>({href,crossOrigin:'',getAttribute(key:string){return this[key]},cloneNode(){return element(this.href)},replaceWith(next:any){manifest=next}});
- let manifest=element('/manifest.webmanifest');
+ // The server <head> link is updated in place: never cloned, moved or replaced.
+ const manifest={href:'/manifest.webmanifest',crossOrigin:'',getAttribute(key:string){return key==='href'?this.href:null},cloneNode():never{throw new Error('cloned')},replaceWith():never{throw new Error('replaced')}};
  const doc={location:{protocol:'https:'},set cookie(v:string){writes.push(v)},querySelector(selector:string){return selector.includes('manifest')?manifest:meta},querySelectorAll(selector:string){return selector.includes('apple-touch-icon')?[apple]:[icon]},defaultView:{dispatchEvent(event:Event){events.push(event.type)}}} as unknown as Document;
  syncThemeBrand(doc,'wuxia');assert.equal(manifest.href,brandManifestUrl('wuxia'));assert.equal(manifest.crossOrigin,'use-credentials');assert.equal(icon.href,themeBrand('wuxia').logo);assert.equal(apple.href,themeBrand('wuxia').apple);assert.equal(apple.sizes.value,'180x180');assert.deepEqual(events,[BRAND_CHANGE_EVENT]);assert.match(writes[0],/^yulin_icon_theme=wuxia;.*Secure/);
  syncThemeBrand(doc,'wuxia');assert.equal(events.length,1);
- syncThemeBrand(doc,'classic');assert.equal(manifest.href,brandManifestUrl('classic'));assert.equal(events.length,2);assert.ok(writes.every(w=>!w.includes('session')));
+ syncThemeBrand(doc,'classic');assert.equal(doc.querySelector('link[rel="manifest"]'),manifest);assert.equal(manifest.href,brandManifestUrl('classic'));assert.equal(events.length,2);assert.ok(writes.every(w=>!w.includes('session')));
+});
+
+test('iPhone添加到主屏幕：安装标签在首屏<head>中输出，不随流式渲染放进<body>',()=>{
+ // Vinext streams generated metadata into a hidden <body> div unless the request UA
+ // matches htmlLimitedBots (compiled as new RegExp(source,'i')). Every browser must match.
+ const bots=nextConfig.htmlLimitedBots;assert.ok(bots instanceof RegExp);
+ const gate=new RegExp(bots.source,'i');
+ for(const ua of [
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+ ])assert.ok(gate.test(ua),ua);
+});
+
+test('桌面App名称固定为羽林大会，清单以独立窗口打开且无Cookie也能读取',async()=>{
+ for(const theme of BRAND_THEMES){
+  const manifest=brandManifest(theme),origin='https://club.example/';
+  assert.equal(manifest.name,'羽林大会');assert.equal(manifest.short_name,'羽林大会');assert.equal(manifest.display,'standalone');
+  assert.ok(new URL(manifest.start_url,origin).href.startsWith(new URL(manifest.scope,origin).href));
+  const response=getManifest(new Request('https://club.example'+brandManifestUrl(theme)));
+  assert.equal(response.status,200);assert.deepEqual(await response.json(),manifest);
+ }
 });
 
 test('Service Worker只预存断网页，安装请求不携带账号Cookie，激活不删除其他缓存',async()=>{
