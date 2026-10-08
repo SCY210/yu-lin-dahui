@@ -4,12 +4,18 @@ const pause:Wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 /** iOS home-screen apps often fail the first request after waking from the
  * background ("Load failed"). Retry a network failure once; HTTP responses are
- * returned as they are. Club writes are safe to resend because the server
- * de-duplicates them by requestId. */
-export async function fetchWithWakeRetry(input:string,init?:RequestInit,{retries=1,delay=700,fetcher=(...args:Parameters<Fetcher>)=>fetch(...args),wait=pause}:{retries?:number;delay?:number;fetcher?:Fetcher;wait?:Wait}={}){
+ * returned as they are. The server de-duplicates writes per account and
+ * requestId, so a write may only be resent while `canRetry` confirms the same
+ * signed-in account is still on this page; it is checked before and after the pause. */
+export async function fetchWithWakeRetry(input:string,init?:RequestInit,{retries=1,delay=700,fetcher=(...args:Parameters<Fetcher>)=>fetch(...args),wait=pause,canRetry=()=>true}:{retries?:number;delay?:number;fetcher?:Fetcher;wait?:Wait;canRetry?:()=>boolean}={}){
+ const allowed=()=>!init?.signal?.aborted&&canRetry();
  for(let attempt=0;;attempt++){
   try{return await fetcher(input,init)}
-  catch(error){if(attempt>=retries||init?.signal?.aborted)throw error;await wait(delay)}
+  catch(error){
+   if(attempt>=retries||!allowed())throw error;
+   await wait(delay);
+   if(!allowed())throw error;
+  }
  }
 }
 

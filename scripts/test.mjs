@@ -8,6 +8,7 @@ const r=spawnSync(process.execPath,['--test',...suites.map(name=>`.test-output/$
 if(r.status!==0)process.exit(r.status??1);
 const scoringApi=spawnSync(process.execPath,['tests/match-scoring-api.mjs'],{stdio:'inherit'});if(scoringApi.status!==0)process.exit(scoringApi.status??1);
 const grantsApi=spawnSync(process.execPath,['tests/point-grants-api.mjs'],{stdio:'inherit'});if(grantsApi.status!==0)process.exit(grantsApi.status??1);
+const retryApi=spawnSync(process.execPath,['tests/write-retry-api.mjs'],{stdio:'inherit'});if(retryApi.status!==0)process.exit(retryApi.status??1);
 const readApi=spawnSync(process.execPath,['tests/club-read-api.mjs'],{stdio:'inherit'});if(readApi.status!==0)process.exit(readApi.status??1);
 const mergeApi=spawnSync(process.execPath,['tests/requested-event-merge-api.mjs'],{stdio:'inherit'});if(mergeApi.status!==0)process.exit(mergeApi.status??1);
 const trialApi=spawnSync(process.execPath,['tests/trial-cleanup-api.mjs'],{stdio:'inherit'});if(trialApi.status!==0)process.exit(trialApi.status??1);

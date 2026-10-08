@@ -19,6 +19,18 @@ test('HTTP 错误响应原样返回、不重试；持续断网时最多两次后
  await assert.rejects(fetchWithWakeRetry('/api/club',undefined,{fetcher:async()=>{calls++;throw new TypeError('Load failed')},wait:async()=>{}}),/Load failed/);
  assert.equal(calls,2);
 });
+test('写入重试绑定发起账号：等待前或等待期间换号、退出或离开页面都不再重发',async()=>{
+ const failing=()=>{let calls=0;return {fetcher:async()=>{calls++;throw new TypeError('Load failed')},get calls(){return calls}}};
+ const before=failing();
+ await assert.rejects(fetchWithWakeRetry('/api/club',{method:'POST'},{fetcher:before.fetcher,wait:async()=>{},canRetry:()=>false}),/Load failed/);
+ assert.equal(before.calls,1);
+ let sameAccount=true;const during=failing();
+ await assert.rejects(fetchWithWakeRetry('/api/club',{method:'POST'},{fetcher:during.fetcher,wait:async()=>{sameAccount=false},canRetry:()=>sameAccount}),/Load failed/);
+ assert.equal(during.calls,1);
+ const controller=new AbortController(),aborted=failing();
+ await assert.rejects(fetchWithWakeRetry('/api/club',{method:'POST',signal:controller.signal},{fetcher:aborted.fetcher,wait:async()=>{controller.abort()}}),/Load failed/);
+ assert.equal(aborted.calls,1);
+});
 test('已取消的请求不再重试',async()=>{
  const controller=new AbortController();controller.abort();let calls=0;
  await assert.rejects(fetchWithWakeRetry('/api/club',{signal:controller.signal},{fetcher:async()=>{calls++;throw new DOMException('aborted','AbortError')},wait:async()=>{}}));
