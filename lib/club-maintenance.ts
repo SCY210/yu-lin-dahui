@@ -5,9 +5,11 @@ import {fail,month} from './domain/types';
 import {load,save} from './store';
 import {enableDefaultAttendance} from './domain/attendance';
 import {ensureClubOwner,clubOwnerId} from './domain/ownership';
+import {runRequestedEventDateRepair} from './requested-event-date-repair';
 
 /** Upgrade current activities once; completed historical attendance stays intact. */
 export async function loadClubState(){
+ await runRequestedEventDateRepair();
  for(let attempt=0;attempt<4;attempt++){
   const state=await load(),previous=structuredClone(state),now=Date.now();
   const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),progressionChanged=enableWeeklyProgression(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now);
