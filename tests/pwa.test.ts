@@ -35,13 +35,14 @@ test('共享主题图标均有独立PNG与Apple尺寸，切换主题保持同一
   assert.equal(manifest.id,'/');assert.equal(manifest.start_url,'/');assert.equal(manifest.scope,'/');
   for(const icon of manifest.icons){
    assert.ok(icon.src.includes(theme));
+   assert.ok(icon.src.endsWith('-v4.png'));
    const png=readFileSync('public'+icon.src),size=Number(icon.sizes.split('x')[0]);
    assert.equal(png.subarray(1,4).toString(),'PNG');assert.equal(png.readUInt32BE(16),size);assert.equal(png.readUInt32BE(20),size);
    assert.equal(png[25],2); // flattened RGB: no transparency around an app icon
   }
   const apple=readFileSync('public'+brand.apple);assert.equal(apple.readUInt32BE(16),180);assert.equal(apple.readUInt32BE(20),180);
  }
- assert.equal(new Set(BRAND_THEMES.map(theme=>themeBrand(theme).logo)).size,2);
+ assert.equal(new Set(BRAND_THEMES.map(theme=>themeBrand(theme).logo)).size,BRAND_THEMES.length);
 });
 
 test('主题安装清单按设备偏好隔离，非法或相似Cookie回退清雅，不接受外部图标地址',async()=>{

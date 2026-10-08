@@ -10,11 +10,11 @@ export function themeBrand(value: unknown) {
     theme,
     color: {classic: '#5048dc', wuxia: '#32283f'}[theme],
     background: {classic: '#f5f6fa', wuxia: '#f4eddf'}[theme],
-    logo: `/brand/${theme}-v3.svg`,
-    apple: `/icons/${theme}-apple-v3.png`,
-    icon192: `/icons/${theme}-192-v3.png`,
-    icon512: `/icons/${theme}-512-v3.png`,
-    maskable: `/icons/${theme}-maskable-v3.png`,
+    logo: `/brand/${theme}-v4.svg`,
+    apple: `/icons/${theme}-apple-v4.png`,
+    icon192: `/icons/${theme}-192-v4.png`,
+    icon512: `/icons/${theme}-512-v4.png`,
+    maskable: `/icons/${theme}-maskable-v4.png`,
   };
 }
 export function brandManifest(value: unknown) {
