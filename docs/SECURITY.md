@@ -1,40 +1,51 @@
-# 网站防护
+# Security controls and verification boundaries
 
-生产入口仍由 Sites 托管并使用 HTTPS。公开的是登录入口；活动、球员、费用和照片仍需服务器认证与成员权限。内置 Worker 和开发模拟身份只用于回环地址测试，不直接暴露到公网。
+Production remains on HTTPS through Sites. The login entry is public; club data, fees, players, events, and photos require server authentication and membership. Do not expose the underlying Worker or development identity emulation directly.
 
-## 请求与滥用防护
+## Requests and abuse limits
 
-- 登录按平台提供的来源 IP 和“账号＋来源 IP”限流，避免另一 IP 的错误尝试直接锁住合法用户。密码校验、会话发放和凭据版本检查继续在服务器进行。
-- 业务写入按固定账号 ID 与 IP 限制频率；照片上传另有限制频率和每日字节额度。服务器 D1 原子计数在多实例、并发请求下仍有效，429 响应携带重试等待时间。
-- 写请求先检查精确 Origin、Fetch Metadata 与 Content-Type，再读取有限请求体。认证 JSON 为8 KiB，普通业务 JSON 为64 KiB，上传总请求为6 MiB，单图最多5 MiB。
-- 提前拒绝的请求也安全收尾：按对应接口的大小上限流式丢弃未读数据，最多等待250毫秒，不解析或缓存；超时、超限或读取错误时取消流。限流后的正常访问不会依赖上传完成。
-- 过期限流记录按索引小批量清理；不在每个计数桶里重复全表扫描。
-- 客户端业务时间必须为安全整数毫秒，范围从1970年到马德里2100年底；拒绝会让日期格式化崩溃的超大数值，保留合法历史时间与毫秒精度。
+- Login limits use the trusted platform IP and a username/IP pair, so failures from one IP do not directly lock out another IP's legitimate login.
+- Writes use account/IP limits; uploads add count and daily byte quotas. Atomic D1 counters coordinate across instances and concurrent requests. HTTP 429 includes Retry-After.
+- Writes validate exact Origin, Fetch Metadata, and Content-Type before bounded body parsing. Auth JSON is limited to 8 KiB, business JSON to 64 KiB, total multipart uploads to 6 MiB, and each image to 5 MiB.
+- Body reception has an absolute deadline: ten seconds for JSON and thirty for photo forms, beginning when the reader starts. New chunks do not extend it. Timeout returns 408; explicit client abort returns a safe 400. Failure cleanup releases the lock and starts cancellation without waiting for it.
+- Early rejected requests also receive bounded cleanup: at most the route's size budget and 250ms, without parsing/retaining contents. Oversize, timeout, or stream failure cancels the read.
+- Expired rate-limit rows are cleaned in indexed small batches, not full scans per counter.
+- Client timestamps must be safe integer milliseconds from 1970 through Madrid's end of 2100, rejecting huge values that could break date formatting.
 
-当前默认额度：同账号和来源 IP 登录尝试8次/15分钟，业务提交120次/5分钟，图片上传10次/10分钟。普通成员每天最多新增20个朋友档案、创建10场活动、上传50 MiB图片；管理员每天新增档案或创建活动各100次、上传250 MiB。每日额度按马德里自然日重置，已提交请求的同一标识重试不会重复扣每日额度。退出登录不受登录尝试额度限制。
+Defaults: eight username/IP login attempts per fifteen minutes; 120 business writes per account/five minutes; ten photo uploads per account/ten minutes. Members may create twenty friend profiles, ten events, and upload 50 MiB per Madrid day. Administrators may create one hundred profiles/events and upload 250 MiB. Repeated committed request IDs do not debit daily quotas twice. Logout is not blocked by login-attempt quotas.
 
-## 图片与隐私
+## Images and privacy
 
-- 上传格式仅 JPEG、PNG、WebP，校验真实文件结构和尺寸；最长边12000像素、总像素不超过5000万。拒绝伪造格式和极端尺寸图片。
-- 照片读取每次认证与授权，响应使用 `private, no-store`、`Vary: Cookie` 和 `nosniff`。退出或换账号后不依赖先前照片缓存。
-- 同浏览器的会话变更通过无敏感数据的事件通知其他标签；只包含事件类型和随机标识。其他标签立即清空缓存资料及密码输入，再由服务器验证新的 Cookie。浏览器从历史缓存恢复页面时也重新验证。
+JPEG/PNG/WebP uploads receive structural/dimension validation. The maximum side is 12,000 pixels and total pixels at most fifty million, with animation limits. These are structural checks, not a guarantee that arbitrary bytes are harmless in every decoder.
 
-## 浏览器响应头
+Uploads require an unchecked-by-default image-rights acknowledgement, checked again on the server before storage. The audit records the uploader's acknowledgement and policy version. This is evidence of the uploader's statement, not proof of consent from each depicted person.
 
-Worker 直接统一应用响应头，关闭 MIME 猜测、限制引用地址信息和不需要的设备 API，使用 HTTPS 严格传输策略。HTML入口与API响应不缓存，静态素材缓存保持原策略。CSP 禁止插件对象、限制 base URL 和表单提交目标，并仅允许本网站及官方预览宿主嵌入页面。
+Photo reads authenticate/authorize every time and use private, no-store, Vary: Cookie, and nosniff. Logout/account changes do not rely on cached private images.
 
-当前 CSP 保留 Vinext 内联启动脚本的兼容性；没有声称实现基于 nonce 的完整脚本白名单。用户文本由 React 转义，地图链接固定域名并编码参数，图像链接使用固定 API 路径。
+Cross-tab session notifications contain only a change type and random identifier. Other tabs clear private snapshots/password inputs and verify new cookies with the server; history-cache restoration also revalidates. The PWA caches only the public offline fallback.
 
-## 数据权限与并发
+Existing uploaded image bytes can contain EXIF/location or other embedded metadata; current structural validation does not strip it. Operators must avoid unnecessary metadata or sanitize images before sharing and must not claim it has been removed.
 
-SQL 使用参数绑定，表名和列名来自固定代码名单。群主身份绑定固定内部账号 ID；其他管理员不能修改群主账号、密码、档案或启用状态。所有业务写入继续使用修订号事务；登录账号和密码变更同时验证操作者与目标凭据，撤销相关旧会话。
+## Response headers
 
-内部数据库错误、摘要、密码和会话令牌不返回客户端或写入操作审计。照片上传失败会清理已写入但未提交的素材。
+The Worker applies MIME-sniffing protection, restricted referrer information/device permissions, HSTS, and a CSP restricting objects, base URLs, forms, and embedding to this site and official preview hosts. Private entry/API responses are not cached; static asset policies remain intact.
 
-## 验证范围
+The CSP preserves Vinext inline bootstrap compatibility. It is not a nonce-based complete script whitelist. React escapes user text; map URLs use a fixed external domain and encoded parameters; image links use fixed API paths.
 
-新增机制使用隔离的本地 Worker/D1、攻击样例、并发限流测试和浏览器正常使用流程验证。没有对线上网站发起攻击，也没有重置真实账号的密码。
+## Permissions, transactions, and errors
 
-[专项接口脚本](../tests/security-api.mjs)仅允许回环地址与 `.test-output` 内的新建空数据库，先应用全部迁移后运行。限流恢复使用窗口自然到期进行验证；上传拒绝后的读取另有小文件、大文件与未知长度请求的回归样例。
+SQL values are bound parameters; table/column names come from fixed code lists. The owner uses a stable account ID and cannot be modified by other administrators. Business writes use revision transactions. Username/password changes verify the acting/target credentials and revoke old sessions.
 
-应用层限制降低常见攻击和资源滥用风险；大规模分布式流量仍需要托管平台边缘层防护。
+Internal database errors, hashes, passwords, and tokens are not returned or recorded in business audits. Failed photo transactions attempt to remove uncommitted R2 objects.
+
+## Tests
+
+npm test runs algorithm, permission, request, image, navigation, timestamp, session, cache, and PWA regressions. Use separate fictional loopback fixtures for tests/security-api.mjs and the other HTTP suites. Never attack production, reset real passwords, or run reset-local-test.sql against real data.
+
+tests/request-body-timeout.test.ts uses a simulated clock for stopped/trickling bodies, stuck cancellation, client aborts, normal parsing, and ten/thirty-second boundaries. tests/request-body-http.mjs verifies a slow chunked login on a built loopback Worker, 408/no session/no-store, and subsequent normal auth responses without DB writes.
+
+Original request-body hardening validation on 2026-10-05: 297 automated tests and isolated read-handler checks passed, as did TypeScript, changed-file ESLint, and the production build. A local Worker generated 408 at about ten seconds. Its HTTP adapter delayed delivery until the client finished the eleven-second upload; this does not demonstrate immediate production-edge termination.
+
+Run the HTTP regression with REQUEST_BODY_TEST_ORIGIN=http://127.0.0.1:8794 and an isolated built Worker. It rejects non-loopback origins and needs no initialized accounts/migrations.
+
+Application limits reduce common resource abuse; header/connection timeouts, distributed traffic mitigation, and verified edge identity stripping remain hosting responsibilities. Source review and local tests do not certify a deployed instance or legal compliance. See [legal readiness](LEGAL_READINESS.md).

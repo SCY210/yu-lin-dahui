@@ -5,11 +5,13 @@ import {Camera, ImagePlus, Upload} from 'lucide-react';
 import {toast} from 'sonner';
 import FeatureGuide from './feature-guide';
 import PhotoDeleteButton from './photo-delete-button';
+import ImageRightsConfirmation from './image-rights-confirmation';
+import type {GalleryContext,GalleryPhoto} from './photo-gallery';
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const maxBytes = 5 * 1024 * 1024;
 
-function RacketPhoto({photo, playerName,ctx}:any) {
+function RacketPhoto({photo, playerName,ctx}:{photo:GalleryPhoto;playerName:string;ctx:GalleryContext}) {
   const [failed, setFailed] = useState(false);
   const caption = photo.caption?.trim();
   return <figure className="racket-photo">
@@ -20,7 +22,7 @@ function RacketPhoto({photo, playerName,ctx}:any) {
   </figure>;
 }
 
-function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
+function RacketUpload({ctx, playerId, playerName, isOwn}:{ctx:GalleryContext;playerId:string;playerName:string;isOwn:boolean}) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const requestId = useRef<string|null>(null);
@@ -31,30 +33,35 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const previewURL = useRef('');
 
-  useEffect(()=>{
-    if (!file) {setPreview(''); return;}
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return ()=>URL.revokeObjectURL(url);
-  }, [file]);
+  useEffect(()=>()=>{if(previewURL.current)URL.revokeObjectURL(previewURL.current)},[]);
+
+  function selectFile(next:File|null){
+    if(previewURL.current)URL.revokeObjectURL(previewURL.current);
+    previewURL.current=next?URL.createObjectURL(next):'';
+    setPreview(previewURL.current);
+    setFile(next);
+  }
 
   function chooseFile(next:File|null) {
+    setRightsConfirmed(false);
     requestId.current = null;
     setError('');
     setSuccess('');
     if (next && (!allowedTypes.has(next.type) || next.size > maxBytes || next.size === 0)) {
-      setFile(null);
+      selectFile(null);
       if (input.current) input.current.value = '';
       setError(next.size > maxBytes ? '照片超过5兆字节，请选择较小的照片。' : '请选择有效的照片文件，支持常见照片、透明图和网页图片格式。');
       return;
     }
-    setFile(next);
+    selectFile(next);
   }
 
   async function upload(e:FormEvent) {
     e.preventDefault();
-    if (!file || sending.current) return;
+    if (!file || !rightsConfirmed || sending.current) return;
     sending.current = true;
     setBusy(true);
     setError('');
@@ -64,6 +71,7 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
       const form = new FormData();
       form.set('file', file);
       form.set('kind', 'racket');
+      form.set('rightsConfirmed', 'true');
       form.set('playerId', playerId);
       form.set('caption', caption.trim());
       form.set('revision', String(ctx.data.revision));
@@ -75,7 +83,8 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
         throw new Error('资料已更新，请点击重试上传。');
       }
       if (!response.ok) throw new Error(result?.error || '上传未完成，请重试。');
-      setFile(null);
+      selectFile(null);
+      setRightsConfirmed(false);
       setCaption('');
       requestId.current = null;
       if (input.current) input.current.value = '';
@@ -99,20 +108,21 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:any) {
       <label htmlFor={id+'-caption'}>照片说明（可选，最多300字）<input id={id+'-caption'} aria-label={playerName+'的战拍照片说明'} value={caption} maxLength={300} disabled={busy} onChange={e=>{setCaption(e.target.value);requestId.current=null;setError('');setSuccess('')}}/></label>
       {error && <p className="racket-upload-error" role="alert">{error}</p>}
       {success && <p className="racket-upload-success" role="status">{success}</p>}
-      <button className="racket-upload-button" type="submit" disabled={!file || busy}><Upload size={16} aria-hidden="true"/>{busy ? '正在上传…' : error ? '重试上传' : '上传照片'}</button>
+      <ImageRightsConfirmation checked={rightsConfirmed} onChange={setRightsConfirmed} disabled={busy}/>
+      <button className="racket-upload-button" type="submit" disabled={!file || !rightsConfirmed || busy}><Upload size={16} aria-hidden="true"/>{busy ? '正在上传…' : error ? '重试上传' : '上传照片'}</button>
     </form>
   </details>;
 }
 
-export default function RacketGallery({ctx, playerId}:any) {
-  const player = ctx.data.players.find((p:any)=>p.id === playerId);
+export default function RacketGallery({ctx, playerId}:{ctx:GalleryContext;playerId:string}) {
+  const player = ctx.data.players.find(p=>p.id === playerId);
   const isOwn = playerId === ctx.data.me.playerId;
   const canUpload = !!player && (isOwn || (ctx.admin && (!player.protectedOwner || ctx.data.me.isOwner)));
-  const photos = (ctx.data.photos ?? []).filter((photo:any)=>photo.kind === 'racket' && photo.playerIds?.includes(playerId)).slice().sort((a:any,b:any)=>b.created-a.created);
+  const photos = ctx.data.photos.filter(photo=>photo.kind === 'racket' && photo.playerIds.includes(playerId)).slice().sort((a,b)=>b.created-a.created);
   const playerName = player?.name || '球友';
   return <section className="racket-gallery" aria-label={playerName+'的战拍照片'}>
     <div className="racket-heading"><h4><Camera size={17} aria-hidden="true"/>{isOwn ? '我的战拍照片' : '这位球友的战拍照片'}</h4><FeatureGuide topic="photos" rules={ctx.data.settings.rules} label="上传说明"/>{photos.length > 0 && <span>{photos.length}张 · 最新上传在前</span>}</div>
-    {photos.length ? <div className="racket-grid">{photos.map((photo:any)=><RacketPhoto key={photo.id} photo={photo} playerName={playerName} ctx={ctx}/>)}</div> : <div className="racket-empty"><Camera size={25} aria-hidden="true"/><p>尚未上传战拍照片</p></div>}
+    {photos.length ? <div className="racket-grid">{photos.map(photo=><RacketPhoto key={photo.id} photo={photo} playerName={playerName} ctx={ctx}/>)}</div> : <div className="racket-empty"><Camera size={25} aria-hidden="true"/><p>尚未上传战拍照片</p></div>}
     {canUpload && <RacketUpload key={playerId} ctx={ctx} playerId={playerId} playerName={playerName} isOwn={isOwn}/>}
   </section>;
 }

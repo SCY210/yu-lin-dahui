@@ -36,7 +36,7 @@ function cookiePair(r){const line=r.headers.getSetCookie().find(v=>v.startsWith(
 async function command(actor,action,payload){const s=await get(actor);assert.equal(s.status,200);return request('/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...sessionHeaders(actor)},body:JSON.stringify({action,payload,requestId:randomUUID(),revision:s.data.revision})})}
 async function update(actor,target,values={}){return command(actor,'profileDetails',{playerId:target,...base,...values})}
 async function upload(actor,kind,values={},options={}){
- const state=await get(actor);assert.equal(state.status,200);const form=new FormData();
+ const state=await get(actor);assert.equal(state.status,200);const form=new FormData();form.set('rightsConfirmed','true');
  const bytes=options.bytes??png,type=options.type??'image/png';
  form.set('file',new Blob([bytes],{type}),options.filename??'fictional-profile.png');form.set('kind',kind);form.set('caption',options.caption??'虚构本地球拍照片验收');form.set('revision',String(options.revision??state.data.revision));form.set('requestId',options.requestId??randomUUID());
  for(const [key,value]of Object.entries(values))if(value!==undefined)form.set(key,String(value));

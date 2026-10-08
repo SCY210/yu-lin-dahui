@@ -1,11 +1,11 @@
-# 球友列表与球员档案
+# Player directory and individual profiles
 
-球友入口默认显示紧凑列表：姓名、头像、段位和状态。个人信息、装备、照片、投票与关系战绩仅在点击球友后展示。
+The player entry shows a compact directory with name, avatar, tier, and form. Personal details, equipment, photos, voting, and relationship statistics appear when opening a player.
 
-每位球友拥有单独的档案界面，顶部显示“球员档案”和“返回球友列表”。档案界面隐藏球友列表和社交功能标签。返回后回到列表顶部。排行榜、“我的”或关系图传入球员 ID 时直接打开该球员档案；点击关系战绩中的姓名切换到对应球员。
+Each player has a dedicated profile view with a back-to-directory action. The directory and social tabs are hidden in detail view; returning resets the directory to the top. Ranking avatars, the personal page, and relationship names can open a player directly.
 
-关系图使用独立的中心球员状态，不再触发默认档案展示。账号所有权、管理员编辑、头像与装备照片上传，以及照片权限继续由原有组件处理；统计和缺失值使用已有数据，不补造档案信息。
+The relationship graph maintains its own central-player selection. It does not implicitly select the default profile. Existing ownership checks, administrator editing, avatars, equipment uploads, and photo access remain authoritative. Missing information is displayed as missing rather than invented.
 
-年度总结入口与渲染暂时隐藏；后台统计和历史数据保留。旧的年度标签值会回退到球友列表。
+The annual-summary entry/rendering is currently hidden, while backend calculations and historical data remain. Old annual-tab values fall back to the directory.
 
-样式限定在 `pl-*` 类名下，使用靛蓝和紫色。手机列表为单列，点击目标至少 44px，支持键盘焦点和减少动态效果偏好。
+Scoped pl-* CSS uses indigo/purple. Mobile controls target at least 44px, support keyboard focus, and respect reduced motion.

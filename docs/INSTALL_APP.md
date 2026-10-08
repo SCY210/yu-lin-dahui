@@ -1,31 +1,31 @@
-# 安卓和iPhone安装羽林大会
+# Installing the badminton web app
 
-羽林大会使用可安装网页版（PWA）。从现有网站安装，不需要APK、App Store或另建账号；添加桌面图标后以独立窗口打开。不同浏览器和系统的菜单文字可能略有不同。
+The existing website is a progressive web app (PWA). Installation adds a home-screen icon and a standalone window; it does not require an APK, App Store listing, or a new account. Browser menu wording varies.
 
-## 安卓
+## Android
 
-1. 用Chrome打开网站，点击登录页或“我的”里的“安装到手机”。
-2. 若有“安装羽林大会”按钮，点击并确认浏览器安装提示。
-3. 否则打开Chrome菜单，选择“安装应用”或“添加到主屏幕”。
-4. 从桌面图标打开，使用原有账号登录。
+1. Open the website in Chrome and use the install entry on the login or personal page.
+2. Accept the browser's installation prompt when available.
+3. Otherwise choose Install app or Add to Home screen from Chrome's menu.
+4. Open the new icon and use the existing account.
 
 ## iPhone
 
-1. 用Safari打开网站，打开分享菜单。
-2. 选择“添加到主屏幕”。
-3. 若出现“作为网页App打开”选项，将它开启，再点“添加”。
-4. 从桌面图标打开。Safari与桌面App的登录状态可能独立，第一次打开时可能要再登录。
+1. Open the website in Safari and use Share.
+2. Choose Add to Home Screen.
+3. Enable Open as Web App if offered, then add it.
+4. Open the icon. Safari and the installed app may have independent login state, so sign-in may be needed again.
 
-微信等内置浏览器中，请先选择在系统浏览器打开。iOS没有与Chrome相同的自动安装提示，因此提供手动安装说明。
+For an embedded browser, first open the page in the system browser. iOS uses manual instructions rather than Chrome's install-prompt API.
 
-## 网络和更新
+## Connectivity, privacy, and updates
 
-报名、投票、比赛、费用和上传仍需要联网。断网时不会保存操作或显示跨账号的离线群组资料。联网重试会获取服务器最新资料；发布网站的新版本后不需要下载独立安装包。
+Registration, voting, scores, fees, and uploads require connectivity. Offline writes are not queued and private club data is not shown offline. Retry fetches fresh server data. Website updates do not require a separate installation package.
 
-安装清单使用stable id `/`、同源scope与start_url，192/512px图标、512px安全区图标和180pxApple图标均由原有羽毛球标志导出。Service Worker只缓存公开的`offline.html`；首页、API、照片、身份凭据与写操作均不缓存。登录退出和权限验证继续使用现有服务器流程。
+The manifest has stable ID /, same-origin scope and start URL, 192/512px icons, a 512px maskable icon, and a 180px Apple icon derived from the existing badminton mark.
 
-## 验证与边界
+The service worker caches only the public offline page. It does not cache the home page, APIs, photos, credentials, or writes. Existing server authentication and logout controls remain authoritative.
 
-清单、PNG图标尺寸、Worker安装/激活/联网/断网、敏感请求不缓存及脚本更新头均纳入自动化测试。生产构建与本机页面另行验证。尚未在真实安卓和iPhone设备上完成系统安装验收，不承诺所有内置浏览器都支持独立App安装。
+tests/pwa.test.ts checks manifests, icon dimensions, lifecycle/network behavior, sensitive-request exclusions, and update headers. Real Android/iPhone installation requires separate device validation; support is not promised for every embedded browser.
 
-官方说明：[Apple添加网页App](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios)、[Chrome使用网页版App](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en-GB)。
+Official instructions: [Apple web apps](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios) and [Chrome web apps](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en-GB).
