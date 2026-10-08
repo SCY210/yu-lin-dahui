@@ -1,4 +1,5 @@
 import {googleMapsUrl} from './venues';
+import {eventStatusAt} from './domain/event-lifecycle';
 import {pointGrants} from './domain/point-grants';
 import {maskClubContent} from './domain/blocked-words';
 import {canDeletePhoto} from './domain/photo-deletion';
@@ -13,7 +14,7 @@ import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now()){
- s=structuredClone(s);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
+ s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));

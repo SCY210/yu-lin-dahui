@@ -4,7 +4,7 @@ import {Trophy,Shield,Feather,Flame,CheckCircle2,Undo2} from 'lucide-react';
 import {Avatar} from './avatar';
 import {awardNames} from '../lib/domain/social';
 import {awardCandidateIds,canCastAwardVote,isAwardVotingOpen} from '../lib/domain/activity-voting';
-import {canManageEvent} from '../lib/domain/permissions';
+import {hm} from './form-fields';
 import {awardCategories,awardSummary,type AwardCategory} from '../lib/client/award-ballot';
 import './event-awards.css';
 
@@ -16,12 +16,12 @@ export default function EventAwards({e,ctx,now}:any){
  const mine=owned.find((v:any)=>v.category===selected),summary=awardSummary(data.awardVotes,e.id,selected),Icon=details[selected].icon;
  const person=(id:string)=>data.players.find((p:any)=>p.id===id)??{id,name:'已移除球友'};
  const playing=data.matches.some((m:any)=>m.eventId===e.id&&m.status==='playing'),cancelled=e.status==='cancelled';
- const canFinish=e.deletedAt===undefined&&canManageEvent(data.me,e)&&!open&&!playing&&!cancelled&&e.status!=='draft'&&e.status!=='ended'&&now>=e.start&&data.matches.some((m:any)=>m.eventId===e.id&&m.status==='complete');
  async function vote(playerId:string,active=true){if(locked||!canVote)return;setPending(playerId);setNotice('');try{await ctx.action('awardVote',{eventId:e.id,playerId,category:selected,active},false);setNotice(active?`已将${awardNames[selected]}投给${person(playerId).name}`:`已撤回${awardNames[selected]}的选票`)}catch{/* The shared action displays the server error. */}finally{setPending('')}}
  return <section className="card award-card" aria-label="赛后球友评选">
   <div className="award-header"><div><p className="award-eyebrow">把掌声留给球友</p><h3>本场球友评选</h3></div><span className="badge">{cancelled?'已关闭':open?'投票进行中':now<e.start?'尚未开始':'等待收官'}</span></div>
   <div className="award-progress"><span>你的评选进度</span><strong>{completed}<small> / 4</small></strong><span className="award-progress-track" aria-hidden="true"><i style={{width:completed*25+'%'}}/></span></div>
-  {!open&&<div className="award-status" role="status"><p>{cancelled?'活动已取消，已有票数仍可查看。':playing?'还有对局进行中，录完比分并结束活动后即可评选。':now<e.start?'尚未到本活动开始时间，赛后开放评选。':'活动结束后开放评选，当前可以查看候选人和已有票数。'}</p>{canFinish&&<button type="button" className="secondary" disabled={locked} onClick={()=>ctx.open('结束活动并开放评选','eventStatus',{eventId:e.id,status:'ended'},[],undefined,'请确认本次活动已经打完。保存后参与球友即可投票，比分和费用记录会保留。')}>结束活动，开放评选</button>}</div>}
+  {!open&&<div className="award-status" role="status"><p>{cancelled?'活动已取消，已有票数仍可查看。':e.status==='draft'?'活动尚未开放。':`本活动将在 ${hm(e.end)} 自动结束并开放评选，无需手动结束。`}</p></div>}
+  {open&&playing&&<p className="hint">活动时间已结束，评选已开放。还有比分待录入，可在「分组 / 比赛」中补录，照常计分。</p>}
   {open&&!canVote&&<p className="hint">参加本活动的球友、活动创建者及管理员可以投票。</p>}
   <div className="award-categories" role="group" aria-label="选择评选奖项">{awardCategories.map(category=>{const Mark=details[category].icon,voted=owned.some((v:any)=>v.category===category);return <button type="button" key={category} className={'award-category '+(selected===category?'is-active':'')} aria-pressed={selected===category} disabled={locked} onClick={()=>{setSelected(category);setNotice('')}}><Mark size={19} aria-hidden="true"/><span>{awardNames[category]}<small>{voted?'已完成':'待评选'}</small></span>{voted&&<CheckCircle2 className="award-done" size={15} aria-hidden="true"/>}</button>})}</div>
   <div className="award-selected"><Icon size={27} aria-hidden="true"/><div><h4>{awardNames[selected]}</h4><p>{details[selected].text}</p></div><span className="badge">{summary.total} 票</span></div>

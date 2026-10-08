@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {awardCandidateIds,canCastAwardVote} from '../lib/domain/activity-voting';
+import {awardCandidateIds,canCastAwardVote,isAwardVotingOpen} from '../lib/domain/activity-voting';
+import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {emptyState,type Account,type Event,type Registration} from '../lib/domain/types';
 import {projectClubState} from '../lib/club-view';
 import {awardSummary} from '../lib/client/award-ballot';
@@ -31,9 +32,26 @@ test('活动尚未打完，正式成员、创建者及管理员都不能提前�
  for(const status of ['draft','open','locked','live','ended'] as const){const {s,e,account,vote}=fixture();e.status=status;e.start=now+3600000;e.end=now+3*3600000;const before=structuredClone(s);for(const who of ['formal-a','creator','admin']){assert.equal(canCastAwardVote(s,e,account(who),now),false);await assert.rejects(()=>vote(who,'formal-b'),/尚未打完/);assert.deepEqual(s,before)}}
 });
 
-test('到达活动结束时间，未标记结束也能评选；仍有比赛进行则继续关闭',async()=>{
+test('到达活动结束时间自动开放评选，尚未录入的比赛不再阻止投票',async()=>{
  for(const status of ['open','locked','live','ended'] as const){const {s,e,vote}=fixture();e.status=status;await vote('formal-a','formal-b');assert.equal(s.awardVotes.length,1)}
- const {s,e,vote}=fixture();s.matches.push({id:'still-playing',eventId:e.id,status:'playing'} as any);const before=structuredClone(s);await assert.rejects(()=>vote('admin','formal-a'),/尚未打完/);assert.deepEqual(s,before);
+ const {s,e,vote}=fixture();e.status='live';s.matches.push({id:'still-playing',eventId:e.id,status:'playing'} as any);const before=structuredClone(s.matches);await vote('admin','formal-a');assert.equal(s.awardVotes.length,1);assert.deepEqual(s.matches,before);
+});
+
+test('结束边界由时间决定，列表与投票一致，草稿/取消/删除不被自动开放',()=>{
+ const {s,e,account}=fixture();e.status='live';e.end=now;s.matches.push({id:'unscored',eventId:e.id,roundId:'round',courtId:'court',a:['formal-a-player','formal-b-player'],b:['attended-player','creator-player'],status:'playing',start:now-600000,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]});
+ assert.equal(eventStatusAt(e,now-1),'live');assert.equal(isAwardVotingOpen(s,e,now-1),false);
+ assert.equal(eventStatusAt(e,now),'ended');assert.equal(isAwardVotingOpen(s,e,now),true);
+ const before=structuredClone(s),view=projectClubState(s,account('formal-a'),'2026-10',2026,now);
+ assert.equal(view.events.find(x=>x.id===e.id)!.status,'ended');assert.deepEqual(s,before);
+ for(const status of ['draft','cancelled'] as const){e.status=status;assert.equal(eventStatusAt(e,now),status);assert.equal(isAwardVotingOpen(s,e,now),false)}
+ e.status='live';e.deletedAt=now-1;assert.equal(isAwardVotingOpen(s,e,now),false);
+});
+
+test('提前标记结束仍须无进行中比赛，延长活动结束时间后遵循新的时段',()=>{
+ const {s,e}=fixture();e.end=now+3600000;e.status='ended';s.matches.push({id:'playing',eventId:e.id,status:'playing'} as any);
+ assert.equal(isAwardVotingOpen(s,e,now),false);s.matches=[];assert.equal(isAwardVotingOpen(s,e,now),true);
+ e.status='live';e.end=now;assert.equal(eventStatusAt(e,now),'ended');e.end=now+3600000;
+ assert.equal(eventStatusAt(e,now),'live');assert.equal(isAwardVotingOpen(s,e,now),false);
 });
 
 test('提前打完可标记结束后评选，未结束时不能因没有进行中比赛而提前投票',async()=>{

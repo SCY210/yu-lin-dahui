@@ -1,4 +1,5 @@
 import {canManageEvent} from './permissions';
+import {eventStatusAt} from './event-lifecycle';
 import type {Account,Event,State} from './types';
 
 type VotingState=Pick<State,'players'|'registrations'|'attendance'>&Partial<Pick<State,'matches'>>;
@@ -14,7 +15,10 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
 }
 
 export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()):boolean{
- return e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status)&&now>=e.start&&(e.status==='ended'||now>=e.end)&&!s.matches.some(m=>m.eventId===e.id&&m.status==='playing');
+ if(e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start)return false;
+ // Missing score entry must not hold a finished activity's voting hostage.
+ if(now>=e.end)return true;
+ return eventStatusAt(e,now)==='ended'&&!s.matches.some(m=>m.eventId===e.id&&m.status==='playing');
 }
 
 export function canCastAwardVote(s:VotingState&Pick<State,'matches'>,e:Event,a:Account,now=Date.now()):boolean{
