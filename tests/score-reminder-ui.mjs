@@ -24,17 +24,20 @@ const headings=()=>renderer.root.findAllByType('h2').map(text);
 async function click(label){await act(async()=>{const target=button(label);assert.ok(target,label);target.props.onClick();await pause()})}
 try{
  await act(async()=>{renderer=create(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:true})));await pause()});
- assert.equal(headings().includes('这局打完了吗？'),false,'An existing dialog/write must defer the reminder');
- await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:false})));await pause()});assert.ok(headings().includes('这局打完了吗？'));
- await click('还没打完');assert.equal(headings().includes('这局打完了吗？'),false);
- await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview)));await pause()});assert.equal(headings().includes('这局打完了吗？'),false,'Polling/rerender must not re-open a postponed prompt');
- await click('去录分');await click('已打完');assert.ok(headings().includes('录入比分'));
- let inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs.length,2);assert.ok(inputs.every(n=>n.props.value===''&&n.props.inputMode==='numeric'));
+ assert.equal(headings().includes('录入本局比分'),false,'An existing dialog/write must defer the reminder');
+ await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:false})));await pause()});assert.ok(headings().includes('录入本局比分'));
+ await click('稍后再录');assert.equal(headings().includes('录入本局比分'),false);
+ await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview)));await pause()});assert.equal(headings().includes('录入本局比分'),false,'Polling/rerender must not re-open a postponed prompt');
+ await click('去录分');assert.ok(headings().includes('录入本局比分'));
+ let inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs.length,2);assert.ok(inputs.every(n=>n.props.value===''&&n.props.inputMode==='numeric'));assert.equal(renderer.root.findAllByType('input').length,2,'First entry has only two score inputs, no reason input');assert.equal(inputs[0].props.autoFocus,true);
  await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}})});assert.ok(renderer.root.findAll(n=>n.props.role==='alert').some(n=>text(n).includes('实际比分')));assert.equal(renderer.root.findAll(n=>n.props.role==='status').length,0);
  await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[1].props.onChange({target:{value:'19'}})});
  inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[0].props.onChange({target:{value:''}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs[0].props.value,'','Clearing must not turn a missing score into zero');
  await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}});await pause()});
- assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('已保存')));assert.equal(headings().includes('录入比分'),false);assert.equal(headings().includes('这局打完了吗？'),false,'A next live assignment must not immediately re-open score entry');
- await act(async()=>{doc.hidden=true;for(const f of documentListeners.get('visibilitychange')??[])f();doc.hidden=false;for(const f of documentListeners.get('visibilitychange')??[])f();await pause()});assert.ok(headings().includes('这局打完了吗？'),'Returning to the app refreshes and offers the next own pending game');
- console.log('PASS score reminder React flow: deferred initial prompt, postpone/manual return, blank numeric inputs, rejected empty submit, real form changes, completion dismissal, no immediate next-game prompt and foreground return');
+ assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('已保存')));assert.equal(headings().includes('录入本局比分'),false);assert.equal(headings().includes('录入本局比分'),false,'A next live assignment must not immediately re-open score entry');
+ await act(async()=>{doc.hidden=true;for(const f of documentListeners.get('visibilitychange')??[])f();doc.hidden=false;for(const f of documentListeners.get('visibilitychange')??[])f();await pause()});assert.ok(headings().includes('录入本局比分'),'Returning to the app refreshes and offers the next own pending game');
+ await act(async()=>{renderer.unmount();renderer=create(React.createElement(Preview,{teamSide:'b'}));await pause()});
+ assert.ok(headings().includes('录入本局比分'));inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs[0].props['aria-label'],'第1局乙队比分','My team must be first even on side B');assert.equal(inputs[0].props.autoFocus,true);
+ await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[1].props.onChange({target:{value:'19'}})});await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}});await pause()});assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('19:21')),'My team display order must preserve the stored A/B score mapping');
+ console.log('PASS direct score dialog: immediate two-input form, no reason step, postpone/manual return, blank and cleared score validation, save dismissal, no immediate next-game popup, foreground return and correct side-B score mapping');
 }finally{if(renderer)await act(async()=>renderer.unmount());globalThis.document=prior.document;globalThis.window=prior.window;globalThis.IS_REACT_ACT_ENVIRONMENT=prior.act}
