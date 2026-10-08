@@ -10,6 +10,7 @@ const installApi=spawnSync(process.execPath,['tests/install-theme-api.mjs'],{std
 const scoringApi=spawnSync(process.execPath,['tests/match-scoring-api.mjs'],{stdio:'inherit'});if(scoringApi.status!==0)process.exit(scoringApi.status??1);
 const grantsApi=spawnSync(process.execPath,['tests/point-grants-api.mjs'],{stdio:'inherit'});if(grantsApi.status!==0)process.exit(grantsApi.status??1);
 const allRankedApi=spawnSync(process.execPath,['tests/all-ranked-api.mjs'],{stdio:'inherit'});if(allRankedApi.status!==0)process.exit(allRankedApi.status??1);
+const awardApi=spawnSync(process.execPath,['tests/award-voting-api.mjs'],{stdio:'inherit'});if(awardApi.status!==0)process.exit(awardApi.status??1);
 const retryApi=spawnSync(process.execPath,['tests/write-retry-api.mjs'],{stdio:'inherit'});if(retryApi.status!==0)process.exit(retryApi.status??1);
 const readApi=spawnSync(process.execPath,['tests/club-read-api.mjs'],{stdio:'inherit'});if(readApi.status!==0)process.exit(readApi.status??1);
 const mergeApi=spawnSync(process.execPath,['tests/requested-event-merge-api.mjs'],{stdio:'inherit'});if(mergeApi.status!==0)process.exit(mergeApi.status??1);

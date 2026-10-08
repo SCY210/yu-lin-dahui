@@ -1,7 +1,7 @@
 import {canManageEvent} from './permissions';
 import type {Account,Event,State} from './types';
 
-type VotingState=Pick<State,'players'|'registrations'|'attendance'>;
+type VotingState=Pick<State,'players'|'registrations'|'attendance'>&Partial<Pick<State,'matches'>>;
 
 /** Formal participation and past attendance preserve eligibility after play. */
 export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):string[]{
@@ -9,6 +9,7 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
  // Automatic attendance may include planned future intervals in the club view.
  // Only intervals that have begun qualify independently of a formal sign-up.
  for(const at of s.attendance)if(at.eventId===eventId&&at.start<=now&&(at.end===null||at.end>at.start))participants.add(at.playerId);
+ for(const m of s.matches??[])if(m.eventId===eventId&&m.status==='complete'&&m.start!==null&&m.end!==null&&m.start<=now&&m.end<=now&&m.end>m.start)for(const id of [...m.a,...m.b])participants.add(id);
  return s.players.filter(p=>p.enabled&&participants.has(p.id)).map(p=>p.id);
 }
 
