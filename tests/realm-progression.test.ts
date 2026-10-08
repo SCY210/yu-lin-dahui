@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import {cultivationProgress,cultivationRealm,cultivationRealms,cultivationSnapshot,enableWeeklyProgression} from '../lib/domain/cultivation';
 import {leaderboard,annualLeaderboard,quarterlyLeaderboard,replayRating} from '../lib/domain/ranking';
 import {playerStats,personality} from '../lib/domain/social';
-import {emptyState,type Match,type Event} from '../lib/domain/types';
+import {emptyState,type Match,type Event,type State} from '../lib/domain/types';
+import {settledRatings} from '../lib/domain/ranking';
+import {clubViewValidUntil} from '../lib/club-read-cache';
 const start=Date.parse('2026-10-04T13:00:00Z'),now=start+20*86400000;
 function fixture(){const s=emptyState();for(const id of ['A','B','C','D'])s.players.push({id,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});s.accounts=s.players.map(p=>({id:p.ownerId,email:'',role:'member',playerId:p.id}));return s}
 function match(id:string,at=start,win=true):Match{return {id,eventId:'event',roundId:'round',courtId:'court',a:['A','B'],b:['C','D'],status:'complete',start:at,end:at+60000,scoreA:win?21:19,scoreB:win?19:21,monthly:true,elo:true,locked:false,enteredBy:'admin',games:[{a:win?21:19,b:win?19:21}]}}
@@ -53,3 +55,32 @@ test('自动预计出勤不产生早到或压线称号，手动和旧历史出�
 });
 
 test('保留并行更新的默认炼气零修为：新建与已有默认实力球友在各页面一致',()=>{const s=fixture();s.settings.initialized=true;enableWeeklyProgression(s,now);assert.ok(s.players.every(p=>p.cultivationBase===0));for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)])for(const row of rows){assert.equal(row.realm,'炼气');assert.equal(row.cultivation.experience,0);assert.equal(row.cultivation.progressPercent,0)}assert.equal(playerStats(s,'A').cultivation.experience,0);const data=projectClubState(s,{id:'member',email:'',role:'member',playerId:'A'},'2026-10',2026,now);assert.ok(data.players.every(p=>p.rating===null));assert.ok(data.social.stats.every(p=>p.tier==='炼气'&&p.cultivation.experience===0));assert.ok(s.players.every(p=>p.rating===1000&&p.initialRating===1000));});
+
+const activity=(s:State,patch:Partial<Event>={}):Event=>{const e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval',...patch};s.events.push(e);return e};
+test('活动进行中完赛的小局不升降境界，活动结束时按完赛顺序一次结算',()=>{
+ const s=fixture();s.players[0].cultivationBase=50;const e=activity(s);s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
+ const live=cultivationSnapshot(s,mid).get('A')!;assert.equal(live.realm,'炼气');assert.equal(live.experience,50);assert.equal(live.earned,0);assert.equal(live.pendingGames,2);assert.equal(live.wins,0);
+ for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.equal(a.points,7);assert.equal(a.games,2);assert.equal(a.realm,'炼气');assert.equal(a.cultivation.experience,50)}
+ const stats=playerStats(s,'A',cultivationSnapshot(s,mid).get('A'));assert.equal(stats.tier,'炼气');assert.equal(stats.wins,1);
+ const settled=cultivationSnapshot(s,e.end).get('A')!;assert.equal(settled.realm,'筑基');assert.equal(settled.experience,73);assert.equal(settled.pendingGames,0);assert.equal(settled.trainingDays,1);
+ assert.deepEqual(cultivationSnapshot(s,e.end),cultivationSnapshot({...s,events:[]},e.end));assert.equal(cultivationSnapshot(s,e.end-1).get('A')!.experience,50);
+ assert.equal(cultivationSnapshot(s,mid).get('C')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('C')!.experience,23);
+});
+test('提前标记结束或取消即结算；延长场地或恢复进行则继续等待；没有活动记录的旧比赛照常完赛即计',()=>{
+ const s=fixture(),e=activity(s);s.matches=[match('one')];const mid=start+3600000;assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);
+ e.status='ended';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);e.status='cancelled';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);
+ e.status='open';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);e.status='draft';assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
+ e.status='live';const end=e.end;e.end+=3600000;assert.equal(cultivationSnapshot(s,end).get('A')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
+ e.deletedAt=mid;assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
+ s.matches[0].eventId='legacy-without-record';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);
+ const friendly=match('friendly');friendly.monthly=false;s.matches=[friendly];assert.equal(cultivationSnapshot(s,mid).get('A')!.pendingGames,0);
+});
+test('页面境界与队伍参考实力在活动中保持，结束时自动结算且与完整重放一致，读取缓存在结束时刷新',()=>{
+ const s=fixture();for(const p of s.players.slice(0,2)){p.initialRating=1090;p.rating=1090}const e=activity(s);s.matches=[match('late')];replayRating(s);const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;
+ assert.ok(s.players[0].rating>1100);
+ const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
+ assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'炼气');assert.equal(a(during).cultivation.experience,0);assert.equal(a(during).cultivation.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.points,10);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.cultivation.experience,0);assert.equal(during.social.matchLevels.late.a,'入门');
+ const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).cultivation.experience,20);assert.equal(after.leaderboard.find(r=>r.playerId==='A')!.cultivation.experience,20);assert.equal(after.social.matchLevels.late.a,'基础');
+ assert.equal(settledRatings(s,mid).get('A'),1090);assert.equal(settledRatings(s,e.end).get('A'),s.players[0].rating);assert.equal(s.events[0].status,'live');
+ e.status='draft';e.creatorId='someone-else';assert.equal(clubViewValidUntil(s,member,e.end-60000),e.end);
+});

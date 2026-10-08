@@ -1,6 +1,7 @@
 import {winner} from './social';
 import {pointGrants} from './point-grants';
 import {cultivationSnapshot} from './cultivation';
+import {settledMatchFilter} from './event-lifecycle';
 import {gameFacts} from './game-facts';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
 import {quarterMonths} from '../ranking-quarter';
@@ -9,9 +10,11 @@ export function replayRating(s:State){for(const p of s.players){p.rating=p.initi
  for(const m of s.matches.filter(m=>m.status==='complete'&&m.elo).sort((a,b)=>(a.end!-b.end!)||a.id.localeCompare(b.id))){const a=m.a.map(id=>s.players.find(p=>p.id===id)!),b=m.b.map(id=>s.players.find(p=>p.id===id)!);const ra=(a[0].rating+a[1].rating)/2,rb=(b[0].rating+b[1].rating)/2;const rules=s.seasons.find(x=>x.id===month(m.start!))?.rules??s.settings.rules;const expected=1/(1+10**((rb-ra)/400)),delta=rules.k*((winner(m)==='a'?1:0)-expected);for(const [ps,d]of [[a,delta],[b,-delta]] as const)for(const p of ps){changes.push({matchId:m.id,playerId:p.id,before:p.rating,after:p.rating+d,delta:d,algorithm:rules.algorithm});p.rating+=d;p.ratedGames++}}
  s.ratingChanges=changes.map(c=>({...c,id:c.matchId+':'+c.playerId,k:s.seasons.find(x=>x.id===month(s.matches.find(m=>m.id===c.matchId)!.start!))?.rules.k??s.settings.rules.k}));return changes;
 }
-export function leaderboard(s:State,season:string){return aggregateLeaderboard(s,[season])}
-function aggregateLeaderboard(s:State,periods:string[]){
- const chosen=new Set(periods),growth=cultivationSnapshot(s),grants=pointGrants(s),bonus=new Map<string,number>();
+/** Visible strength labels settle like realms; matchmaking keeps the live rating. */
+export function settledRatings(s:State,now=Date.now()){const copy:State={...s,players:s.players.map(p=>({...p})),matches:s.matches.filter(settledMatchFilter(s,now)),ratingChanges:[]};replayRating(copy);return new Map(copy.players.map(p=>[p.id,p.rating]))}
+export function leaderboard(s:State,season:string,now=Date.now()){return aggregateLeaderboard(s,[season],now)}
+function aggregateLeaderboard(s:State,periods:string[],now=Date.now()){
+ const chosen=new Set(periods),growth=cultivationSnapshot(s,now),grants=pointGrants(s),bonus=new Map<string,number>();
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
  const members=new Set(s.accounts.map(account=>account.playerId));
  const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{
@@ -28,5 +31,5 @@ function aggregateLeaderboard(s:State,periods:string[]){
  }).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
-export function quarterlyLeaderboard(s:State,quarter:string){return aggregateLeaderboard(s,quarterMonths(quarter))}
-export function annualLeaderboard(s:State,year:number){return aggregateLeaderboard(s,Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')))}
+export function quarterlyLeaderboard(s:State,quarter:string,now=Date.now()){return aggregateLeaderboard(s,quarterMonths(quarter),now)}
+export function annualLeaderboard(s:State,year:number,now=Date.now()){return aggregateLeaderboard(s,Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0')),now)}
