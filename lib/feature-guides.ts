@@ -4,6 +4,7 @@ import {cultivationRealms} from './domain/cultivation';
 import {guideLabels,guideTopics,type GuideTopic,type FeatureGuideContent} from './feature-guide-topics';
 export * from './feature-guide-topics';
 
+const singlesGuide='综合榜统计全部网站计分赛。单打榜只统计每方各 1 人的单打比赛，沿用同样的月度规则、胜负积分、上限与同分规则，只列出所选周期打过单打的正式球友；群主手动积分调整只计入综合榜。网站排场目前只安排双打。';
 /** Rules belong to the viewed season when explaining historical rankings or matches. */
 export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):FeatureGuideContent {
   switch(topic) {
@@ -21,6 +22,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '只有已完成、实际开赛时间属于所选季度、且开启积分计分的比赛参与积分。取消、弃权或仍在进行的比赛不计分。',
           '按马德里自然季度归属：第一季度 1–3 月，第二季度 4–6 月，第三季度 7–9 月，第四季度 10–12 月。跨季度结束仍归开赛的季度。有正式账号的启用球友入榜，没有最低场数要求。代报名邀请来的朋友不进入排行榜，报名、比赛和费用记录仍保留。',
           '默认取消旧的每月12场封顶，每个完成的计分小局都计入；若管理员设了自定义月度上限，按当月规则取有效小局；同一开赛时间按比赛编号排序。季度汇总三个月的计入结果，不增加额外的季度上限。胜率和局均净胜按整个季度的计入场数计算，不平均各月比例。',
+          singlesGuide,
         ]},
       ],
       example:{title:'三个月汇总为一个季度',text:'若 1 月计入积分 6 分、2 月 9 分、3 月 3 分，第一季度积分为 18 分。胜率使用三个月计入胜局总和除以计入局数总和，不能直接平均三个月的胜率。'},
@@ -39,6 +41,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '先比全年积分，再比全年计分赛胜率（全年计入胜局 ÷ 全年计入局数），再比全年局均净胜（全年计入净胜总和 ÷ 全年计入场数）。不取十二个月胜率或局均净胜的简单平均。',
           '三项都相同则并列，后续名次跳过并列人数。有正式账号的启用球友都在榜中，没有最低场数要求；代报名朋友不入榜。',
           '比赛以实际开赛时间按马德里时区归属月份和年份；跨年结束仍归入开赛年份。年度榜旁的年份选择器可查看历史年份。',
+          singlesGuide,
         ]},
         {title:'积分排名与修仙境界', paragraphs:['排行榜名次由积分、胜率和局均净胜决定。修仙境界来自累计成长修为，历史季度和年份也展示当前境界；修为不会额外增加榜单积分或改变榜单次序。少于 10 场有效 实力分 比赛时显示暂定境界。']},
       ],

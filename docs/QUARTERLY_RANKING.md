@@ -10,4 +10,6 @@ The authenticated club response adds `quarterlyLeaderboard` and `rankingQuarter`
 
 Ranking, home sidebar and My points now display quarter results. Profile navigation preserves quarter selection and scroll; legacy monthly history markers map to the corresponding quarterly view. The calculation panel lists the quarter's three monthly rule sets.
 
+A combined/singles switch sits below the quarterly/annual switch. The combined board is this unchanged leaderboard (all website matches plus owner grants); the singles board applies the same quarter/annual aggregation to 1v1 matches only, through `singlesQuarterlyLeaderboard` and `singlesAnnualLeaderboard`. See [SINGLES_RANKING.md](SINGLES_RANKING.md).
+
 Validation covers all quarter mappings, Madrid midnight/year boundaries, cross-quarter endings, different historical caps/rules, friendly/uncounted games, weighted rates/margins, ties and disabled/empty players, annual-versus-four-quarter totals, and profile/history restoration. No database migration is required.
