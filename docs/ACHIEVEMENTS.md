@@ -4,18 +4,20 @@ The collection contains eight original imagegen badge themes, each with five att
 
 | Badge ID | Metric | Bronze / Silver / Gold / Platinum / Diamond |
 |---|---|---|
-| first-flight | Completed matches | 1 / 3 / 5 / 10 / 20 |
-| first-victory | Wins | 1 / 3 / 5 / 10 / 20 |
-| ten-matches (四方论剑) | Distinct defeated opponents | 2 / 4 / 6 / 8 / 12 |
-| fifty-matches (持之以恒) | Distinct Madrid calendar dates with completed matches | 1 / 3 / 7 / 15 / 30 |
-| ten-victories (黄金搭档) | Highest cumulative wins with one teammate | 1 / 3 / 5 / 10 / 20 |
-| three-streak | Lifetime best personal winning streak | 3 / 4 / 5 / 6 / 8 |
-| five-partners | Distinct teammates | 5 / 6 / 8 / 10 / 12 |
-| three-game-victory | Best-of-three wins that reach three games | 1 / 3 / 5 / 10 / 20 |
+| first-flight | Completed matches | 1 / 20 / 60 / 150 / 300 |
+| first-victory | Wins | 1 / 10 / 35 / 100 / 220 |
+| ten-matches (四方论剑) | Distinct defeated opponents | 2 / 5 / 9 / 14 / 20 |
+| fifty-matches (持之以恒) | Distinct Madrid calendar dates with completed matches | 1 / 6 / 16 / 35 / 60 |
+| ten-victories (黄金搭档) | Highest cumulative wins with one teammate | 1 / 8 / 25 / 60 / 120 |
+| three-streak | Lifetime best personal winning streak | 3 / 6 / 10 / 15 / 21 |
+| five-partners | Distinct teammates | 5 / 8 / 12 / 16 / 20 |
+| three-game-victory | Best-of-three wins that reach three games | 1 / 5 / 12 / 25 / 50 |
 
-All eight themes now have distinct metrics. Repeated cumulative-match and cumulative-win themes have been replaced with opponent breadth, regular play on different dates, and sustained chemistry with one partner. Their legacy IDs and artwork paths stay stable, but their names, rules, progress and dates are derived from the new criteria. Existing records immediately recalculate the changed themes; the other five themes retain their rules and targets.
+All eight themes now have distinct metrics. Repeated cumulative-match and cumulative-win themes have been replaced with opponent breadth, regular play on different dates, and sustained chemistry with one partner. Their legacy IDs and artwork paths stay stable, but their names, rules, progress and dates are derived from the new criteria. All five stages now use the longer-term targets above. Existing records recalculate every theme under the current criteria; original matches and results are preserved.
 
-All targets are lifetime cumulative goals. Higher stages require more completed facts, never payment or random rewards. Rank 0 is locked; rank 5 is maximum and has no next goal. Each threshold stores its own first factual crossing time in the derived response, so historical games backfill all supported ranks immediately. The collection reports both themes unlocked out of eight and stages earned out of forty. A loss does not remove a lifetime best-streak milestone; correcting or voiding its underlying matches can.
+Every stage also requires distinct lifetime Madrid play dates: Bronze 1, Silver 3, Gold 8, Platinum 20, Diamond 40. Both its metric target and participation target must be reached. One day with many matches or multiple activities still counts once. A normal eight-game, two-hour session can only earn Bronze; Silver needs at least three actual play dates and Gold at least eight. Missing weeks impose no penalty, and dates need not be consecutive. With six games per week, 20 completed matches take about four sessions and 60 take about ten; these are examples, not promised timing.
+
+All targets are lifetime cumulative goals. Higher stages require more completed facts, never payment or random rewards. Rank 0 is locked; rank 5 is maximum and has no next goal. Each threshold stores the first factual crossing time when both conditions are supported in the derived response, so historical games backfill all supported ranks immediately. The collection reports both themes unlocked out of eight and stages earned out of forty. A loss does not remove a lifetime best-streak milestone; correcting or voiding its underlying matches can.
 
 Regular play counts the Madrid calendar date of the match's end. Multiple matches or activities ending on the same date count once, including across daylight-saving transitions. Wins are unnecessary for that metric. Opponent breadth only adds opposing real player IDs from wins and counts each player once. Partner chemistry maintains a separate win total per real teammate and takes the maximum, rather than adding different teammates together. Its details show the teammate currently holding that record. Ties keep the first record holder in deterministic chronological order. Losing does not subtract wins; score corrections and voiding recalculate all three metrics.
 
@@ -25,7 +27,7 @@ Achievements are derived on the server from lifetime completed results, in stabl
 
 The projection applies the viewer's event visibility before deriving achievements. A member cannot infer private draft results from new badges. Finished historical facts survive an activity's soft deletion; a corrected loss or voided match recalculates the collection. These are factual achievements, not irrevocable awards: historical corrections can remove a badge or alter its unlock date.
 
-No database migration or new award-write endpoint is required. Clients cannot submit unlocks. Achievements do not add ranking points, Elo, financial charges or permissions. Conditional-read metadata expires at future factual completion boundaries so a newly due result is not hidden by an unchanged revision.
+No database migration or new award-write endpoint is required. The derived response exposes matchDays, and cards, stage counts, progress bars, filter states and roadmap dates all use the same dual requirements. Legacy inflated levels are not grandfathered: history is recalculated, while score, ranking points, cultivation and Elo are unchanged. Clients cannot submit unlocks. Achievements do not add ranking points, Elo, financial charges or permissions. Conditional-read metadata expires at future factual completion boundaries so a newly due result is not hidden by an unchanged revision.
 
 ## Assets and performance
 

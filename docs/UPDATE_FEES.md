@@ -1,15 +1,9 @@
-# 每人分摊金额更新
+# Participant cost shares
 
-本次根据用户要求简化费用流程：只展示每个人付多少，以及场地费、球费和其他费用明细。首页与个人页不再显示待付余额；活动费用页不再显示已付/未付、退款、付款记录或确认付款按钮。群内成员可查看全部参加者的分摊结果。
+The app displays each participant's amount with court, shuttle, and other-cost details. Home/personal pages do not show unpaid balances. The activity cost page does not offer payment records, confirmation, refunds, or paid/unpaid states. Members can view all participants' shares in their club.
 
-付款写入操作已停用，正常群组接口不返回付款记录。已存数据与数据库结构保留，未执行破坏性迁移。分摊算法、出勤计算、豁免、群补贴和历史分摊版本继续使用。
+Payment writes are disabled; normal club APIs do not return historical payment records. Existing storage is retained for compatibility without a destructive migration. Split algorithms, participation time, exemptions, club subsidies, and settlement versions remain.
 
-本次实际检查：
+Verify that participant shares plus subsidy and unallocated amounts equal the source total in integer cents. Administrative/member views must not expose payment records. A disabled payment action must reject without changing the revision.
 
-- TypeScript `tsc --noEmit`通过。
-- Cloudflare Worker构建通过。
-- 原21项独立算法测试通过。
-- 本地真实HTTP核对：普通成员读取4位参加者金额及明细；个人分摊合计加补贴严格等于总费用；管理员及成员接口均不返回payments；已停用的payment请求返回400，修订号未改变。
-- 旧版完整API脚本已按新费用范围更新，本次未重置本地数据重跑整套脚本。
-
-本次没有删除或上传真实群数据，没有扩大网站受众。
+Cost sharing is a calculation tool, not payment processing, tax advice, a debt collection system, or confirmation that a venue has been reserved. Organizers remain responsible for actual payments and applicable financial duties.

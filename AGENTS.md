@@ -1,14 +1,29 @@
-# 项目协作要求
+# Project collaboration requirements
 
-## 重大更新必须同步 GitHub
+## Significant updates must be synchronized to GitHub
 
-- 本项目的 GitHub 主仓库是 `SCY210/yu-lin-dahui`：https://github.com/SCY210/yu-lin-dahui 。
-- 每次完成重大更新（新增或明显调整核心功能、页面流程、权限与安全、数据结构、架构或部署配置），必须在结束本次任务前，将本次更新涉及的代码、文档和必要配置同步到 GitHub，不能只保留在本地或只更新已部署的网站。
-- 同步前完成与更新相适应的验证。同步后核对远程提交确实包含本次改动，并在回复中提供提交或 PR 链接及状态。若因权限、认证或网络问题无法同步，应明确说明尚未同步及具体原因，不得声称已更新 GitHub。
+- The canonical repository is [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui).
+- Before finishing any significant update to core functionality, page flows, permissions, security, data structures, architecture, or deployment configuration, synchronize the relevant code, documentation, and necessary configuration to GitHub. Local changes or an updated deployed website alone are insufficient.
+- Validate the update before synchronization. After synchronization, verify that the remote commit contains the changes and provide the commit or PR URL and status. If authentication, permissions, or networking prevent synchronization, explain the specific cause and clearly state that GitHub has not been updated.
 
-## 提交与审核范围
+## Commits and review
 
-- 用户本人及 Codex/助手在用户授权的任务中，使用用户的 `SCY210` 账号提交时，可以直接更新 `main`，不要求另建 PR，也不要求用户再次 Approve。重大更新仍必须验证并同步 GitHub。
-- 其他受邀协作者提交的修改必须通过 PR，并由 `SCY210` 批准后才能合并到 `main`；有新的修改提交后需要重新审核，不能直接推送 `main`。
-- GitHub 按账号和权限执行保护。用户账号保留管理员豁免以支持本人及助手更新；不得为其他协作者添加管理员豁免，也不得关闭针对其他协作者的 PR 和 Code Owners 审核要求。
-- PR 提交权限保持为仅受邀协作者；新增协作者需要用户明确指定。
+- The owner and Codex/assistants performing authorized work through the owner's SCY210 account may update main directly, without a separate PR or additional approval. Significant updates still require validation and GitHub synchronization.
+- Other invited collaborators must submit changes through a PR approved by SCY210 before merging into main. New commits require renewed review; collaborators must not push directly to main.
+- GitHub enforces protection by account and permissions. Preserve the owner's administrator exemption. Do not grant administrator exemptions to other collaborators or disable their PR and Code Owners review requirements.
+- PR submission permissions remain restricted to invited collaborators. The user must explicitly identify any new collaborator.
+
+## Shared documentation and local state
+
+- Write new or rewritten shared Markdown documentation in English. Existing untranslated notes listed in scripts/legacy-markdown.json may retain their language; preserve their up-to-date behavior descriptions when resolving conflicts. This does not require translating the application UI, user data, test fixtures, or third-party license notices.
+- Keep source code, reproducible tests, migrations, licenses, and required hosting configuration tracked.
+- Keep personal agent/editor state, credentials, local databases, generated outputs, and per-checkout reports ignored.
+- To stop tracking local files, preserve their contents and use git rm --cached. Never delete another contributor's local working files.
+- Git may remove formerly tracked files when another checkout pulls a deletion. Document a backup procedure before merging such a change; ignoring a path alone does not preserve it during checkout.
+- Legal notices must describe actual processing and real operator details. Do not invent identities, legal bases, consent, retention rules, or compliance guarantees.
+
+## Privately customized material stays outside GitHub
+
+- GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the Sites deployment repository. Do not upload them to GitHub.
+- Do not merge deployment repository history or copy its complete source over the shared version. Port shared functionality separately and inspect each change.
+- Before pushing, run node scripts/check-shared-source.mjs --check. Preserve that check and the local push hook.

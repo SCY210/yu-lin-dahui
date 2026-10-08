@@ -77,3 +77,12 @@ test('completed history remains stable and another creator private activity does
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,now),projectClubState(s,a,'2026-10',2026,expires-1));
  assert.equal(clubViewValidUntil(s,{...a,role:'admin'},now),now);
 });
+
+test('a clock boundary changes the returned activity status without a write or reusable old validator',()=>{
+ const {s,a,e,version,identity}=fixture(),cache=createClubReadCache();
+ const before=e.start-1,token=cache.remember(version,identity,'2026-10',2026,clubViewValidUntil(s,a,before),before)!;
+ assert.ok(token);assert.equal(cache.matches(token,version,identity,'2026-10',2026,e.end),false);
+ assert.equal(projectClubState(s,a,'2026-10',2026,e.end-1).events[0].status,'open');
+ assert.equal(projectClubState(s,a,'2026-10',2026,e.end).events[0].status,'ended');
+ assert.equal(s.events[0].status,'open');assert.equal(s.revision,4);
+});

@@ -1,15 +1,15 @@
-# 手机返回与站内历史
+# Mobile back navigation and application history
 
-首页、活动列表、活动详情各标签、排名、我的、管理、球友列表、球员详情和球友圈标签统一通过 `ClubNavigation` 更新浏览器历史。过去只改 React 状态，浏览器不知道用户已进入另一个页面，因此手机返回会直接回到网站之前的页面。
+ClubNavigation records home, event lists/details/tabs, rankings, personal/admin pages, player lists/profiles, and social tabs in browser history. This replaces navigation that changed only React state and caused Back to leave the website immediately.
 
-- 进入站内新页面使用 `pushState`；相同页面重复点击不会新增记录。
-- `popstate` 恢复页面、活动标签、球员详情和保存的滚动位置，不再 push。
-- 初始页面只有 `replaceState`。首页没有虚拟拦截记录，正常返回上一网站仍可用。
-- 路由保存在 URL query，刷新后恢复当前详情；原 `?event=ID` 活动分享链接兼容。不存在/无权查看的活动、不存在的球员回到对应列表。普通成员打开管理地址回到“我的”。
-- “全部活动”与“返回球友列表”查找实际历史中的列表记录；直接打开详情且没有列表记录时替换为列表，避免来回循环。
-- 共享 Dialog 和 AlertDialog 打开时记录匿名弹窗 ID，手机返回先关闭功能说明、创建/编辑表单、账号管理、确认操作或账号绑定弹窗。表单值、密码、照片和个人资料不进入 history.state。已关闭弹窗前进时不恢复旧表单。
-- 关闭弹窗的异步 history.go 与紧接着的站内导航顺序执行，避免前一个 pop 覆盖新页面。弹窗注册延迟一个 microtask，React effect replay 不产生多余历史记录。
-- 历史标记按当前账号与挂载 session 隔离；重载后跨旧 session 的历史按 URL 恢复，并轮换 generation 防止旧 index 与新内存记录冲突。不同账号的旧标记回首页；退出登录先清除当前路由。
-- 地图、照片等现有外链行为保留。
+- New internal destinations use pushState; repeated selection of the same destination does not add entries.
+- popstate restores the destination, event tab, profile, and scroll position without pushing another record.
+- Initial navigation uses replaceState. Home adds no synthetic interception entries; returning to a previous website still works.
+- Query parameters restore deep links on reload, including existing ?event=ID links. Missing/inaccessible entities fall back to the appropriate list; members opening administration fall back to their personal page.
+- Returning to lists searches actual history. A direct detail link with no list entry replaces the destination to avoid a back/forward loop.
+- Dialogs record an anonymous dialog ID so Back closes them first. Passwords, form contents, photos, and personal data never enter history.state. Forward does not resurrect a closed form.
+- Dialog history.go and immediate subsequent navigation run in order. Microtask-delayed registration avoids duplicate entries during React effect replay.
+- Account/mount session ownership isolates history markers. Reloads restore from URLs and rotate the generation; another account's old markers return home. Logout clears the current route.
+- Existing external map/photo links retain their behavior.
 
-验证：`node scripts/test-navigation.mjs` 运行 10 项路由/历史测试，覆盖浏览器返回与前进、活动标签、球员详情返回、深链、弹窗关闭、立即切页竞态、刷新后返回与前进、账号隔离、滚动恢复。另运行 `node node_modules/typescript/bin/tsc --noEmit`。Root 负责手机宽度浏览器 QA 与 Sites 发布。
+Run node scripts/test-navigation.mjs for focused navigation regressions and npm test for the full suite. Test real-device Back/Forward, deep links, scroll restoration, modal dismissal, and account switching when changing this flow. Screenshots and per-run evidence belong in ignored output directories.

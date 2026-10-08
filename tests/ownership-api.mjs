@@ -37,7 +37,7 @@ await test('通过重置密码、账号绑定或球员绑定不能接管群主�
  assert.equal((await auth(admin,{action:'createAccount',name:'伪装',username:'takeover'+suffix,password:password(),requestId:randomUUID(),accountId:other.id,playerId:owner.playerId})).status,400);
  assert.equal((await get(owner)).me.isOwner,true);assert.equal((await auth(null,{action:'login',username:owner.username,password:owner.password})).status,200);
 });
-async function upload(actor,kind,playerId){const form=new FormData();form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind',kind);form.set('playerId',playerId);form.set('requestId',randomUUID());form.set('revision',String((await get(actor)).revision));return fetch(origin+'/api/photos',{method:'POST',headers:{...headers(actor),Origin:origin},body:form})}
+async function upload(actor,kind,playerId){const form=new FormData();form.set('rightsConfirmed','true');form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind',kind);form.set('playerId',playerId);form.set('requestId',randomUUID());form.set('revision',String((await get(actor)).revision));return fetch(origin+'/api/photos',{method:'POST',headers:{...headers(actor),Origin:origin},body:form})}
 await test('头像与球拍上传接口阻止普通管理员替换群主照片，不留下资产或审计变化',async()=>{
  const before=await get(owner);for(const kind of ['avatar','racket'])assert.equal((await upload(admin,kind,owner.playerId)).status,403);const after=await get(owner);assert.deepEqual(after.photos,before.photos);assert.deepEqual(after.audits,before.audits);assert.equal(after.players.find(p=>p.id===owner.playerId).avatarId,before.players.find(p=>p.id===owner.playerId).avatarId);
 });

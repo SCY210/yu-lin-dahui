@@ -1,49 +1,48 @@
-# 管理员创建账号
+# Administrator-managed accounts
 
-网站不开放自行注册，不需要球友提供邮箱。登录页只填写“账号”和“密码”。账号由群管理员创建，创建后的新账号一律为普通成员；修改管理员角色仍走原来的独立权限管理。
+The app does not offer public self-registration or require email. Administrators create usernames and passwords; new accounts always start as members. Role management is a separate protected operation.
 
-## 使用
+## Creating and migrating accounts
 
-1. 群主首次使用原账号确认身份，在“我的 → 设置账号和密码”开通自己的登录账号。本人输入并确认密码，原管理员权限、头像、档案与比赛记录保留。
-2. “我的 → 群组管理 → 球友账号 → 创建账号”：填写昵称、登录账号和初始密码。新账号为2–32位英文字母或数字；英文不区分大小写。旧中文、下划线或邮箱式账号仍可登录，主动修改时使用新规则。密码至少12位。
-3. 已经有球友档案时，选择原档案开通登录，保留比赛、实力、照片、打法资料和出勤记录。已有原账号但没有密码登录时，在账号列表点“开通登录”，保留原账号和权限。
-4. 手动把账号和初始密码交给本人。网站不会自动发邮件或消息，也不会展示已保存的密码。
-5. 忘记密码时由管理员点“重置密码”。新密码立即生效，目标账号的所有旧登录会话被撤销；档案、比赛记录和角色保留。
+1. The owner verifies the existing platform identity and enables password login from the personal account page. The same profile, permissions, photos, and match history remain associated.
+2. In group administration, create an account with a display name, username, and initial password. New usernames accept 2-32 ASCII letters/digits, case-insensitively; legacy non-Latin, underscore, and email-style usernames still work. A changed username follows the new policy. Passwords are 12-128 characters.
+3. Link an existing player profile when appropriate. Enable login on an existing account rather than duplicating its identity.
+4. Deliver the initial credentials directly to the person through an appropriate private channel. The app sends no automatic email/messages and never displays saved passwords.
+5. Reset a forgotten password as an administrator. The change revokes all target-account sessions while preserving its role and business records.
 
-密码必须由本人/管理员在页面输入；项目没有真实账号的预设密码。测试账号只存在本机虚构数据库。
+Passwords come from the user or administrator, not source-code defaults. Fictional test accounts belong only in dedicated local databases.
 
-## 修改登录账号
+## Changing usernames and passwords
 
-- 普通成员在“我的 → 修改账号”可自主修改一次，验证本人当前密码后设置新的英文字母数字账号。
-- 群主不限次数，可修改自己和任何成员的登录账号，也可通过账号管理修改球友名字。代改验证群主本人的密码，不索取成员密码。
-- 群主代改不消耗或重置成员的自主修改机会；密码重置也不会重置该机会。
-- 本人修改后全部设备退出，用新账号和原密码重新登录。群主替别人修改时，目标成员的会话退出，群主自己的会话保留。
-- 内部账号 ID、档案 ID、群主权限、比赛、头像和费用记录均保持原关联。登录账号与显示名字分别设置。
-- 账号重复、格式错误、当前密码错误或并发冲突都不会消耗机会。只有成功的成员自主修改会记录使用时间。
+A member can change their own username once, after verifying their current password. The owner can change their own or another person's username repeatedly, using the owner's password rather than requesting the member's password.
 
-## 网站入口
+An owner-initiated rename does not consume or reset the member's self-service allowance; resetting a password does not reset it either. A successful self-change records the usage timestamp. Duplicate names, invalid formats, incorrect passwords, and concurrency failures do not consume the allowance.
 
-群主已明确选择公开登录入口，Sites访问模式已设为public。没有ChatGPT账号的朋友可直接打开账号登录页。群内名单、活动、比分、费用和照片仍由网站登录与成员权限保护。旧账号身份入口用于迁移；新球友无需此入口。线上禁止通过旧群邀请码自行创建成员；旧邀请数据保留供兼容，不公开。
+Changing one's own username signs out all sessions; changing another member's username revokes that member's sessions while preserving the owner's session. Account/player IDs, protected owner status, photos, costs, and match relationships remain stable. Login usernames and display names are independent.
 
-## 实现
+The current password is required for a self-service password change. A reset or change revokes previous password sessions atomically.
 
-- scrypt 随机盐密码摘要（N=16384、r=8、p=5）和常量时间比较；认证表与业务导出分离，不返回盐、摘要、令牌或密码。
-- 256位会话令牌，只保存SHA-256摘要；HttpOnly、SameSite=Lax，HTTPS使用Secure，14天过期。退出删除当前会话，并抑制旧身份自动登录。
-- 同源写入校验、8KB认证请求体限制、IP/账号限流与过期桶清理。拒绝跨站前消费有限请求体，修复本地未读请求流导致后续读取挂起的问题。
-- 账号、档案、凭据同一个D1原子batch保存，唯一修订号重试。创建接口不切换管理员的当前登录；请求ID保证幂等，唯一账号键防止重复开户。
-- 密码重置和撤销会话同一事务；登录发放会话时再次检查凭据摘要仍等于已验证值，防止并发重置后旧密码获得会话。
-- 每次重试重查管理员身份；普通成员和匿名访问者不能开户、为别人的档案开通登录或重置密码。业务和照片API继续验证成员/管理员权限与所有权。
-- 原ChatGPT身份只信任Sites分发层，底层Worker不要直接暴露；公开入口实际检查已确认调用者伪造平台身份头被丢弃。
+## Access boundary
 
-0003建立凭据/会话/限流表；0004只改准确的旧群名并保留邀请码；0005将凭据登录键改为username，保留原密码摘要和会话。新增后续迁移为凭据增加自主修改时间字段，既有账号默认尚未使用一次机会。既有平台账号的邮箱字段仅用于旧身份兼容，新账号该字段为空，登录和页面不需要邮箱。
+Only the login entry is public. Club lists, events, scores, costs, and images require membership. The legacy platform sign-in entry is for migration. Production does not create accounts from the historical invitation code.
 
-## 验证
+Sites must remove untrusted identity headers before forwarding requests. Keep the underlying Worker behind that distribution layer. Development emulation is loopback-only and absent from production builds.
 
-本地实际构建Worker/D1首次16组集成检查通过，包含管理员开户、无邮箱登录、账号归一化、权限、并发、幂等、历史档案关联、旧账号迁移、密码重置撤销全部会话、限流和跨站请求拒绝。详见 MANAGED_ACCOUNTS_RESULTS.md。
+## Implementation
 
-登录/重置竞争修复后，另做专项验证：3轮、每轮3个同时登录请求的9个旧密码会话全部在重置后拒绝；旧凭据的原子会话写入返回0行，无会话残留。详见 MANAGED_ACCOUNTS_RACE_RESULTS.md。两次运行分别记录，不宣称17组单次运行。另有36项算法/权限回归、TypeScript、生产构建及群名迁移验证。
+- Salted scrypt: N=16384, r=8, p=5, constant-time comparison.
+- 256-bit session tokens; only SHA-256 token digests stored server-side.
+- HttpOnly, SameSite=Lax cookies; Secure on HTTPS; 14-day expiry. Logout deletes the session and suppresses legacy identity auto-login.
+- Exact-origin checks, an 8 KiB body limit, a 10-second absolute JSON receive deadline, and persistent IP/username rate limits.
+- Credentials and business records commit in one atomic D1 batch. Idempotency keys and unique usernames prevent duplicate account creation.
+- Session issuance rechecks the validated username, salt, and password hash to prevent a concurrent reset from issuing a usable stale-password session.
+- Retries reload administrator permissions. Members and anonymous callers cannot create accounts, reset others' passwords, or bypass protected owner checks.
+- Passwords, salts, hashes, and session tokens are excluded from business exports and audit payloads.
 
-首次私有线上发布后，通过正式Sites服务访问边界完成6项检查：匿名认证状态、伪造平台身份头被忽略、群组与照片未登录读取被拒绝、真实生产密码哈希路径以错误账号返回401且不签发应用会话、匿名建号拒绝。没有创建线上测试账号或输入真实密码。检查仍使用服务凭据穿过私有外层入口，不能代替公开入口切换后的匿名浏览器验收。
+Migrations 0003-0006 establish and evolve credentials, username keys, and the self-change timestamp. New password accounts have an empty legacy email field. Existing platform-account email fields remain for compatibility.
 
-生产哈希路径已执行，但没有替用户设置真实密码或验证真实账号的HTTPS会话Cookie。上传鉴权测试未宣称完整验证二进制上传。
-公开入口切换后，在没有ChatGPT Cookie和没有Sites服务凭据的HTTP请求下重新检查：登录页面200、匿名认证状态、伪造身份头被丢弃、群组与照片401、密码哈希路径错误账号401且不发应用会话、匿名建号401。7项实际检查通过。未创建线上测试账号或输入真实密码。
+## Verification
+
+Use tests/managed-accounts.mjs, tests/change-username-api.mjs, tests/change-password-api.mjs, and tests/ownership-api.mjs only with their documented fictional loopback fixtures. They cover identity preservation, permissions, idempotency, session tampering/revocation, username policy, concurrent reset/login, origin checks, and protected ownership.
+
+Historical machine-specific execution reports are ignored; run results must state their own environment and scope. HTTP loopback checks do not certify HTTPS cookies or production edge identity stripping.
