@@ -11,7 +11,7 @@ const owner:Account={id:'owner',playerId:'owner-player',role:'admin',email:''};
 const admin:Account={id:'admin',playerId:'admin-player',role:'admin',email:''};
 const member:Account={id:'member',playerId:'member-player',role:'member',email:''};
 function fixture(){const s=emptyState();s.settings.ownerAccountId=owner.id;s.accounts=[{...owner},{...admin},{...member}];s.players=s.accounts.map(a=>({id:a.playerId,ownerId:a.id,name:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));return s;}
-const profile={playerId:owner.playerId,years:3,hand:'left',preference:'mixed',style:'网前',equipment:'球拍',level:'advanced',racket:'测试战拍',strings:'测试拍线',tensionMin:24,tensionMax:28};
+const profile={playerId:owner.playerId,years:3,hand:'left',preference:'mixed',style:'网前',equipment:'球拍',racket:'测试战拍',strings:'测试拍线',tensionMin:24,tensionMax:28};
 test('群主由持久化账号身份决定，昵称、role和客户端isOwner字段不能冒充',()=>{
  const s=fixture();s.players[1].name='chenyue';assert.equal(clubOwnerId(s),owner.id);assert.equal(isClubOwner(s,admin),false);assert.equal(isClubOwner(s,{...admin,isOwner:true} as Account),false);assert.equal(isClubOwner(s,owner),true);
 });

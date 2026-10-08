@@ -1,10 +1,10 @@
 # Player profiles and racket photos
 
-app/player-profile.tsx exports PlayerProfile({p, stats, ctx}) and uses scoped pp-* / racket-* styles in app/player-profile.css. The profile shows avatar, name, tier/form, experience, handedness, preferences, self-assessed level/style, racket/strings/tension range, equipment notes, match count, and streaks. Missing details remain visibly unfilled; the app does not invent brands or personal facts.
+app/player-profile.tsx exports PlayerProfile({p, stats, ctx}) and uses scoped pp-* / racket-* styles in app/player-profile.css. The profile shows avatar, name, tier/form, gender, experience, handedness, preferences, style, racket/strings/tension range, equipment notes, match count, and streaks. Missing details remain visibly unfilled; the app does not invent brands or personal facts.
 
 ## Profile fields and permissions
 
-Player.profile retains years, hand, preference, style, equipment, and level. Optional racket and strings fields accept at most 120 characters. tensionMin and tensionMax are numbers from 1 to 80, including decimals.
+Player.profile retains years, hand, preference, style, and equipment. Optional racket and strings fields accept at most 120 characters. tensionMin and tensionMax are numbers from 1 to 80, including decimals.
 
 Both range endpoints must be present, the maximum cannot be below the minimum, and two null values clear the range. A legacy single value can display as an equal-endpoint range. Recognizable legacy ranges remain readable; ambiguous historical text stays intact until explicitly replaced. A formatted tension string preserves old-client compatibility.
 
@@ -31,3 +31,7 @@ tests/player-profile-api.mjs uses fictional local accounts and image fixtures. C
 The framework body allowance is 6 MiB while the file limit stays 5 MiB, leaving multipart overhead. See [Next.js bodySizeLimit](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions#bodysizelimit); the installed Vinext implementation and the actual build must also be checked.
 
 Historical per-checkout API results remain local and ignored. No production profile, credential, or image should be used as a test fixture.
+
+## Self-assessed level removed
+
+The self-assessed level (beginner / intermediate / advanced) is no longer shown, edited, accepted by profileDetails, or included in group data. It was display-only and never affected Elo, automatic grouping, seeding, points, or achievements. Old clients that still send level succeed and the server ignores the field. Stored legacy values stay in raw data so historical payloads are not rewritten, but are not sent to any member; only an administrator's full raw export may still contain them. No database-table migration is required.

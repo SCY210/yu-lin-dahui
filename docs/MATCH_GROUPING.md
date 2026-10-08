@@ -4,7 +4,8 @@ Branch: `feature/balanced-match-grouping`.
 
 Elo remains `doubles-elo-v1`: validated, completed Elo-enabled matches update
 the existing rating from the administrator's initial estimate. Ranking points,
-self-declared level, years played and gender do not influence Elo or grouping.
+years played and gender do not influence Elo or grouping. The former
+self-declared profile level has been removed and was never an input.
 New players keep the neutral default; the existing provisional flag lasts for
 the first ten rated matches. No historical ratings are migrated or recomputed
 solely because of this change.

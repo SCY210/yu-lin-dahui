@@ -8,7 +8,7 @@ import {BALANCE_TOLERANCE} from '../lib/domain/match-balance';
 import {emptyState,type Event,type Match,type Player} from '../lib/domain/types';
 
 const start=Date.parse('2026-10-07T12:00:00Z');
-const profile:NonNullable<Player['profile']>={years:2,hand:'right',preference:'doubles',style:'',equipment:'',level:'beginner'};
+const profile:NonNullable<Player['profile']>={years:2,hand:'right',preference:'doubles',style:'',equipment:''};
 function fixture(ratings=[1500,1300,1100,900]) {
  const s=emptyState();
  const e:Event={id:'event',title:'分组测试',start,end:start+3*3600000,venue:'测试球馆',address:'',capacity:16,signupDeadline:start,cancelDeadline:start,note:'',status:'live',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
@@ -42,7 +42,7 @@ test('several courts are balanced without duplicates or losing the resting playe
  assert.equal(new Set(playing).size,8);assert.equal(next.rest.length,2);
  assert.ok(next.courts.every(m=>gap(s,m)<=BALANCE_TOLERANCE));
 });
-test('self-declared years, level and gender do not influence Elo or grouping',async()=>{
+test('self-declared years, gender and a retired level field do not influence Elo or grouping',async()=>{
  const {s,e}=fixture();s.matches.push(match('rated',['A','D'],['B','C']));replayRating(s);
  const before=s.players.map(p=>({rating:p.rating,initialRating:p.initialRating,ratedGames:p.ratedGames}));
  const grouping=propose(s,e,start+120000,15,5);
