@@ -14,7 +14,7 @@ function statement(query,parameters=[]){return {query,parameters,bind(...args){r
 fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
 const api=await import(pathToFileURL(resolve('.test-output/grants-api-bundle.mjs')).href);
 try{
- const initial=api.emptyState(),s=api.emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.rankingVersion='signed-v1';
+ const initial=api.emptyState(),s=api.emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';
  s.accounts=['owner','admin','member'].map((id,i)=>({id,email:'',role:i<2?'admin':'member',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await api.save(s,'seed',initial);
  const origin='https://club.example',payload={playerId:'p2',period:'2026-10',points:25,reason:"组织奖励 '); DROP TABLE players; --"};
  const user=id=>fixture.user=id?{userId:id,displayName:id,method:'password'}:null;

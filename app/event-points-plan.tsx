@@ -14,7 +14,7 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
  const {data,open,send,busy,name}=ctx,[now,setNow]=useState(Date.now);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer)},[e.id]);
  const manager=canManageEvent(data.me,e),editable=manager&&!['ended','cancelled','draft'].includes(e.status);
- const window=pointsWindow(e),minutes=Math.round((window.end-window.start)/60000),free=Math.max(0,Math.round((e.end-window.end)/60000));
+ const window=pointsWindow(e),minutes=Math.round((window.end-window.start)/60000);
  const phases=pointsPhases(data,e,window.start,window.end),fixedIds=new Set(e.pointsChoice?.teams?.flat()??[]);
  const unmatched=e.pointsChoice?.selectedMode==='fixed'?data.registrations.filter((r:any)=>r.eventId===e.id&&r.status==='confirmed'&&!fixedIds.has(r.playerId)):[];
  const counts=pointsChoiceCounts(data,e),mine=e.pointsChoice?.votes.find(v=>v.voterId===data.me.id),canVote=canVotePointsMode(data,e,data.me,now);
@@ -30,8 +30,8 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
  function confirm(mode:PointsMode){open('确认搭档方式','pointsModeSelect',{eventId:e.id,mode},[],undefined,`确认「${pointsModeLabels[mode]}」并关闭投票。更换方式会取消尚未开始的分组，需要重新分配。`)}
  return <section className="card event-points-plan" aria-label="积分赛时段与搭档投票">
   <div className="row"><h3>积分赛安排</h3>{rounds.length>0&&<span className="badge">已预排 {rounds.length} 轮</span>}</div>
-  <div className="points-phase-grid"><div><span>积分赛 · {minutes} 分钟</span><strong>{hm(window.start)}–{hm(window.end)}</strong></div>{free>0&&<div><span>自由打 · {free} 分钟</span><strong>{hm(window.end)}–{hm(e.end)}</strong></div>}</div>
-<Disclosure label="参加时段与排场详情">  <p className="hint">默认留最后半小时自由打，其他时间打积分赛。创建者可调整时长；进入自由打时段后，新开赛的比赛不计月积分或实力分。</p>
+  <div className="points-phase-grid"><div><span>积分赛 · {minutes} 分钟</span><strong>{hm(window.start)}–{hm(window.end)}</strong></div></div>
+<Disclosure label="参加时段与排场详情">  <p className="hint">网站记录的对局统一计入积分赛。这里的时间只用于提前排场，时段外逐轮生成并录入的比赛也计积分。</p>
   <h4>按时间混合排场</h4><div className="points-availability">{phases.map((phase,i)=><div className="points-availability-phase" key={i}><div><strong>{hm(phase.start)}–{hm(phase.end)}</strong><span>{phase.players.length} 人 · {phase.courts.length} 块场</span></div><p>{phase.usedCourts?`每轮最多 ${phase.playing} 人上场${phase.rest?'，'+phase.rest+' 人轮休':''}`:phase.courts.length?'同球馆人数不足4人，暂不能排双打':'没有可用场地'}</p><small>{phase.courts.map(c=>c.name).join(' · ')}</small></div>)}</div><p className="hint">接龙决定参加时间，同一时段跨场混合打。人数或场地变化时，每轮会在交接时间前结束；后半段继续照顾仍在场球友的上场机会。</p>
 </Disclosure>  <h4>搭档方式投票{e.pointsChoice?.selectedMode?' · 已确认'+pointsModeLabels[e.pointsChoice.selectedMode]:''}</h4>
   <div className="points-mode-options">{(['rotate','fixed'] as const).map(mode=><div className={'points-mode-option'+(e.pointsChoice?.selectedMode===mode?' is-selected':'')} key={mode}>
