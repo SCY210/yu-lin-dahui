@@ -47,7 +47,7 @@ export function achievementSnapshot(s:State,now=Date.now()):Record<string,Achiev
    for(const a of achievementCatalog){
     const progress=row.summary.progress[a.id];progress.current=row.metrics[a.metric];
     if(a.metric==='partnerWins'&&row.bestPartnerId)progress.partnerId=row.bestPartnerId;
-    for(const [index,target]of achievementTargets[a.id].entries())if(progress.levelUnlockedAt[index]===null&&progress.current>=target&&row.metrics.matchDays>=achievementParticipationDays[index]){
+    for(const [index,target]of achievementTargets[a.id].entries())if(progress.levelUnlockedAt[index]===null&&progress.current>=target&&row.metrics.matchDays>=achievementParticipationDays[a.id][index]){
      progress.levelUnlockedAt[index]=m.end;progress.level++;row.summary.totalLevels++;
      if(index===0){progress.unlockedAt=m.end;row.summary.unlockedCount++}
     }

@@ -17,7 +17,8 @@ export const viewport: Viewport = {
 };
 
 const baseMetadata: Metadata = {
-  title: "羽林大会 · 羽毛球友社区",
+  // iOS falls back to <title> for the Home Screen name: keep it identical to the app name.
+  title: "羽林大会",
   description: "报名、候补、公平排场、比赛积分与透明费用分摊。",
   applicationName: '羽林大会',
   manifest: '/manifest.webmanifest',

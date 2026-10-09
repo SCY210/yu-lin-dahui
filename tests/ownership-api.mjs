@@ -22,7 +22,7 @@ const ownerLogin=await auth(null,{action:'login',username:owner.username,passwor
 async function member(label){const username='ownertest'+(label==='甲'?'a':'b')+suffix,pw=password();const r=await auth(owner,{action:'createAccount',name:'虚构权限球友'+label,username,password:pw,requestId:randomUUID()});assert.equal(r.status,200);const logged=await auth(null,{action:'login',username,password:pw});assert.equal(logged.status,200);const a={id:r.data.accountId,cookie:cookie(logged),username,password:pw};a.playerId=(await get(a)).me.playerId;return a}
 const admin=await member('甲'),other=await member('乙');assert.equal((await command(owner,'role',{accountId:admin.id,role:'admin',reason:'虚构群主授权'})).status,200);
 const baseline=await get(owner),ownerPlayer=baseline.players.find(p=>p.id===owner.playerId);
-const profile={playerId:owner.playerId,years:4,hand:'left',preference:'doubles',style:'越权资料',equipment:'越权备注',level:'advanced',racket:'越权战拍',strings:'越权拍线',tensionMin:24,tensionMax:28};
+const profile={playerId:owner.playerId,years:4,hand:'left',preference:'doubles',style:'越权资料',equipment:'越权备注',racket:'越权战拍',strings:'越权拍线',tensionMin:24,tensionMax:28};
 await test('初始化账号立即拥有唯一群主最高权限，普通管理员不能管理角色',async()=>{
  const ov=await get(owner),av=await get(admin);assert.equal(ov.me.isOwner,true);assert.equal(ov.permissions.canManageRoles,true);assert.equal(av.me.role,'admin');assert.equal(av.me.isOwner,false);assert.equal(av.permissions.canManageRoles,false);assert.equal(av.accounts.find(a=>a.id===owner.id).canModify,false);
  assert.equal((await command(admin,'role',{accountId:other.id,role:'admin',reason:'私自授权'})).status,403);assert.equal((await command(admin,'role',{accountId:owner.id,role:'member',reason:'降级群主'})).status,403);

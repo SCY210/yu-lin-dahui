@@ -12,7 +12,7 @@ const adminHeaders={'oai-authenticated-user-id':'local_seedy','oai-authenticated
 const results=[],transportRetries=[],fixtures={};let currentTest='',memberA,memberB,friendId,avatarId,racketId,activityPhotoId;
 const imageFixturePath='tests/fixtures/shuttlecock.png',png=readFileSync(imageFixturePath);
 assert.ok(png.length>0&&png.length<=5*1024*1024,'Expected valid existing PNG fixture');
-const base={years:4,hand:'right',preference:'mixed',style:'虚构验收 · 网前与轮转',equipment:'虚构验收 · 备用装备说明',level:'intermediate'};
+const base={years:4,hand:'right',preference:'mixed',style:'虚构验收 · 网前与轮转',equipment:'虚构验收 · 备用装备说明'};
 const gear={racket:'虚构球拍 4U',strings:'虚构球线 0.66mm',tensionMin:25,tensionMax:27};
 async function request(path,options={}){
  for(let attempt=0;attempt<2;attempt++){
