@@ -137,7 +137,7 @@ export async function POST(req: Request) {
             else {
                 if (!a)
                     return response({ error: '403: 请先加入群组' }, 403);
-                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'profile', 'shuttleVote', 'pointsModeVote'].includes(body.action) && body.revision !== s.revision)
+                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
                 const preview = await apply(s, a, body.action, body.payload, Date.now());
                 if (body.action === 'historyPreview' && preview)
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'profile', 'shuttleVote', 'pointsModeVote'].includes(body.action))
+                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

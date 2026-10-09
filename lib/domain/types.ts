@@ -30,7 +30,9 @@ export type Rules={win:number;loss:number;minimum:number;cap:number;target:numbe
 export type Season={id:string;rules:Rules;version?:number};
 export type RatingChange={id:string;matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string;k:number};
 export type Audit={id:string;at:number;actor:string;action:string;reason:string;changes?:unknown};
-export type Settings={name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[];progressionVersion?:'weekly-v2';realmVersion?:'elo-v1';rankingVersion?:'signed-v1';scoringPolicy?:'all-ranked-v1';strengthVersion?:'realm-elo-v2'};
+export type Settings={name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[];progressionVersion?:'weekly-v2';realmVersion?:'elo-v1';rankingVersion?:'signed-v1';scoringPolicy?:'all-ranked-v1';strengthVersion?:'realm-elo-v2';feePayees?:FeePayee[]}
+/** A saved transfer recipient, offered when setting an activity's fee recipient; newest use first. */
+export type FeePayee={id:string;name:string;phone:string;createdBy:string;usedAt:number};
 export type ProfileRestrictions={genderOnlyPlayerIds:string[]};
 export type State={profileRestrictions?:ProfileRestrictions;revision:number;settings:Settings;accounts:Account[];players:Player[];events:Event[];bookings:Booking[];registrations:Registration[];attendance:Attendance[];rounds:Round[];matches:Match[];costs:Cost[];settlements:Settlement[];payments:Payment[];seasons:Season[];audits:Audit[];ratingChanges:RatingChange[];challenges:Challenge[];tagVotes:TagVote[];awardVotes:AwardVote[];photos:Photo[]};
 export const defaultRules:Rules={win:10,loss:-3,minimum:0,cap:0,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'};
