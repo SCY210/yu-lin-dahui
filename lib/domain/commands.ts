@@ -604,7 +604,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             const e = event(p.eventId), latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
             if (!latest)
-                fail('请先确认费用分摊，再通知球友');
+                fail('请先确认费用分摊，再提醒未付款的球友');
             if (latest.id !== p.settlementId)
                 fail('409: 分摊版本已更新，请刷新后再通知');
             // "Remind unpaid": only bills not yet marked paid, and at most once every six hours per version.

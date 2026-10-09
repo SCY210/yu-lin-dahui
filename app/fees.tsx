@@ -20,7 +20,8 @@ const proxied=(id:string)=>id!==data.me.playerId&&data.players.find((p:{id:strin
 const canMark=(id:string)=>statusOn&&!!latest?.bills.some((x:{playerId:string})=>x.playerId===id)&&(id===data.me.playerId||proxied(id)||manager);
 const markPaid=(id:string,value:boolean)=>void ctx.action('feePaid',{eventId:ev.id,playerId:id,paid:value,reason:value?'标记已付款':'撤销付款标记'},false).catch(()=>{});
 const paidStatus=(b:{playerId:string;total:number})=>statusOn&&<div className="fee-paid-status">{paid(b)?<span className="badge fee-paid">已付款</span>:<span className="badge fee-unpaid">未付款</span>}{canMark(b.playerId)&&b.total>0&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>markPaid(b.playerId,!paid(b))}>{paid(b)?'撤销已付款':'标记已付款'}</button>}</div>;
-const unpaidCount=statusOn&&latest?latest.bills.filter((b:{playerId:string;total:number})=>!paid(b)).length:0;
+// The reminder targets the latest confirmed version even while a manager previews a newer draft.
+const unpaidCount=latest&&latest.confirmed?latest.bills.filter((b:{playerId:string;total:number})=>!paid(b)).length:0;
 const myFriends=statusOn&&latest?latest.bills.filter((b:{playerId:string})=>proxied(b.playerId)):[];
 const bill=(b:Bill)=><div className="bill-row" key={b.playerId}><div><strong>{name(b.playerId)}{proxied(b.playerId)&&<small> · 我代报名</small>}</strong><small>{Math.round(b.minutes)} 分钟 · 场地 {euro(b.court)} · 球 {euro(b.ball)} · 其他 {euro(b.other)}</small></div><div><strong>{euro(b.total)}</strong><small>分摊金额</small></div>{paidStatus(b)}</div>;
 return <><div className="section-title"><h2>费用分摊</h2><div className="actions"><span className="badge">费用分摊 · 欧元</span><FeatureGuide topic="fees" label="费用怎么算"/></div></div>
