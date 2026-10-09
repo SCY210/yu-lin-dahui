@@ -15,3 +15,7 @@ test('a billed confirmer also receives a stable per-version reminder; revised ve
 });
 test('upcoming reminders use individual court arrival and exclude waitlist, canceled, ended and other accounts',()=>{const s=fixture();s.events[0].start=now-3600000;s.registrations=[registration()];const notices=upcomingReminders(s,'one',now);assert.equal(notices.length,1);assert.equal(notices[0].expires,now+3600000);assert.equal(upcomingReminders(s,'outside',now).length,0);assert.equal(upcomingReminders(s,'one',now+3600000).length,0);s.registrations[0].bookingSignups![0].status='waitlist';assert.equal(upcomingReminders(s,'one',now).length,0);s.registrations=[registration()];s.events[0].status='cancelled';assert.equal(upcomingReminders(s,'one',now).length,0)});
 test('a new signup and all inbox identities are stable for an identical request',()=>{const before=fixture(),after=structuredClone(before);before.events=[];const n=remindersForChange(after,before,'owner','same',now)[0];assert.equal(n.kind,'signup');assert.deepEqual(n.accountIds,['one','two','outside']);after.registrations=[registration()];assert.deepEqual(remindersForChange(after,before,'owner','same',now),remindersForChange(after,before,'owner','same',now))});
+test('deleting an activity never creates a new reminder exposing its title',()=>{
+ const before=fixture();before.registrations=[registration()];const after=structuredClone(before);after.events[0].deletedAt=0;
+ assert.deepEqual(remindersForChange(after,before,'owner','delete',now),[]);assert.deepEqual(upcomingReminders(after,'one',now),[]);
+});
