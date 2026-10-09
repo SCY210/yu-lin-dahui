@@ -1,49 +1,141 @@
 import {projectClubState} from '../lib/club-view';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {cultivationProgress,cultivationRealm,cultivationRealms,cultivationSnapshot,enableWeeklyProgression} from '../lib/domain/cultivation';
-import {leaderboard,annualLeaderboard,quarterlyLeaderboard,replayRating} from '../lib/domain/ranking';
+import {eloChange,enableEloRealms,expectedScore,gameChanges,kFactor,realmByScore,realmPolicy,realmProgress,realmSnapshot,realms,replayRealmScores,roundDelta,settleRealmIndex} from '../lib/domain/realm-rating';
+import {annualLeaderboard,leaderboard,quarterlyLeaderboard,replayRating,settledRatings} from '../lib/domain/ranking';
 import {playerStats,personality} from '../lib/domain/social';
 import {emptyState,type Match,type Event,type State} from '../lib/domain/types';
-import {settledRatings} from '../lib/domain/ranking';
 import {clubViewValidUntil} from '../lib/club-read-cache';
+import {doublesExample,exchangeRow,getFeatureGuide} from '../lib/feature-guides';
 const start=Date.parse('2026-10-04T13:00:00Z'),now=start+20*86400000;
-function fixture(){const s=emptyState();for(const id of ['A','B','C','D'])s.players.push({id,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});s.accounts=s.players.map(p=>({id:p.ownerId,email:'',role:'member',playerId:p.id}));return s}
-function match(id:string,at=start,win=true):Match{return {id,eventId:'event',roundId:'round',courtId:'court',a:['A','B'],b:['C','D'],status:'complete',start:at,end:at+60000,scoreA:win?21:19,scoreB:win?19:21,monthly:true,elo:true,locked:false,enteredBy:'admin',games:[{a:win?21:19,b:win?19:21}]}}
-test('修为门槛及进度使用长期成长，低值和无穷值保持有效',()=>{
- assert.deepEqual(cultivationRealms.map(r=>r.minimum),[0,60,180,400,800]);
- for(const [xp,realm] of [[0,'炼气'],[59,'炼气'],[60,'筑基'],[179,'筑基'],[180,'金丹'],[399,'金丹'],[400,'元婴'],[799,'元婴'],[800,'化神']] as const)assert.equal(cultivationRealm(xp),realm);
- assert.equal(cultivationProgress(60).progressPercent,0);assert.equal(cultivationProgress(60).remaining,120);assert.equal(cultivationProgress(180).progressPercent,0);assert.equal(cultivationProgress(850).experience,850);assert.equal(cultivationProgress(850).progressPercent,100);
- for(const xp of [-100,NaN,Infinity])assert.equal(cultivationProgress(xp).experience,0);
+function fixture(ids=['A','B','C','D']){const s=emptyState();for(const id of ids)s.players.push({id,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});s.accounts=s.players.map(p=>({id:p.ownerId,email:'',role:'member',playerId:p.id}));return s}
+function match(id:string,at=start,win=true,a=['A','B'],b=['C','D']):Match{return {id,eventId:'event',roundId:'round',courtId:'court',a,b,status:'complete',start:at,end:at+60000,scoreA:win?21:19,scoreB:win?19:21,monthly:true,elo:true,locked:false,enteredBy:'admin',games:[{a:win?21:19,b:win?19:21}]}}
+const rated=(score:number,games:number=realmPolicy.provisionalGames)=>({score,games});
+const deltas=(c:ReturnType<typeof gameChanges>)=>({a:c.a.map(x=>x.delta),b:c.b.map(x=>x.delta)});
+const score=(s:State,id:string,at=now)=>realmSnapshot(s,at).get(id)!;
+
+test('双打按个人计算：自己的分对比对方平均分，示例 1200+900 对 1050+1050',()=>{
+ const a=[rated(1200),rated(900)],b=[rated(1050),rated(1050)];
+ assert.deepEqual(deltas(gameChanges(a,b,'a')),{a:[5,11],b:[-8,-8]});
+ assert.deepEqual(deltas(gameChanges(a,b,'b')),{a:[-11,-5],b:[8,8]});
+ assert.equal(gameChanges(a,b,'a').a[0].opponent,1050);assert.equal(gameChanges(a,b,'a').b[0].opponent,1050);
+ assert.match(doublesExample(),/1200 分 \+5、900 分 \+11，B 队两人各 −8；A 队输，1200 分 −11、900 分 −5，B 队两人各 \+8/);
+ // The team-average variant gives both partners the team's change.
+ assert.deepEqual(deltas(gameChanges(a,b,'a','team')),{a:[8,8],b:[-8,-8]});
 });
-test('一晚6小局3胜3负：榜单21、修为49，不用等待全群',()=>{
- const s=fixture();for(let i=0;i<6;i++)s.matches.push(match('m'+i,start+i*60000,i<3));
- const progress=cultivationSnapshot(s,now).get('A')!;assert.equal(progress.earned,49);assert.equal(progress.trainingDays,1);assert.equal(progress.wins,3);assert.equal(progress.losses,3);assert.equal(leaderboard(s,'2026-10').find(r=>r.playerId==='A')!.points,21);
- const before=structuredClone(s.matches);s.players.push({id:'absent',name:'缺席',ownerId:'other',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});assert.equal(cultivationSnapshot(s,now).get('A')!.experience,49);assert.equal(cultivationSnapshot(s,now).get('absent')!.experience,0);assert.deepEqual(s.matches,before);
+
+test('单打为标准一对一 Elo，换算表与说明一致',()=>{
+ assert.equal(expectedScore(1000,1000),.5);assert.ok(Math.abs(expectedScore(1100,1000)-.64)<.001);
+ assert.equal(eloChange(1000,1000,1,20),8);assert.equal(eloChange(1000,1000,0,20),-8);
+ assert.equal(eloChange(1100,1000,1,20),6);assert.equal(eloChange(1000,1100,1,20),10);assert.equal(eloChange(1100,1000,0,20),-10);
+ assert.deepEqual(deltas(gameChanges([rated(1100)],[rated(1000)],'b')),{a:[-10],b:[10]});
+ assert.deepEqual(exchangeRow(0),['0','各 +8 / −8','各 +8 / −8']);assert.deepEqual(exchangeRow(100),['100','强方 +6，弱方 −6','弱方 +10，强方 −10']);
+ assert.equal(roundDelta(-4.5),-5);assert.equal(roundDelta(4.5),5);
+ const guide=getFeatureGuide('rating');assert.deepEqual(guide.table?.rows,realms.map(r=>[r.name,r.range]));assert.equal(guide.tables?.[0].rows[2][1],'强方 +6，弱方 −6');
+ assert.ok(!JSON.stringify([guide,getFeatureGuide('ranking'),getFeatureGuide('annualRanking'),getFeatureGuide('matches'),getFeatureGuide('modes')]).includes('修为'));
 });
-test('三局两胜2:1按实际小局统计17与4分，实力每场仍更新一次',()=>{
- const s=fixture(),m=match('multi');m.games=[{a:21,b:19},{a:19,b:21},{a:21,b:19}];m.scoreA=2;m.scoreB=1;s.matches=[m];const changes=replayRating(s),rows=leaderboard(s,'2026-10');
- const a=rows.find(r=>r.playerId==='A')!,c=rows.find(r=>r.playerId==='C')!;assert.equal(a.points,17);assert.equal(c.points,4);assert.equal(a.games,3);assert.equal(a.wins,2);assert.equal(a.rate,2/3);assert.equal(c.rate,1/3);assert.equal(s.players[0].ratedGames,1);assert.equal(changes.length,4);assert.equal(s.players[0].rating,1016);assert.equal(changes.reduce((n,r)=>n+r.delta,0),0);assert.equal(playerStats(s,'A').wins,2);assert.equal(playerStats(s,'A').games,3);assert.equal(cultivationSnapshot(s,now).get('A')!.experience,33);
+
+test('定级期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
+ assert.equal(kFactor(0),32);assert.equal(kFactor(19),32);assert.equal(kFactor(20),16);
+ assert.deepEqual(deltas(gameChanges([rated(1000,19),rated(1000,20)],[rated(1000,5),rated(1000,40)],'a')),{a:[16,8],b:[-16,-8]});
+ const s=fixture(['A','B']);for(let i=0;i<22;i++)s.matches.push(match('m'+String(i).padStart(2,'0'),start+i*120000,i%2===0,['A'],['B']));
+ const {games}=replayRealmScores(s,()=>true);const a=games.filter(g=>g.playerId==='A');
+ assert.deepEqual(a.map(g=>g.k),[...Array(20).fill(32),16,16]);
+ assert.equal(score(s,'A').ratedGames,22);
 });
-test('默认不再每月12场封顶，而成长一天只计前12局，跨活动也不重复签到奖励',()=>{
- const s=fixture();for(let i=0;i<13;i++){const m=match('m'+String(i).padStart(2,'0'),start+i*60000);m.eventId='event'+i;s.matches.push(m)}
- assert.equal(leaderboard(s,'2026-10').find(r=>r.playerId==='A')!.games,13);assert.equal(leaderboard(s,'2026-10').find(r=>r.playerId==='A')!.points,130);const xp=cultivationSnapshot(s,now).get('A')!;assert.equal(xp.earned,130);assert.equal(xp.creditedGames,12);assert.equal(xp.trainingDays,1);
- s.matches.push(match('next-week',start+7*86400000));assert.equal(cultivationSnapshot(s,now).get('A')!.earned,150);
+
+test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
+ for(const [a,b] of [[[1200,900],[1050,1050]],[[1000,1000],[1000,1000]],[[1300,1250],[800,900]]] as const)for(const w of ['a','b'] as const){const c=gameChanges(a.map(x=>rated(x)),b.map(x=>rated(x)),w);const sum=[...c.a,...c.b].reduce((n,x)=>n+x.delta,0);assert.ok(Math.abs(sum)<=2,'game sum '+sum)}
+ // A deterministic 8-player club, 40 weekly sessions of 6 doubles games.
+ const ids=['P1','P2','P3','P4','P5','P6','P7','P8'],skill=[1250,1150,1100,1000,1000,900,850,750],s=fixture(ids);let seed=7;const rnd=()=>{seed=(seed*1103515245+12345)%2147483648;return seed/2147483648};
+ for(let w=0;w<40;w++)for(let g=0;g<6;g++){const order=[...ids].sort(()=>rnd()-.5),a=order.slice(0,2),b=order.slice(2,4),team=(t:string[])=>t.reduce((n,id)=>n+skill[ids.indexOf(id)],0)/2,win=rnd()<expectedScore(team(a),team(b));s.matches.push({...match('w'+String(w).padStart(2,'0')+g,start+w*7*86400000+g*600000,win,a,b),eventId:'e'+w})}
+ const later=start+400*86400000,snap=realmSnapshot(s,later),mean=ids.reduce((n,id)=>n+snap.get(id)!.score,0)/ids.length;
+ assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
+ assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
+ // Ranking points over the whole year equal the change of 段位分 from 1000.
+ const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids)assert.equal((year.find(r=>r.playerId===id)?.points??0)+(next.find(r=>r.playerId===id)?.points??0),snap.get(id)!.score-1000);
 });
-test('旧默认规则升级、保留旧境界的冻结补差额不重奖，自定义赛季和Elo不被修改',()=>{
- const s=fixture();s.settings.initialized=true;s.settings.rules={...s.settings.rules,win:3,loss:0,cap:12};s.seasons=[{id:'2026-10',rules:{...s.settings.rules}},{id:'2026-09',rules:{...s.settings.rules,win:7,loss:2,cap:8}}];s.players[0].rating=1300;s.matches=[match('old')];const scores=s.players.map(p=>p.rating),records=structuredClone(s.matches);
- assert.equal(enableWeeklyProgression(s,now),true);assert.equal(s.players[0].cultivationBase,380);assert.equal(cultivationSnapshot(s,now).get('A')!.realm,'元婴');assert.equal(s.settings.rules.win,10);assert.equal(s.settings.rules.loss,3);assert.equal(s.settings.rules.cap,0);assert.equal(s.seasons[0].rules.win,10);assert.equal(s.seasons[1].rules.win,7);assert.equal(s.seasons[1].rules.cap,8);assert.deepEqual(s.players.map(p=>p.rating),scores);assert.deepEqual(s.matches,records);
- const base=s.players[0].cultivationBase;assert.equal(enableWeeklyProgression(s,now),false);s.matches.push(match('next',start+7*86400000));assert.equal(cultivationSnapshot(s,now).get('A')!.experience,420);assert.equal(s.players[0].cultivationBase,base);
+
+test('境界门槛：达到即晋升，跌破门槛减15分才降级',()=>{
+ assert.deepEqual(realms.map(r=>r.minimum),[-Infinity,900,1000,1100,1200]);
+ for(const [value,realm] of [[899,'炼气'],[900,'筑基'],[999,'筑基'],[1000,'金丹'],[1099,'金丹'],[1100,'元婴'],[1199,'元婴'],[1200,'化神']] as const)assert.equal(realmByScore(value),realm);
+ assert.equal(settleRealmIndex(2,1100),3,'promotion at the threshold');
+ assert.equal(settleRealmIndex(3,1090),3);assert.equal(settleRealmIndex(3,1085),3);assert.equal(settleRealmIndex(3,1084),2);
+ assert.equal(settleRealmIndex(4,1090),3,'a fall from 化神 still keeps 元婴 inside its buffer');assert.equal(settleRealmIndex(4,1084),2);
+ assert.equal(settleRealmIndex(1,880),0);assert.equal(settleRealmIndex(1,885),1);
+ const guarded=realmProgress(1090,3);assert.deepEqual([guarded.realm,guarded.progressPercent,guarded.guarded,guarded.demotionAt],['元婴',0,true,1085]);
+ const mid=realmProgress(1050);assert.deepEqual([mid.realm,mid.stage,mid.progressPercent,mid.nextRealm,mid.remaining],['金丹','中期',50,'元婴',50]);
+ assert.deepEqual([realmProgress(850).realm,realmProgress(850).progressPercent,realmProgress(700).progressPercent],['炼气',50,0]);
+ assert.deepEqual([realmProgress(1200).stage,realmProgress(1250).stage,realmProgress(1300).stage,realmProgress(1300).progressPercent],['初期','中期','圆满',100]);
+ for(const bad of [NaN,Infinity])assert.equal(realmProgress(bad).score,1000);
 });
-test('缺席不降境界，作废纠错会回放；友谊、让分、弃权与未来完赛不制造修为',()=>{
- const s=fixture();s.matches=[match('real')];assert.equal(cultivationSnapshot(s,now).get('A')!.experience,20);assert.equal(cultivationSnapshot(s,now+30*86400000).get('A')!.experience,20);
- const friendly=match('friend');friendly.monthly=false;const handicap=match('handicap');handicap.handicap={side:'a',points:4,applied:true};const forfeit=match('forfeit');forfeit.status='forfeit';const future=match('future',now+86400000);s.matches.push(friendly,handicap,forfeit,future);assert.equal(cultivationSnapshot(s,now).get('A')!.experience,20);
- s.matches[0].status='cancelled';assert.equal(cultivationSnapshot(s,now).get('A')!.experience,0);s.matches[0]=match('real',start,false);assert.equal(cultivationSnapshot(s,now).get('A')!.experience,13);
+
+test('保级缓冲按活动结算后判断：同一活动中途跌破又回升不降级，下一次活动跌入缓冲区仍保留',()=>{
+ const s=fixture(['A','B']);let at=start,n=0;const play=(event:string,wins:boolean[])=>{for(const w of wins){const m=match('g'+String(n++).padStart(3,'0'),at,w,['A'],['B']);m.eventId=event;s.matches.push(m);at+=120000}at+=86400000};
+ play('e1',Array(9).fill(true));const top=score(s,'A');assert.deepEqual([top.score,top.realm,top.placement],[1103,'元婴',true]);
+ play('e2',[false,true]);const path=replayRealmScores(s,()=>true).games.filter(g=>g.playerId==='A'&&g.eventId==='e2').map(g=>g.after);
+ assert.deepEqual(path,[1078,1087],'dips below 1085 inside e2, ends inside the buffer');const back=score(s,'A');
+ assert.deepEqual([back.realm,back.guarded,back.demotionAt,back.placement],['元婴',true,1085,false]);
+ play('e3',[false]);const fall=score(s,'A');assert.deepEqual([fall.score,fall.realm,fall.guarded],[1064,'金丹',false]);
 });
-test('修为奖励采用马德里完赛日期，跨午夜与重放稳定且重复ID不多发',()=>{
- const s=fixture();const first=match('first',Date.parse('2026-10-04T21:40:00Z'));first.end=Date.parse('2026-10-04T21:59:00Z');const second=match('second',Date.parse('2026-10-04T21:50:00Z'));second.end=Date.parse('2026-10-04T22:10:00Z');s.matches=[second,first,{...first}];assert.equal(cultivationSnapshot(s,now).get('A')!.experience,40);assert.equal(cultivationSnapshot(s,now).get('A')!.trainingDays,2);assert.equal(cultivationSnapshot(s,now).get('A')!.creditedGames,2);
+
+test('少于10个计分小局显示定级中，仍显示对应境界且不用缓冲',()=>{
+ const s=fixture(['A','B']);for(let i=0;i<9;i++){const m=match('p'+i,start+i*120000,false,['A'],['B']);m.eventId='e'+i;s.matches.push(m)}
+ const a=score(s,'A');assert.equal(a.placement,true);assert.equal(a.ratedGames,9);assert.equal(a.realm,realmByScore(a.score));assert.ok(a.score<900);
+ const m=match('p9',start+20*120000,false,['A'],['B']);m.eventId='e9';s.matches.push(m);assert.equal(score(s,'A').placement,false);
+ assert.equal(playerStats(s,'A',score(s,'A')).provisional,false);assert.equal(playerStats(s,'B',realmSnapshot(s,start).get('B')).provisional,true);
 });
-test('隐藏实力初值不再单独决定可见境界或打破积分并列',()=>{const s=fixture();s.players[0].rating=4000;assert.equal(playerStats(s,'A').tier,'炼气');s.matches=[match('one')];const rows=annualLeaderboard(s,2026);assert.equal(rows.find(r=>r.playerId==='A')!.points,10);assert.equal(rows.find(r=>r.playerId==='C')!.points,-3);assert.equal(rows.find(r=>r.playerId==='A')!.rank,rows.find(r=>r.playerId==='B')!.rank)});
+
+test('友谊赛、让分局、弃权、取消、未完成和未来完赛不改段位分；作废与纠错按历史回放',()=>{
+ const s=fixture();s.matches=[match('real')];assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A',now+30*86400000).score,1016,'absence costs nothing');
+ const friendly=match('friend');friendly.monthly=false;const handicap=match('handicap');handicap.handicap={side:'a',points:4,applied:true};handicap.elo=false;const forfeit=match('forfeit');forfeit.status='forfeit';const playing=match('playing');playing.status='playing';const future=match('future',now+86400000);
+ s.matches.push(friendly,handicap,forfeit,playing,future,{...match('real')});assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A').ratedGames,1);
+ const row=leaderboard(s,'2026-10',now).find(r=>r.playerId==='A')!;assert.deepEqual([row.points,row.games],[16,1]);assert.ok(row.total>row.games,'unrated records still count as actual games');
+ for(const m of s.matches)if(m.id==='real')m.status='cancelled';assert.equal(score(s,'A').score,1000);s.matches=[...s.matches.filter(m=>m.id!=='real'),match('real',start,false)];assert.equal(score(s,'A').score,984);
+});
+
+test('回放顺序确定：按完赛时间、比赛编号与小局顺序，与输入顺序无关',()=>{
+ const s=fixture(),bo3=match('bo3',start+60000);bo3.games=[{a:21,b:19},{a:19,b:21},{a:21,b:15}];bo3.scoreA=2;bo3.scoreB=1;
+ s.matches=[match('z',start,false),match('a',start,true),bo3,match('next',start+3600000,true,['A','C'],['B','D'])];
+ const forward=realmSnapshot(s,now);s.matches.reverse();assert.deepEqual(realmSnapshot(s,now),forward);
+ const {games}=replayRealmScores(s,()=>true);assert.deepEqual([...new Set(games.map(g=>g.matchId+':'+g.gameIndex))],['a:0','z:0','bo3:0','bo3:1','bo3:2','next:0']);
+ assert.equal(forward.get('A')!.ratedGames,6);assert.equal(forward.get('A')!.wins,4);
+ // Hidden strength is untouched and still updates once per match.
+ replayRating(s);assert.equal(s.players[0].ratedGames,4);
+});
+
+test('活动进行中段位分与境界保持，显示待结算局数和暂计变化；结束后一次结算',()=>{
+ const s=fixture(),e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
+ s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
+ const live=score(s,'A',mid);assert.deepEqual([live.score,live.realm,live.pendingGames,live.ratedGames],[1000,'金丹',2,0]);assert.equal(live.pendingChange,16-17);
+ for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.points,a.pendingPoints,a.pendingGames,a.games],[-1,-1,2,2]);assert.equal(a.realmScore.score,1000)}
+ const settled=score(s,'A',e.end);assert.deepEqual([settled.score,settled.pendingGames,settled.ratedGames],[999,0,2]);
+ assert.deepEqual(realmSnapshot(s,e.end),realmSnapshot({...s,events:[]},e.end));assert.equal(score(s,'A',e.end-1).score,1000);
+ e.status='ended';assert.equal(score(s,'A',mid).score,999);e.status='cancelled';assert.equal(score(s,'A',mid).score,999);
+ e.status='open';assert.equal(score(s,'A',mid).score,1000);e.end+=3600000;assert.equal(score(s,'A',start+3*3600000).score,1000);
+ s.matches.forEach(m=>{m.eventId='legacy-without-record'});assert.equal(score(s,'A',mid).score,999);
+});
+
+test('一次性迁移：所有人从1000按全部历史回算，忽略初始实力与旧成长底分，写入版本并幂等',()=>{
+ const s=fixture();s.players[0].initialRating=1400;s.players[0].rating=1400;s.players[0].cultivationBase=380;s.settings.progressionVersion='weekly-v2';s.matches=[match('old',start),match('older',start-86400000,false)];
+ const before=structuredClone(s);assert.equal(enableEloRealms({...structuredClone(s),settings:{...s.settings,initialized:false}},now),null);
+ s.settings.initialized=true;const audit=enableEloRealms(s,now)!;assert.equal(s.settings.realmVersion,'elo-v1');assert.equal(audit.version,'elo-v1');
+ const a=audit.players.find(p=>p.playerId==='A')!;assert.equal(a.legacyBase,380);assert.equal(a.ratedGames,2);assert.equal(a.score,score(s,'A').score);assert.equal(a.score,1000-16+17);
+ assert.deepEqual(s.players,before.players);assert.deepEqual(s.matches,before.matches);
+ assert.equal(enableEloRealms(s,now+1),null);assert.equal(s.settings.realmVersion,'elo-v1');
+});
+
+test('页面境界与队伍参考实力在活动中保持，结束时自动结算且与完整重放一致，读取缓存在结束时刷新',()=>{
+ const s=fixture();for(const p of s.players.slice(0,2)){p.initialRating=1090;p.rating=1090}const e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);s.matches=[match('late')];replayRating(s);const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;
+ assert.ok(s.players[0].rating>1100);
+ const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
+ assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'金丹');assert.equal(a(during).realmScore.score,1000);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.points,16);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1000);assert.equal(during.social.matchLevels.late.a,'入门');
+ const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).realmScore.score,1016);assert.equal(after.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1016);assert.equal(after.social.matchLevels.late.a,'基础');
+ assert.equal(settledRatings(s,mid).get('A'),1090);assert.equal(settledRatings(s,e.end).get('A'),s.players[0].rating);assert.equal(s.events[0].status,'live');
+ assert.ok(after.players.every(p=>p.rating===null));
+ e.status='draft';e.creatorId='someone-else';assert.equal(clubViewValidUntil(s,member,e.end-60000),e.end);
+});
+
 test('自动预计出勤不产生早到或压线称号，手动和旧历史出勤保持实际记录',()=>{
  const s=fixture();const e:Event={id:'manual',creatorId:'A',title:'活动',start,end:start+3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};
  s.events.push(e,{...e,id:'legacy'},{...e,id:'automatic'});
@@ -52,35 +144,4 @@ test('自动预计出勤不产生早到或压线称号，手动和旧历史出�
   {id:'legacy',eventId:'legacy',playerId:'A',start:start-300000,end:null,state:'ready'},
   {id:'only-expected',eventId:'automatic',playerId:'A',start,end:null,state:'ready',source:'automatic'});
  const p=personality(s,2026).find(p=>p.playerId==='A')!;assert.equal(p.early,1);assert.equal(p.onTime,1);
-});
-
-test('保留并行更新的默认炼气零修为：新建与已有默认实力球友在各页面一致',()=>{const s=fixture();s.settings.initialized=true;enableWeeklyProgression(s,now);assert.ok(s.players.every(p=>p.cultivationBase===0));for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)])for(const row of rows){assert.equal(row.realm,'炼气');assert.equal(row.cultivation.experience,0);assert.equal(row.cultivation.progressPercent,0)}assert.equal(playerStats(s,'A').cultivation.experience,0);const data=projectClubState(s,{id:'member',email:'',role:'member',playerId:'A'},'2026-10',2026,now);assert.ok(data.players.every(p=>p.rating===null));assert.ok(data.social.stats.every(p=>p.tier==='炼气'&&p.cultivation.experience===0));assert.ok(s.players.every(p=>p.rating===1000&&p.initialRating===1000));});
-
-const activity=(s:State,patch:Partial<Event>={}):Event=>{const e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval',...patch};s.events.push(e);return e};
-test('活动进行中完赛的小局不升降境界，活动结束时按完赛顺序一次结算',()=>{
- const s=fixture();s.players[0].cultivationBase=50;const e=activity(s);s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
- const live=cultivationSnapshot(s,mid).get('A')!;assert.equal(live.realm,'炼气');assert.equal(live.experience,50);assert.equal(live.earned,0);assert.equal(live.pendingGames,2);assert.equal(live.wins,0);
- for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.equal(a.points,7);assert.equal(a.games,2);assert.equal(a.realm,'炼气');assert.equal(a.cultivation.experience,50)}
- const stats=playerStats(s,'A',cultivationSnapshot(s,mid).get('A'));assert.equal(stats.tier,'炼气');assert.equal(stats.wins,1);
- const settled=cultivationSnapshot(s,e.end).get('A')!;assert.equal(settled.realm,'筑基');assert.equal(settled.experience,73);assert.equal(settled.pendingGames,0);assert.equal(settled.trainingDays,1);
- assert.deepEqual(cultivationSnapshot(s,e.end),cultivationSnapshot({...s,events:[]},e.end));assert.equal(cultivationSnapshot(s,e.end-1).get('A')!.experience,50);
- assert.equal(cultivationSnapshot(s,mid).get('C')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('C')!.experience,23);
-});
-test('提前标记结束或取消即结算；延长场地或恢复进行则继续等待；没有活动记录的旧比赛照常完赛即计',()=>{
- const s=fixture(),e=activity(s);s.matches=[match('one')];const mid=start+3600000;assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);
- e.status='ended';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);e.status='cancelled';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);
- e.status='open';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);e.status='draft';assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
- e.status='live';const end=e.end;e.end+=3600000;assert.equal(cultivationSnapshot(s,end).get('A')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
- e.deletedAt=mid;assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,0);assert.equal(cultivationSnapshot(s,e.end).get('A')!.experience,20);
- s.matches[0].eventId='legacy-without-record';assert.equal(cultivationSnapshot(s,mid).get('A')!.experience,20);
- const friendly=match('friendly');friendly.monthly=false;s.matches=[friendly];assert.equal(cultivationSnapshot(s,mid).get('A')!.pendingGames,0);
-});
-test('页面境界与队伍参考实力在活动中保持，结束时自动结算且与完整重放一致，读取缓存在结束时刷新',()=>{
- const s=fixture();for(const p of s.players.slice(0,2)){p.initialRating=1090;p.rating=1090}const e=activity(s);s.matches=[match('late')];replayRating(s);const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;
- assert.ok(s.players[0].rating>1100);
- const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
- assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'炼气');assert.equal(a(during).cultivation.experience,0);assert.equal(a(during).cultivation.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.points,10);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.cultivation.experience,0);assert.equal(during.social.matchLevels.late.a,'入门');
- const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).cultivation.experience,20);assert.equal(after.leaderboard.find(r=>r.playerId==='A')!.cultivation.experience,20);assert.equal(after.social.matchLevels.late.a,'基础');
- assert.equal(settledRatings(s,mid).get('A'),1090);assert.equal(settledRatings(s,e.end).get('A'),s.players[0].rating);assert.equal(s.events[0].status,'live');
- e.status='draft';e.creatorId='someone-else';assert.equal(clubViewValidUntil(s,member,e.end-60000),e.end);
 });

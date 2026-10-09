@@ -60,10 +60,10 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <p className="pp-eyebrow"><span className="pp-perspective">{isOwn ? '我的档案' : p.name+'的档案'}</span></p>
         <h2>{p.name}</h2>
         <div className="pp-badges">
-          {state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.provisional ? '暂定' : undefined} /> : <span className="pp-tier">暂无境界</span>}
+          {state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.provisional ? '定级中' : state.realmScore?.stage} /> : <span className="pp-tier">暂无境界</span>}
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
-        <RealmProgress value={state.cultivation}/>
+        <RealmProgress value={state.realmScore}/>
       </div>
       {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
         <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>

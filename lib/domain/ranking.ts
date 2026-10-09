@@ -1,6 +1,6 @@
 import {winner} from './social';
 import {pointGrants} from './point-grants';
-import {cultivationSnapshot} from './cultivation';
+import {realmLedger,type RealmLedger} from './realm-rating';
 import {settledMatchFilter} from './event-lifecycle';
 import {gameFacts} from './game-facts';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
@@ -18,30 +18,27 @@ export function replayRating(s:State){for(const p of s.players){p.rating=p.initi
 }
 /** Visible strength labels settle like realms; matchmaking keeps the live rating. */
 export function settledRatings(s:State,now=Date.now()){const copy:State={...s,players:s.players.map(p=>({...p})),matches:s.matches.filter(settledMatchFilter(s,now)),ratingChanges:[]};replayRating(copy);return new Map(copy.players.map(p=>[p.id,p.rating]))}
-export function leaderboard(s:State,season:string,now=Date.now()){return aggregateLeaderboard(s,[season],now)}
-function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all'){
- const singles=format==='singles',chosen=new Set(periods),growth=cultivationSnapshot(s,now),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>();
+/** Ranking points are the 段位分 changes of the period's rated games (plus owner grants on the combined board).
+ * Points stay live: games of a running activity count at once (shown as pending) while realms wait for the activity to end. */
+export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
+function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
+ const singles=format==='singles',chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
  const members=new Set(s.accounts.map(account=>account.playerId));
  const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{
   const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&(!singles||isSinglesMatch(m))&&gameFacts(m).length>0);
-  let games=0,wins=0,net=0,score=0;
-  for(const period of periods){const rules=s.seasons.find(x=>x.id===period)?.rules??s.settings.rules;
-   const eligible=all.filter(m=>m.monthly&&month(m.start!)===period).sort((a,b)=>a.start!-b.start!||a.id.localeCompare(b.id)).flatMap(gameFacts);
-   const scored=rules.cap?eligible.slice(0,rules.cap):eligible;
-   let periodWins=0;for(const g of scored){const side=g.match.a.includes(p.id)?'a':'b';periodWins+=g.winner===side?1:0;net+=side==='a'?g.a-g.b:g.b-g.a}
-   games+=scored.length;wins+=periodWins;score+=periodWins*rules.win+(scored.length-periodWins)*rules.loss;
-  }
-  const cultivation=growth.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:cultivation.realm,cultivation,provisional:false,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  const rated=(ledger.byPlayer.get(p.id)??[]).filter(g=>chosen.has(month(g.start))&&(!singles||isSinglesMatch(matches.get(g.matchId)!)));
+  const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=rated.reduce((n,g)=>n+g.delta,0),pending=rated.filter(g=>!g.settled);
+  const realm=ledger.snapshot.get(p.id)!;
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+g.delta,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).filter(row=>!singles||row.totalMatches>0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
 const yearMonths=(year:number)=>Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0'));
-export function quarterlyLeaderboard(s:State,quarter:string,now=Date.now()){return aggregateLeaderboard(s,quarterMonths(quarter),now)}
-export function annualLeaderboard(s:State,year:number,now=Date.now()){return aggregateLeaderboard(s,yearMonths(year),now)}
+export function quarterlyLeaderboard(s:State,quarter:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,quarterMonths(quarter),now,'all',ledger)}
+export function annualLeaderboard(s:State,year:number,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,yearMonths(year),now,'all',ledger)}
 /** Singles boards list only members with a completed singles match in the period; the main boards stay unchanged.
- * Points stay live; realms shown on the rows settle per activity like the combined board. */
-export function singlesLeaderboard(s:State,season:string,now=Date.now()){return aggregateLeaderboard(s,[season],now,'singles')}
-export function singlesQuarterlyLeaderboard(s:State,quarter:string,now=Date.now()){return aggregateLeaderboard(s,quarterMonths(quarter),now,'singles')}
-export function singlesAnnualLeaderboard(s:State,year:number,now=Date.now()){return aggregateLeaderboard(s,yearMonths(year),now,'singles')}
+ * Points are the singles games' 段位分 changes, live like the combined board; realms on the rows settle per activity. */
+export function singlesLeaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'singles',ledger)}
+export function singlesQuarterlyLeaderboard(s:State,quarter:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,quarterMonths(quarter),now,'singles',ledger)}
+export function singlesAnnualLeaderboard(s:State,year:number,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,yearMonths(year),now,'singles',ledger)}
