@@ -18,7 +18,7 @@ test('three calendar months clamp a short target month instead of rolling into t
 test('already migrated grouping strength catches up after inactivity without another migration or lost season points',()=>{
  const s=fixture(),revision=s.revision,audits=structuredClone(s.audits),history=structuredClone(s.matches);
  assert.equal(mergeStrengthRating(s,due),null);assert.ok(s.players.every(p=>p.rating===1000&&p.ratedGames===0));assert.equal(s.revision,revision);assert.deepEqual(s.audits,audits);assert.deepEqual(s.matches,history);
- assert.equal(doublesAnnualLeaderboard(s,2026,due).find(r=>r.playerId==='a')!.points,3);assert.equal(doublesAnnualLeaderboard(s,2026,due).find(r=>r.playerId==='c')!.points,1);
+ assert.equal(doublesAnnualLeaderboard(s,2026,due).find(r=>r.playerId==='a')!.points,3);assert.equal(doublesAnnualLeaderboard(s,2026,due).find(r=>r.playerId==='c')!.points,-1);
 });
 test('cached responses expire exactly at an inactivity deadline even without another write',()=>{
  const s=fixture();assert.equal(clubViewValidUntil(s,s.accounts[0],due-1000),due);

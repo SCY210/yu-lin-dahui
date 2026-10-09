@@ -62,7 +62,7 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
  assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
  assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
  // Season points are independent of 段位分: win 3, loss 1, plus the upset bonus.
- const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids){const rows=[year,next].map(b=>b.find(r=>r.playerId===id)!);assert.equal(rows.reduce((n,r)=>n+r.points,0),rows.reduce((n,r)=>n+3*r.wins+r.losses+r.upsetPoints,0))}
+ const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids){const rows=[year,next].map(b=>b.find(r=>r.playerId===id)!);assert.equal(rows.reduce((n,r)=>n+r.points,0),rows.reduce((n,r)=>n+3*r.wins-r.losses+r.upsetPoints,0))}
 });
 
 test('境界门槛：每境150分，达到即晋升，跌破门槛减30分才降级',()=>{
@@ -138,7 +138,7 @@ test('活动进行中段位分与境界保持，显示待结算局数和暂计�
  const s=fixture(),e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
  s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
  const live=score(s,'A',mid);assert.deepEqual([live.score,live.realm,live.pendingGames,live.ratedGames],[1000,'金丹',2,0]);assert.equal(live.pendingChange,16-17);
- for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.points,a.pendingPoints,a.pendingGames,a.games],[3+1,3+1,2,2]);assert.equal(a.realmScore.score,1000)}
+ for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.points,a.pendingPoints,a.pendingGames,a.games],[3-1,3-1,2,2]);assert.equal(a.realmScore.score,1000)}
  const settled=score(s,'A',e.end);assert.deepEqual([settled.score,settled.pendingGames,settled.ratedGames],[999,0,2]);
  assert.deepEqual(realmSnapshot(s,e.end),realmSnapshot({...s,events:[]},e.end));assert.equal(score(s,'A',e.end-1).score,1000);
  e.status='ended';assert.equal(score(s,'A',mid).score,999);e.status='cancelled';assert.equal(score(s,'A',mid).score,999);
@@ -195,16 +195,16 @@ test('连续3个月没有计分小局：段位分回到1000并重新定级、重
  assert.ok(!replayRealmScores(soon,()=>true).games.some(g=>g.reset));assert.equal(score(soon,'A',due+86400000).ratedGames,13);assert.ok(score(soon,'A',due+86400000).score>1050);
 });
 
-test('赛季积分：胜3负1，赢段位分高50/150以上的对手另加1/2分，与段位分加减无关',()=>{
- assert.deepEqual([[false,900,1300],[true,1000,1049],[true,1000,1050],[true,1000,1149],[true,1000,1150],[true,1300,900]].map(([won,team,opponent])=>gamePoints({won:won as boolean,team:team as number,opponent:opponent as number})),[1,3,4,4,5,3]);
+test('赛季积分：胜3负−1，赢段位分高50/150以上的对手另加1/2分，与段位分加减无关',()=>{
+ assert.deepEqual([[false,900,1300],[true,1000,1049],[true,1000,1050],[true,1000,1149],[true,1000,1150],[true,1300,900]].map(([won,team,opponent])=>gamePoints({won:won as boolean,team:team as number,opponent:opponent as number})),[-1,3,4,4,5,3]);
  assert.equal(upsetBonus({won:false,team:800,opponent:1300}),0);
  // B loses three singles to A (A 1044, B 956: 88 apart), then beats A: 3 + 1.
  const s=fixture(['A','B']);for(let i=0;i<4;i++)s.matches.push(match('u'+i,start+i*120000,i<3,['A'],['B']));
  const row=(id:string)=>annualLeaderboard(s,2026,now).find(r=>r.playerId===id)!;
- assert.deepEqual([row('B').points,row('B').upsetPoints,row('B').wins,row('B').losses],[1+1+1+4,1,1,3]);assert.deepEqual([row('A').points,row('A').upsetPoints],[3+3+3+1,0]);
+ assert.deepEqual([row('B').points,row('B').upsetPoints,row('B').wins,row('B').losses],[-1-1-1+4,1,1,3]);assert.deepEqual([row('A').points,row('A').upsetPoints],[3+3+3-1,0]);
  // Doubles compare the two team averages.
  const d=fixture();for(let i=0;i<4;i++)d.matches.push(match('d'+i,start+i*120000,i<3));
- const doubles=annualLeaderboard(d,2026,now);assert.deepEqual(['A','B','C','D'].map(id=>doubles.find(r=>r.playerId===id)!.points),[10,10,7,7]);
+ const doubles=annualLeaderboard(d,2026,now);assert.deepEqual(['A','B','C','D'].map(id=>doubles.find(r=>r.playerId===id)!.points),[8,8,1,1]);
 });
 
 test('一次性合并隐藏分组实力：球友实力改为段位分，写入版本并幂等',()=>{

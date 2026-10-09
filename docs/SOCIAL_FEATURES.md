@@ -8,4 +8,4 @@ Player profiles, recorded match statistics, partner/opponent relationships, chal
 
 Verification includes the activity-voting unit suite and isolated SQLite award API tests covering eligibility, one-vote replacement/withdrawal, stale withdrawal protection, self/outsider rejection, activity boundaries, privacy, rollback and legacy-record preservation.
 
-Season points and long-term realm ratings remain separate. Rated games earn 3 points for a win or 1 for a loss, with the documented upset bonus. Grouping uses the realm-rating formula over doubles only; applied handicap games do not earn season or realm points. See [realm progression](REALM_PROGRESSION.md).
+Season points and long-term realm ratings remain separate. Rated games earn 3 points for a win and lose 1 point for a loss, with the documented upset bonus. Grouping uses the realm-rating formula over doubles only; applied handicap games do not earn season or realm points. See [realm progression](REALM_PROGRESSION.md).

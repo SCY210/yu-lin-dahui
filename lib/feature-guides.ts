@@ -10,7 +10,7 @@ const signed=(n:number)=>(n>0?'+':n<0?'−':'±')+Math.abs(n);
 const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap),upsetGaps=upsets.map(u=>u.gap).join(' / '),upsetBonuses=upsets.map(u=>u.bonus).join(' / ');
 /** 赛季积分 per rated game, generated from seasonPointsPolicy. */
 export const seasonPointsTable:GuideTable={caption:'每个计分小局的赛季积分',columns:['结果','赛季积分'],rows:[
- ['输',String(seasonPointsPolicy.loss)],['赢',String(seasonPointsPolicy.win)],
+ ['输',String(seasonPointsPolicy.loss).replace('-','−')],['赢',String(seasonPointsPolicy.win)],
  ...upsets.map((u,i)=>[`赢赛前平均段位分高 ${u.gap}${upsets[i+1]?'–'+(upsets[i+1].gap-1):' 及以上'} 分的对手`,String(seasonPointsPolicy.win+u.bonus)]),
 ]};
 export const realmTable:GuideTable={caption:'修仙境界门槛（段位分）',columns:['境界','段位分'],rows:realms.map(realm=>[realm.name,realm.range])};
@@ -28,11 +28,11 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
   switch(topic) {
     case 'ranking': return {
       title:guideLabels.ranking,
-      description:'季度榜按自然季度累计赛季积分：每个计分小局赢 3 分、输 1 分，赢段位分更高的对手另有加成；积分、胜率与局均净胜共同决定名次。',
+      description:'季度榜按自然季度累计赛季积分：每个计分小局赢 3 分、输扣 1 分，赢段位分更高的对手另有加成；积分、胜率与局均净胜共同决定名次。',
       sections:[
         {title:'积分与名次', items:[
-          `季度积分 = 本季度每个计分小局的赛季积分之和 + 群主手动积分调整。每局输 ${seasonPointsPolicy.loss} 分、赢 ${seasonPointsPolicy.win} 分；赢下赛前队伍平均段位分比自己高 ${upsetGaps} 分以上的对手，另加 ${upsetBonuses} 分。`,
-          '赛季积分只用于本季度和年度排名，每季度从 0 开始累计，不会扣成负数（群主扣分除外）；比赛积分不改变段位分和境界。段位分是长期实力，不随季度重置，只有群主单独填写的段位分调整会直接改变它。',
+          `季度积分 = 本季度每个计分小局的赛季积分之和 + 群主手动积分调整。每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分；赢下赛前队伍平均段位分比自己高 ${upsetGaps} 分以上的对手，另加 ${upsetBonuses} 分。`,
+          '赛季积分只用于本季度和年度排名，每季度从 0 开始累计，输的局数超过赢的局数 3 倍时会是负数；比赛积分不改变段位分和境界。段位分是长期实力，不随季度重置，只有群主单独填写的段位分调整会直接改变它。',
           '先比积分，再比计分小局胜率，再比局均净胜分，均按从高到低排列。',
           '胜率 = 胜局 ÷ 计分小局数；局均净胜 = 各计分小局本方得分与对方得分之差的合计 ÷ 计分小局数。三局两胜按实际打完的每一局分别计算。',
           '三项都相同则并列：例如两人并列第 1，下一位第 3。比赛编号 / 球友编号只稳定显示顺序，不打破并列名次。',
@@ -45,7 +45,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         ]},
       ],
       tables:[seasonPointsTable],
-      example:{title:'一个季度的积分',text:'某人本季度打了 12 个计分小局，赢 7 局、输 5 局，其中 2 局赢的是平均段位分高 60 分的对手：7 × 3 + 5 × 1 + 2 × 1 = 28 分。胜率用全季度胜局除以计分小局总数，不能直接平均三个月的胜率。'},
+      example:{title:'一个季度的积分',text:'某人本季度打了 12 个计分小局，赢 7 局、输 5 局，其中 2 局赢的是平均段位分高 60 分的对手：7 × 3 − 5 × 1 + 2 × 1 = 18 分。胜率用全季度胜局除以计分小局总数，不能直接平均三个月的胜率。'},
       related:['annualRanking','rating','matches','state'],
     };
     case 'annualRanking': return {
@@ -53,7 +53,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
       description:'年度榜把马德里自然年内每个计分小局的赛季积分相加，再加上群主手动积分调整，等于四个季度积分之和。',
       sections:[
         {title:'积分怎么来', paragraphs:[
-          `年度积分 = 1 月至 12 月每个计分小局的赛季积分之和 + 计入本年各月的手动积分调整：每局输 ${seasonPointsPolicy.loss} 分、赢 ${seasonPointsPolicy.win} 分，赢段位分高 ${upsetGaps} 分以上的对手另加 ${upsetBonuses} 分。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按现行规则重新计算。`,
+          `年度积分 = 1 月至 12 月每个计分小局的赛季积分之和 + 计入本年各月的手动积分调整：每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分，赢段位分高 ${upsetGaps} 分以上的对手另加 ${upsetBonuses} 分。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按现行规则重新计算。`,
           '年度胜局、负局和计分小局数为这些计入段位分的小局合计；实际比赛数还包括友谊赛和让分局。手动积分调整计入指定月份并汇总到年度榜，不增加胜场；群主也可以另填段位分调整，保存后立即改变段位分、境界和双打分组实力，但不计入比赛局数。',
         ]},
         {title:'年度并列与年份归属', paragraphs:[
@@ -65,7 +65,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         {title:'赛季积分与修仙境界', paragraphs:[`网站只有两个分数：段位分是长期实力，决定修仙境界（自动分组按同一公式只计双打小局），不随季度或年度重置，只有连续 ${realmPolicy.inactivityMonths} 个月没有计分小局才回到 ${realmPolicy.start} 分重新定级；赛季积分只用于季度和年度排名。榜单上的境界是当前境界，历史季度和年份也一样。计分小局少于 ${realmPolicy.placementGames} 局的球友只显示“定级中 · N/${realmPolicy.placementGames} 局”。`]},
       ],
       tables:[seasonPointsTable],
-      example:{title:'积分与段位分互不影响',text:'某人全年赢 30 局、输 20 局，其中 4 局爆冷赢了段位分高 150 分以上的对手：年度积分 30 × 3 + 20 × 1 + 4 × 2 = 118 分。同一年他的段位分可能只从 1000 涨到 1040，两者分别计算。'},
+      example:{title:'积分与段位分互不影响',text:'某人全年赢 30 局、输 20 局，其中 4 局爆冷赢了段位分高 150 分以上的对手：年度积分 30 × 3 − 20 × 1 + 4 × 2 = 78 分。同一年他的段位分可能只从 1000 涨到 1040，两者分别计算。'},
       related:['ranking','rating','matches'],
     };
     case 'rating': return {

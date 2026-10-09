@@ -32,9 +32,9 @@ test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受�
  for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)]){
   assert.equal(rows.length,8);assert.ok(!rows.some(row=>row.playerId===guest.id));
   assert.equal(rows.find(row=>row.playerId==='A')!.points,3);
-  assert.equal(rows.find(row=>row.playerId==='B')!.points,1);
-  assert.equal(rows.find(row=>row.playerId==='C')!.points,1);
-  assert.deepEqual(rows.map(row=>row.rank),[1,2,2,4,4,4,4,4]);
+  assert.equal(rows.find(row=>row.playerId==='B')!.points,-1);
+  assert.equal(rows.find(row=>row.playerId==='C')!.points,-1);
+  assert.deepEqual(rows.map(row=>row.rank),[1,2,2,2,2,2,7,7]);
  }
  for(const role of ['admin','member'] as const){
   const view=projectClubState(s,{...actor,role},'2026-10',2026);
@@ -93,7 +93,7 @@ test('年度全年胜率和净胜按计分场数加权，不平均月度比例',
  s.matches.push(match('jan','2026-01-01T12:00:00Z',21,10),match('feb1','2026-02-01T12:00:00Z',19,21),match('feb2','2026-02-02T12:00:00Z',18,21),match('feb3','2026-02-03T12:00:00Z',17,21));
  const r=annualLeaderboard(s,2026).find(r=>r.playerId==='A')!;
  assert.equal(r.rate,.25);assert.equal(r.margin,.5);
- assert.equal(r.games,4);assert.equal(r.points,3+1+1+1);
+ assert.equal(r.games,4);assert.equal(r.points,3-1-1-1);
 });
 
 test('年度所有启用球友都入榜，排除非计分和非完整赛，保留实际场数',()=>{
@@ -119,7 +119,7 @@ test('年度按积分、胜率、场均净胜排序，三项相同并列且稳�
 test('同刻完赛按比赛编号确定回放顺序，旧上限不再截取，说明公开年度榜并保持总结独立',()=>{
  const s=fixture();s.settings.rules.cap=1;s.settings.rules.loss=0;
  s.matches.push(match('z-late-id','2026-07-01T12:00:00Z',21,0),match('a-first-id','2026-07-01T12:00:00Z',0,21));
- assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.points,1+3);replayRating(s,Date.parse('2026-07-02T00:00:00Z'));assert.equal(s.players[0].rating,1000-16+17,'a-first-id (loss) replays before z-late-id (win)');
+ assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.points,-1+3);replayRating(s,Date.parse('2026-07-02T00:00:00Z'));assert.equal(s.players[0].rating,1000-16+17,'a-first-id (loss) replays before z-late-id (win)');
  const guide=getFeatureGuide('annualRanking');
  assert.equal(guide.title,'年度积分与排名');assert.ok(guide.sections.some(section=>section.paragraphs?.some(p=>p.includes('没有月度或全年小局上限'))));
  assert.equal(getFeatureGuide('annual').title,'年度总结');
