@@ -62,7 +62,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '比赛以实际开赛时间按马德里时区归属月份和年份；跨年结束仍归入开赛年份。年度榜旁的年份选择器可查看历史年份。',
           singlesGuide,
         ]},
-        {title:'赛季积分与修仙境界', paragraphs:[`网站只有两个分数：段位分是长期实力，决定修仙境界和自动分组，不随季度或年度重置，只有连续 ${realmPolicy.inactivityMonths} 个月没有计分小局才回到 ${realmPolicy.start} 分重新定级；赛季积分只用于季度和年度排名。榜单上的境界是当前境界，历史季度和年份也一样。计分小局少于 ${realmPolicy.placementGames} 局的球友只显示“定级中 · N/${realmPolicy.placementGames} 局”。`]},
+        {title:'赛季积分与修仙境界', paragraphs:[`网站只有两个分数：段位分是长期实力，决定修仙境界（自动分组按同一公式只计双打小局），不随季度或年度重置，只有连续 ${realmPolicy.inactivityMonths} 个月没有计分小局才回到 ${realmPolicy.start} 分重新定级；赛季积分只用于季度和年度排名。榜单上的境界是当前境界，历史季度和年份也一样。计分小局少于 ${realmPolicy.placementGames} 局的球友只显示“定级中 · N/${realmPolicy.placementGames} 局”。`]},
       ],
       tables:[seasonPointsTable],
       example:{title:'积分与段位分互不影响',text:'某人全年赢 30 局、输 20 局，其中 4 局爆冷赢了段位分高 150 分以上的对手：年度积分 30 × 3 + 20 × 1 + 4 × 2 = 118 分。同一年他的段位分可能只从 1000 涨到 1040，两者分别计算。'},
@@ -70,7 +70,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
     };
     case 'rating': return {
       title:guideLabels.rating,
-      description:`修仙境界由段位分决定：每人从 ${realmPolicy.start} 分起，赢强者加得多、输给弱者扣得多，长期反映真实水平；自动分组也使用段位分。`,
+      description:`修仙境界由段位分决定：每人从 ${realmPolicy.start} 分起，赢强者加得多、输给弱者扣得多，长期反映真实水平；自动分组按同一公式只计双打小局，单打不影响分组。`,
       sections:[
         {title:'段位分怎么变',paragraphs:[
           '每个已完成的计分小局单独结算，三局两胜按实际打完的每一局分别计算。预期胜率 E = 1 ÷ (1 + 10^((对手分 − 自己分) ÷ 400))；本局变化 = K × (结果 − E)，赢记 1、输记 0，四舍五入为整数。',
@@ -91,7 +91,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         ]},
         {title:'历史记录与分组',paragraphs:[
           '原先只增不减的累计成长规则已停用。所有球友从 1000 分起，按已有全部比赛记录重新计算段位分，不使用旧的成长补差额或管理员设置的初始实力。',
-          '原来单独的隐藏实力分已并入段位分：自动分组、均衡搭档和对手、师徒 / 大腿身份和让分建议都使用实时段位分（进行中活动的小局立即计入）。比赛卡片上的队伍境界按两队已结算的平均段位分显示，队内有人在定级中时显示“定级中”。',
+          '原来单独的隐藏实力分已改为段位分的同一公式：自动分组、均衡搭档和对手、师徒 / 大腿身份和让分建议使用只按双打小局计算的实时段位分（进行中活动的小局立即计入），单打不改变分组实力；只打双打的球友两者完全相同。比赛卡片上的队伍境界按两队已结算的平均段位分显示，队内有人在定级中时显示“定级中”。',
         ]},
       ],
       table:realmTable,

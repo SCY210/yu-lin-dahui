@@ -11,12 +11,13 @@ export function isDoublesMatch(m:Pick<Match,'a'|'b'>){return m.a.length===2&&m.b
 /** all: the established board (every recorded website match plus owner grants). singles: 1v1 matches only, same rules, no grants. */
 export type RankingFormat='all'|'singles'|'doubles';
 export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return hi<=r.ceiling&&((hi===r.target&&lo<=hi-r.lead)||(hi>r.target&&hi<r.ceiling&&hi-lo===r.lead)||(hi===r.ceiling&&lo>=r.ceiling-r.lead&&lo<hi))}
-/** One strength number: each player's stored rating is their live 段位分 (every completed rated game, running
- * activities included, with the long-break restart), which automatic grouping, partner modes and handicap
- * suggestions read. Owner-set initial ratings and season K values no longer change it. */
+/** Grouping strength: the same 段位分 formula (per game, team average, novice K, long-break restart) replayed over
+ * doubles games only, live including running activities. Automatic grouping, partner modes and handicap suggestions
+ * read it; singles never move it. For doubles-only players it equals their 段位分. Owner-set initial ratings and
+ * season K values no longer change it. */
 export const strengthAlgorithm='realm-elo-v2';
 export function replayRating(s:State,now=Date.now()){
- const {rows,games}=replayRealmScores(s,m=>isRatedMatch(m,now),()=>true,realmPolicy.doubles,now);
+ const {rows,games}=replayRealmScores(s,m=>isDoublesMatch(m)&&isRatedMatch(m,now),()=>true,realmPolicy.doubles,now);
  for(const p of s.players){const r=rows.get(p.id)!;p.rating=r.score;p.ratedGames=r.games}
  const changes=games.map(g=>({id:g.matchId+':'+g.gameIndex+':'+g.playerId,matchId:g.matchId,playerId:g.playerId,before:g.before,after:g.after,delta:g.delta,algorithm:strengthAlgorithm,k:g.k}));
  s.ratingChanges=changes;return changes;

@@ -93,12 +93,11 @@ test('群主手动积分只计入综合榜，不进入单打榜',async()=>{
  assert.deepEqual(singles.map(r=>[r.playerId,r.points,r.manualPoints]),[['A',3,0],['B',1,0]]);
 });
 
-test('分组实力就是段位分：单打同样计入，重算不会因单打报错',()=>{
+test('单打不改变分组实力：分组实力只回放双打小局，重算不会因单打报错',()=>{
  const s=fixture();s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
- const changes=replayRating(s,now);assert.deepEqual(changes.map(c=>[c.playerId,c.delta]),[['A',16],['B',-16]]);
- assert.deepEqual(s.players.map(p=>[p.id,p.rating,p.ratedGames]),[['A',1016,1],['B',984,1],['C',1000,0],['D',1000,0],['E',1000,0]]);
+ assert.deepEqual(replayRating(s,now),[]);assert.ok(s.players.every(p=>p.rating===1000&&p.ratedGames===0));
  s.matches.push(match('d1','2026-10-06T14:00:00Z',['A','B'],['C','D']));
- assert.equal(replayRating(s,now).length,2+4);assert.equal(s.players.find(p=>p.id==='A')!.rating,1032);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,2);
+ assert.deepEqual(replayRating(s,now).map(c=>[c.playerId,c.delta]),[['A',16],['B',16],['C',-16],['D',-16]]);assert.equal(s.players.find(p=>p.id==='A')!.rating,1016);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,1);
 });
 
 test('群组投影提供季度与年度单打榜，普通球友看不到实力分',()=>{

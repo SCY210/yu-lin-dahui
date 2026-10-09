@@ -29,7 +29,7 @@ try{
  user('member5');assert.equal((await post(await command('score',{matchId:first.id,a:21,b:19}))).status,403);
  user('member1');const score=await command('score',{matchId:first.id,a:21,b:19});assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);stored=await api.load();assert.equal(stored.matches.length,2);assert.deepEqual(new Set([...stored.matches[1].a,...stored.matches[1].b]),new Set(['p2','p3']));
  const visible=await view();assert.equal(visible.singlesQuarterlyLeaderboard.length,2);assert.ok(visible.quarterlyLeaderboard.every(r=>r.games===0&&r.points===0));assert.ok(visible.singlesQuarterlyLeaderboard.some(r=>r.points===3));
- await send('score',{matchId:first.id,a:19,b:21,reason:''});stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.audits.at(-1).reason,'常规修改');assert.deepEqual(stored.players.map(p=>p.rating).sort((x,y)=>x-y),[984,1000,1000,1000,1000,1016],'singles update the shared 段位分 that grouping reads');
+ await send('score',{matchId:first.id,a:19,b:21,reason:''});stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.audits.at(-1).reason,'常规修改');assert.ok(stored.players.every(p=>p.rating===1000));
  const before=structuredClone(stored),second=stored.matches.find(m=>m.status==='playing'),request=await command('score',{matchId:second.id,a:21,b:19}),batch=fixture.env.DB.batch;
  fixture.env.DB.batch=async list=>{sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw Error('injected failure')}finally{sql.exec('ROLLBACK')}};
  assert.equal((await post(request)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),before);

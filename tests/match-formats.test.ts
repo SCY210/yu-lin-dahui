@@ -27,7 +27,7 @@ test('two singles players can start, score and correct without notes; rest is re
  const board=projectClubState(s,owner,'2030-10',2030,now+1000);assert.equal(board.singlesQuarterlyLeaderboard.length,2);assert.ok(board.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));assert.ok(board.singlesQuarterlyLeaderboard.some(r=>r.points===3));
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:19,b:21,reason:''},now+2000);assert.equal(s.matches.length,1);assert.equal(s.audits.at(-1)!.reason,'常规修改');
  await apply(s,owner,'liveReady',{eventId:e.id,playerId:'p0'},now+3000);assert.equal(s.matches.length,2);assert.equal(s.matches[1].status,'playing');
- assert.deepEqual(s.players.map(p=>p.rating),[984,1016],'singles results update the shared 段位分 that grouping reads');
+ assert.ok(s.players.every(p=>p.rating===1000),'Singles must not change doubles matchmaking Elo');
 });
 test('independent singles courts never double-book a player and keep appearances balanced',async()=>{
  const {s,e,owner}=await fixture('singles',6,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
