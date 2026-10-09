@@ -61,7 +61,7 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
  assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
  assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
  // Ranking points over the whole year equal the change of 段位分 from 1000.
- const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids)assert.equal((year.find(r=>r.playerId===id)?.points??0)+(next.find(r=>r.playerId===id)?.points??0),snap.get(id)!.score-1000);
+ const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids)assert.equal((year.find(r=>r.playerId===id)?.pointsChange??0)+(next.find(r=>r.playerId===id)?.pointsChange??0),snap.get(id)!.score-1000);
 });
 
 test('境界门槛：达到即晋升，跌破门槛减15分才降级',()=>{
@@ -119,7 +119,7 @@ test('友谊赛、让分局、弃权、取消、未完成和未来完赛不改�
  const s=fixture();s.matches=[match('real')];assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A',now+30*86400000).score,1016,'absence costs nothing');
  const friendly=match('friend');friendly.monthly=false;const handicap=match('handicap');handicap.handicap={side:'a',points:4,applied:true};handicap.elo=false;const forfeit=match('forfeit');forfeit.status='forfeit';const playing=match('playing');playing.status='playing';const future=match('future',now+86400000);
  s.matches.push(friendly,handicap,forfeit,playing,future,{...match('real')});assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A').ratedGames,1);
- const row=leaderboard(s,'2026-10',now).find(r=>r.playerId==='A')!;assert.deepEqual([row.points,row.games],[16,1]);assert.ok(row.total>row.games,'unrated records still count as actual games');
+ const row=leaderboard(s,'2026-10',now).find(r=>r.playerId==='A')!;assert.deepEqual([row.pointsChange,row.games],[16,1]);assert.ok(row.total>row.games,'unrated records still count as actual games');
  for(const m of s.matches)if(m.id==='real')m.status='cancelled';assert.equal(score(s,'A').score,1000);s.matches=[...s.matches.filter(m=>m.id!=='real'),match('real',start,false)];assert.equal(score(s,'A').score,984);
 });
 
@@ -137,7 +137,7 @@ test('活动进行中段位分与境界保持，显示待结算局数和暂计�
  const s=fixture(),e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
  s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
  const live=score(s,'A',mid);assert.deepEqual([live.score,live.realm,live.pendingGames,live.ratedGames],[1000,'金丹',2,0]);assert.equal(live.pendingChange,16-17);
- for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.points,a.pendingPoints,a.pendingGames,a.games],[-1,-1,2,2]);assert.equal(a.realmScore.score,1000)}
+ for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.pointsChange,a.pendingPoints,a.pendingGames,a.games],[-1,-1,2,2]);assert.equal(a.realmScore.score,1000)}
  const settled=score(s,'A',e.end);assert.deepEqual([settled.score,settled.pendingGames,settled.ratedGames],[999,0,2]);
  assert.deepEqual(realmSnapshot(s,e.end),realmSnapshot({...s,events:[]},e.end));assert.equal(score(s,'A',e.end-1).score,1000);
  e.status='ended';assert.equal(score(s,'A',mid).score,999);e.status='cancelled';assert.equal(score(s,'A',mid).score,999);
@@ -158,7 +158,7 @@ test('页面境界与队伍参考实力在活动中保持，结束时自动结�
  const s=fixture();for(const p of s.players.slice(0,2)){p.initialRating=1090;p.rating=1090}const e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);s.matches=[match('late')];replayRating(s);const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;
  assert.ok(s.players[0].rating>1100);
  const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
- assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,null);assert.equal(a(during).realmScore.placement,true);assert.equal(a(during).realmScore.score,1000);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.points,16);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1000);assert.equal(during.social.matchLevels.late.a,'入门');
+ assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,null);assert.equal(a(during).realmScore.placement,true);assert.equal(a(during).realmScore.score,1000);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.pointsChange,16);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1000);assert.equal(during.social.matchLevels.late.a,'入门');
  const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).realmScore.score,1016);assert.equal(after.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1016);assert.equal(after.social.matchLevels.late.a,'基础');
  assert.equal(settledRatings(s,mid).get('A'),1090);assert.equal(settledRatings(s,e.end).get('A'),s.players[0].rating);assert.equal(s.events[0].status,'live');
  assert.ok(after.players.every(p=>p.rating===null));

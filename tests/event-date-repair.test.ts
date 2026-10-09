@@ -18,11 +18,11 @@ function fixture(){
  const plan:EventDateRepair={eventId:e.id,fromStart:start,fromEnd:end,toStart:start-day,toEnd:end-day};return {s,e,plan};
 }
 test('corrects the entire activity date, preserves score/roster/real write times and opens voting',()=>{
- const {s,e,plan}=fixture(),points=leaderboard(s,'2026-10',now+30*day).map(p=>[p.playerId,p.points]),match=structuredClone(s.matches[0]),foreign=structuredClone(s.events[1]);
+ const {s,e,plan}=fixture(),points=leaderboard(s,'2026-10',now+30*day).map(p=>[p.playerId,p.pointsChange]),match=structuredClone(s.matches[0]),foreign=structuredClone(s.events[1]);
  assert.equal(isAwardVotingOpen(s,e,now),false);assert.ok(repairEventDate(s,plan,now));
  const fixed=s.events[0];assert.equal(fixed.start,start-day);assert.equal(fixed.end,end-day);assert.equal(s.bookings[0].start,start-day);assert.equal(s.rounds[0].start,start-day);assert.equal(fixed.pointsPlan!.end,end-day);assert.equal(fixed.pointsPlan!.generatedAt,e.pointsPlan!.generatedAt);
  for(const r of s.registrations){assert.equal(r.arrival,start-day);assert.equal(r.bookingSignups![0].departure,end-day);assert.equal(r.registeredAt,now-300000);assert.equal(r.sequence,s.registrations.indexOf(r)+1)}
- assert.deepEqual(s.matches[0],{...match,start:match.start!-day,end:match.end!-day});assert.deepEqual(s.events[1],foreign);assert.deepEqual(leaderboard(s,'2026-10',now+30*day).map(p=>[p.playerId,p.points]),points);assert.equal(s.awardVotes[0].id,'existing-vote');assert.ok(isAwardVotingOpen(s,fixed,now));assert.equal(s.audits[0].action,'repairEventDate');assert.equal((s.audits[0].changes as any).before.event.start,start);
+ assert.deepEqual(s.matches[0],{...match,start:match.start!-day,end:match.end!-day});assert.deepEqual(s.events[1],foreign);assert.deepEqual(leaderboard(s,'2026-10',now+30*day).map(p=>[p.playerId,p.pointsChange]),points);assert.equal(s.awardVotes[0].id,'existing-vote');assert.ok(isAwardVotingOpen(s,fixed,now));assert.equal(s.audits[0].action,'repairEventDate');assert.equal((s.audits[0].changes as any).before.event.start,start);
  const after=structuredClone(s);assert.equal(repairEventDate(s,plan,now),false);assert.deepEqual(s,after);
 });
 test('a different date, deleted activity, missing target or different owner cannot be overwritten',()=>{

@@ -4,7 +4,7 @@ import {expectedScore,gameChanges,realmPolicy,realms,roundDelta} from './domain/
 import {guideLabels,guideTopics,type GuideTopic,type FeatureGuideContent,type GuideTable} from './feature-guide-topics';
 export * from './feature-guide-topics';
 
-const singlesGuide='综合榜统计全部计分小局。单打榜只统计每方各 1 人的单打小局的段位分变化，同分规则相同，只列出所选周期打过单打的正式球友；群主手动积分调整只计入综合榜。单打与双打共用同一个段位分。网站排场目前只安排双打。';
+const singlesGuide='综合榜统计全部计分小局。单打榜积分 = 1000 + 每方各 1 人的单打小局的段位分变化之和，同分规则相同，只列出所选周期打过单打的正式球友；群主手动积分调整只计入综合榜。单打与双打共用同一个段位分。网站排场目前只安排双打。';
 const signed=(n:number)=>(n>0?'+':n<0?'−':'±')+Math.abs(n);
 export const realmTable:GuideTable={caption:'修仙境界门槛（段位分）',columns:['境界','段位分'],rows:realms.map(realm=>[realm.name,realm.range])};
 /** Gains for one game at the settled K; the provisional K doubles them. */
@@ -24,7 +24,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
       description:'季度榜汇总自然季度内每个计分小局的段位分变化，积分、胜率与局均净胜共同决定名次。',
       sections:[
         {title:'积分与名次', items:[
-          '季度积分 = 本季度每个计分小局的段位分变化之和 + 群主手动积分调整。赢强者加得多、输给弱者扣得多，水平相当时一局约 ±8 分（定级期约 ±16 分）；积分可以为负。',
+          '季度积分 = 1000 + 本季度每个计分小局的段位分变化之和 + 群主手动积分调整。每个季度所有人都从 1000 分起算，高于 1000 表示本季度净加分，低于 1000 表示净扣分；本季度还没打计分赛的球友显示 1000 分。赢强者加得多、输给弱者扣得多，水平相当时一局约 ±8 分（定级期约 ±16 分）。',
           '先比积分，再比计分小局胜率，再比局均净胜分，均按从高到低排列。',
           '胜率 = 胜局 ÷ 计分小局数；局均净胜 = 各计分小局本方得分与对方得分之差的合计 ÷ 计分小局数。三局两胜按实际打完的每一局分别计算。',
           '三项都相同则并列：例如两人并列第 1，下一位第 3。比赛编号 / 球友编号只稳定显示顺序，不打破并列名次。',
@@ -37,15 +37,15 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         ]},
       ],
       tables:[exchangeTable],
-      example:{title:'三个月汇总为一个季度',text:'若 10 月各局段位分变化合计 +18、11 月 −6、12 月 +9，第四季度积分为 21 分。胜率使用三个月计分胜局总和除以计分小局总和，不能直接平均三个月的胜率。'},
+      example:{title:'三个月汇总为一个季度',text:'若 10 月各局段位分变化合计 +18、11 月 −6、12 月 +9，第四季度积分为 1000 + 21 = 1021 分。胜率使用三个月计分胜局总和除以计分小局总和，不能直接平均三个月的胜率。'},
       related:['annualRanking','rating','matches','state'],
     };
     case 'annualRanking': return {
       title:guideLabels.annualRanking,
-      description:'年度榜把马德里自然年内每个计分小局的段位分变化相加，再加上群主手动积分调整。',
+      description:'年度榜从 1000 分起算，加上马德里自然年内每个计分小局的段位分变化和群主手动积分调整。',
       sections:[
         {title:'积分怎么来', paragraphs:[
-          '年度积分 = 1 月至 12 月每个计分小局的段位分变化之和 + 计入本年各月的手动积分调整。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按段位分规则重新计算。',
+          '年度积分 = 1000 + 1 月至 12 月每个计分小局的段位分变化之和 + 计入本年各月的手动积分调整；每年所有人都从 1000 分起算，名次与起算分无关。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按段位分规则重新计算。',
           '年度胜局、负局和计分小局数为这些计入段位分的小局合计；实际比赛数还包括友谊赛和让分局。手动积分调整计入指定月份并汇总到年度榜，不增加胜场，也不改变段位分、境界或实力分。',
         ]},
         {title:'年度并列与年份归属', paragraphs:[
@@ -54,9 +54,9 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '比赛以实际开赛时间按马德里时区归属月份和年份；跨年结束仍归入开赛年份。年度榜旁的年份选择器可查看历史年份。',
           singlesGuide,
         ]},
-        {title:'积分排名与修仙境界', paragraphs:['榜单积分是本周期的段位分变化，境界由当前段位分决定：历史季度和年份也展示当前境界。计分小局少于 10 局的球友只显示“定级中 · N/10 局”，不显示境界。进行中活动的小局即时计入榜单，境界在活动结束后才结算。']},
+        {title:'积分排名与修仙境界', paragraphs:['榜单积分是 1000 加上本周期的段位分变化，境界由当前段位分决定：历史季度和年份也展示当前境界。计分小局少于 10 局的球友只显示“定级中 · N/10 局”，不显示境界。进行中活动的小局即时计入榜单，境界在活动结束后才结算。']},
       ],
-      example:{title:'积分与段位分的关系',text:'某人年初 1000 分，全年各局段位分合计 +46，年度积分就是 46 分，年底段位分为 1046 分（群主手动调整只加在榜单积分上，不改变段位分）。'},
+      example:{title:'积分与段位分的关系',text:'某人年初 1000 分，全年各局段位分合计 +46，年度积分就是 1000 + 46 = 1046 分，年底段位分也是 1046 分；若年初是 1080 分、全年合计 −20，年度积分为 980 分，年底段位分为 1060 分。群主手动调整只加在榜单积分上，不改变段位分。'},
       related:['ranking','rating','matches'],
     };
     case 'rating': return {
