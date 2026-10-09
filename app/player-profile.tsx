@@ -64,6 +64,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
         <RealmProgress value={state.realmScore}/>
+        {profile.motto&&<p className="pp-motto-preview">{profile.motto}</p>}
       </div>
       {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
         <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>{genderOnly?'修改性别':'编辑档案'}</button>
@@ -72,7 +73,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </header>
     <CultivationOrnament variant="ribbon"/>
 
-    <section className="pp-section" aria-label="个人信息">
+    <Disclosure label="个人资料与打法"><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
         <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]}/>
@@ -83,7 +84,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       <p className="hint">球龄与性别仅作档案展示，不影响实力分或自动分组。</p>
       <div className="pp-style"><span>{isOwn ? '我的口号' : '这位球友的口号'}</span><p className={profile.motto ? '' : 'pp-unfilled'}>{profile.motto || '尚未填写'}</p></div>
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
-    </section>
+    </section></Disclosure>
 
     <Disclosure label="战拍与装备"><section className="pp-section" aria-label="装备信息">
       <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : '这位球友的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>

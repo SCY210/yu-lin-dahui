@@ -4,10 +4,10 @@ import {Bell,KeyRound,Medal} from 'lucide-react';
 import './me-panels.css';
 
 export function MyAchievements({children}:{children:ReactNode}) {
- const [expanded,setExpanded]=useState(true),id=useId();
+ const [expanded,setExpanded]=useState(false),[visited,setVisited]=useState(false),id=useId();
  return <section className="card me-achievements-entry">
-  <div className="row"><h3><Medal size={20} aria-hidden="true"/> 我的成就</h3><button className="secondary" aria-expanded={expanded} aria-controls={id} onClick={()=>setExpanded(value=>!value)}>{expanded?'收起成就':'查看成就'}</button></div>
-  <div id={id} className="me-panel-content" hidden={!expanded}>{children}</div>
+  <div className="row"><h3><Medal size={20} aria-hidden="true"/> 我的成就</h3><button className="secondary" aria-expanded={expanded} aria-controls={id} onClick={()=>{setVisited(true);setExpanded(value=>!value)}}>{expanded?'收起成就':'查看成就'}</button></div>
+  <div id={id} className="me-panel-content" hidden={!expanded}>{visited&&children}</div>
  </section>;
 }
 
