@@ -32,7 +32,7 @@ export async function POST(req:Request){
   let eventId:string|null=null,matchId:string|null=null,playerIds:string[]=[];
   if(kind==='avatar'||kind==='racket'){
    const playerId=z.string().trim().min(1).max(100).parse(f.get('playerId')),p=s.players.find(p=>p.id===playerId);
-   if(!p)return Response.json({error:'球友档案不存在'},{status:404});assertPlayerMutable(s,a,p.id);assertFullProfileEditable(s,p.id);
+   if(!p)return Response.json({error:'球友档案不存在'},{status:404});assertPlayerMutable(s,a,p.id);assertFullProfileEditable(s,p.id,a);
    if(a.role!=='admin'&&p.id!==a.playerId)return Response.json({error:'只能上传自己的档案照片'},{status:403});
    playerIds=[p.id];
   }else{

@@ -14,7 +14,7 @@ await build({entryPoints:['app/player-profile.tsx'],bundle:true,platform:'node',
 const {default:PlayerProfile}=await import(pathToFileURL(resolve('.test-output/profile-policy-ui.mjs')).href);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const player={id:'fixture-player',name:'Fictional member',ownerId:'fixture-account',profileEditMode:'gender-only',profile:{gender:'undisclosed',years:5,hand:'left',preference:'mixed',style:'existing style',racket:'existing racket'}};
-const calls=[],ctx={admin:false,busy:false,name:()=>player.name,refresh:async()=>{},open:(...args)=>calls.push(args),data:{me:{id:'fixture-account',playerId:player.id,role:'member'},players:[player],photos:[{id:'racket',kind:'racket',playerIds:[player.id],caption:'Existing racket photo',created:1,canDelete:false}],settings:{rules:{target:21,lead:2,ceiling:30,k:32}},achievements:{}}};
+const calls=[],ctx={admin:false,busy:false,name:()=>player.name,refresh:async()=>{},open:(...args)=>calls.push(args),data:{me:{id:'fixture-account',playerId:player.id,role:'member'},players:[player],matches:[],attendance:[],events:[],photos:[{id:'racket',kind:'racket',playerIds:[player.id],caption:'Existing racket photo',created:1,canDelete:false}],settings:{rules:{target:21,lead:2,ceiling:30,k:32}},achievements:{}}};
 const text=node=>typeof node==='string'?node:(node?.children??[]).map(text).join('');
 let ui;
 try{
@@ -28,5 +28,12 @@ try{
  assert.equal(ui.root.findAllByType('input').filter(input=>input.props.type==='file').length,0);
  assert.ok(!buttons().some(button=>/上传照片|删除战拍|更换头像/.test(text(button))));
  assert.ok(ui.root.findAllByType('img').some(image=>image.props.src==='/api/photos/racket'));
- console.log('PASS profile controls: gender-only dialog contains one field, avatar/rename/upload/delete controls absent, existing racket photo remains visible.');
+ await act(()=>ui.unmount());calls.length=0;
+ const ownerPlayer={...player,profileEditMode:'full'},ownerContext={...ctx,admin:true,data:{...ctx.data,me:{id:'verified-owner',playerId:'owner-player',role:'admin',isOwner:true},players:[ownerPlayer],photos:ctx.data.photos.map(photo=>({...photo,canDelete:true}))}};
+ await act(async()=>{ui=renderer.create(React.createElement(PlayerProfile,{p:ownerPlayer,ctx:ownerContext}));});
+ assert.ok(buttons().some(button=>text(button)==='更换头像'));assert.ok(buttons().some(button=>text(button)==='修改姓名'));
+ await act(()=>buttons().find(button=>text(button)==='编辑档案').props.onClick());assert.equal(calls[0][1],'profileDetails');assert.ok(calls[0][3].some(field=>field.key==='racket'));assert.ok(calls[0][3].some(field=>field.key==='years'));
+ const ownerEquipment=ui.root.findAllByType('details').find(details=>text(details.findByType('summary'))==='战拍与装备');await act(async()=>{ownerEquipment.props.onToggle({currentTarget:{open:true}});});
+ assert.ok(ui.root.findAllByType('input').some(input=>input.props.type==='file'));assert.ok(buttons().some(button=>button.props['aria-label']?.includes('删除战拍')));
+ console.log('PASS profile controls: gender-only dialog contains one field, avatar/rename/upload/delete controls absent, existing racket photo remains visible; verified owner gets full profile, rename, avatar and racket controls.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}

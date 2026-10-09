@@ -26,8 +26,8 @@ test('gender-only policy binds stable identity and preserves every existing fiel
  assert.deepEqual(p.profile,{...before.profile,gender:'female'});
  assert.equal(p.name,'A different display name');assert.equal(s.audits.at(-1)?.action,'profileGender');
 });
-test('direct full-profile, rename and extra-field gender requests are blocked without mutation, including owner requests',async()=>{
- for(const actor of [0,1])for(const [action,payload]of [['profileDetails',fullProfile],['profile',{playerId:'restricted-player',name:'changed'}],['profileGender',{playerId:'restricted-player',gender:'female',racket:'injected'}]] as const){
+test('direct full-profile, rename and extra-field gender requests are blocked without mutation, for restricted members',async()=>{
+ for(const actor of [1])for(const [action,payload]of [['profileDetails',fullProfile],['profile',{playerId:'restricted-player',name:'changed'}],['profileGender',{playerId:'restricted-player',gender:'female',racket:'injected'}]] as const){
   const s=fixture(),before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[actor],action,payload,1));assert.deepEqual(s,before);
  }
  const s=fixture();await assert.rejects(()=>apply(s,s.accounts[2],'profileGender',{playerId:'restricted-player',gender:'male'},1),/403/);
@@ -37,7 +37,8 @@ test('restricted avatar and racket deletion is denied while ordinary activity-ph
  const s=fixture();
  for(const kind of ['avatar','racket'] as const){
   const p:Photo={id:kind,key:'fictional/'+kind,kind,eventId:null,matchId:null,playerIds:['restricted-player'],ownerId:'restricted',caption:'existing',created:1,type:'image/png',size:1};s.photos.push(p);
-  for(const a of s.accounts){assert.equal(canDeletePhoto(s,a,p),false);const before=structuredClone(s);assert.throws(()=>removePhoto(s,a,p.id,'request',1),/403/);assert.deepEqual(s,before)}
+  assert.equal(canDeletePhoto(s,s.accounts[0],p),true);
+  for(const a of s.accounts.slice(1)){assert.equal(canDeletePhoto(s,a,p),false);const before=structuredClone(s);assert.throws(()=>removePhoto(s,a,p.id,'request',1),/403/);assert.deepEqual(s,before)}
  }
  const photo:Photo={...s.photos[0],id:'activity',kind:'photo',eventId:'event'};assert.equal(canDeletePhoto(s,s.accounts[1],photo),true);
  const view=projectClubState(s,s.accounts[1],'2026-10',2026,1);
@@ -51,4 +52,15 @@ test('runtime policy parsing is bounded and fail-closed; validators invalidate w
  const token=cache.remember(version,identity,'2026-10',2026,10000,1);
  assert.equal(cache.matches(token,version,identity,'2026-10',2026,2),true);
  assert.equal(cache.matches(token,{...version,profileRestrictions:undefined},identity,'2026-10',2026,2),false);
+});
+
+test('only the verified club owner can override profile restrictions, including media controls',async()=>{
+ const s=fixture();s.accounts[2].role='admin';
+ const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,s.accounts[2],'profileDetails',fullProfile,1),/403/);assert.deepEqual(s,before);
+ await apply(s,s.accounts[0],'profileDetails',fullProfile,1);assert.equal(s.players[1].profile?.racket,'changed');
+ await apply(s,s.accounts[0],'profile',{playerId:'restricted-player',name:'Owner edited name'},1);assert.equal(s.players[1].name,'Owner edited name');
+ const ownerView=projectClubState(s,s.accounts[0],'2026-10',2026,1),adminView=projectClubState(s,s.accounts[2],'2026-10',2026,1);
+ assert.equal(ownerView.players.find(p=>p.id==='restricted-player')?.profileEditMode,'full');assert.equal(ownerView.accounts.find(a=>a.id==='restricted')?.canEditProfileName,true);
+ assert.equal(adminView.players.find(p=>p.id==='restricted-player')?.profileEditMode,'gender-only');
 });

@@ -21,16 +21,16 @@ const read=token=>api.read(new Request(origin+'/api/club?month=2026-10&year=2026
 async function upload(kind,playerId){const state=await api.load(),form=new FormData();form.set('kind',kind);form.set('playerId',playerId);form.set('rightsConfirmed','true');form.set('revision',String(state.revision));form.set('requestId',crypto.randomUUID());form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');return api.upload(new Request(origin+'/api/photos',{method:'POST',headers:{origin},body:form}));}
 try{
  const s=api.emptyState(),previous=structuredClone(s);s.settings={...s.settings,initialized:true,ownerAccountId:'owner',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',progressionVersion:'weekly-v2'};
- for(const id of ['owner','restricted','other']){s.accounts.push({id,email:'',role:id==='owner'?'admin':'member',playerId:id+'-player'});s.players.push({id:id+'-player',ownerId:id,name:'Fictional '+id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'',profile:{gender:'undisclosed',years:5,hand:'left',preference:'mixed',style:'existing',equipment:'existing',racket:'existing'}})}
+ for(const id of ['owner','restricted','other','administrator']){s.accounts.push({id,email:'',role:id==='owner'||id==='administrator'?'admin':'member',playerId:id+'-player'});s.players.push({id:id+'-player',ownerId:id,name:'Fictional '+id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'',profile:{gender:'undisclosed',years:5,hand:'left',preference:'mixed',style:'existing',equipment:'existing',racket:'existing'}})}
  for(const kind of ['avatar','racket'])s.photos.push({id:kind,key:'fixture/'+kind,kind,eventId:null,matchId:null,playerIds:['restricted-player'],ownerId:'restricted',caption:'existing',created:1,type:'image/png',size:1});s.players[1].avatarId='avatar';
  await api.save(s,'fixture-seed',previous);
  const first=await read();assert.equal(first.status,200);const token=first.headers.get('ETag'),view=await first.json();assert.equal(view.players.find(p=>p.id==='restricted-player').profileEditMode,'gender-only');assert.ok(view.photos.every(p=>!p.canDelete));assert.equal((await read(token)).status,304);
  delete fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS;const changed=await read(token);assert.equal(changed.status,200);assert.equal((await changed.json()).players.find(p=>p.id==='restricted-player').profileEditMode,'full');fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS='["restricted-player"]';
  const before=await api.load();assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'other',reason:'Routine form audit metadata'})).status,200);let after=await api.load();assert.deepEqual(after.players[1].profile,{...before.players[1].profile,gender:'other'});assert.equal(after.players[1].avatarId,'avatar');
  assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'male',name:'injected'})).status,400);
- for(const actor of ['restricted','owner']){
+ for(const actor of ['restricted','administrator']){
   fixture.actor=actor;
-  assert.equal((await command('profileDetails',{playerId:'restricted-player',gender:'male',years:9,hand:'right',preference:'all',style:'changed',equipment:'changed',racket:'changed'})).status,403);
+  assert.equal((await command('profileDetails',{playerId:'restricted-player',gender:'male',years:9,hand:'right',preference:'all',style:'changed',equipment:'changed',racket:'changed',isOwner:true})).status,403);
   assert.equal((await command('profile',{playerId:'restricted-player',name:'changed'})).status,403);
   for(const kind of ['avatar','racket']){
    assert.equal((await upload(kind,'restricted-player')).status,403);
@@ -39,6 +39,12 @@ try{
  }
  assert.equal(fixture.writes,0);assert.equal(fixture.deletes,0);assert.equal(fixture.reservations,0);after=await api.load();assert.equal(after.photos.length,2);assert.equal(after.players[1].name,'Fictional restricted');assert.deepEqual(after.players[1].profile,{...before.players[1].profile,gender:'other'});
  assert.equal(db.sql.prepare('SELECT payload FROM players WHERE id=?').get('restricted-player').payload.includes('profileRestrictions'),false);
- fixture.actor='other';assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'male'})).status,403);assert.equal((await upload('avatar','other-player')).status,200);assert.equal(fixture.writes,1);assert.equal(fixture.reservations,1);
- console.log('PASS profile policy API: runtime stable-ID policy, cache invalidation without revision changes, strict gender-only writes, blocked full profile/name/avatar/racket upload and deletion including owner, no quota/R2 writes on denial, preserved records and unaffected other members.');
+ fixture.actor='owner';const ownerView=await (await read()).json();assert.equal(ownerView.players.find(p=>p.id==='restricted-player').profileEditMode,'full');assert.ok(ownerView.photos.every(p=>p.canDelete));assert.equal(ownerView.accounts.find(a=>a.id==='restricted').canEditProfileName,true);
+ assert.equal((await command('profileDetails',{playerId:'restricted-player',gender:'female',years:7,hand:'right',preference:'all',style:'owner edited',equipment:'owner edited',racket:'owner edited'})).status,200);
+ assert.equal((await command('profile',{playerId:'restricted-player',name:'Owner edited name'})).status,200);
+ for(const kind of ['avatar','racket']){assert.equal((await upload(kind,'restricted-player')).status,200);const revision=(await api.load()).revision;assert.equal((await api.remove(request('/api/photos/'+kind,{action:'delete',requestId:crypto.randomUUID(),revision}),{params:Promise.resolve({id:kind})})).status,200)}
+ assert.equal(fixture.writes,2);assert.equal(fixture.deletes,2);assert.equal(fixture.reservations,2);
+ fixture.actor='restricted';assert.equal((await upload('avatar','restricted-player')).status,403);
+ fixture.actor='other';assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'male'})).status,403);assert.equal((await upload('avatar','other-player')).status,200);assert.equal(fixture.writes,3);assert.equal(fixture.reservations,3);
+ console.log('PASS profile policy API: runtime stable-ID policy, cache invalidation without revision changes, strict gender-only writes, blocked full profile/name/avatar/racket upload and deletion for members/non-owner admins; verified owner edits and media management allowed, no quota/R2 writes on denial, preserved records and unaffected other members.');
 }finally{db.close();delete globalThis.__profilePolicyTest}

@@ -45,7 +45,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
         case 'profileDetails': {
             const p = command.payload;
             assertPlayerMutable(s, a, p.playerId);
-            assertFullProfileEditable(s,p.playerId);
+            assertFullProfileEditable(s,p.playerId,a);
             const pl = player(p.playerId);
             if (a.role !== 'admin' && p.playerId !== a.playerId)
                 fail('403: 只能编辑自己的档案');
