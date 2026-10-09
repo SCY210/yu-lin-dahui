@@ -168,3 +168,22 @@
 .rp-name { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; max-height:2.8em; overflow:hidden; }
 .rp-empty-status { position:absolute; top:45px; left:16px; right:16px; margin:0; text-align:center; color:#9686a8; font-size:13px; }
 @media(max-width:600px) { .rp-stage { min-height:358px; }.rp-person { height:214px; }.rp-empty-status { top:38px; font-size:12px; } }
+
+/* Compact mobile geometry; names keep two equal-height lines in every theme. */
+@media(max-width:600px) {
+ .rp-root .rp-stage { min-height:0; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+ .rp-root .rp-person { height:auto; min-height:200px; padding:0 0 28px; display:flex; flex-direction:column; justify-content:flex-end; }
+ .rp-root .rp-profile { flex-shrink:0; padding-inline:0; }
+ .rp-root .rp-person .rp-name { font-size:14px; line-height:1.4; min-height:2.8em; max-height:2.8em; text-wrap:balance; letter-spacing:0; }
+ .rp-root .rp-avatar { width:46px; height:46px; }
+ .rp-root .rp-center .rp-avatar { width:54px; height:54px; }
+ .rp-root .rp-score b { font-size:24px; line-height:1.2; }
+ .rp-root .rp-record { font-size:12px; line-height:1.5; }
+ .rp-root .rp-pedestal { height:96px; }
+ .rp-root .rp-center .rp-pedestal { height:120px; }
+ .rp-root .rp-right .rp-pedestal { height:88px; }
+ .rp-root .rp-medal { width:44px; height:50px; margin-top:-20px; }
+ .rp-root .rp-number { font-size:26px; margin-bottom:5px; }
+ .rp-root .rp-center .rp-number { font-size:32px; }
+ .rp-root .rp-right .rp-number { font-size:24px; }
+}

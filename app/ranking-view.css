@@ -18,6 +18,8 @@
 .rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker select:focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
 .rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px minmax(0,1fr); align-items:center; gap:10px; min-height:48px; }
 .rv-controls>button { justify-self:end; white-space:nowrap; }
+.rv-control-actions { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.rv-control-actions>button { min-height:44px; white-space:nowrap; }
 .rv-controls .rv-date-picker { box-sizing:border-box; display:grid; grid-template-columns:30px minmax(0,1fr) 30px; width:208px; height:48px; padding:3px; gap:0; flex-shrink:0; }
 .rv-date-picker .month-arrow { width:30px; height:40px; min-height:0; padding:0; }
 .rv-date-picker .month-current { box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:5px; width:100%; height:40px; min-width:0; padding:0 3px; white-space:nowrap; font-size:15px; line-height:1; }
@@ -36,8 +38,10 @@
  .rv-title .eyebrow { font-size:8px; letter-spacing:1px; margin-bottom:5px; }
  .rv-period-switch { padding:3px; border-radius:11px; }
  .rv-period-switch button { padding:7px 12px; font-size:12px; min-height:44px; border-radius:8px; }
- .rv-controls { grid-template-columns:168px minmax(0,1fr); gap:8px; }
- .rv-controls .rv-date-picker { width:168px; grid-template-columns:28px minmax(0,1fr) 28px; }
+ .rv-controls { grid-template-columns:minmax(0,1fr); gap:8px; }
+ .rv-controls .rv-date-picker { width:100%; grid-template-columns:36px minmax(0,1fr) 36px; }
+ .rv-control-actions { justify-content:space-between; width:100%; }
+ .rv-control-actions>button { font-size:14px; }
  .rv-date-picker .month-arrow { width:28px; }
  .rv-date-picker .month-current { font-size:14px; gap:4px; padding:0; }
  .rv-controls>button { padding-left:7px; padding-right:7px; font-size:12px; gap:4px; }
@@ -48,3 +52,11 @@
  .rv-year-rules { grid-template-columns:1fr; }
 }
 @media(max-width:350px) { .rv-title h1 { font-size:21px; }.rv-period-switch button { padding-left:9px; padding-right:9px; }.rv-provisional { font-size:10px; }.rv-progress-track { width:32px; } }
+
+/* Match theme specificity without allowing decorative heading sizes to overflow. */
+@media(max-width:600px) {
+ body .shell.app-compact .rv-heading .rv-title h1 { font-size:clamp(1.25rem,5.5vw,1.5rem); line-height:1.3; letter-spacing:0; }
+ .rv-heading .rv-period-switch button { font-size:14px; padding:7px 10px; }
+ .rv-heading .rv-title .eyebrow { font-size:12px; letter-spacing:1px; }
+ .rv-controls .rv-date-picker .month-arrow { width:36px; min-height:40px; }
+}
