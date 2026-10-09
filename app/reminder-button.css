@@ -1,0 +1,6 @@
+.reminder-button{position:relative}
+.reminder-button.has-unread{color:var(--destructive);border-color:color-mix(in srgb,var(--destructive) 45%,transparent);background:color-mix(in srgb,var(--destructive) 9%,transparent);font-weight:600}
+.reminder-button.has-unread svg{animation:reminder-ring 1.6s ease-in-out 2;transform-origin:50% 10%}
+.reminder-count{display:inline-grid;place-items:center;min-width:20px;height:20px;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--destructive);color:#fff;font-size:12px;font-weight:700;line-height:1}
+@keyframes reminder-ring{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(8deg)}60%{transform:rotate(-5deg)}75%{transform:rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.reminder-button.has-unread svg{animation:none}}
