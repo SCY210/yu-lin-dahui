@@ -27,7 +27,7 @@ Achievements are derived on the server from lifetime completed results, in stabl
 
 The projection applies the viewer's event visibility before deriving achievements. A member cannot infer private draft results from new badges. Finished historical facts survive an activity's soft deletion; a corrected loss or voided match recalculates the collection. These are factual achievements, not irrevocable awards: historical corrections can remove a badge or alter its unlock date.
 
-No database migration or new award-write endpoint is required. The derived response exposes matchDays, and cards, stage counts, progress bars, filter states and roadmap dates all use the same dual requirements. Legacy inflated levels are not grandfathered: history is recalculated, while score, ranking points, cultivation and Elo are unchanged. Clients cannot submit unlocks. Achievements do not add ranking points, Elo, financial charges or permissions. Conditional-read metadata expires at future factual completion boundaries so a newly due result is not hidden by an unchanged revision.
+No database migration or new award-write endpoint is required. The derived response exposes matchDays, and cards, stage counts, progress bars, filter states and roadmap dates all use the same dual requirements. Legacy inflated levels are not grandfathered: history is recalculated, while score, ranking points, 段位分 realms and Elo are unchanged. Clients cannot submit unlocks. Achievements do not add ranking points, Elo, financial charges or permissions. Conditional-read metadata expires at future factual completion boundaries so a newly due result is not hidden by an unchanged revision.
 
 ## Assets and performance
 

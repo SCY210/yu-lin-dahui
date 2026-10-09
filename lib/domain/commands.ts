@@ -12,6 +12,7 @@ import {propose,validateRound,readyIds} from './grouping';
 import {usesAutomaticAttendance,archiveDefaultAttendance} from './attendance';
 import {cancellationDeadline,cancellationNeedsApproval} from './cancellation';
 import {calculateSettlement} from './money';
+import {sameSettlement} from './settlement-state';
 import {validScore,replayRating} from './ranking';
 import {applySocial,memberSocialActions} from './social-commands';
 import {applyShuttles} from './shuttles';
@@ -45,6 +46,8 @@ const schemas:Record<string,z.ZodTypeAny>={
  costOverride:z.object({costId:pid,reason,segments:z.array(z.object({start:time,end:time,cents})).min(1).max(100)}),
  bookingBearer:z.object({bookingId:pid,bearer:z.enum(['members','subsidy']),reason}),deleteCost:z.object({costId:pid,reason}),modes:z.object({eventId:pid,courtMode:mode,ballMode:mode,reason}),
  exemption:z.object({eventId:pid,playerId:pid,type:z.enum(['court','ball']),mode:z.enum(['none','redistribute','subsidy']),reason}),
+ feeRecipient:z.object({eventId:pid,name:z.string().trim().min(1).max(80),phone:z.string().trim().min(5).max(40).regex(/^\+?[\d ()-]+$/,'电话号码只可包含数字、区号及常用分隔符').refine(v=>v.replace(/\D/g,'').length>=5&&v.replace(/\D/g,'').length<=20,'请检查电话号码'),reason}),
+ notifyFees:z.object({eventId:pid,settlementId:pid,reason}),
  settle:z.object({eventId:pid,confirmed:z.boolean(),reason}) ,
  blockedWords:blockedWordsInput,
  settings:z.object({name:text,invite:z.string().max(100).refine(v=>v===''||v.length>=8,'邀请码至少8位，或留空保留'),rules:rulesSchema}),rating:z.object({playerId:pid,value:z.number().min(0).max(4000),enabled:z.boolean(),reason}),role:z.object({accountId:pid,role:z.enum(['admin','member']),reason}),
@@ -83,7 +86,9 @@ export async function apply(s:State,a:Account,action:string,input:unknown,now:nu
  else if(action==='deleteCost'){s.costs=s.costs.filter(c=>c.id!==p.costId)}
  else if(action==='modes'){const e=event(p.eventId);e.courtMode=p.courtMode;e.ballMode=p.ballMode}
  else if(action==='exemption'){const r=reg(p.eventId,p.playerId);r[p.type==='court'?'courtExempt':'ballExempt']={mode:p.mode,reason:p.reason}}
- else if(action==='settle'){const e=event(p.eventId);if(p.confirmed&&now<e.end&&(usesAutomaticAttendance(e)||s.attendance.some(x=>x.eventId===e.id&&x.end===null)))fail('请等待活动结束，再确认正式分摊');const result=calculateSettlement(s,e,now);if(p.confirmed&&result.unallocated)fail('仍有待分配费用，请通过费用承担设置指定群补贴或核对参加时间');s.settlements.push({...result,id:id(),created:now,version:Math.max(0,...s.settlements.filter(x=>x.eventId===e.id).map(x=>x.version))+1,confirmed:p.confirmed,reason:p.reason})}
+ else if(action==='feeRecipient'){event(p.eventId).feeRecipient={name:p.name,phone:p.phone}}
+ else if(action==='notifyFees'){const e=event(p.eventId),latest=s.settlements.filter(x=>x.eventId===e.id&&x.confirmed).sort((a,b)=>b.version-a.version)[0];if(!latest)fail('请先确认费用分摊，再通知球友');if(latest.id!==p.settlementId)fail('409: 分摊版本已更新，请刷新后再通知')}
+ else if(action==='settle'){const e=event(p.eventId);if(p.confirmed&&now<e.end&&(usesAutomaticAttendance(e)||s.attendance.some(x=>x.eventId===e.id&&x.end===null)))fail('请等待活动结束，再确认正式分摊');const result=calculateSettlement(s,e,now);if(p.confirmed&&result.unallocated)fail('仍有待分配费用，请通过费用承担设置指定群补贴或核对参加时间');const latest=s.settlements.filter(x=>x.eventId===e.id&&x.confirmed).sort((a,b)=>b.version-a.version)[0];if(p.confirmed&&latest&&sameSettlement(result,latest))return null;s.settlements.push({...result,id:id(),created:now,version:Math.max(0,...s.settlements.filter(x=>x.eventId===e.id).map(x=>x.version))+1,confirmed:p.confirmed,reason:p.reason})}
  else if(action==='blockedWords'){s.settings.blockedWords=normalizeBlockedWords(p.words)}
  else if(action==='settings'){if(p.rules.ceiling<p.rules.target||p.rules.lead>p.rules.target)fail('比赛规则无效');s.settings.name=p.name;if(p.invite)s.settings.inviteHash=await digest(p.invite);s.settings.rules=p.rules}
  else if(action==='rating'){assertPlayerMutable(s,a,p.playerId);const pl=player(p.playerId);pl.initialRating=p.value;pl.ratingReason=p.reason;pl.enabled=p.enabled;replayRating(s)}

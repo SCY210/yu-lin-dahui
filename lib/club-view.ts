@@ -1,4 +1,5 @@
 import {googleMapsUrl} from './venues';
+import {canRecoverEvent,privateEventState} from './domain/event-privacy';
 import {eventStatusAt} from './domain/event-lifecycle';
 import {pointGrants} from './domain/point-grants';
 import {maskClubContent} from './domain/blocked-words';
@@ -27,7 +28,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const ledger=realmLedger(history,now),monthly=leaderboard(history,period,now,ledger),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter,now,ledger),annual=annualLeaderboard(history,year,now,ledger),singlesQuarterly=singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual=singlesAnnualLeaderboard(history,year,now,ledger);
  const ratingHistory=admin?replayRating(structuredClone(history)):[];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
- const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&(admin||e.creatorId===a.id)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
+ const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&canRecoverEvent(s,a,e)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
  s.events=s.events.filter(e=>e.deletedAt===undefined);
  const ids=new Set(s.events.map(e=>e.id));
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>ids.has(row.eventId));
@@ -47,6 +48,6 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   tagVotes:s.tagVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),awardVotes:s.awardVotes.map((v,i)=>({...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':'+v.category+':'+i,voterId:v.voterId===a.id?a.id:''})),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
-  audits:admin?s.audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
+  audits:admin?privateEventState(history,a).audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  },s.settings.blockedWords??[]);
 }

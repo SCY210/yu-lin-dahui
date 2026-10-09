@@ -1,40 +1,33 @@
-# 项目瘦身验证
+# Performance architecture
 
-范围：CSS扫描、静态装饰图片、页面/弹窗按需加载，以及群组数据条件读取。不删除业务功能，不改数据库结构、权限规则或费用/排名口径。
+Scope: Tailwind source scanning, compressed decorations, lazy pages/dialogs, and conditional club reads. These optimizations retain business behavior, database structure, permissions, and fee/ranking rules.
 
-## 构建对照
+## Frontend
 
-优化前使用本地应用原始 HEAD（06f7b4d）的隔离副本，以相同依赖和构建命令生成；优化后使用最终应用源码构建。下表按字节计，gzip 是本地压缩估算，首屏 JS 为 club-app 入口的静态依赖闭包，不含后续按需页面，也不是浏览器耗时测量。
+Tailwind scans app/lib, root components, and the explicitly used UI components. New pages are included automatically; add additional UI components to the explicit source list in globals.css when necessary.
 
-| 指标 | 优化前 | 优化后 | 减少 |
-|---|---:|---:|---:|
-| componentBytes | 443512 | 33960 | 92.3% |
-| componentGzip | 135456 | 11492 | 91.5% |
-| initialStaticJSBytes | 671940 | 480295 | 28.5% |
-| initialStaticJSGzip | 206220 | 148781 | 27.9% |
-| globalCSSBytes | 175273 | 72174 | 58.8% |
-| globalCSSGzip | 28540 | 14726 | 48.4% |
+Activity details, social views, rankings, fees, galleries, player profiles, account management, scoring, account dialogs, and guide bodies load in separate chunks. Closed dialogs/forms are not eagerly fetched. Avatar rendering and field metadata stay lightweight.
 
-两张装饰图从 2,227,114 bytes PNG 减为 87,402 bytes WebP（减少96.08%）；原PNG移到 tests/fixtures 保留验收，不再作为公开部署资产。
+Clients import small voting/time helpers. Zod validation and grouping stay server-side; original exported entry points remain compatible with tests/server consumers.
 
-## 行为
+Two large decorative PNGs remain test/source fixtures. Pages use small WebP copies: the original combined 2,227,114 bytes became 87,402 bytes. Exact build measurements are historical observations, not guarantees of current bundle size or browser latency.
 
-- Tailwind仅扫描app/lib、根级组件和实际使用的7个UI组件；新页面仍自动扫描。新增其他UI组件时更新globals.css的显式列表。
-- 活动详情、社群、排名、费用、相册、球员档案、账号管理、记分、账号弹窗和说明内容独立分包。关闭的弹窗/表单不提前加载；头像和字段元数据移到轻量模块。
-- 前端仅使用投票和时段的轻量辅助模块；Zod校验和排场代码留在服务器，原导出入口保留兼容测试和服务端调用。
-- 条件GET每次仍认证；缓存命中时检查revision/settings/当前账号并返回304，跳过18表完整读取和派生计算。缓存仅保存有界校验元数据，不保存共享用户响应；冷启动或不同Worker回退完整读取。
-- 账号、权限、月份、年份、数据修订或时间边界变化会失效；活动进行中保持完整刷新，以免费用时长和轮转数据变旧。导出始终返回完整新数据。
+## Conditional reads
 
-## 验证
+Every conditional GET still authenticates and checks current revision, settings, and account permissions. A matching bounded validator returns 304 without loading all eighteen business collections or recomputing projections.
 
-- TypeScript检查通过。
-- 266项单元测试通过，包括图片格式校验、投票/积分赛、权限、费用、排名、时间、导航与新增条件读取测试。
-- 真实GET处理函数的隔离集成验收通过：304跳过load、revision/query/角色/跨账号失效、401/403、完整导出、setup和非法输入；只使用fake auth与fake persistence，不访问生产数据库。
-- 生产构建通过并输出按需分包。
-- 图片尺寸、透明背景与视觉对比通过。
+The cache stores bounded validation metadata, not reusable cross-account response bodies. A cold or different Worker falls back to a full read.
 
-以上结果不包含线上部署，也不代表真实网络下的页面耗时。
+Account/role, month/year, revision, or time boundaries invalidate validators. Active-event data refreshes fully so participation time and round opportunities stay current. Exports always fetch fresh complete data.
 
-## 后续投票资格修正
+## Voting behavior
 
-积分赛搭档投票在未设置且未确认时默认开放；创建者明确关闭或确认后仍关闭。搭档方式和用球投票只允许本活动已启用、正式接龙的本人账号，候补不允许投票且旧票不再计数；递补为正式后取得投票资格。仍保持每账号一票、改投/撤回、活动开始前截止及创建者确认规则。增加默认开放、明确关闭、候补拒绝、递补和降为候补失效的回归测试。
+Partner-mode voting defaults to open before selection/confirmation unless the creator explicitly closes it. Partner-mode and shuttle votes belong to the account's own enabled, confirmed participant. Waitlisted players cannot vote and old votes no longer count; promotion restores eligibility.
+
+One account has one vote, can change/retract it before the start, and the creator confirms the selection. Tests cover default opening, explicit closure, waitlist rejection/promotion, and eligibility loss.
+
+## Verification
+
+Use npm test, npm run typecheck, and npm run build. tests/club-read-api.mjs isolates authentication/persistence to verify 304 avoidance, revision/query/role/user invalidation, 401/403, fresh exports, setup, and invalid inputs without production access.
+
+Do not equate local gzip estimates with real network latency. Recheck image transparency/details, route behavior, and lazy loading after changes.

@@ -30,7 +30,7 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
    <div className="rv-period-switch rv-format-switch" role="group" aria-label="排行榜类型"><button type="button" aria-pressed={!singles} onClick={()=>setRankingFormat?.('all')}>综合榜</button><button type="button" aria-pressed={singles} onClick={()=>setRankingFormat?.('singles')}>单打榜</button></div>
    <div className="actions rv-controls">
     {annual?<YearPicker value={year} onChange={value=>setYear?.(value)}/>:<QuarterPicker value={period} onChange={setPeriod}/>}
-    <button type="button" className="ghost" aria-pressed={detailed} onClick={()=>setDetailed(!detailed)}>{detailed?'简洁排名':'详细数据'}</button><FeatureGuide topic={annual?'annualRanking':'ranking'} rules={rule} label="积分怎么算"/>
+    <div className="rv-control-actions"><button type="button" className="ghost" aria-pressed={detailed} onClick={()=>setDetailed(!detailed)}>{detailed?'简洁排名':'详细数据'}</button><FeatureGuide topic={annual?'annualRanking':'ranking'} rules={rule} label="积分怎么算"/></div>
    </div>
   </div>
   <RankingPodium leaders={leaders} rankingRows={rows} players={data.players} onProfile={onProfile} loading={pendingPeriod}/>

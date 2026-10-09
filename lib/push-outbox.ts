@@ -38,10 +38,14 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     const event:Event=JSON.parse(row.event),account:Account=JSON.parse(row.account),player:Player=JSON.parse(row.player);
     const notice:Reminder|null=row.message?JSON.parse(row.message):null;
     const preference=reminderPreferences.safeParse(row.preferences?JSON.parse(row.preferences):defaultReminderPreferences),kind=notice?.kind??'signup';
-    let relevant=!notice?(event.status==='open'&&event.deletedAt===undefined&&event.end>Date.now()):reminderKinds.includes(notice.kind)&&notice.accountIds.includes(account.id)&&notice.eventId===event.id&&notice.expires>Date.now()&&(notice.kind==='changes'||(event.deletedAt===undefined&&!['draft','cancelled'].includes(event.status)));
+    let relevant=event.deletedAt===undefined&&(!notice?(event.status==='open'&&event.end>Date.now()):reminderKinds.includes(notice.kind)&&notice.accountIds.includes(account.id)&&notice.eventId===event.id&&notice.expires>Date.now()&&(notice.kind==='changes'||!['draft','cancelled'].includes(event.status)));
     if(notice?.kind==='registration'){const r=row.registration?JSON.parse(row.registration):null;const slot=notice.bookingId?r?.bookingSignups?.find((x:{bookingId:string})=>x.bookingId===notice.bookingId):r;relevant=relevant&&slot?.status===notice.status}
     if(notice?.kind==='matches'&&notice.roundId){const round=await db.prepare('SELECT payload FROM rounds WHERE id=?').bind(notice.roundId).first<{payload:string}>();const match=(await db.prepare('SELECT payload FROM matches WHERE round_id=?').bind(notice.roundId).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload));relevant=relevant&&!!round&&['published','playing'].includes(JSON.parse(round.payload).status)&&match.some(m=>['published','playing'].includes(m.status)&&[...m.a,...m.b].includes(player.id))}
     if(notice?.kind==='awards')relevant=relevant&&(event.status==='ended'||event.end<=Date.now());
+    if(notice?.kind==='fees'){
+     const latest=(await db.prepare('SELECT payload FROM settlements WHERE event_id=? ORDER BY version DESC').bind(event.id).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload)).find(b=>b.confirmed);
+     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id);
+    }
     if(!player.enabled||account.playerId!==player.id||!relevant||(preference.success&&!preference.data[kind])||row.createdAt<Date.now()-86400000){state='cancelled'}
     else{
      const subscription=pushSubscriptionInput.parse(JSON.parse(row.subscription));

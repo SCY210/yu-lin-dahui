@@ -55,3 +55,25 @@ next-env.d.ts
 *AQUARIUM*
 *CAPYBARA*
 **/theme-access*
+
+# Personal editor/agent state, caches, databases and local backups.
+.vscode/
+.idea/
+.cursor/
+.claude/
+.cache/
+.local/
+AGENTS.local.md
+CLAUDE.local.md
+*.sqlite
+*.sqlite3
+*.db
+*.log
+Thumbs.db
+Desktop.ini
+
+# Historical checkout-specific reports. Keep reproducible tests in Git.
+/docs/MANAGED_ACCOUNTS_RESULTS.md
+/docs/MANAGED_ACCOUNTS_RACE_RESULTS.md
+/docs/PLAYER_PROFILE_API_RESULTS.md
+/docs/TEST_RESULTS.md

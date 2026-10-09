@@ -1,3 +1,4 @@
+import {equalFeeAmounts} from './equal-fees';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {courtSpans} from './booking-signups';
 import {fail,type State,type Event,type Settlement,type Mode,type Exemption} from './types';
@@ -30,12 +31,12 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
   total+=amount;const segmentWeights:Record<string,number>={};const intervals:{key:string;start:number;end:number;members:string[]}[]=[];
   if(mode==='interval'){for(let i=0;i<cuts.length-1;i++){const a=Math.max(cuts[i],start),b=Math.min(cuts[i+1],end);if(b>a){const members=scopedActive(a,b);const key=String(i);segmentWeights[key]=b-a;intervals.push({key,start:a,end:b,members})}}}
   else{intervals.push({key:'all',start,end,members:booking?scopeIds:ids});segmentWeights.all=1}
-  const amounts=allocate(amount,segmentWeights); if(!intervals.length){unallocated+=amount;detail.push({name,start,end,cents:amount,shares:{},subsidy:0,unallocated:amount,estimated});return}
+  const amounts=allocate(amount,segmentWeights); if(!intervals.length){unallocated+=amount;detail.push({name,type,start,end,cents:amount,shares:{},subsidy:0,unallocated:amount,estimated});return}
   for(const seg of intervals){const cents=amounts[seg.key]??0;const weights:Record<string,number>={};const ex=(id:string):Exemption=>{const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===id);return type==='court'?r?.courtExempt??{mode:'none',reason:''}:type==='ball'?r?.ballExempt??{mode:'none',reason:''}:{mode:'none',reason:''}};
    for(const id of seg.members){if(ex(id).mode==='redistribute')continue;const w=mode==='duration'?(booking?scopedMinutes(id):Math.round(minutes(id)*60000)):1;const key=ex(id).mode==='subsidy'?'@subsidy':id;weights[key]=(weights[key]??0)+w}
    const shares=bearer==='subsidy'?{'@subsidy':cents}:allocate(cents,weights);const sub=shares['@subsidy']??0;delete shares['@subsidy'];const missing=cents-sub-Object.values(shares).reduce((a,b)=>a+b,0);subsidy+=sub;unallocated+=missing;
    for(const [id,n]of Object.entries(shares)){const bill=bills.find(b=>b.playerId===id)!;bill[type]+=n;bill.total+=n}
-   detail.push({name,start:seg.start,end:seg.end,cents,shares,subsidy:sub,unallocated:missing,estimated});
+   detail.push({name,type,start:seg.start,end:seg.end,cents,shares,subsidy:sub,unallocated:missing,estimated});
   }
  };
  for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members',b.id);
@@ -44,6 +45,6 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
   else if(c.type==='ball'&&e.ballMode==='interval'){const weights:Record<string,number>={};const segs:{key:string;start:number;end:number}[]=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];const courts=s.bookings.filter(x=>x.eventId===e.id&&x.start<=a&&x.end>=b).length;if(active(a,b).length&&courts){weights[String(i)]=(b-a)*courts;segs.push({key:String(i),start:a,end:b})}}const parts=allocate(amount,weights);if(!segs.length)distribute(c.name,'ball',amount,e.start,e.end,e.ballMode,true,c.bearer);else for(const seg of segs)distribute(c.name,'ball',parts[seg.key],seg.start,seg.end,e.ballMode,true,c.bearer)}
   else distribute(c.name,c.type==='ball'?'ball':'other',amount,e.start,e.end,c.type==='ball'?e.ballMode:'equal',c.type==='ball',c.bearer);
  }
- if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');return {eventId:e.id,bills,detail,total,subsidy,unallocated};
+ if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');return equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate);
 }
 

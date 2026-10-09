@@ -1,6 +1,7 @@
 import {assertWriteRequest,releaseRejectedWriteBody,writeErrorResponse} from '../../../lib/write-security';
 import {cleanExpiredRateLimits,consumeRateLimit,reserveDailyCreation,trustedClientIP} from '../../../lib/rate-limit';
 import {isClubOwner} from '../../../lib/domain/ownership';
+import {privateEventState} from '../../../lib/domain/event-privacy';
 import {canChangeOwnUsername} from '../../../lib/username-policy';
 import {readJsonBody} from '../../../lib/request-body';
 import {publicApiError} from '../../../lib/api-error';
@@ -43,7 +44,7 @@ export async function GET(req:Request){try{
  }
  if(url.searchParams.get('export')==='1'){
   if(a.role!=='admin')return response({error:'403: 仅管理员可以导出'},403);
-  return new Response(JSON.stringify(s,null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="club-export.json"','Cache-Control':'no-store'}});
+  return new Response(JSON.stringify(privateEventState(s,a),null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="club-export.json"','Cache-Control':'no-store'}});
  }
  const credentials=a.role==='admin'?
   (await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials').all<{accountId:string;username:string;usernameChangedAt:number|null}>()).results:

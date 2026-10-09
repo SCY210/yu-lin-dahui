@@ -6,10 +6,12 @@ import {load,save} from './store';
 import {enableDefaultAttendance} from './domain/attendance';
 import {ensureClubOwner,clubOwnerId} from './domain/ownership';
 import {runRequestedEventDateRepair} from './requested-event-date-repair';
+import {runRequestedThursdaySplit} from './requested-thursday-split';
 
 /** Upgrade current activities once; completed historical attendance stays intact. */
 export async function loadClubState(){
  await runRequestedEventDateRepair();
+ await runRequestedThursdaySplit();
  for(let attempt=0;attempt<4;attempt++){
   const state=await load(),previous=structuredClone(state),now=Date.now();
   const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now),realmMigration=enableEloRealms(state,now);

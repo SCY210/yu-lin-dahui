@@ -1,49 +1,33 @@
-# 球友档案与战拍照片
+# Player profiles and racket photos
 
-`app/player-profile.tsx` 默认导出 `PlayerProfile({p, stats, ctx})`。它接收当前球友、原有社交统计及页面上下文，替换 SocialHub 中原来的档案卡片。样式通过组件引入 `app/player-profile.css`，全部规则使用 `pp-` 或 `racket-` 范围，不修改其他页面的全局设计。
+app/player-profile.tsx exports PlayerProfile({p, stats, ctx}) and uses scoped pp-* / racket-* styles in app/player-profile.css. The profile shows avatar, name, tier/form, experience, handedness, preferences, self-assessed level/style, racket/strings/tension range, equipment notes, match count, and streaks. Missing details remain visibly unfilled; the app does not invent brands or personal facts.
 
-档案显示头像、名字、段位和状态；球龄、惯用手、参赛偏好、自评水平与打法；战拍、拍线、穿线磅数范围；原有自由文本装备备注；比赛场次、近期状态和最长连胜 / 连败。未填写的资料显示“尚未填写”，不补造品牌或个人信息。老的 `equipment` 字段仍单独完整展示。
+## Profile fields and permissions
 
-## 数据与编辑
+Player.profile retains years, hand, preference, style, equipment, and level. Optional racket and strings fields accept at most 120 characters. tensionMin and tensionMax are numbers from 1 to 80, including decimals.
 
-`Player.profile` 保留原有 `years`、`hand`、`preference`、`style`、`equipment`、`level` 字段，装备保留两项可选字符串，并支持磅数范围：
+Both range endpoints must be present, the maximum cannot be below the minimum, and two null values clear the range. A legacy single value can display as an equal-endpoint range. Recognizable legacy ranges remain readable; ambiguous historical text stays intact until explicitly replaced. A formatted tension string preserves old-client compatibility.
 
-| 字段 | 含义 | 表单标签中的上限 |
-| --- | --- | --- |
-| `racket` | 战拍品牌 / 型号 | 120字 |
-| `strings` | 拍线品牌 / 型号 | 120字 |
-| `tensionMin` | 最低穿线磅数 | 数值1–80，可留空 |
-| `tensionMax` | 最高穿线磅数 | 数值1–80，可留空 |
+Grip/shoes are no longer accepted or displayed. Historical stored fields remain but are omitted from group profile projections.
 
-仅管理员或 `p.ownerId === ctx.data.me.id` 的成员可以看到“编辑档案”、更换头像与战拍上传入口。编辑使用已有的 `ctx.open('球友档案', 'profileDetails', values, fields)` 表单，并将原有档案合并到默认值中。服务器已经实施相同权限与字段上限；旧客户端省略新字段时保留已有装备，显式空字符串才清空。其他已登录成员可以浏览资料和照片。
+Server permissions are authoritative. The member self-service detailed-profile operation permits their own account player; administrators may edit other unprotected players. Basic name changes and photo flows have their own ownership rules. A visible UI affordance is not proof of API permission.
 
-## 战拍相册
+Updates merge into existing profiles: omitted optional fields remain, explicit empty strings clear strings, and explicit null pairs clear tension ranges. No database-table migration is required.
 
-`app/racket-gallery.tsx` 默认导出 `RacketGallery({ctx, playerId})`。相册从 `ctx.data.photos` 选择 `kind === 'racket'` 且 `playerIds` 包含当前球友的记录，按 `created` 倒序排列。真实图片通过已鉴权的 `/api/photos/{id}` 加载；点击图片可在新窗口查看原图。空相册显示“尚未上传战拍照片”。没有生成示例图片或虚构装备。相册不提供删除操作。
+## Racket gallery
 
-上传向 `/api/photos` 发出 multipart POST，字段为 `file`、`kind: racket`、`playerId`、`caption`、当前 `revision` 和 UUID `requestId`。战拍无需关联活动或比赛。上传支持 JPEG / PNG / WebP、非空文件、最多5MB，说明最多300字。客户端筛选类型与大小，服务器验证内容和所有权；字节保存到R2，关联元数据保存到D1，并通过需登录的照片接口读取。
+app/racket-gallery.tsx exports RacketGallery({ctx, playerId}). It selects kind=racket photos containing the player ID and sorts newest first. Authenticated /api/photos/{id} serves image bytes. Empty galleries do not invent photos or equipment.
 
-选择文件后通过 `URL.createObjectURL` 展示本地预览，并在更换文件或卸载时撤销该 URL。同一上传重试复用 `requestId`；更换文件或说明后生成新的请求标识，配合服务器提交记录避免重复上传。上传过程中禁止重复提交和变更文件；失败保留文件和说明供重试，收到409时先刷新数据，再提示点击重试。成功后清空输入、刷新页面数据，并显示确认；如果刷新失败，仍告知照片已上传并提示刷新查看。
+Multipart uploads include file, kind, playerId, caption, revision, a UUID requestId, and the explicit image-rights confirmation. Racket images need no activity/match association. JPEG, PNG, and WebP are supported, at most 5 MiB, with captions up to 300 characters. The server validates content, dimensions, permissions, and revision. R2 stores bytes; D1 stores relationships.
 
-个人档案下方的头像工具沿用 `PhotoGallery` 的头像上传行为，且只对管理员和档案所有者展示。活动照片与原有社交关系板块由 SocialHub 保留。
+A local object URL previews the file and is revoked on replacement/unmount. Retrying reuses requestId; changing file/caption resets it. Submission disables duplicates. Failures retain inputs; a 409 refreshes data before retry. Success clears fields and refreshes; a failed refresh does not falsely report that the upload itself failed.
 
-## 集成检查
+Avatar tools reuse PhotoGallery. Photo deletion uses the shared authorized deletion control; there is no automatic third-party facial recognition.
 
-集成时确认 `profileDetails` schema 接受上述新字段、`Photo.kind` 包含 `racket`、POST 与 GET 照片接口允许球友战拍，并保留现有头像和活动照片行为。验证管理员 / 档案所有者可修改、其他成员只读，真实照片上传后显示正确球友与说明，重复重试不新增副本，390px 窄屏可完整阅读和操作。
+## Verification
 
-上述接入已完成，不需要变更数据库表结构；装备和照片扩展沿用JSON载荷。排行榜头像增加个人档案入口，首页和“我的”可进入自己的档案，再选择其他球友。上传区域增加功能说明。
+tests/player-profile-api.mjs uses fictional local accounts and image fixtures. Check permissions, field preservation/clearing, real byte round-trips, idempotency, stale-revision 409, image rejection, avatar/activity compatibility, and 390px layout.
 
-## 验收结果
+The framework body allowance is 6 MiB while the file limit stays 5 MiB, leaving multipart overhead. See [Next.js bodySizeLimit](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions#bodysizelimit); the installed Vinext implementation and the actual build must also be checked.
 
-12项实际Worker/D1/R2接口检查通过，0失败：装备持久化/跨成员读取、本人/管理员/代报权限、防越权、老字段保留及清空、真实1,051,507字节照片读回完全一致、幂等、过期版本409、格式/大小检查、头像/活动相册兼容。详见 PLAYER_PROFILE_API_RESULTS.md。既有36项算法和权限回归通过，TypeScript及完整生产构建通过。
-
-390px浏览器中从排行榜头像进入Profile，编辑表单显示五项装备字段；使用仅本地虚构档案实际选择1,175,607字节crossed-rackets.png、预览并成功上传，相册新增照片且显示正确说明。预览最初被框架1MB表单入口限制拦截，现已配置6MB请求体空间，API文件上限仍为5MB，留出multipart元数据开销。配置依据：[Next.js bodySizeLimit](https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions#bodysizelimit)，并以当前Vinext实现和浏览器结果验证。
-
-没有上传测试图片到线上，也没有给生产球友填入示例装备。所有验收使用既有虚构本地数据库，未重置数据。
-## 装备范围调整
-
-手胶和球鞋已从展示、编辑表单及群组接口的档案输出中移除；已有历史载荷保留供兼容，不再接受新增这两项。穿线磅数填写最低/最高值，例如24–28磅，允许小数。必须同时填写，最高值不得低于最低值，两项同时留空可清空范围。
-
-旧单值如26磅按26–26显示；明确的旧范围如24～28可读取。无法确定的旧文本如“约26磅”保留为旧记录，编辑其他资料不会自动删除。新数据以tensionMin/tensionMax为准，保留格式化tension供旧客户端读取。不需要数据库表结构迁移。
-
-37项回归通过，包括范围上下限/非法输入/权限/留空/旧值兼容。浏览器在仅本地虚构档案中保存24–28，并确认档案读回正确范围，展示和表单均无手胶、球鞋字段。战拍照片功能保持可用。
+Historical per-checkout API results remain local and ignored. No production profile, credential, or image should be used as a test fixture.
