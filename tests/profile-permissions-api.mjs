@@ -26,7 +26,7 @@ try{
  await api.save(s,'fixture-seed',previous);
  const first=await read();assert.equal(first.status,200);const token=first.headers.get('ETag'),view=await first.json();assert.equal(view.players.find(p=>p.id==='restricted-player').profileEditMode,'gender-only');assert.ok(view.photos.every(p=>!p.canDelete));assert.equal((await read(token)).status,304);
  delete fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS;const changed=await read(token);assert.equal(changed.status,200);assert.equal((await changed.json()).players.find(p=>p.id==='restricted-player').profileEditMode,'full');fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS='["restricted-player"]';
- const before=await api.load();assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'other'})).status,200);let after=await api.load();assert.deepEqual(after.players[1].profile,{...before.players[1].profile,gender:'other'});assert.equal(after.players[1].avatarId,'avatar');
+ const before=await api.load();assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'other',reason:'Routine form audit metadata'})).status,200);let after=await api.load();assert.deepEqual(after.players[1].profile,{...before.players[1].profile,gender:'other'});assert.equal(after.players[1].avatarId,'avatar');
  assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'male',name:'injected'})).status,400);
  for(const actor of ['restricted','owner']){
   fixture.actor=actor;

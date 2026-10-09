@@ -11,7 +11,7 @@ import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen } from './activi
 const id = z.string().min(1).max(100);
 export const memberSocialActions = ['profileDetails', 'profileGender', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
 const schemas = {
-    profileGender:z.object({playerId:id,gender:z.enum(['male','female','other','undisclosed'])}).strict(),
+    profileGender:z.object({playerId:id,gender:z.enum(['male','female','other','undisclosed']),reason:z.string().trim().max(500).optional()}).strict(),
     profileDetails: z.object({ playerId: id, gender: z.enum(['male', 'female', 'other', 'undisclosed']).optional(), years: z.number().min(0).max(80), hand: z.enum(['right', 'left', 'both']), preference: z.enum(['doubles', 'singles', 'mixed', 'all']), style: z.string().trim().max(300), motto: z.string().trim().max(80).optional(), equipment: z.string().trim().max(500), racket: z.string().trim().max(120).optional(), strings: z.string().trim().max(120).optional(), tension: z.string().trim().max(80).optional(), tensionMin: z.number().min(1).max(80).nullable().optional(), tensionMax: z.number().min(1).max(80).nullable().optional() }).superRefine((p, c) => { const hasRange = p.tensionMin !== undefined || p.tensionMax !== undefined; if (!hasRange)
         return; if (p.tensionMin === null && p.tensionMax === null)
         return; if (typeof p.tensionMin !== 'number' || typeof p.tensionMax !== 'number')

@@ -22,7 +22,7 @@ test('gender-only policy binds stable identity and preserves every existing fiel
  const s=fixture(),a=s.accounts[1],p=s.players[1],before=structuredClone(p);
  p.name='A different display name';s.players[2].name=before.name;
  assert.equal(genderOnlyProfile(s,p.id),true);assert.equal(genderOnlyProfile(s,s.players[2].id),false);
- await apply(s,a,'profileGender',{playerId:p.id,gender:'female'},1);
+ await apply(s,a,'profileGender',{playerId:p.id,gender:'female',reason:'Routine form audit metadata'},1);
  assert.deepEqual(p.profile,{...before.profile,gender:'female'});
  assert.equal(p.name,'A different display name');assert.equal(s.audits.at(-1)?.action,'profileGender');
 });
