@@ -1,8 +1,14 @@
 # Animated cultivation badges
 
-Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the 段位分 realm rules (new players start at 1000, 金丹 · 初期). Realm order comes from `lib/domain/realm-rating.ts`.
+Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the 段位分 realm rules. Realm order comes from `lib/domain/realm-rating.ts`.
 
-The My page shows this badge through `app/my-realm-card.tsx`, using the existing 段位分 realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change 段位分 calculations.
+## Placement: 定级中
+
+Everyone starts at 1000, so during placement almost everyone would show 金丹. Until a player has `realmPolicy.placementGames` (10) settled rated games, every member-facing place (profile, social card, My page, ranking rows) shows `PlacementBadge` instead of a realm: `定级中 · N/10 局`, with no stage and no realm progress bar. Profile and My page add the 段位分, the games still needed and any pending games of a running activity; detailed ranking rows show only the 段位分. Only settled games count, the same settle-after-activity rule as the realm. After the 10th settled game the realm badge appears directly at the realm and stage of the 段位分 at that point. The feature guide's realm table still shows all five realm badges.
+
+The placement chip is a plain paper tag (the theme's `--card` with no pigment wash) edged with a quiet dashed line, holding an uncarved seal in neutral ink: a dashed outline, ten beads (one per placement game, filled once settled) and a small centre. The name uses a lighter weight than the realms, and the count uses tabular figures. 水墨江湖 squares the corners and sets 定级中 in brush script, like the realm badges. Motion stays gentle: the dashed outline turns slowly (40s), the next bead pulses and the centre breathes. It uses the same offscreen pause and `prefers-reduced-motion` rules as every realm (static seal, no motion).
+
+The My page shows this badge (or the placement chip) through `app/my-realm-card.tsx`, using the existing 段位分 realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change 段位分 calculations.
 
 ## Look
 

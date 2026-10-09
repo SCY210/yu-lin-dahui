@@ -2,7 +2,7 @@
 import Disclosure from './disclosure';
 import {Avatar} from './avatar';
 import {useState} from 'react';
-import RealmBadge from './realm-badge';
+import RealmBadge,{PlacementBadge} from './realm-badge';
 import {QuarterPicker,YearPicker} from './month-picker';
 import {rankingQuarter,quarterLabel} from '../lib/ranking-quarter';
 import FeatureGuide from './feature-guide';
@@ -21,6 +21,8 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
  const player=(r:any)=>data.players.find((p:any)=>p.id===r.playerId)??{name:r.name};
  const realm=(r:any)=>r.realm??data.social?.stats?.find((s:any)=>s.playerId===r.playerId)?.tier??'炼气';
  const realmScore=(r:any)=>r.realmScore??data.social?.stats?.find((s:any)=>s.playerId===r.playerId)?.realmScore;
+ // Placement rows show only the neutral 定级中 chip: no realm, stage or realm progress.
+ const placing=(r:Parameters<typeof realmScore>[0])=>!!(r.provisional||realmScore(r)?.placement);
  const leaders=rows.filter((r:any)=>(r.games>0||r.points>0)&&r.rank<=3).slice(0,3);
  const signed=(n:number)=>(n>0?'+':'')+n;
  return <>
@@ -38,7 +40,7 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
    {rows.map((r:any)=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')} key={r.playerId}>
     <b className={'rank rank-'+(r.rank-1)}>{r.rank}</b>
     {<button type="button" className="pp-rank-avatar-link" aria-label={'查看'+r.name+'的球员档案'} onClick={()=>onProfile?.(r.playerId)}><Avatar p={player(r)} size="ranking-avatar"/></button>}
-    <div className="ranking-person"><strong><button type="button" className="rv-name-link" onClick={()=>onProfile?.(r.playerId)} aria-label={'查看'+r.name+'的球员档案'}>{r.name}</button>{r.playerId===data.me.playerId&&<span className="me-label">我</span>}</strong><div className="rv-realm-meta"><RealmBadge className="rv-realm-badge" realm={realm(r)} stage={realmScore(r)?.stage} />{r.provisional&&<span className="rv-provisional">定级中</span>}</div>{detailed&&realmScore(r)&&<div className="rv-progress" aria-label={`${realm(r)}段位分 ${realmScore(r).score}，境界进度 ${realmScore(r).progressPercent}%`}><span className="rv-progress-track" aria-hidden="true"><span style={{width:realmScore(r).progressPercent+'%'}}/></span><span>段位分 {realmScore(r).score??1000} · {realmScore(r).progressPercent}%</span></div>}<small>{r.games}局计分 · {r.wins}胜 {r.losses}负</small>{detailed&&r.total!==r.games&&<small>实际比赛 {r.total} 局</small>}</div>
+    <div className="ranking-person"><strong><button type="button" className="rv-name-link" onClick={()=>onProfile?.(r.playerId)} aria-label={'查看'+r.name+'的球员档案'}>{r.name}</button>{r.playerId===data.me.playerId&&<span className="me-label">我</span>}</strong><div className="rv-realm-meta">{placing(r)?<PlacementBadge className="rv-realm-badge" games={realmScore(r)?.ratedGames} total={realmScore(r)?.placementGames} />:<RealmBadge className="rv-realm-badge" realm={realm(r)} stage={realmScore(r)?.stage} />}</div>{detailed&&placing(r)&&realmScore(r)&&<div className="rv-progress"><span>段位分 {realmScore(r).score??1000} · 定级完成后显示境界</span></div>}{detailed&&!placing(r)&&realmScore(r)&&<div className="rv-progress" aria-label={`${realm(r)}段位分 ${realmScore(r).score}，境界进度 ${realmScore(r).progressPercent}%`}><span className="rv-progress-track" aria-hidden="true"><span style={{width:realmScore(r).progressPercent+'%'}}/></span><span>段位分 {realmScore(r).score??1000} · {realmScore(r).progressPercent}%</span></div>}<small>{r.games}局计分 · {r.wins}胜 {r.losses}负</small>{detailed&&r.total!==r.games&&<small>实际比赛 {r.total} 局</small>}</div>
     <div className="ranking-result"><strong>{r.points}<span> 分</span></strong>{!!r.pendingGames&&<small>含进行中 {signed(r.pendingPoints)}</small>}<small>{r.games?Math.round(r.rate*100)+'% 胜率':annual?'本年暂无计分赛':'本季度暂无计分赛'}</small>{detailed&&<small>局均净胜 {r.margin.toFixed(1)}</small>}</div>
    </div>)}
    {!rows.length&&<p className="empty" role={pendingPeriod?'status':undefined}>{pendingPeriod?'正在读取'+(annual?year+'年度':quarterLabel(quarter))+'榜单…':singles?scope+'还没有单打比赛成绩。网站排场目前只安排双打，记录一对一单打后才会在这里排名。':'群组还没有启用的球友。'}</p>}{rows.length>0&&!leaders.length&&<p className="hint">{annual?'本年':quarterLabel(quarter)}{singles?'尚无有效单打计分赛。':'尚无有效计分赛，所有球友已在榜单中。'}</p>}

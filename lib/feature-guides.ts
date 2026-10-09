@@ -54,7 +54,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '比赛以实际开赛时间按马德里时区归属月份和年份；跨年结束仍归入开赛年份。年度榜旁的年份选择器可查看历史年份。',
           singlesGuide,
         ]},
-        {title:'积分排名与修仙境界', paragraphs:['榜单积分是本周期的段位分变化，境界由当前段位分决定：历史季度和年份也展示当前境界。计分小局少于 10 局的球友显示“定级中”。进行中活动的小局即时计入榜单，境界在活动结束后才结算。']},
+        {title:'积分排名与修仙境界', paragraphs:['榜单积分是本周期的段位分变化，境界由当前段位分决定：历史季度和年份也展示当前境界。计分小局少于 10 局的球友只显示“定级中 · N/10 局”，不显示境界。进行中活动的小局即时计入榜单，境界在活动结束后才结算。']},
       ],
       example:{title:'积分与段位分的关系',text:'某人年初 1000 分，全年各局段位分合计 +46，年度积分就是 46 分，年底段位分为 1046 分（群主手动调整只加在榜单积分上，不改变段位分）。'},
       related:['ranking','rating','matches'],
@@ -74,10 +74,10 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
           '活动进行中境界和段位分保持不变，本场已完成的小局显示为待结算，并显示暂计的加减分。活动到达结束时间（或创建者提前标记结束、取消）后一次结算；活动结束后补录的比分也会立即结算。季度和年度榜积分在录入比分后即时更新。',
         ]},
         {title:'境界门槛与保级',items:[
-          `每人从 ${realmPolicy.start} 分（金丹初期）起步，达到门槛立即晋升。`,
+          `每人从 ${realmPolicy.start} 分起步，定级期间不显示境界；完成 ${realmPolicy.placementGames} 个计分小局后按当时的段位分显示境界，之后达到门槛立即晋升。`,
           `降级有 ${realmPolicy.demotionBuffer} 分缓冲：跌到门槛减 ${realmPolicy.demotionBuffer} 分以下才降境界，例如元婴要低于 ${realms[3].minimum-realmPolicy.demotionBuffer} 分才降为金丹。每次活动结算后判断一次。`,
           '每个境界 100 分，分为初期（0–33%）、中期（34–66%）、后期（67–99%）；化神 1200–1299 分同样分三期，1300 分及以上为化神圆满。',
-          `计分小局少于 ${realmPolicy.placementGames} 局时显示“定级中”，仍显示当前段位分对应的境界，暂不使用保级缓冲。`,
+          `计分小局少于 ${realmPolicy.placementGames} 局时只显示“定级中 · N/${realmPolicy.placementGames} 局”，不显示境界、阶段和境界进度，段位分照常加减。只计活动结束后已结算的计分小局，进行中活动的小局显示为待结算。第 ${realmPolicy.placementGames} 局结算后直接显示当时段位分对应的境界，此后才使用保级缓冲。`,
         ]},
         {title:'历史记录与分组',paragraphs:[
           '原先只增不减的累计成长规则已停用。所有球友从 1000 分起，按已有全部比赛记录重新计算段位分，不使用旧的成长补差额或管理员设置的初始实力。',

@@ -8,7 +8,7 @@ import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
 import {leaderboard,quarterlyLeaderboard,annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating,settledRatings} from './domain/ranking';
-import {realmLedger} from './domain/realm-rating';
+import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlement} from './domain/money';
 import {socialSnapshot} from './domain/social';
@@ -35,14 +35,18 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const ids=new Set(s.events.map(e=>e.id));
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>ids.has(row.eventId));
  const matchIds=new Set(s.matches.map(m=>m.id));
- const social=socialSnapshot(s,period,year,now,history,settledRatings(history,now),ledger.snapshot);
+ // Members never see a realm during placement: rows and stats carry only the settled count and 段位分 then.
+ const realmView=(realm:RealmSnapshot)=>realm.placement?null:realm.realm;
+ const board=<T extends {rating:number;realm:string;realmScore:RealmSnapshot}>(rows:T[])=>rows.map(r=>({...r,rating:admin?r.rating:null,realm:realmView(r.realmScore),realmScore:visibleRealm(r.realmScore)}));
+ const fullSocial=socialSnapshot(s,period,year,now,history,settledRatings(history,now),ledger.snapshot);
+ const social={...fullSocial,stats:fullSocial.stats.map(st=>({...st,tier:realmView(st.realmScore),realmScore:visibleRealm(st.realmScore)}))};
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
   players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
-  leaderboard:monthly.map(r=>({...r,...(!admin?{rating:null}:{})})),quarterlyLeaderboard:quarterly.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingQuarter:quarter,annualLeaderboard:annual.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingYear:year,period,
-  singlesQuarterlyLeaderboard:singlesQuarterly.map(r=>({...r,...(!admin?{rating:null}:{})})),singlesAnnualLeaderboard:singlesAnnual.map(r=>({...r,...(!admin?{rating:null}:{})})),
+  leaderboard:board(monthly),quarterlyLeaderboard:board(quarterly),rankingQuarter:quarter,annualLeaderboard:board(annual),rankingYear:year,period,
+  singlesQuarterlyLeaderboard:board(singlesQuarterly),singlesAnnualLeaderboard:board(singlesAnnual),
   social,
   pointGrants:isClubOwner(s,a)?pointGrants(s):[],
   achievements,
