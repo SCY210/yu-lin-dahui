@@ -34,6 +34,20 @@ in the transfer section of the fees page and apply one with a single tap instead
 The member who added a payee, or an administrator, can remove it; removing it never changes recipients already set on
 activities. The member view receives each payee's name, phone and whether the viewer added it, never the adder's id.
 
+## Where members see unpaid fees
+
+- My page: each row of the activity and split list shows a green "paid" or red "unpaid" label for the member's own bill.
+- Home page: while the member owes a confirmed fee, for themselves or for a friend they registered, a highlighted
+  notice at the top lists each activity, whose bill it is and the amount, and opens the activity's fees tab. It
+  disappears once every bill is marked paid. Only the latest confirmed version of each visible activity counts
+  (`lib/client/my-fees.ts`, covered by `tests/my-fees.test.ts`).
+
+## Reminder button
+
+The reminder button in the header switches to a ringing, highlighted icon with the unread count (99+ above 99) while
+the reminder centre has unread notices. The count refreshes on load, on every page change, when the tab becomes
+visible and every minute while visible; a failed read keeps the last count.
+
 ## Verification
 
 `tests/fee-payments.test.ts` covers fee contacts, confirmation and reminder notices, mark and unmark permissions, raised
