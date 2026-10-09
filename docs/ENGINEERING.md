@@ -79,12 +79,15 @@ attendance or scoring rules and need updating before being added to CI.
 
 ## Remaining project-wide work
 
-The first delivery was reconciled with shared `main` commit `64f8258`, preserving
+The first delivery was reconciled with shared `main` commit `fa5229b`, preserving
 its current scoring, live-play, expenses, image rights, sharing and privacy
 features. Local files retired by that version were copied to an ignored backup
-before updating the checkout. A locked installation, 551 unit tests, all 17
+before updating the checkout. A locked installation, 553 unit tests, all 17
 integration suites, TypeScript, migration checks and the production build pass
 locally. GitHub execution is reported separately when the branch is pushed.
+The scoring integration race accepts either legitimate winner, verifies that
+only that score commits, then checks correction independently; it does not
+assume concurrent requests finish in submission order.
 
 | Stage | Concrete completion criteria |
 | --- | --- |

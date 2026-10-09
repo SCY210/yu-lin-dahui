@@ -1,6 +1,6 @@
 # Activity workflow and interface
 
-An activity groups a badminton session's bookings, registrations, rounds, matches, and costs. Its grouping/matches tab provides draft generation, rest lists, publishing, starting, and scoring. There is no separate bottom-navigation match page. Match summaries on the home and personal pages link to their parent activity.
+An activity groups a badminton session's bookings, registrations, rounds, matches, and costs. Its grouping/matches tab provides draft generation, rest lists, publishing, starting, and scoring. There is no separate bottom-navigation match page. Home shows up to six upcoming signup cards without a recent-match section; personal match summaries link to their parent activity. Deleted activity recovery is restricted to its creator and the club owner; see [visibility rules](EVENT_PRIVACY_AND_HOME.md).
 
 Rankings include avatars and all enabled players without a minimum-game threshold. A month selector supports previous/next months and an explicit year/month panel.
 

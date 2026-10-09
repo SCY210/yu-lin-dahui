@@ -13,3 +13,7 @@
 相同参加区间、场地报名范围、费用豁免条件的球友按同额取整到分。20.20欧元的六人样例每人3.37欧元，分摊合计20.22欧元；原费用项目合计20.20欧元保留为expenseTotal，2分为roundingDifference，既不伪造原费用也不建立余款账户。逐项分配与逐时段分摊同步规范，个人及总额严格对账。不同时长继续按原权重计算，豁免及不同场地费用不会被强制合并。
 
 费用页可由活动创建者或管理员填写收款人、电话号码；已授权成员查看、拨号或复制。号码按数字、区号及常用分隔符验证；无付款、已付/未付或收款流水。
+
+## Latest settlement display
+
+The fees page shows a single current per-person allocation. Managers see the current preview until they confirm it; members see the latest confirmed result. Previous versions and per-time-segment reconciliation are no longer displayed. Stored versions and calculation details remain available internally for confirmation comparisons and audit integrity.

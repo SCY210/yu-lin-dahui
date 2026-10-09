@@ -1,4 +1,5 @@
 import {fail,type Account,type Event,type State} from './types';
+import {canRecoverEvent} from './event-privacy';
 
 export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Event,'creatorId'>){
  return account.role==='admin'||event.creatorId===account.id;
@@ -29,6 +30,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['moveCourt','lock','score','matchScoring','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
+ if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
  if(action==='score'){
   if(!canRecordScore(s,a,event))fail('403: 只有本活动已接龙的球友、创建者或管理员可以录入比分');
  }else if(!canManageEvent(a,event))fail('403: 只能管理自己创建的活动');

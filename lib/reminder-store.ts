@@ -31,7 +31,10 @@ export async function reminderCenter(accountId:string){
  const currentIds=new Set(upcoming.map(n=>n.id)),old=(await raw().prepare("SELECT id,payload FROM reminder_inbox WHERE account_id=? AND kind='upcoming'").bind(accountId).all<{id:string;payload:string}>()).results;
  const stale=old.filter(row=>!currentIds.has(JSON.parse(row.payload).id)).map(row=>raw().prepare('DELETE FROM reminder_inbox WHERE id=? AND account_id=?').bind(row.id,accountId));if(stale.length)await raw().batch(stale);
  await raw().prepare('DELETE FROM reminder_inbox WHERE account_id=? AND kind=\'upcoming\' AND json_extract(payload,\'$.expires\')<=?').bind(accountId,now).run();
- const results=await raw().batch([raw().prepare('SELECT id,payload,read_at AS readAt,created_at AS createdAt FROM reminder_inbox WHERE account_id=? AND created_at>? ORDER BY created_at DESC,id DESC LIMIT 40').bind(accountId,now-30*86400000),raw().prepare('SELECT COUNT(*) AS count FROM reminder_inbox WHERE account_id=? AND read_at IS NULL AND created_at>?').bind(accountId,now-30*86400000)]);
+ // Filter before LIMIT and COUNT so deleted activities neither leak their
+ // details nor displace visible notices or leave a phantom unread badge.
+ const visible="EXISTS(SELECT 1 FROM events e WHERE e.id=reminder_inbox.event_id AND json_extract(e.payload,'$.deletedAt') IS NULL)";
+ const results=await raw().batch([raw().prepare(`SELECT id,payload,read_at AS readAt,created_at AS createdAt FROM reminder_inbox WHERE account_id=? AND created_at>? AND ${visible} ORDER BY created_at DESC,id DESC LIMIT 40`).bind(accountId,now-30*86400000),raw().prepare(`SELECT COUNT(*) AS count FROM reminder_inbox WHERE account_id=? AND read_at IS NULL AND created_at>? AND ${visible}`).bind(accountId,now-30*86400000)]);
  const items=(results[0].results as unknown as {id:string;payload:string;readAt:number|null;createdAt:number}[]).map(row=>{const n=JSON.parse(String(row.payload)) as Reminder;return {id:String(row.id),kind:n.kind,eventId:n.eventId,title:n.title,body:n.body,tab:n.tab,createdAt:Number(row.createdAt),readAt:row.readAt===null?null:Number(row.readAt)}});
  return {items,unread:Number((results[1].results[0] as {count:number}|undefined)?.count??0),preferences:await preferencesFor(accountId)};
 }

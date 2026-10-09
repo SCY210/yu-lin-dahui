@@ -42,6 +42,10 @@ try{
  fixture.user={...user,userId:'different-account'};assert.equal((await read(undefined,token)).status,403);
  fixture.user=user;state.accounts=[account];
  const beforeExport=fixture.loads;const exported=await read('/api/club?export=1',token);assert.equal(exported.status,200);assert.match(exported.headers.get('Content-Disposition'),/club-export/);assert.equal(fixture.loads,beforeExport+1);
+ state.events=[{id:'hidden-event',creatorId:account.id,title:'Private deleted activity',deletedAt:0,status:'ended',start:1,end:2}];state.bookings=[{id:'hidden-booking',eventId:'hidden-event'}];state.audits=[{id:'hidden-audit',changes:{eventId:'hidden-event'},reason:'removed'}];
+ const otherAdmin={...account,id:'other-admin'};state.accounts.push(otherAdmin);fixture.user={...user,userId:otherAdmin.id};
+ const filteredExport=await (await read('/api/club?export=1')).json();assert.deepEqual(filteredExport.events,[]);assert.deepEqual(filteredExport.bookings,[]);assert.deepEqual(filteredExport.audits,[]);
+ fixture.user=user;const ownerExport=await (await read('/api/club?export=1')).json();assert.equal(ownerExport.events[0].id,'hidden-event');assert.equal(state.events.length,1);state.events=[];state.bookings=[];state.audits=[];
  assert.equal((await read('/api/club?month=2026-13',token)).status,400);
  state.settings.initialized=false;const setup=await read(undefined,token);assert.equal(setup.status,200);assert.equal((await setup.json()).setup,true);assert.equal(setup.headers.get('ETag'),null);
  console.log('PASS conditional GET: full read avoided, revision/query/role/user invalidation, no-store, 401/403, fresh export, setup and invalid input');

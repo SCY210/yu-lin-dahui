@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {projectClubState} from '../lib/club-view';
+import {privateEventState} from '../lib/domain/event-privacy';
 import {emptyState,type Account,type Event} from '../lib/domain/types';
 import {replayRating} from '../lib/domain/ranking';
 import {enableDefaultAttendance,applyDefaultAttendance} from '../lib/domain/attendance';
@@ -11,7 +12,7 @@ const owner:Account={id:'owner',role:'member',playerId:'a',email:''};
 const outsider:Account={id:'outsider',role:'member',playerId:'c',email:''};
 const admin:Account={id:'admin',role:'admin',playerId:'d',email:''};
 function fixture(){
- const s=emptyState();s.accounts=[owner,outsider,admin];
+ const s=emptyState();s.accounts=[owner,outsider,admin];s.settings.ownerAccountId=admin.id;
  s.players=['a','b','c','d'].map(id=>({id,ownerId:id==='a'||id==='b'?owner.id:id==='c'?outsider.id:admin.id,name:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const e:Event={id:'own',creatorId:owner.id,title:'删除验收',start:at,end:at+3600000,capacity:4,signupDeadline:at+3600000,cancelDeadline:at+3600000,status:'ended',venue:'虚构球馆',address:'',note:'',courtMode:'interval',ballMode:'interval'};
  s.events=[e,{...e,id:'other',creatorId:outsider.id,title:'他人活动',status:'open'}];
@@ -83,4 +84,20 @@ test('不存在的活动与无效删除原因被拒绝，不修改原状态',asy
  const s=fixture(),before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'missing',reason:'删除'},at),/不存在/);
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:' '},at));assert.deepEqual(s,before);
+});
+
+test('其他管理员也看不到删除列表、关联导出与审计，不能直接恢复；创建者和群主可恢复',async()=>{
+ const s=fixture(),otherAdmin={...outsider,role:'admin' as const};s.accounts[1]=otherAdmin;
+ await apply(s,owner,'deleteEvent',{eventId:'own',reason:'移除私有活动'},at+3600000);
+ s.audits.push({id:'creation',actor:owner.id,at,action:'event',reason:'created',changes:{title:s.events[0].title}},
+  {id:'nested',actor:owner.id,at,action:'score',reason:'score',changes:{input:{matchId:'own-match'}}},
+  {id:'keep',actor:outsider.id,at,action:'eventStatus',reason:'live',changes:{eventId:'other'}});
+ const before=structuredClone(s),view=projectClubState(s,otherAdmin,'2026-10',2026,at+3600000),exported=privateEventState(s,otherAdmin);
+ assert.deepEqual(view.deletedEvents,[]);assert.deepEqual(view.audits.map(a=>a.id),['keep']);
+ assert.deepEqual(exported.events.map(e=>e.id),['other']);assert.ok(!exported.matches.some(m=>m.eventId==='own'));
+ assert.ok(!exported.photos.some(p=>p.eventId==='own'));assert.deepEqual(exported.challenges,[]);
+ assert.deepEqual(exported.audits.map(a=>a.id),['keep']);assert.deepEqual(s,before);
+ await assert.rejects(()=>apply(s,otherAdmin,'restoreEvent',{eventId:'own',reason:'越权恢复'},at+1),/403/);
+ assert.deepEqual(s,before);assert.equal(privateEventState(s,admin),s);assert.equal(privateEventState(s,owner),s);
+ await apply(s,admin,'restoreEvent',{eventId:'own',reason:'群主恢复'},at+3600001);assert.equal(s.events[0].deletedAt,undefined);
 });
