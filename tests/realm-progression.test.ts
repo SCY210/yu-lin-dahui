@@ -1,7 +1,7 @@
 import {projectClubState} from '../lib/club-view';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {eloChange,enableEloRealms,expectedScore,gameChanges,kFactor,realmByScore,realmPolicy,realmProgress,realmSnapshot,realms,replayRealmScores,roundDelta,settleRealmIndex} from '../lib/domain/realm-rating';
+import {eloChange,enableEloRealms,expectedScore,gameChanges,kFactor,realmByScore,realmPolicy,realmProgress,realmSnapshot,realms,replayRealmScores,roundDelta,settleRealmIndex,visibleRealm} from '../lib/domain/realm-rating';
 import {annualLeaderboard,leaderboard,quarterlyLeaderboard,replayRating,settledRatings} from '../lib/domain/ranking';
 import {playerStats,personality} from '../lib/domain/social';
 import {emptyState,type Match,type Event,type State} from '../lib/domain/types';
@@ -43,7 +43,7 @@ test('单打为标准一对一 Elo，换算表与说明一致',()=>{
  assert.ok(!JSON.stringify([guide,getFeatureGuide('ranking'),getFeatureGuide('annualRanking'),getFeatureGuide('matches'),getFeatureGuide('modes')]).includes('修为'));
 });
 
-test('定级期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
+test('新手期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
  assert.equal(kFactor(0),32);assert.equal(kFactor(19),32);assert.equal(kFactor(20),16);
  assert.deepEqual(deltas(gameChanges([rated(1000,19),rated(1000,20)],[rated(1000,5),rated(1000,40)],'a')),{a:[16,8],b:[-16,-8]});
  const s=fixture(['A','B']);for(let i=0;i<22;i++)s.matches.push(match('m'+String(i).padStart(2,'0'),start+i*120000,i%2===0,['A'],['B']));
@@ -61,7 +61,7 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
  assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
  assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
  // Ranking points over the whole year equal the change of 段位分 from 1000.
- const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids)assert.equal((year.find(r=>r.playerId===id)?.points??0)+(next.find(r=>r.playerId===id)?.points??0),snap.get(id)!.score-1000);
+ const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids)assert.equal((year.find(r=>r.playerId===id)?.pointsChange??0)+(next.find(r=>r.playerId===id)?.pointsChange??0),snap.get(id)!.score-1000);
 });
 
 test('境界门槛：达到即晋升，跌破门槛减15分才降级',()=>{
@@ -87,18 +87,39 @@ test('保级缓冲按活动结算后判断：同一活动中途跌破又回升�
  play('e3',[false]);const fall=score(s,'A');assert.deepEqual([fall.score,fall.realm,fall.guarded],[1064,'金丹',false]);
 });
 
-test('少于10个计分小局显示定级中，仍显示对应境界且不用缓冲',()=>{
+test('少于10个计分小局为定级中：内部仍按段位分记境界且不用缓冲',()=>{
  const s=fixture(['A','B']);for(let i=0;i<9;i++){const m=match('p'+i,start+i*120000,false,['A'],['B']);m.eventId='e'+i;s.matches.push(m)}
  const a=score(s,'A');assert.equal(a.placement,true);assert.equal(a.ratedGames,9);assert.equal(a.realm,realmByScore(a.score));assert.ok(a.score<900);
  const m=match('p9',start+20*120000,false,['A'],['B']);m.eventId='e9';s.matches.push(m);assert.equal(score(s,'A').placement,false);
  assert.equal(playerStats(s,'A',score(s,'A')).provisional,false);assert.equal(playerStats(s,'B',realmSnapshot(s,start).get('B')).provisional,true);
 });
 
+test('定级期间页面不显示境界：只给已结算局数与段位分，进行中小局不计入，第10局结算后才显示境界',()=>{
+ const s=fixture(),member={id:'C',email:'',role:'member' as const,playerId:'C'},admin={id:'D',email:'',role:'admin' as const,playerId:'D'};
+ for(let i=0;i<9;i++){const m=match('q'+i,start+i*120000);m.eventId='q'+i;s.matches.push(m)}
+ const internal=score(s,'A');assert.equal(internal.realm,realmByScore(internal.score),'the full snapshot keeps the realm internally');
+ const hidden={placement:true,ratedGames:9,placementGames:realmPolicy.placementGames,score:internal.score,wins:9,losses:0,pendingGames:0,pendingChange:0,realm:null,stage:null};
+ assert.deepEqual(visibleRealm(internal),hidden);
+ for(const account of [member,admin]){const view=projectClubState(s,account,'2026-10',2026,now),st=view.social.stats.find(p=>p.playerId==='A')!;
+  assert.equal(st.tier,null);assert.equal(st.provisional,true);assert.deepEqual(st.realmScore,hidden);
+  for(const rows of [view.leaderboard,view.quarterlyLeaderboard,view.annualLeaderboard]){const row=rows.find(r=>r.playerId==='A')!;assert.equal(row.realm,null);assert.equal(row.provisional,true);assert.deepEqual(row.realmScore,hidden)}
+  assert.ok(!JSON.stringify([st,view.quarterlyLeaderboard.find(r=>r.playerId==='A')]).match(/progressPercent|nextRealm|初期|中期|后期/),'no realm stage or progress during placement');
+ }
+ const e:Event={id:'live',creatorId:'A',title:'周四活动',start:now-3600000,end:now+3600000,venue:'测试',address:'',capacity:8,signupDeadline:now-3600000,cancelDeadline:now-3600000,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
+ const tenth=match('q9',now-1800000);tenth.eventId='live';s.matches.push(tenth);
+ const during=projectClubState(s,member,'2026-10',2026,now).social.stats.find(p=>p.playerId==='A')!;
+ assert.equal(during.tier,null);assert.equal(during.realmScore.placement,true);assert.equal(during.realmScore.ratedGames,9,'a running activity does not count towards placement');assert.equal(during.realmScore.pendingGames,1);
+ const view=projectClubState(s,member,'2026-10',2026,e.end),after=view.social.stats.find(p=>p.playerId==='A')!,settled=score(s,'A',e.end);
+ assert.equal(settled.ratedGames,10);assert.equal(after.provisional,false);assert.equal(after.tier,realmByScore(settled.score));
+ assert.equal(after.realmScore.placement,false);assert.equal(after.realmScore.realm,after.tier);assert.equal(after.realmScore.stage,settled.stage);assert.equal(after.realmScore.progressPercent,settled.progressPercent);
+ assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='A')!.realm,after.tier);
+});
+
 test('友谊赛、让分局、弃权、取消、未完成和未来完赛不改段位分；作废与纠错按历史回放',()=>{
  const s=fixture();s.matches=[match('real')];assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A',now+30*86400000).score,1016,'absence costs nothing');
  const friendly=match('friend');friendly.monthly=false;const handicap=match('handicap');handicap.handicap={side:'a',points:4,applied:true};handicap.elo=false;const forfeit=match('forfeit');forfeit.status='forfeit';const playing=match('playing');playing.status='playing';const future=match('future',now+86400000);
  s.matches.push(friendly,handicap,forfeit,playing,future,{...match('real')});assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A').ratedGames,1);
- const row=leaderboard(s,'2026-10',now).find(r=>r.playerId==='A')!;assert.deepEqual([row.points,row.games],[16,1]);assert.ok(row.total>row.games,'unrated records still count as actual games');
+ const row=leaderboard(s,'2026-10',now).find(r=>r.playerId==='A')!;assert.deepEqual([row.pointsChange,row.games],[16,1]);assert.ok(row.total>row.games,'unrated records still count as actual games');
  for(const m of s.matches)if(m.id==='real')m.status='cancelled';assert.equal(score(s,'A').score,1000);s.matches=[...s.matches.filter(m=>m.id!=='real'),match('real',start,false)];assert.equal(score(s,'A').score,984);
 });
 
@@ -116,7 +137,7 @@ test('活动进行中段位分与境界保持，显示待结算局数和暂计�
  const s=fixture(),e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
  s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
  const live=score(s,'A',mid);assert.deepEqual([live.score,live.realm,live.pendingGames,live.ratedGames],[1000,'金丹',2,0]);assert.equal(live.pendingChange,16-17);
- for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.points,a.pendingPoints,a.pendingGames,a.games],[-1,-1,2,2]);assert.equal(a.realmScore.score,1000)}
+ for(const rows of [leaderboard(s,'2026-10',mid),quarterlyLeaderboard(s,'2026-Q4',mid),annualLeaderboard(s,2026,mid)]){const a=rows.find(r=>r.playerId==='A')!;assert.deepEqual([a.pointsChange,a.pendingPoints,a.pendingGames,a.games],[-1,-1,2,2]);assert.equal(a.realmScore.score,1000)}
  const settled=score(s,'A',e.end);assert.deepEqual([settled.score,settled.pendingGames,settled.ratedGames],[999,0,2]);
  assert.deepEqual(realmSnapshot(s,e.end),realmSnapshot({...s,events:[]},e.end));assert.equal(score(s,'A',e.end-1).score,1000);
  e.status='ended';assert.equal(score(s,'A',mid).score,999);e.status='cancelled';assert.equal(score(s,'A',mid).score,999);
@@ -137,7 +158,7 @@ test('页面境界与队伍参考实力在活动中保持，结束时自动结�
  const s=fixture();for(const p of s.players.slice(0,2)){p.initialRating=1090;p.rating=1090}const e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);s.matches=[match('late')];replayRating(s);const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;
  assert.ok(s.players[0].rating>1100);
  const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
- assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'金丹');assert.equal(a(during).realmScore.score,1000);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.points,16);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1000);assert.equal(during.social.matchLevels.late.a,'入门');
+ assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,null);assert.equal(a(during).realmScore.placement,true);assert.equal(a(during).realmScore.score,1000);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.pointsChange,16);assert.equal(during.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1000);assert.equal(during.social.matchLevels.late.a,'入门');
  const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).realmScore.score,1016);assert.equal(after.leaderboard.find(r=>r.playerId==='A')!.realmScore.score,1016);assert.equal(after.social.matchLevels.late.a,'基础');
  assert.equal(settledRatings(s,mid).get('A'),1090);assert.equal(settledRatings(s,e.end).get('A'),s.players[0].rating);assert.equal(s.events[0].status,'live');
  assert.ok(after.players.every(p=>p.rating===null));

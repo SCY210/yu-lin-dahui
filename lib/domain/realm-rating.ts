@@ -95,6 +95,17 @@ export function realmLedger(s:Pick<State,'players'|'matches'|'events'>,now=Date.
  return {snapshot,games:live.games,byPlayer};
 }
 export type RealmLedger=ReturnType<typeof realmLedger>;
+/** What members see during placement: no realm, stage or realm progress, only the settled count and 段位分. */
+export type PlacementRealm={placement:true;ratedGames:number;placementGames:number;score:number;wins:number;losses:number;pendingGames:number;pendingChange:number;realm:null;stage:null};
+export type VisibleRealm=PlacementRealm|(RealmSnapshot&{placement:false;placementGames:number});
+/** Placement counts only settled rated games (the same settle-after-activity rule as the realm), so
+ * games of a running activity stay pending and the realm first appears once the 10th game settles.
+ * The full snapshot stays internal for replay, the migration audit and tests. */
+export function visibleRealm(r:RealmSnapshot):VisibleRealm{
+ const placementGames=realmPolicy.placementGames;
+ if(!r.placement)return {...r,placement:false,placementGames};
+ return {placement:true,ratedGames:r.ratedGames,placementGames,score:r.score,wins:r.wins,losses:r.losses,pendingGames:r.pendingGames,pendingChange:r.pendingChange,realm:null,stage:null};
+}
 export function realmSnapshot(s:Pick<State,'players'|'matches'|'events'>,now=Date.now()){return realmLedger(s,now).snapshot}
 export function playerRealm(s:Pick<State,'players'|'matches'|'events'>,id:string,now=Date.now()){return realmSnapshot(s,now).get(id)!}
 

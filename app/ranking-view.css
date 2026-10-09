@@ -2,7 +2,6 @@
 .rv-name-link:hover{color:#735098}
 .rv-name-link:focus-visible{outline:3px solid #a897e9;outline-offset:3px;border-radius:5px}
 .rv-realm-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
-.rv-provisional { color: #93859e; font-size: 11px; }
 .rv-calculation { margin: 20px 0; padding: 19px 22px; border: 1px solid #e4ddeb; border-radius: 16px; background: #fcfaff; color: #7f728c; font-size: 13px; line-height: 1.8; }
 .rv-calculation>strong { display: block; font-size: 14px; color: #625073; }.rv-calculation p { margin: 7px 0 0; }
 .rv-calculation summary { margin-top: 12px; cursor: pointer; color: #745394; font-weight: 600; padding: 5px 0; }
@@ -53,7 +52,7 @@
  .rv-calculation { padding:16px 14px; }
  .rv-year-rules { grid-template-columns:1fr; }
 }
-@media(max-width:350px) { .rv-title h1 { font-size:21px; }.rv-period-switch button { padding-left:9px; padding-right:9px; }.rv-provisional { font-size:10px; }.rv-progress-track { width:32px; } }
+@media(max-width:350px) { .rv-title h1 { font-size:21px; }.rv-period-switch button { padding-left:9px; padding-right:9px; }.rv-progress-track { width:32px; } }
 
 /* Match theme specificity without allowing decorative heading sizes to overflow. */
 @media(max-width:600px) {

@@ -2,7 +2,7 @@
 import Deferred from './deferred';
 import Disclosure from './disclosure';
 import RealmProgress from './realm-progress';
-import RealmBadge from './realm-badge';
+import RealmBadge, {PlacementBadge} from './realm-badge';
 import {Avatar} from './avatar';
 import {lazy} from 'react';
 import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
@@ -59,7 +59,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <p className="pp-eyebrow"><span className="pp-perspective">{isOwn ? '我的档案' : p.name+'的档案'}</span></p>
         <h2>{p.name}</h2>
         <div className="pp-badges">
-          {state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.provisional ? '定级中' : state.realmScore?.stage} /> : <span className="pp-tier">暂无境界</span>}
+          {state.provisional || state.realmScore?.placement ? <PlacementBadge className="pp-tier" games={state.realmScore?.ratedGames} total={state.realmScore?.placementGames} /> : state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.realmScore?.stage} /> : <span className="pp-tier">暂无境界</span>}
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
         <RealmProgress value={state.realmScore}/>

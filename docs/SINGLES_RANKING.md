@@ -10,7 +10,7 @@ The current match creation flows still generate doubles: live courts, scheduled 
 
 ## Calculation
 
-- Points are the sum of the selected period's rated singles-game realm-rating changes. Singles and doubles share one visible realm rating; see [REALM_PROGRESSION.md](REALM_PROGRESSION.md). Madrid start month determines the period. Best-of-three matches count each game. Quarterly and annual totals aggregate the relevant months. Legacy win/loss amounts and monthly caps no longer calculate ranking points.
+- Points are 1000 (`periodPointsBase`, the same start for every player and period) plus the sum of the selected period's rated singles-game realm-rating changes, so a net loss shows below 1000 instead of a negative number; `pointsChange` holds the signed sum. Only players with a singles match in the period are listed, so nobody appears at a bare 1000 without playing. Singles and doubles share one visible realm rating; see [REALM_PROGRESSION.md](REALM_PROGRESSION.md). Madrid start month determines the period. Best-of-three matches count each game. Quarterly and annual totals aggregate the relevant months. Legacy win/loss amounts and monthly caps no longer calculate ranking points.
 - Sort by points, rated win rate and average score margin. Identical rows share a rank and subsequent ranks skip the tied positions.
 - Only enabled players with their own account qualify. Proxy guest profiles and disabled players do not appear. A singles row additionally requires at least one completed singles match in the period.
 - Owner point adjustments apply only to Combined, preventing duplicate attribution to Singles.

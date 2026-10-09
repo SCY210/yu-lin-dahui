@@ -28,7 +28,7 @@ try{
  const snapshot=structuredClone(fixed);await api.runRequestedEventDateRepair({eventId:'foreign',toStart:0});assert.deepEqual(await api.load(),snapshot);
  const rollback=structuredClone(fixed);rollback.matches[0].scoreA=30;await assert.rejects(()=>api.save(rollback,plan.key,fixed),/UNIQUE/);assert.deepEqual(await api.load(),snapshot);
  fixture.user={userId:'alice',method:'password',displayName:'alice'};const origin='https://club.example';
- const read=await api.GET(new Request(origin+'/api/club?month=2026-10&year=2026'));assert.equal(read.status,200);const view=await read.json();assert.equal(view.events.find(x=>x.id===e.id).status,'ended');assert.equal(view.leaderboard.find(r=>r.playerId==='p1').points,16,'first rated game at 1000 with K=32');
+ const read=await api.GET(new Request(origin+'/api/club?month=2026-10&year=2026'));assert.equal(read.status,200);const view=await read.json();assert.equal(view.events.find(x=>x.id===e.id).status,'ended');assert.equal(view.leaderboard.find(r=>r.playerId==='p1').pointsChange,16,'first rated game at 1000 with K=32');
  const vote=await api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'awardVote',payload:{eventId:e.id,playerId:'p2',category:'mvp'},revision:fixed.revision,actor:'alice',requestId:crypto.randomUUID()})}));assert.equal(vote.status,200,await vote.text());assert.equal((await api.load()).awardVotes.length,1);
  console.log('PASS date repair API: actual SQLite atomic migration, concurrent once-only ledger, preserved score/roster/foreign activity, rollback, ended projection and authorized voting');
 }finally{Date.now=realNow;sql.close();delete globalThis.__dateRepairTest}

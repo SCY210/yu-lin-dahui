@@ -5,6 +5,7 @@
    pigments stay fixed.
    Every realm moves, and each adds splendour: 金丹 gold leaf, 元婴 a
    starlit sky, 化神 thunderclouds with drifting mist and lightning.
+   During placement no realm is shown: a neutral 定级中 tag takes its place.
    Rules use !important because the badge shares class names with older
    tag styles (.pp-tier, .pc-realm, .rv-realm-badge, .stats span/strong).
    ═══════════════════════════════════════════════════════════════════ */
@@ -519,6 +520,24 @@
   86%       { opacity: 1; }
   90%, 100% { opacity: 0; }
 }
+
+/* ── 定级中: a plain paper tag with an uncarved seal ─────────────── */
+/* No realm pigment yet: the tag is the theme paper itself, edged with a quiet dashed line. */
+.realm-badge-placement {
+  background: var(--rb-paper) !important;
+  border: 1px dashed color-mix(in srgb, var(--rb-c) 55%, var(--rb-paper)) !important;
+}
+
+.realm-badge-placement .rb-name {
+  font-weight: 500 !important;
+}
+
+.realm-badge-placement .rb-stage {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The dashed seal outline traces slowly; the next placement bead pulses, the centre breathes. */
+.rb-trace { animation: rb-turn 40s linear infinite; }
 
 /* ── Placements ───────────────────────────────────────────────── */
 /* 名帖 */

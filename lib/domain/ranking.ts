@@ -18,8 +18,11 @@ export function replayRating(s:State){for(const p of s.players){p.rating=p.initi
 }
 /** Visible strength labels settle like realms; matchmaking keeps the live rating. */
 export function settledRatings(s:State,now=Date.now()){const copy:State={...s,players:s.players.map(p=>({...p})),matches:s.matches.filter(settledMatchFilter(s,now)),ratingChanges:[]};replayRating(copy);return new Map(copy.players.map(p=>[p.id,p.rating]))}
-/** Ranking points are the 段位分 changes of the period's rated games (plus owner grants on the combined board).
- * Points stay live: games of a running activity count at once (shown as pending) while realms wait for the activity to end. */
+/** Every period starts everyone at the same base, so members see points around 1000 instead of negative
+ * numbers; the order is exactly that of the signed change because every row gets the same offset. */
+export const periodPointsBase=1000;
+/** Ranking points = periodPointsBase + the 段位分 changes of the period's rated games (plus owner grants on the
+ * combined board); pointsChange is the signed part alone. Points stay live: games of a running activity count at once (shown as pending) while realms wait for the activity to end. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
 function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
  const singles=format==='singles',chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
@@ -30,7 +33,7 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
   const rated=(ledger.byPlayer.get(p.id)??[]).filter(g=>chosen.has(month(g.start))&&(!singles||isSinglesMatch(matches.get(g.matchId)!)));
   const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=rated.reduce((n,g)=>n+g.delta,0),pending=rated.filter(g=>!g.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+g.delta,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:periodPointsBase+score+(bonus.get(p.id)??0),pointsChange:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+g.delta,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).filter(row=>!singles||row.totalMatches>0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
