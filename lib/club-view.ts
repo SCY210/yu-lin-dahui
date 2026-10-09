@@ -7,7 +7,7 @@ import {canDeletePhoto} from './domain/photo-deletion';
 import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
-import {leaderboard,quarterlyLeaderboard,annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating,settledRatings} from './domain/ranking';
+import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating,settledRatings} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlement} from './domain/money';

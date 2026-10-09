@@ -1,4 +1,5 @@
 'use client';
+import {eventFormat,courtPlayers} from '../lib/domain/match-format';
 import {useEffect,useState} from 'react';
 import {Play,Pause,RefreshCw} from 'lucide-react';
 import {canManageEvent} from '../lib/domain/permissions';
@@ -25,7 +26,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const playingIds=new Set(current.flatMap(m=>[...m.a,...m.b]));
  return <div className="live-play">
   <section className="card live-play-header"><div className="row"><h2>当前对局</h2><span className="badge">{config?.paused?'排场暂停':config?.enabled?'自动同步':'尚未开始排场'}</span></div>
-   <p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先安排上场次数少、等待更久的球友。</p>
+   <p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先安排上场次数少、等待更久的球友。每场{courtPlayers(e)}人。</p>
    {manager&&active&&<div className="actions">
     {!config?.enabled?<button type="button" className="primary" disabled={busy||!inWindow} onClick={()=>send('liveStart',{eventId:e.id})}><Play size={17}/>开始实时排场</button>:<>
      <button type="button" className="secondary" disabled={busy} onClick={()=>send('livePause',{eventId:e.id,paused:!config.paused})}>{config.paused?<Play size={17}/>:<Pause size={17}/>} {config.paused?'恢复自动排场':'暂停自动排场'}</button>
@@ -48,6 +49,6 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
    })}
   </section>
   <Disclosure label={`已完成对局 · ${history.length} 局`}><div>{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>
-  <Disclosure label="搭档方式与投票"><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
+  <Disclosure label={eventFormat(e)==='singles'?'单打轮转':'搭档方式与投票'}><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
  </div>;
 }

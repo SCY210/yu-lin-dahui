@@ -1,3 +1,4 @@
+import {eventFormat} from './match-format';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { authorizeEventAction } from './permissions';
@@ -18,6 +19,7 @@ export async function applyPointsChoice(s: State, a: Account, action: string, in
     if (action !== 'pointsModeVote')
         authorizeEventAction(s, a, action, p);
     const e = s.events.find(e => e.id === p.eventId && e.deletedAt === undefined) ?? fail('活动不存在或已删除');
+    if(eventFormat(e)==='singles')fail('单打每方一人，不使用搭档方式投票');
     if (['ended', 'cancelled'].includes(e.status))
         fail('活动已结束或取消');
     const choice = e.pointsChoice ?? { votes: [], votingOpen: pointsVotingOpen(e, now) };

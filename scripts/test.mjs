@@ -24,8 +24,8 @@ if (!unitOnly) {
   // These suites run handlers locally with isolated persistence. Legacy scripts
   // requiring a running Worker are separate and must never target production.
   const suites = [
-    'photo-rights-api', 'score-reminder-ui', 'install-theme-api', 'live-play-api',
-    'match-scoring-api', 'point-grants-api', 'all-ranked-api', 'award-voting-api',
+    'simple-forms-ui', 'photo-rights-api', 'score-reminder-ui', 'install-theme-api', 'live-play-api',
+    'match-formats-api', 'match-scoring-api', 'point-grants-api', 'all-ranked-api', 'award-voting-api',
     'event-date-repair-api', 'settlement-api', 'requested-thursday-split-api',
     'write-retry-api', 'club-read-api', 'requested-event-merge-api',
     'trial-cleanup-api', 'push-api', 'auth-business.integration',
