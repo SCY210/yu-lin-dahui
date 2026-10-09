@@ -6,7 +6,7 @@
 
 ## 当前标准
 
-- 段位分与境界：每个计分小局按 Elo 结算（每人从 1000 起，定级期前 20 局 K = 32，之后 K = 16，双打按两队平均分计算、同队两人加减相同）。完整规则、境界门槛、保级缓冲和模拟结果见 [REALM_PROGRESSION.md](REALM_PROGRESSION.md)。
+- 段位分与境界：每个计分小局按 Elo 结算（每人从 1000 起，新手期前 20 局 K = 32，之后 K = 16，双打按两队平均分计算、同队两人加减相同）。完整规则、境界门槛、保级缓冲和模拟结果见 [REALM_PROGRESSION.md](REALM_PROGRESSION.md)。
 - 积分榜：季度 / 年度积分 = 1000 + 周期内每个计分小局的段位分变化之和（综合榜另加群主手动调整），每个周期从 1000 起算；没有月度小局上限。先积分、再小局胜率、再局均净胜。
 - 统计：三局两胜 2∶1 按 2 胜 1 负、3 个小局计算，每一局分别结算段位分；胜率分别为 66.7% 和 33.3%。球员档案、近期状态与搭档对位胜率使用小局口径。隐藏实力分仍以整场胜负更新一次，原始实力、初值、调整系数和匹配逻辑不修改。
 - 缺席既不加分也不扣分，不要求全群到场。友谊赛、应用让分、取消、弃权、未完成、未来完赛不改变段位分。
@@ -28,4 +28,4 @@
 
 ## 验证
 
-`tests/realm-progression.test.ts` 覆盖双打个人公式示例、单打、定级期 K 切换、零和与长期均值不漂移、门槛与缓冲、按活动判断缓冲、定级中、排除规则、确定性回放、活动结束后结算、迁移幂等与页面投影；`tests/match-scoring.test.ts`、`tests/ranking-periods.test.ts`、`tests/singles-ranking.test.ts`、`tests/point-grants.test.ts` 覆盖榜单求和、手动调整与旧规则不再生效；`tests/push-api.mjs` 用真实 SQLite 验证迁移一次落库与重复加载不重复。
+`tests/realm-progression.test.ts` 覆盖双打个人公式示例、单打、新手期 K 切换、零和与长期均值不漂移、门槛与缓冲、按活动判断缓冲、定级中、排除规则、确定性回放、活动结束后结算、迁移幂等与页面投影；`tests/match-scoring.test.ts`、`tests/ranking-periods.test.ts`、`tests/singles-ranking.test.ts`、`tests/point-grants.test.ts` 覆盖榜单求和、手动调整与旧规则不再生效；`tests/push-api.mjs` 用真实 SQLite 验证迁移一次落库与重复加载不重复。

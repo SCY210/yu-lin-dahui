@@ -43,7 +43,7 @@ test('单打为标准一对一 Elo，换算表与说明一致',()=>{
  assert.ok(!JSON.stringify([guide,getFeatureGuide('ranking'),getFeatureGuide('annualRanking'),getFeatureGuide('matches'),getFeatureGuide('modes')]).includes('修为'));
 });
 
-test('定级期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
+test('新手期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
  assert.equal(kFactor(0),32);assert.equal(kFactor(19),32);assert.equal(kFactor(20),16);
  assert.deepEqual(deltas(gameChanges([rated(1000,19),rated(1000,20)],[rated(1000,5),rated(1000,40)],'a')),{a:[16,8],b:[-16,-8]});
  const s=fixture(['A','B']);for(let i=0;i<22;i++)s.matches.push(match('m'+String(i).padStart(2,'0'),start+i*120000,i%2===0,['A'],['B']));

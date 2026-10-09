@@ -10,11 +10,11 @@ export const realmTable:GuideTable={caption:'修仙境界门槛（段位分）',
 /** Gains for one game at the settled K; the provisional K doubles them. */
 export const exchangeGaps=[0,50,100,150,200,300,400] as const;
 export function exchangeRow(gap:number,k:number=realmPolicy.k){const e=expectedScore(gap,0),favourite=roundDelta(k*(1-e)),upset=roundDelta(k*e);return gap===0?[String(gap),'各 '+signed(favourite)+' / '+signed(-favourite),'各 '+signed(upset)+' / '+signed(-upset)]:[String(gap),'强方 '+signed(favourite)+'，弱方 '+signed(-favourite),'弱方 '+signed(upset)+'，强方 '+signed(-upset)]}
-export const exchangeTable:GuideTable={caption:`每局加减分（K = ${realmPolicy.k}；定级期 K = ${realmPolicy.provisionalK}，加减分约翻倍）`,columns:['分差','强方赢','弱方爆冷赢'],rows:exchangeGaps.map(gap=>exchangeRow(gap))};
+export const exchangeTable:GuideTable={caption:`每局加减分（K = ${realmPolicy.k}；新手期 K = ${realmPolicy.provisionalK}，加减分约翻倍）`,columns:['分差','强方赢','弱方爆冷赢'],rows:exchangeGaps.map(gap=>exchangeRow(gap))};
 /** The club's doubles example: 1200 + 900 against two 1050 players, all past placement. */
 export function doublesExample(){const p=(score:number)=>({score,games:realmPolicy.provisionalGames}),a=[p(1200),p(900)],b=[p(1050),p(1050)];
  const win=gameChanges(a,b,'a'),loss=gameChanges(a,b,'b');
- return `A 队 1200 分与 900 分（平均 1050）对 B 队两位 1050 分（平均 1050），四人都已过定级期，两队平均分相同：A 队赢，A 队两人各 ${signed(win.a[0].delta)}，B 队两人各 ${signed(win.b[0].delta)}；A 队输，A 队两人各 ${signed(loss.a[0].delta)}，B 队两人各 ${signed(loss.b[0].delta)}。四个人的段位分都通过两队平均分进入计算，同队两人加减相同；仍在定级期的球友 K = ${realmPolicy.provisionalK}，变化约加倍。`;
+ return `A 队 1200 分与 900 分（平均 1050）对 B 队两位 1050 分（平均 1050），四人都已过新手期，两队平均分相同：A 队赢，A 队两人各 ${signed(win.a[0].delta)}，B 队两人各 ${signed(win.b[0].delta)}；A 队输，A 队两人各 ${signed(loss.a[0].delta)}，B 队两人各 ${signed(loss.b[0].delta)}。四个人的段位分都通过两队平均分进入计算，同队两人加减相同；仍在定级期的球友 K = ${realmPolicy.provisionalK}，变化约加倍。`;
 }
 /** Rules belong to the viewed season when explaining historical rankings or matches. */
 export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):FeatureGuideContent {
@@ -65,7 +65,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
       sections:[
         {title:'段位分怎么变',paragraphs:[
           '每个已完成的计分小局单独结算，三局两胜按实际打完的每一局分别计算。预期胜率 E = 1 ÷ (1 + 10^((对手分 − 自己分) ÷ 400))；本局变化 = K × (结果 − E)，赢记 1、输记 0，四舍五入为整数。',
-          `K 值：每人前 ${realmPolicy.provisionalGames} 个计分小局为定级期，K = ${realmPolicy.provisionalK}；之后 K = ${realmPolicy.k}。搭档各按自己的计分小局数决定 K 值。`,
+          `K 值：每人前 ${realmPolicy.provisionalGames} 个计分小局为新手期，K = ${realmPolicy.provisionalK}；之后 K = ${realmPolicy.k}。搭档各按自己的计分小局数决定 K 值。`,
           '双打按队伍平均计算：本队两人的平均分对比对方两人的平均分得到预期胜率，四个人的段位分都通过两队平均分进入计算；同队两人加减分相同，各自的 K 值不同时（例如一人仍在定级期）变化幅度不同。单打就是标准的一对一计算，单打与双打共用同一个段位分。',
           '一局里双方的加减分基本抵消，全群平均分保持在 1000 附近，不会因为多打而整体上涨；缺席既不加分也不扣分。',
         ]},
