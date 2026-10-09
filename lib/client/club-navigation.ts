@@ -8,9 +8,9 @@ const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';
 
-export function normalizeRoute(value:Partial<ClubRoute>):ClubRoute {
- const page = pages.has(value.page??'')?value.page!:'home';
- return {page,eventId:page==='events'?safeId(value.eventId):'',tab:page==='events'&&eventTabs.has(value.tab??'')?value.tab!:'overview',playerId:page==='social'?safeId(value.playerId):'',socialTab:page==='social'&&socialTabs.has(value.socialTab??'')?value.socialTab!:'players'};
+export function normalizeRoute(value:Partial<Record<keyof ClubRoute,unknown>>):ClubRoute {
+ const page:ClubPage = typeof value.page==='string'&&pages.has(value.page)?value.page as ClubPage:'home';
+ return {page,eventId:page==='events'?safeId(value.eventId):'',tab:page==='events'&&typeof value.tab==='string'&&eventTabs.has(value.tab)?value.tab as EventTab:'overview',playerId:page==='social'?safeId(value.playerId):'',socialTab:page==='social'&&typeof value.socialTab==='string'&&socialTabs.has(value.socialTab)?value.socialTab as SocialTab:'players'};
 }
 export function readClubRoute(href:string):ClubRoute {
  const q = new URL(href).searchParams;
@@ -30,21 +30,22 @@ export type ProfileSource={route:ClubRoute;scrollY:number;ranking?:RankingSelect
 type Frame = {route:ClubRoute;dialog:string|null;scrollY:number;profileSource?:ProfileSource;ranking?:RankingSelection};
 type Marker = {session:string;owner:string;index:number;route:ClubRoute;dialog:string|null;scrollY?:number;profileSource?:ProfileSource;ranking?:RankingSelection};
 export type NavigationPort = {href:()=>string; state:()=>unknown; push:(state:unknown,url:string)=>void; replace:(state:unknown,url:string)=>void; go:(delta:number)=>void; scrollY:()=>number; scrollTo:(y:number)=>void};
+const objectOf=(value:unknown):Record<string,unknown>|undefined=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
 const markerOf = (state:unknown):Marker|undefined => {
- const marker=state&&typeof state==='object'?(state as any).__yulinNavigation:undefined;
- return marker&&typeof marker==='object'&&typeof marker.session==='string'&&typeof marker.owner==='string'&&typeof marker.index==='number'&&marker.route&&typeof marker.route==='object'?marker:undefined;
+ const marker=objectOf(objectOf(state)?.__yulinNavigation),route=objectOf(marker?.route);
+ if(!marker||!route||typeof marker.session!=='string'||typeof marker.owner!=='string'||typeof marker.index!=='number'||!Number.isSafeInteger(marker.index)||marker.index<0)return;
+ const source=sourceOf(marker.profileSource),ranking=rankingOf(marker.ranking);
+ return {session:marker.session,owner:marker.owner,index:marker.index,route:normalizeRoute(route),dialog:typeof marker.dialog==='string'&&marker.dialog.length<=150?marker.dialog:null,scrollY:safeScroll(marker.scrollY),...(source?{profileSource:source}:{}),...(ranking?{ranking}:{})};
 };
 const safeScroll=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(2000000,value)):0;
 const rankingOf=(value:unknown):RankingSelection|undefined=>{
- if(!value||typeof value!=='object')return;
- const v=value as any;
- if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||!Number.isInteger(v.year)||v.year<2000||v.year>2100||!['quarterly','monthly','annual'].includes(v.rankingPeriod))return;
+ const v=objectOf(value);if(!v)return;
+ if(typeof v.period!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(v.period)||typeof v.year!=='number'||!Number.isInteger(v.year)||v.year<2000||v.year>2100||typeof v.rankingPeriod!=='string'||!['quarterly','monthly','annual'].includes(v.rankingPeriod))return;
  return {period:v.period,year:v.year,rankingPeriod:v.rankingPeriod==='annual'?'annual':'quarterly'};
 };
 const sourceOf=(value:unknown):ProfileSource|undefined=>{
- if(!value||typeof value!=='object')return;
- const v=value as any;if(!v.route||!pages.has(v.route.page))return;
- const route=normalizeRoute(v.route);if(route.page==='social'&&route.playerId)return;
+ const v=objectOf(value),sourceRoute=objectOf(v?.route);if(!v||!sourceRoute||typeof sourceRoute.page!=='string'||!pages.has(sourceRoute.page))return;
+ const route=normalizeRoute(sourceRoute);if(route.page==='social'&&route.playerId)return;
  const ranking=rankingOf(v.ranking);return {route,scrollY:safeScroll(v.scrollY),...(ranking?{ranking}:{})};
 };
 

@@ -10,11 +10,17 @@
     "dev": "node scripts/run-framework.mjs dev",
     "build": "node scripts/run-framework.mjs build",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "node scripts/lint-debt.mjs",
     "db:generate": "drizzle-kit generate",
     "test": "node scripts/test.mjs",
     "typecheck": "tsc --noEmit",
-    "check:repo": "node scripts/check-repository.mjs"
+    "check:repo": "node scripts/check-repository.mjs",
+    "lint:report": "eslint .",
+    "lint:prune": "node scripts/lint-debt.mjs --prune",
+    "verify": "node scripts/verify.mjs",
+    "test:unit": "node scripts/test.mjs --unit",
+    "test:integration": "node scripts/test.mjs --integration",
+    "db:check": "node scripts/check-migrations.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -64,7 +70,8 @@
     "vinext": "1.0.0-beta.5",
     "vite": "8.0.13",
     "wrangler": "4.92.0",
-    "react-test-renderer": "19.2.6"
+    "react-test-renderer": "19.2.6",
+    "esbuild": "0.28.0"
   },
   "type": "module",
   "overrides": {

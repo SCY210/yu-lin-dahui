@@ -2,6 +2,15 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ClubNavigation,clubRouteUrl,homeRoute,normalizeRoute,readClubRoute,type NavigationPort} from '../lib/client/club-navigation';
 
+test('malformed route values and browser history markers cannot become trusted navigation state',()=>{
+ assert.deepEqual(normalizeRoute({page:42,eventId:{id:'private'},tab:['fees']}),homeRoute);
+ for(const marker of [null,[],{session:'s',owner:'member-A',index:Infinity,route:{}},{session:'s',owner:'member-A',index:-1,route:{}},{session:'s',owner:'member-A',index:0,route:[]}]){
+  const b=browser('https://club.example/?page=events',{__yulinNavigation:marker});
+  assert.equal(b.navigation.route.page,'events');
+  assert.doesNotThrow(()=>b.navigation.pop({__yulinNavigation:marker}));
+ }
+});
+
 function browser(href='https://club.example/',state:unknown=null){
  const entries=[{href,state}],moves:number[]=[];let index=0,scroll=0;
  const port:NavigationPort={href:()=>entries[index].href,state:()=>entries[index].state,push:(state,url)=>{entries.splice(index+1);entries.push({state,href:new URL(url,entries[index].href).href});index++},replace:(state,url)=>{entries[index]={state,href:new URL(url,entries[index].href).href}},go:delta=>{moves.push(delta)},scrollY:()=>scroll,scrollTo:y=>{scroll=y}};

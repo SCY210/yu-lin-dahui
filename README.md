@@ -1,3 +1,5 @@
+Engineering verification and modernization: [ENGINEERING.md](docs/ENGINEERING.md). Incident response and recovery: [OPERATIONS.md](docs/OPERATIONS.md). Use the Node version in `.node-version`, install with `npm ci`, then run `npm run verify`. The lint gate permits only decreasing historical debt; `npm run lint:report` shows the outstanding findings.
+
 # Yu Lin Da Hui
 
 A private, mobile-first badminton club web application. The existing UI is in Chinese; shared development documentation is in English. Defaults: EUR and Europe/Madrid.

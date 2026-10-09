@@ -1,0 +1,53 @@
+name: Project quality
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-fund
+      - name: Protect migration history against the PR base
+        if: github.event_name == 'pull_request'
+        env:
+          MIGRATION_BASE_REF: origin/${{ github.base_ref }}
+        run: node scripts/check-migrations.mjs
+      - name: Verify types, lint debt, migrations, tests and build
+        # The first baseline is reviewed with its introduction; later PRs can only shrink it.
+        env:
+          LINT_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+        run: npm run verify
+      - name: Upload diagnostic artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: quality-diagnostics-${{ matrix.os }}
+          path: .test-output/
+          if-no-files-found: ignore
+          retention-days: 7
