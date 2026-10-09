@@ -79,12 +79,14 @@ attendance or scoring rules and need updating before being added to CI.
 
 ## Remaining project-wide work
 
-The first delivery was reconciled with shared `main` commit `fa5229b`, preserving
+The first delivery was reconciled with shared `main` commit `189e957`, preserving
 its current scoring, live-play, expenses, image rights, sharing and privacy
 features. Local files retired by that version were copied to an ignored backup
 before updating the checkout. A locked installation, 553 unit tests, all 17
 integration suites, TypeScript, migration checks and the production build pass
 locally. GitHub execution is reported separately when the branch is pushed.
+During review, the initial lint ledger was aligned with the already-reviewed main changes to personal achievements and the My page. Only two source fingerprints changed; the accepted count remains 395, with no added findings. This first baseline alignment does not weaken the rule that subsequent ledgers may only shrink.
+
 The scoring integration race accepts either legitimate winner, verifies that
 only that score commits, then checks correction independently; it does not
 assume concurrent requests finish in submission order.

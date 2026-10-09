@@ -28,8 +28,9 @@ verified there. No external monitoring account has been provisioned.
 6. Keep the previous compatible release available for rollback. Do not assume
    rolling application code back also reverses database changes.
 
-GitHub synchronization and Sites publication are distinct operations. This
-modernization delivery only updates the Git branch.
+GitHub synchronization and Sites publication are distinct operations. The
+quality pipeline does not deploy Sites automatically; production releases use
+the separate Sites workflow above.
 
 ## Recovery drill required before readiness sign-off
 
