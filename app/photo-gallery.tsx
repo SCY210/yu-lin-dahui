@@ -32,7 +32,7 @@ export default function PhotoGallery({ctx,eventId,playerId,avatar=false}:{ctx:Ga
  const attended=data.players.filter(item=>data.attendance.some(record=>record.eventId===eventId&&record.playerId===item.id));
  const event=data.events.find(item=>item.id===eventId);
  const canUpload=avatar
-  ?!!player&&(playerId===data.me.playerId||(ctx.admin&&(!player.protectedOwner||data.me.isOwner)))
+  ?!!player&&player.profileEditMode!=='gender-only'&&(playerId===data.me.playerId||(ctx.admin&&(!player.protectedOwner||data.me.isOwner)))
   :!!event&&(canManageEvent(data.me,event)||data.attendance.some(record=>record.eventId===eventId&&record.playerId===data.me.playerId));
 
  async function upload(){

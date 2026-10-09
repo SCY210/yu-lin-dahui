@@ -1,4 +1,5 @@
 import {assertPlayerMutable} from '../../../lib/domain/ownership';
+import {assertFullProfileEditable} from '../../../lib/domain/profile-permissions';
 import {readPhotoForm} from '../../../lib/request-body';
 import {assertWriteRequest,releaseRejectedWriteBody,writeErrorResponse} from '../../../lib/write-security';
 import {cleanExpiredRateLimits,consumeRateLimit,reserveUploadBytes,trustedClientIP} from '../../../lib/rate-limit';
@@ -31,7 +32,7 @@ export async function POST(req:Request){
   let eventId:string|null=null,matchId:string|null=null,playerIds:string[]=[];
   if(kind==='avatar'||kind==='racket'){
    const playerId=z.string().trim().min(1).max(100).parse(f.get('playerId')),p=s.players.find(p=>p.id===playerId);
-   if(!p)return Response.json({error:'球友档案不存在'},{status:404});assertPlayerMutable(s,a,p.id);
+   if(!p)return Response.json({error:'球友档案不存在'},{status:404});assertPlayerMutable(s,a,p.id);assertFullProfileEditable(s,p.id);
    if(a.role!=='admin'&&p.id!==a.playerId)return Response.json({error:'只能上传自己的档案照片'},{status:403});
    playerIds=[p.id];
   }else{

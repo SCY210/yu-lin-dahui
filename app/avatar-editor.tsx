@@ -6,7 +6,7 @@ import PhotoGallery from './photo-gallery';
 
 export default function AvatarEditor({ctx,playerId=ctx.data.me.playerId,className='ghost'}:any){
  const [open,setOpen]=useState(false),player=ctx.data.players.find((p:any)=>p.id===playerId);
- const canEdit=!!player&&(playerId===ctx.data.me.playerId||(ctx.data.me.role==='admin'&&(!player.protectedOwner||ctx.data.me.isOwner)));
+ const canEdit=!!player&&player.profileEditMode!=='gender-only'&&(playerId===ctx.data.me.playerId||(ctx.data.me.role==='admin'&&(!player.protectedOwner||ctx.data.me.isOwner)));
  if(!canEdit)return null;
  return <>
   <button type="button" className={className} onClick={()=>setOpen(true)}><Camera size={17} aria-hidden="true"/>更换头像</button>

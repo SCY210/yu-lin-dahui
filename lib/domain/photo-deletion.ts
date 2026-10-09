@@ -1,7 +1,9 @@
 import {clubOwnerPlayerId,isClubOwner} from './ownership';
+import {genderOnlyProfile} from './profile-permissions';
 import {fail,type State,type Account,type Photo} from './types';
 
 export function canDeletePhoto(s:State,a:Account,photo:Photo){
+ if((photo.kind!=='photo'&&photo.playerIds.some(id=>genderOnlyProfile(s,id)))||s.players.some(p=>p.avatarId===photo.id&&genderOnlyProfile(s,p.id)))return false;
  const ownerPlayer=clubOwnerPlayerId(s);
  const protectedTarget=ownerPlayer&&((photo.kind!=='photo'&&photo.playerIds.includes(ownerPlayer))||s.players.some(p=>p.id===ownerPlayer&&p.avatarId===photo.id));
  if(protectedTarget&&!isClubOwner(s,a))return false;

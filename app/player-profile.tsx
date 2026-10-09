@@ -34,11 +34,12 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   const profile = {...defaults, ...p.profile};
   const isOwn = p.id === ctx.data.me.playerId;
   const canEdit = isOwn || (ctx.admin && (!p.protectedOwner || ctx.data.me.isOwner));
+  const genderOnly=p.profileEditMode==='gender-only';
   const rules = ctx.data.settings.rules;
   const state = stats ?? {};
   const range=tensionRange(p.profile);
   const unparsedLegacy=!range&&p.profile?.tension&&!('tensionMin' in p.profile||'tensionMax' in p.profile);
-  const edit = () => ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
+  const edit = () => genderOnly?ctx.open('修改性别','profileGender',{playerId:p.id,gender:p.profile?.gender??'undisclosed'},[choice('gender','性别（可不透露）',genderOptions.map(([value,label])=>[value,label]))]):ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
     choice('gender', '性别（可不透露）', genderOptions.map(([value,label])=>[value,label])),
     {...number('years', '球龄（年）'),min:0,max:80,step:'any'},
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
@@ -65,8 +66,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <RealmProgress value={state.realmScore}/>
       </div>
       {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
-        <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>编辑档案</button>
-        {ctx.admin && canEdit && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
+        <button type="button" className="pp-edit" onClick={edit}><Pencil size={16} aria-hidden="true"/>{genderOnly?'修改性别':'编辑档案'}</button>
+        {ctx.admin && canEdit && !genderOnly && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
     </header>
     <CultivationOrnament variant="ribbon"/>
@@ -105,6 +106,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section></Disclosure>
 
     <Disclosure label={'成就 · 已点亮 '+(ctx.data.achievements?.[p.id]?.unlockedCount??0)}><Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred></Disclosure>
-    {canEdit && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
+    {canEdit && !genderOnly && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

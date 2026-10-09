@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
+import {profileRestrictionsFromConfig} from './profile-policy-config';
 const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos'] as const;
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
@@ -18,7 +19,7 @@ export async function clubReadVersion(accountId: string): Promise<ClubReadVersio
     } | undefined, account = result[2].results[0] as {
         payload: string;
     } | undefined;
-    return { revision: revisionFrom(result[0].results[0]), settings: settings ? storedSettings(settings.payload) : state.settings, account: account ? storedRecord('accounts', { id: accountId, payload: account.payload }) as Account : null };
+    return { profileRestrictions:profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS), revision: revisionFrom(result[0].results[0]), settings: settings ? storedSettings(settings.payload) : state.settings, account: account ? storedRecord('accounts', { id: accountId, payload: account.payload }) as Account : null };
 }
 type TableName = typeof names[number];
 type PayloadRow = {
@@ -44,6 +45,8 @@ export async function load(): Promise<State> {
     if (settings)
         state.settings = storedSettings(String(settings.payload));
     names.forEach((table, index) => assignRecords(state, table, result[index + 2].results as PayloadRow[]));
+    const policy=profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS);
+    if(policy)state.profileRestrictions=policy;
     return state;
 }
 export async function committed(key: string) { return !!(await raw().prepare('SELECT revision FROM commits WHERE key = ?').bind(key).first()); }

@@ -1,4 +1,5 @@
 import { parseDomainCommand } from './command-contract';
+import {assertFullProfileEditable} from './profile-permissions';
 import { assertPlayerMutable } from './ownership';
 import { z } from 'zod';
 import { fail, type State, type Account } from './types';
@@ -6,8 +7,9 @@ import { finished, won, styleTags } from './social';
 import { authorizeEventAction } from './permissions';
 import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen } from './activity-voting';
 const id = z.string().min(1).max(100);
-export const memberSocialActions = ['profileDetails', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
+export const memberSocialActions = ['profileDetails', 'profileGender', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
 const schemas = {
+    profileGender:z.object({playerId:id,gender:z.enum(['male','female','other','undisclosed'])}).strict(),
     profileDetails: z.object({ playerId: id, gender: z.enum(['male', 'female', 'other', 'undisclosed']).optional(), years: z.number().min(0).max(80), hand: z.enum(['right', 'left', 'both']), preference: z.enum(['doubles', 'singles', 'mixed', 'all']), style: z.string().trim().max(300), motto: z.string().trim().max(80).optional(), equipment: z.string().trim().max(500), racket: z.string().trim().max(120).optional(), strings: z.string().trim().max(120).optional(), tension: z.string().trim().max(80).optional(), tensionMin: z.number().min(1).max(80).nullable().optional(), tensionMax: z.number().min(1).max(80).nullable().optional() }).superRefine((p, c) => { const hasRange = p.tensionMin !== undefined || p.tensionMax !== undefined; if (!hasRange)
         return; if (p.tensionMin === null && p.tensionMax === null)
         return; if (typeof p.tensionMin !== 'number' || typeof p.tensionMax !== 'number')
@@ -30,9 +32,18 @@ export async function applySocial(s: State, a: Account, action: string, input: u
         fail('403: 仅管理员可以执行此操作');
     const player = (id: string) => s.players.find(x => x.id === id && x.enabled) ?? fail('球友不存在或已停用');
     switch (command.action) {
+        case 'profileGender': {
+            const p=command.payload;
+            assertPlayerMutable(s,a,p.playerId);
+            const pl=player(p.playerId);
+            if(a.role!=='admin'&&p.playerId!==a.playerId)fail('403: 只能编辑自己的档案');
+            pl.profile={years:0,hand:'right',preference:'doubles',style:'',equipment:'',...pl.profile,gender:p.gender};
+            break;
+        }
         case 'profileDetails': {
             const p = command.payload;
             assertPlayerMutable(s, a, p.playerId);
+            assertFullProfileEditable(s,p.playerId);
             const pl = player(p.playerId);
             if (a.role !== 'admin' && p.playerId !== a.playerId)
                 fail('403: 只能编辑自己的档案');

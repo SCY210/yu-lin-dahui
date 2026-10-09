@@ -1,4 +1,5 @@
 import { parseDomainCommand } from './command-contract';
+import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
 import { applyLivePlay, finishLiveMatch } from './live-play';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
@@ -105,6 +106,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             const target = p.playerId ?? a.playerId;
             assertPlayerMutable(s, a, target);
+            assertFullProfileEditable(s,target);
             player(target).name = p.name;
             break;
         }

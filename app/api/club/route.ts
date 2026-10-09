@@ -69,7 +69,7 @@ export async function GET(req: Request) {
             } => c !== null);
         const ownCredential = credentials.find(c => c.accountId === a.id) ?? null, ownUsername = ownCredential?.username ?? null, owner = isClubOwner(s, a), now = Date.now();
         const data: ClubData = { ...projectClubState(s, a, period, year, now), loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
-        const token = readCache.remember({ revision: s.revision, settings: s.settings, account: a }, identity, period, year, clubViewValidUntil(s, a, now), now);
+        const token = readCache.remember({ revision: s.revision, settings: s.settings, account: a, profileRestrictions:s.profileRestrictions }, identity, period, year, clubViewValidUntil(s, a, now), now);
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', ...(token ? { 'ETag': token } : {}) } });
     }
     catch (e) {

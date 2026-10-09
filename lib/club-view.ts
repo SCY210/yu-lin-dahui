@@ -1,4 +1,5 @@
 import {googleMapsUrl} from './venues';
+import {profileEditMode} from './domain/profile-permissions';
 import {canRecoverEvent,privateEventState} from './domain/event-privacy';
 import {eventStatusAt} from './domain/event-lifecycle';
 import {pointGrants} from './domain/point-grants';
@@ -43,7 +44,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
-  players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  players:s.players.map(p=>({...p,profileEditMode:profileEditMode(s,p.id),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   leaderboard:board(monthly),quarterlyLeaderboard:board(quarterly),rankingQuarter:quarter,annualLeaderboard:board(annual),rankingYear:year,period,
   singlesQuarterlyLeaderboard:board(singlesQuarterly),singlesAnnualLeaderboard:board(singlesAnnual),
@@ -54,6 +55,6 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   tagVotes:s.tagVotes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''})),awardVotes:s.awardVotes.map((v,i)=>({...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':'+v.category+':'+i,voterId:v.voterId===a.id?a.id:''})),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
-  audits:admin?privateEventState(history,a).audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
+  audits:admin?privateEventState(history,a).audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId)==='full',canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  },s.settings.blockedWords??[]);
 }
