@@ -5,7 +5,7 @@ import {eventFormat} from './match-format';
 import { assertPlayerMutable } from './ownership';
 import { z } from 'zod';
 import { fail, type State, type Account } from './types';
-import { finished, won, styleTags } from './social';
+import { finished, won } from './social';
 import { authorizeEventAction } from './permissions';
 import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen } from './activity-voting';
 const id = z.string().min(1).max(100);
@@ -19,7 +19,7 @@ const schemas = {
     else if (p.tensionMin > p.tensionMax)
         c.addIssue({ code: 'custom', path: ['tensionMax'], message: '最高磅数不能低于最低磅数' }); }),
     challenge: z.object({ targetId: id }), challengeRespond: z.object({ challengeId: id, status: z.enum(['accepted', 'declined', 'cancelled']) }), challengeMatch: z.object({ challengeId: id, matchId: id }),
-    tagVote: z.object({ eventId: id, playerId: id, tag: z.string(), active: z.boolean() }), awardVote: z.object({ eventId: id, playerId: id, category: z.enum(['mvp', 'defense', 'net', 'effort']), active: z.boolean().optional() }),
+    tagVote: z.object({ eventId: id, playerId: id, tag: z.string(), active: z.boolean() }), awardVote: z.object({ eventId: id, playerId: id, category: z.literal('mvp'), active: z.boolean().optional() }),
     playSettings: z.object({ eventId: id, playMode: z.enum(['balanced', 'arena', 'koc']), identityMode: z.enum(['off', 'cp', 'mentor', 'carry']), arenaCourtId: z.string().max(100), handicap: z.boolean() }),
     handicap: z.object({ matchId: id, applied: z.boolean() }),
 
@@ -103,25 +103,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             break;
         }
         case 'tagVote': {
-            const p = command.payload;
-            const e = s.events.find(e => e.id === p.eventId && e.deletedAt === undefined) ?? fail('活动不存在或已删除');
-            if (e.status === 'cancelled')
-                fail('活动已取消，不能投票');
-            if (!isAwardVotingOpen(s, e, now))
-                fail('活动尚未打完，请在活动结束后评选');
-            if (!canCastAwardVote(s, e, a, now))
-                fail('403: 仅本活动参与者、活动创建者和管理员可以投票');
-            player(p.playerId);
-            if (!awardCandidateIds(s, e.id, now).includes(p.playerId))
-                fail('候选球友须参与本次活动');
-            if (!styleTags.includes(p.tag))
-                fail('打法标签不存在');
-            const mine = (v: State['tagVotes'][number]) => v.eventId === e.id && v.voterId === a.id && v.playerId === p.playerId && v.tag === p.tag;
-            const voteId = s.tagVotes.find(mine)?.id ?? crypto.randomUUID();
-            s.tagVotes = s.tagVotes.filter(v => !mine(v));
-            if (p.active)
-                s.tagVotes.push({ id: voteId, eventId: e.id, voterId: a.id, playerId: p.playerId, tag: p.tag, at: now });
-            break;
+            fail('赛后仅开放 MVP 投票，打法标签投票已取消');
         }
         case 'awardVote': {
             const p = command.payload;

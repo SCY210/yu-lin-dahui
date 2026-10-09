@@ -1,8 +1,7 @@
 import {month,type State,type Match} from './types';
 import {realmSnapshot,playerRealm,strengthTier} from './realm-rating';
 import {gameFacts,gameRecord} from './game-facts';
-export const styleTags=['后场重炮','网前雨刮器','防守怪','混双不退后场','跑不死','落点大师','反手达人','气氛担当'];
-export const awardNames={mvp:'最佳球员',defense:'最佳防守',net:'最佳网前',effort:'最拼命球员'};
+export const awardNames={mvp:'MVP · 最佳球员'};
 export function tier(rating:number){return strengthTier(rating)}
 export function winner(m:Match){if(m.games?.length>1)return m.games.filter(g=>g.a>g.b).length>m.games.filter(g=>g.b>g.a).length?'a':'b';return m.scoreA!>m.scoreB!?'a':'b'}
 export function points(m:Match,side:'a'|'b'){return m.games?.length?m.games.reduce((n,g)=>n+g[side],0):side==='a'?m.scoreA!:m.scoreB!}
