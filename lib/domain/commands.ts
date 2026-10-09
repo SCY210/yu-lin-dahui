@@ -45,7 +45,7 @@ const schemas = {
     generate: z.object({ eventId: pid, usePointsWindow: z.boolean().optional(), at: time, duration: z.number().int().min(5).max(90), seed: z.number().int().min(1).max(2147483647) }),
     swap: z.object({ roundId: pid, p1: pid, p2: pid }), moveCourt: z.object({ matchId: pid, courtId: pid }), lock: z.object({ matchId: pid, locked: z.boolean() }), publish: z.object({ roundId: pid }), start: z.object({ roundId: pid, at: time, monthly: z.boolean(), elo: z.boolean(), friendly: z.boolean().optional() }), cancelRound: z.object({ roundId: pid, reason }),
     score: z.object({ matchId: pid, a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
-    cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), reason }),
+    cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100).default(1), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), reason }),
     costOverride: z.object({ costId: pid, reason, segments: z.array(z.object({ start: time, end: time, cents })).min(1).max(100) }),
     bookingBearer: z.object({ bookingId: pid, bearer: z.enum(['members', 'subsidy']), reason }), deleteCost: z.object({ costId: pid, reason }), modes: z.object({ eventId: pid, courtMode: mode, ballMode: mode, reason }),
     exemption: z.object({ eventId: pid, playerId: pid, type: z.enum(['court', 'ball']), mode: z.enum(['none', 'redistribute', 'subsidy']), reason }),
@@ -528,9 +528,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('耗球开始与结束时间必须同时填写');
             if (p.start !== null && p.end !== null && (p.start < e.start || p.end > e.end || p.end <= p.start))
                 fail('费用时段无效');
-            if (p.type === 'ball' && p.pricing === 'total')
-                fail('球费请选择每筒或单颗价格');
-            s.costs.push({ ...p, id: id() });
+            if (p.type === 'ball' && p.pricing !== 'unit')
+                fail('耗球请按单颗价格和消耗颗数录入；如仍看到按筒计价，请刷新页面后重试');
+            s.costs.push({ ...p, ...(p.type === 'ball' ? {tubeCount: 1} : {}), id: id() });
             break;
         }
         case 'costOverride': {
@@ -671,3 +671,4 @@ function checkBooking(e: {
 }) { if (b.start < e.start || b.end > e.end || b.end <= b.start)
     fail('场地预约必须在活动时间内且结束晚于开始'); }
 export function promote(s: State, e: Event, now = Date.now()) { promoteLegacy(s, e, now); }
+

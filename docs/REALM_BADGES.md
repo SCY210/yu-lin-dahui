@@ -1,8 +1,8 @@
 # Animated cultivation badges
 
-Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the initial 炼气 · 初期 · 0% rule. Realm order comes from `lib/domain/cultivation.ts`.
+Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the 段位分 realm rules (new players start at 1000, 金丹 · 初期). Realm order comes from `lib/domain/realm-rating.ts`.
 
-The My page shows this badge through `app/my-realm-card.tsx`, using the existing cultivation realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change growth calculations.
+The My page shows this badge through `app/my-realm-card.tsx`, using the existing 段位分 realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change 段位分 calculations.
 
 ## Look
 

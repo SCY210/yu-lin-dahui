@@ -67,7 +67,7 @@ test('普通创建者完整管理报名、出勤、排场、比赛结果和费�
  await apply(s,member,'settle',{eventId:'own',confirmed:true,reason:'创建者确认分摊'},end);assert.equal(s.settlements[0].confirmed,true);assert.equal(s.settlements[0].bills.length,4);assert.equal(s.accounts[0].role,'member');
 });
 test('普通成员可以修改自己档案，但不可改名字、他人档案或代报朋友档案',async()=>{
- const s=fixture(),details={playerId:'self',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'球拍',level:'intermediate'};
+ const s=fixture(),details={playerId:'self',years:3,hand:'left',preference:'doubles',style:'防守',equipment:'球拍'};
  await apply(s,member,'profileDetails',{...details,name:'越权改名'},start);assert.equal(s.players[0].profile?.hand,'left');assert.equal(s.players[0].name,'self');
  for(const playerId of ['self','other','friend'])await assert.rejects(()=>apply(s,member,'profile',{playerId,name:'改名'},start),/403/);
  for(const playerId of ['other','friend'])await assert.rejects(()=>apply(s,member,'profileDetails',{...details,playerId},start),/403/);

@@ -32,3 +32,4 @@ if (!unitOnly) {
   ];
   for (const suite of suites) run([`tests/${suite}.mjs`]);
 }
+

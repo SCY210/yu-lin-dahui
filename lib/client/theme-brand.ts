@@ -14,14 +14,13 @@ export function syncThemeBrand(document: Document, theme: string) {
     link.sizes.value = '180x180';
   }
   // Put the palette in the URL: native install fetches may omit cookies.
-  // The manifest's app ID and start URL remain unchanged.
+  // The manifest's app ID and start URL remain unchanged. Update the server-rendered
+  // <head> link in place: it stays where iPhone install reads it, and React keeps its node.
   const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   const next=brandManifestUrl(brand.theme);
   if (manifest && manifest.getAttribute('href')!==next) {
-    const replacement = manifest.cloneNode(false) as HTMLLinkElement;
-    replacement.href = next;
-    replacement.crossOrigin = 'use-credentials';
-    manifest.replaceWith(replacement);
+    manifest.crossOrigin = 'use-credentials';
+    manifest.href = next;
     const browser=document.defaultView;
     if(browser)browser.dispatchEvent(new Event(BRAND_CHANGE_EVENT));
   }

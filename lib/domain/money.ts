@@ -9,7 +9,10 @@ const mul=(a:Q,b:Q):Q=>({n:a.n*b.n,d:a.d*b.d});
 const zero=()=>q(0);
 export function allocate(total:number,weights:Record<string,number>):Record<string,number>{return allocateQ(total,Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,q(v)])))}
 function allocateQ(total:number,weights:Record<string,Q>){const entries=Object.entries(weights).filter(([,v])=>v.n>BigInt(0));const sum=entries.reduce((a,[,v])=>add(a,v),zero());if(!sum.n)return {};const list=entries.map(([id,v])=>{const n=BigInt(total)*v.n*sum.d,d=v.d*sum.n;return {id,base:Number(n/d),n:n%d,d}});let left=total-list.reduce((a,v)=>a+v.base,0);list.sort((a,b)=>{const diff=a.n*b.d-b.n*a.d;return diff===BigInt(0)?a.id.localeCompare(b.id):diff>BigInt(0)?-1:1});for(const v of list){if(left-->0)v.base++}return Object.fromEntries(list.map(v=>[v.id,v.base]))}
+// 新耗球记录只按单颗价格×消耗颗数（pricing=unit）。pricing=tube 仅用于读取旧记录：仍按原公式 每筒价×颗数÷每筒颗数、不足1分按半向上，历史金额不变。
 export function ballCents(c:{pricing:string;cents:number;tubeCount:number;used:number}){return c.pricing==='tube'?Number((BigInt(c.cents)*BigInt(c.used)*BigInt(2)+BigInt(c.tubeCount))/(BigInt(c.tubeCount)*BigInt(2))):c.pricing==='unit'?c.cents*c.used:c.cents}
+/** 旧按筒记录折合的单颗价格（欧分）；仅当每筒价能被每筒颗数整除、折算不改变任何金额时返回，否则为null。 */
+export function legacyTubeUnitCents(c:{pricing:string;cents:number;tubeCount:number}){return c.pricing==='tube'&&c.tubeCount>0&&c.cents%c.tubeCount===0?c.cents/c.tubeCount:null}
 export function bookingCents(b:{pricing:string;cents:number;start:number;end:number}){return b.pricing==='total'?b.cents:Math.round(b.cents*(b.end-b.start)/3600000)}
 export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,'id'|'version'|'created'|'reason'|'confirmed'>{
  const spans=attendanceForEvent(s,e).map(a=>({...a,end:Math.min(a.end??Math.min(now,e.end),e.end,...(usesAutomaticAttendance(e)?[now]:[])),start:Math.max(a.start,e.start)})).filter(a=>a.end>a.start);

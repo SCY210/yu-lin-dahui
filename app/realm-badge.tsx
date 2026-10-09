@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useId,useRef,useState,type CSSProperties,type RefObject,type SVGProps} from 'react';
-import {cultivationRealms} from '@/lib/domain/cultivation';
+import {realms} from '@/lib/domain/realm-rating';
 import './realm-badge.css';
 
 export interface RankInfo {
@@ -27,7 +27,7 @@ export const RANKS: RankInfo[] = [
 
 export function getRankByRealm(realm: string): {rank: RankInfo; level: number} {
   const norm = realm.trim().replace(/^练气$/, '炼气');
-  const index = cultivationRealms.findIndex(r => r.name === norm);
+  const index = realms.findIndex(r => r.name === norm);
   const level = index >= 0 ? index : 0;
   return {rank: RANKS[level] ?? RANKS[0], level};
 }

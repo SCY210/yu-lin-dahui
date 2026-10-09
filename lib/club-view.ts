@@ -7,13 +7,16 @@ import {canDeletePhoto} from './domain/photo-deletion';
 import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import type {State,Account} from './domain/types';
-import {leaderboard,quarterlyLeaderboard,annualLeaderboard,replayRating} from './domain/ranking';
+import {leaderboard,quarterlyLeaderboard,annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating,settledRatings} from './domain/ranking';
+import {realmLedger} from './domain/realm-rating';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlement} from './domain/money';
 import {socialSnapshot} from './domain/social';
 import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
+// Retired profile fields may remain in stored JSON for compatibility, but are never shown: grip/shoes and the self-assessed level.
+const hiddenProfileKeys=['grip','shoes','level'];
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now()){
  s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
@@ -23,7 +26,8 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>historicalIds.has(row.eventId));
  const achievements=achievementSnapshot({...history,events:s.events,matches:s.matches},now);
  // Deletion hides an activity's workspace; completed results stay historical facts.
- const monthly=leaderboard(history,period),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter),annual=annualLeaderboard(history,year);
+ // Realms, 段位分 and strength labels settle per activity, while ranking points stay live.
+ const ledger=realmLedger(history,now),monthly=leaderboard(history,period,now,ledger),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter,now,ledger),annual=annualLeaderboard(history,year,now,ledger),singlesQuarterly=singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual=singlesAnnualLeaderboard(history,year,now,ledger);
  const ratingHistory=admin?replayRating(structuredClone(history)):[];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
  const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&canRecoverEvent(s,a,e)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
@@ -31,13 +35,14 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const ids=new Set(s.events.map(e=>e.id));
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>ids.has(row.eventId));
  const matchIds=new Set(s.matches.map(m=>m.id));
- const social=socialSnapshot(s,period,year,now,history);
+ const social=socialSnapshot(s,period,year,now,history,settledRatings(history,now),ledger.snapshot);
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
-  players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!['grip','shoes'].includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  players:s.players.map(p=>({...p,protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations,attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   leaderboard:monthly.map(r=>({...r,...(!admin?{rating:null}:{})})),quarterlyLeaderboard:quarterly.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingQuarter:quarter,annualLeaderboard:annual.map(r=>({...r,...(!admin?{rating:null}:{})})),rankingYear:year,period,
+  singlesQuarterlyLeaderboard:singlesQuarterly.map(r=>({...r,...(!admin?{rating:null}:{})})),singlesAnnualLeaderboard:singlesAnnual.map(r=>({...r,...(!admin?{rating:null}:{})})),
   social,
   pointGrants:isClubOwner(s,a)?pointGrants(s):[],
   achievements,
