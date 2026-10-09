@@ -30,7 +30,7 @@ test('organizing an activity does not grant administrative account or raw rating
  const {s,me,start}=fixture(),v=projectClubState(s,me,'2026-10',2026,start);
  assert.equal(v.me.role,'member');assert.deepEqual(v.accounts,[]);assert.deepEqual(v.audits,[]);assert.deepEqual(v.ratingHistory,[]);
  assert.ok(v.players.every(p=>p.rating===null&&p.initialRating===null));
- assert.ok(v.leaderboard.every(p=>p.rating===null));assert.ok(v.annualLeaderboard.every(p=>p.rating===null));
+ assert.ok(!('leaderboard' in v));assert.ok(v.quarterlyLeaderboard.every(p=>p.rating===null));assert.ok(v.annualLeaderboard.every(p=>p.rating===null));
 });
 
 test('administrators retain all drafts and previews without exposing storage object keys',()=>{
@@ -65,9 +65,9 @@ test('已完成活动改回私有草稿后，所有账号仍看到相同历史�
  s.matches.push({id:'historical-draft-result',eventId:'hidden',roundId:'private-round',courtId:'court-hidden',a:['self','third'],b:['peer','fourth'],status:'complete',start,end:start+1200000,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'other'});
  s.registrations.push({id:'private-reg',eventId:'hidden',playerId:'peer',sequence:1,status:'confirmed',arrival:start,departure:start+3600000,note:'私有报名备注',cancelRequested:false,registeredAt:start-60000,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
  const at=start+1200000,member=projectClubState(s,me,'2026-10',2026,at),creator=projectClubState(s,s.accounts[1],'2026-10',2026,at),admin=projectClubState(s,{...me,role:'admin'},'2026-10',2026,at);
- const publicRanking=(rows:typeof member.leaderboard)=>rows.map(({rating,...row})=>row);
- assert.deepEqual(publicRanking(member.leaderboard),publicRanking(admin.leaderboard));assert.deepEqual(publicRanking(creator.leaderboard),publicRanking(admin.leaderboard));
- assert.deepEqual(publicRanking(member.annualLeaderboard),publicRanking(admin.annualLeaderboard));assert.equal(member.leaderboard.find(r=>r.playerId==='self')!.pointsChange,16);
+ const publicRanking=(rows:typeof member.quarterlyLeaderboard)=>rows.map(row=>{const copy:Record<string,unknown>={...row};delete copy.rating;return copy});
+ assert.deepEqual(publicRanking(member.quarterlyLeaderboard),publicRanking(admin.quarterlyLeaderboard));assert.deepEqual(publicRanking(creator.quarterlyLeaderboard),publicRanking(admin.quarterlyLeaderboard));
+ assert.deepEqual(publicRanking(member.annualLeaderboard),publicRanking(admin.annualLeaderboard));assert.equal(member.quarterlyLeaderboard.find(r=>r.playerId==='self')!.points,3);
  assert.deepEqual(member.social.stats,admin.social.stats);assert.equal(member.social.stats.find(p=>p.playerId==='self')!.games,1);
  assert.ok(!member.events.some(e=>e.id==='hidden'));assert.ok(!member.matches.some(m=>m.id==='historical-draft-result'));assert.ok(!member.registrations.some(r=>r.id==='private-reg'));assert.ok(!('historical-draft-result' in member.social.matchLevels));assert.ok(!('hidden' in member.social.arenas));
  assert.equal(member.social.personality.find(p=>p.playerId==='peer')!.fastSignup,0);assert.equal(admin.social.personality.find(p=>p.playerId==='peer')!.fastSignup,1);

@@ -20,7 +20,7 @@ function match(id:string,at:string,a:string[],b:string[],games:{a:number;b:numbe
 }
 const row=(rows:{playerId:string}[],id:string)=>rows.find(r=>r.playerId===id) as ReturnType<typeof leaderboard>[number]|undefined;
 
-test('单打只认每方各1名不同球友，双打实力只认2对2',()=>{
+test('单打只认每方各1名不同球友，双打只认2对2',()=>{
  assert.equal(isSinglesMatch({a:['A'],b:['B']}),true);
  assert.equal(isSinglesMatch({a:['A','B'],b:['C','D']}),false);
  assert.equal(isSinglesMatch({a:['A'],b:['A']}),false);
@@ -35,7 +35,7 @@ test('没有单打记录时单打榜为空，综合榜照常列出全部正式�
  assert.equal(quarterlyLeaderboard(s,'2026-Q4').length,5);
 });
 
-test('单打榜只算单打小局的段位分变化，三局逐局结算，综合榜包含双打与单打',()=>{
+test('单打榜只算单打小局的赛季积分，三局逐局结算，综合榜包含双打与单打',()=>{
  const s=fixture();
  s.matches.push(match('d1','2026-10-06T13:00:00Z',['A','B'],['C','D']));
  s.matches.push(match('s1','2026-10-06T14:00:00Z',['A'],['C'],[{a:21,b:15},{a:18,b:21},{a:21,b:19}]));
@@ -43,15 +43,15 @@ test('单打榜只算单打小局的段位分变化，三局逐局结算，综�
  const singles=singlesQuarterlyLeaderboard(s,'2026-Q4',now);
  assert.deepEqual(singles.map(r=>r.playerId).sort(),['A','C','D','E'],'only players with singles appear; B played doubles only');
  const a=row(singles,'A')!,c=row(singles,'C')!;
- // After d1 A=1016, C=984 (K=32). s1: A wins +15, C wins +19, A wins +15.
- assert.deepEqual([a.pointsChange,a.games,a.wins,a.losses,a.totalMatches,a.manualPoints],[15-19+15,3,2,1,1,0]);
- assert.deepEqual([c.pointsChange,c.games,c.wins,c.losses],[-15+19-15,3,1,2]);
+ // After d1 A=1016, C=984. Win 3, loss 1 per game; A's first win puts A 62 ahead, so C's win earns the +1 upset bonus.
+ assert.deepEqual([a.points,a.games,a.wins,a.losses,a.totalMatches,a.manualPoints],[3+1+3,3,2,1,1,0]);
+ assert.deepEqual([c.points,c.games,c.wins,c.losses,c.upsetPoints],[1+4+1,3,1,2,1]);
  assert.equal(a.rate,2/3);assert.equal(a.margin,(6-3+2)/3);
- // D 984 against E 1000: +17, −17, +17.
- assert.deepEqual(singles.map(r=>[r.playerId,r.pointsChange,r.rank]),[['D',17,1],['A',11,2],['C',-11,3],['E',-17,4]]);
+ // D 984 against E 1000 plays the same three games; E's win comes only 18 below D, so no bonus. A and D tie on every criterion.
+ assert.deepEqual(singles.map(r=>[r.playerId,r.points,r.rank]),[['A',7,1],['D',7,1],['C',6,3],['E',5,4]]);
  const combined=quarterlyLeaderboard(s,'2026-Q4',now);
  assert.equal(combined.length,5,'combined board still lists every member');
- assert.equal(row(combined,'A')!.pointsChange,16+11,'combined board keeps doubles plus singles');assert.equal(row(combined,'B')!.pointsChange,16);
+ assert.equal(row(combined,'A')!.points,3+7,'combined board keeps doubles plus singles');assert.equal(row(combined,'B')!.points,3);
  assert.equal(row(combined,'A')!.games,4);
 });
 
@@ -62,13 +62,13 @@ test('单打榜按马德里季度、年度归属；旧的月度上限与每胜�
  s.matches.push(match('s-feb','2026-02-02T10:00:00Z',['A'],['B']));
  s.seasons.push({id:'2026-02',rules:{...s.settings.rules,win:4,cap:0}});
  s.matches.push(match('s-madrid-boundary','2026-03-31T22:30:00Z',['A'],['B']));
- // A: −16 (doubles), +16, −17, +16, then +15 on 1 April Madrid time.
+ // A: doubles loss 1, then singles win 3, loss 1, win 3, and a win 3 on 1 April Madrid time.
  const q1=row(singlesQuarterlyLeaderboard(s,'2026-Q1',now),'A')!;
- assert.deepEqual([q1.pointsChange,q1.games,q1.wins,q1.total,q1.totalMatches],[16-17+16,3,2,3,3]);
- const q2=row(singlesQuarterlyLeaderboard(s,'2026-Q2',now),'A')!;assert.equal(q2.pointsChange,15,'Madrid 00:30 on 1 April belongs to Q2');
- const year=row(singlesAnnualLeaderboard(s,2026,now),'A')!;assert.equal(year.pointsChange,q1.pointsChange+q2.pointsChange);
- assert.equal(row(singlesLeaderboard(s,'2026-01',now),'A')!.pointsChange,16-17);
- assert.equal(row(annualLeaderboard(s,2026,now),'A')!.pointsChange,-16+15+15,'combined board sums every rated game');
+ assert.deepEqual([q1.points,q1.games,q1.wins,q1.total,q1.totalMatches],[3+1+3,3,2,3,3]);
+ const q2=row(singlesQuarterlyLeaderboard(s,'2026-Q2',now),'A')!;assert.equal(q2.points,3,'Madrid 00:30 on 1 April belongs to Q2');
+ const year=row(singlesAnnualLeaderboard(s,2026,now),'A')!;assert.equal(year.points,q1.points+q2.points);
+ assert.equal(row(singlesLeaderboard(s,'2026-01',now),'A')!.points,3+1);
+ assert.equal(row(annualLeaderboard(s,2026,now),'A')!.points,1+3+1+3+3,'combined board sums every rated game');
 });
 
 test('单打榜排除代报名朋友与停用球友，作废、未完成和其他人数的对局不计入',async()=>{
@@ -80,7 +80,7 @@ test('单打榜排除代报名朋友与停用球友，作废、未完成和其�
  s.players.find(p=>p.id==='E')!.enabled=false;
  const rows=singlesAnnualLeaderboard(s,2026,now);
  assert.deepEqual(rows.map(r=>r.playerId).sort(),['B','C']);
- assert.equal(row(rows,'B')!.pointsChange,-16,'the guest win still costs B, as on the main board');
+ assert.equal(row(rows,'B')!.points,1,'the loss to the guest still counts for B, as on the main board');
  assert.ok(!rows.some(r=>r.playerId===guest.id||r.playerId==='E'||r.playerId==='A'));
 });
 
@@ -88,16 +88,17 @@ test('群主手动积分只计入综合榜，不进入单打榜',async()=>{
  const s=fixture();s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
  await apply(s,s.accounts[0],'grantPoints',{playerId:'B',period:'2026-10',points:30,reason:'组织奖励'},now);
  await apply(s,s.accounts[0],'grantPoints',{playerId:'C',period:'2026-10',points:5,reason:'组织奖励'},now);
- assert.equal(row(quarterlyLeaderboard(s,'2026-Q4',now),'B')!.pointsChange,30-16);
+ assert.equal(row(quarterlyLeaderboard(s,'2026-Q4',now),'B')!.points,30+1);
  const singles=singlesQuarterlyLeaderboard(s,'2026-Q4',now);
- assert.deepEqual(singles.map(r=>[r.playerId,r.pointsChange,r.manualPoints]),[['A',16,0],['B',-16,0]]);
+ assert.deepEqual(singles.map(r=>[r.playerId,r.points,r.manualPoints]),[['A',3,0],['B',1,0]]);
 });
 
-test('单打不改变双打隐藏实力，重算不会因单打报错',()=>{
+test('分组实力就是段位分：单打同样计入，重算不会因单打报错',()=>{
  const s=fixture();s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
- const changes=replayRating(s);assert.deepEqual(changes,[]);assert.ok(s.players.every(p=>p.rating===1000&&p.ratedGames===0));
+ const changes=replayRating(s,now);assert.deepEqual(changes.map(c=>[c.playerId,c.delta]),[['A',16],['B',-16]]);
+ assert.deepEqual(s.players.map(p=>[p.id,p.rating,p.ratedGames]),[['A',1016,1],['B',984,1],['C',1000,0],['D',1000,0],['E',1000,0]]);
  s.matches.push(match('d1','2026-10-06T14:00:00Z',['A','B'],['C','D']));
- assert.equal(replayRating(s).length,4);assert.ok(s.players.find(p=>p.id==='A')!.rating>1000);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,1);
+ assert.equal(replayRating(s,now).length,2+4);assert.equal(s.players.find(p=>p.id==='A')!.rating,1032);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,2);
 });
 
 test('群组投影提供季度与年度单打榜，普通球友看不到实力分',()=>{
@@ -105,8 +106,8 @@ test('群组投影提供季度与年度单打榜，普通球友看不到实力�
  const admin=projectClubState(s,s.accounts[0] as Account,'2026-10',2026,now),member=projectClubState(s,s.accounts[1] as Account,'2026-10',2026,now);
  assert.deepEqual(admin.singlesQuarterlyLeaderboard.map(r=>r.playerId),['A','B']);assert.deepEqual(admin.singlesAnnualLeaderboard.map(r=>r.playerId),['A','B']);
  assert.ok(member.singlesQuarterlyLeaderboard.every(r=>r.rating===null));assert.ok(member.singlesAnnualLeaderboard.every(r=>r.rating===null));
- // s1: A +16 (1016), B 984. d1: team A,B averages 1000 against C,D 1000, so each +16.
- assert.equal(admin.quarterlyLeaderboard.length,5);assert.equal(row(admin.quarterlyLeaderboard,'A')!.pointsChange,16);
+ // Doubles board: d1 only. Team A,B (1016, 984) averages 1000 against C,D 1000 and wins (3); 段位分 A 1016 then 1032.
+ assert.equal(admin.quarterlyLeaderboard.length,5);assert.equal(row(admin.quarterlyLeaderboard,'A')!.points,3);
  assert.equal(admin.social.stats.find(p=>p.playerId==='A')!.realmScore.score,1032);
  assert.deepEqual(projectClubState(s,s.accounts[1] as Account,'2026-04',2025,now).singlesQuarterlyLeaderboard,[]);
 });
@@ -127,7 +128,7 @@ test('单打榜积分录入即时更新，行内境界与段位分和综合榜�
  s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
  for(const at of [mid,end]){
   const boards=[singlesLeaderboard(s,'2026-10',at),singlesQuarterlyLeaderboard(s,'2026-Q4',at),singlesAnnualLeaderboard(s,2026,at)];
-  for(const rows of boards){const a=row(rows,'A')!;assert.equal(a.pointsChange,16);assert.equal(a.pendingPoints,at===mid?16:0);assert.equal(row(rows,'B')!.pointsChange,-16);assert.deepEqual(a.realmScore,row(leaderboard(s,'2026-10',at),'A')!.realmScore)}
+  for(const rows of boards){const a=row(rows,'A')!;assert.equal(a.points,3);assert.equal(a.pendingPoints,at===mid?3:0);assert.equal(row(rows,'B')!.points,1);assert.deepEqual(a.realmScore,row(leaderboard(s,'2026-10',at),'A')!.realmScore)}
  }
  const during=row(singlesLeaderboard(s,'2026-10',mid),'A')!.realmScore,after=row(singlesLeaderboard(s,'2026-10',end),'A')!.realmScore;
  assert.equal(during.pendingGames,1);assert.equal(during.pendingChange,16);assert.equal(during.score,1000);assert.equal(after.pendingGames,0);assert.equal(after.score,1016);

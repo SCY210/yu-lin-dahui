@@ -76,6 +76,6 @@ await test('删除与报名并发不会向已删除活动新增接龙',async()=>
 await test('原有活动、历史比赛及排行榜保持不变',async()=>{
  const final=await get(admin),originalIds=new Set(initial.events.map(e=>e.id));
  assert.deepEqual(final.events.filter(e=>originalIds.has(e.id)),initial.events);assert.deepEqual(final.matches.filter(m=>initial.matches.some(x=>x.id===m.id)),initial.matches);
- for(const before of initial.leaderboard){const after=final.leaderboard.find(r=>r.playerId===before.playerId);assert.equal(after.pointsChange,before.pointsChange);assert.equal(after.games,before.games);assert.equal(after.rating,before.rating);}
+ for(const before of initial.quarterlyLeaderboard){const after=final.quarterlyLeaderboard.find(r=>r.playerId===before.playerId);assert.equal(after.points,before.points);assert.equal(after.games,before.games);assert.equal(after.rating,before.rating);}
 });
 mkdirSync('.test-output',{recursive:true});writeFileSync('.test-output/event-deletion-api-report.json',JSON.stringify({passed:results.length,results,uiFixture:{eventId:e.id,title:e.title,creatorId:A.me.id}},null,2));console.log(JSON.stringify({passed:results.length,uiFixture:{eventId:e.id,title:e.title}}));
