@@ -3,7 +3,7 @@ import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
 import {ratingAdjustments,type RatingAdjustment} from './point-grants';
 
-/** 段位分 (FIDE-style Elo): everyone starts at 1000 and each rated game moves it. */
+/** 修为 (FIDE-style Elo): everyone starts at 1000 and each rated game moves it. */
 export const realmPolicy={start:1000,k:16,provisionalK:32,provisionalGames:20,placementGames:10,demotionBuffer:30,band:150,inactivityMonths:3,doubles:'team'} as const;
 /** team (the club's choice): both partners share the expectation of their team average against the
  * opponents' average, so all four scores enter through the two averages; each partner keeps their own K.
@@ -79,7 +79,7 @@ export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesEx
 /** Deterministic replay of the given matches: match end time, match id, then game order.
  * A player whose previous rated game ended `inactivityMonths` before a match starts (or before `now`) restarts
  * at the start score with placement and the novice K again; otherwise the score never resets.
- * adjustments: the owner's 段位分 grants, applied at their time (realm settles at once; they never count as games). */
+ * adjustments: the owner's 修为 grants, applied at their time (realm settles at once; they never count as games). */
 export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[]){
  const fresh=():Row=>({score:realmPolicy.start,games:0,wins:0,losses:0,held:rawRealmIndex(realmPolicy.start),last:null});
  const rows=new Map<string,Row>(s.players.map(p=>[p.id,fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
@@ -108,7 +108,7 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:M
  return {rows,games};
 }
 export type RealmSnapshot=ReturnType<typeof realmProgress>&{ratedGames:number;wins:number;losses:number;placement:boolean;pendingGames:number;pendingChange:number};
-/** Visible realm and 段位分 include only activities that have concluded; running ones show as pending. */
+/** Visible realm and 修为 include only activities that have concluded; running ones show as pending. */
 export function realmLedger(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,now=Date.now()){
  const adjustments=ratingAdjustments(s);
  const settled=settledMatchFilter(s,now),rated=(m:Match)=>isRatedMatch(m,now);
@@ -120,7 +120,7 @@ export function realmLedger(s:Pick<State,'players'|'matches'|'events'>&Partial<P
  return {snapshot,games:live.games,byPlayer};
 }
 export type RealmLedger=ReturnType<typeof realmLedger>;
-/** What members see during placement: no realm, stage or realm progress, only the settled count and 段位分. */
+/** What members see during placement: no realm, stage or realm progress, only the settled count and 修为. */
 export type PlacementRealm={placement:true;ratedGames:number;placementGames:number;score:number;wins:number;losses:number;pendingGames:number;pendingChange:number;realm:null;stage:null};
 export type VisibleRealm=PlacementRealm|(RealmSnapshot&{placement:false;placementGames:number});
 /** Placement counts only settled rated games (the same settle-after-activity rule as the realm), so
@@ -134,7 +134,7 @@ export function visibleRealm(r:RealmSnapshot):VisibleRealm{
 export function realmSnapshot(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,now=Date.now()){return realmLedger(s,now).snapshot}
 export function playerRealm(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,id:string,now=Date.now()){return realmSnapshot(s,now).get(id)!}
 
-/** One-time switch from cumulative 修为 to 段位分. Scores are derived from match
+/** One-time switch from the old cumulative growth rule to the Elo-based 修为. Scores are derived from match
  * history on every read, so the marker only records the switch and its audit. */
 export function enableEloRealms(s:State,now=Date.now()){
  if(!s.settings.initialized||s.settings.realmVersion==='elo-v1')return null;
@@ -142,5 +142,5 @@ export function enableEloRealms(s:State,now=Date.now()){
  return {version:'elo-v1',start:realmPolicy.start,players:s.players.map(p=>{const r=snapshot.get(p.id)!;return {playerId:p.id,score:r.score,realm:r.realm,ratedGames:r.ratedGames,legacyBase:p.cultivationBase??null}})};
 }
 
-/** Match cards label each team with the realm of its average settled 段位分; a team with a player in placement shows 定级中. */
+/** Match cards label each team with the realm of its average settled 修为; a team with a player in placement shows 定级中. */
 export function teamRealmLabel(scores:{score:number;placement:boolean}[]){return scores.some(r=>r.placement)?'定级中':realmByScore(scores.reduce((n,r)=>n+r.score,0)/scores.length)}

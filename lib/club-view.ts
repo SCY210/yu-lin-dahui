@@ -27,7 +27,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>historicalIds.has(row.eventId));
  const achievements=achievementSnapshot({...history,events:s.events,matches:s.matches},now);
  // Deletion hides an activity's workspace; completed results stay historical facts.
- // Realms, 段位分 and strength labels settle per activity, while ranking points stay live.
+ // Realms, 修为 and strength labels settle per activity, while ranking points stay live.
  const ledger=realmLedger(history,now),monthly=leaderboard(history,period,now,ledger),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter,now,ledger),annual=annualLeaderboard(history,year,now,ledger),singlesQuarterly=singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual=singlesAnnualLeaderboard(history,year,now,ledger);
  const ratingHistory=admin?replayRating(structuredClone(history),now):[];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
@@ -36,7 +36,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const ids=new Set(s.events.map(e=>e.id));
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>ids.has(row.eventId));
  const matchIds=new Set(s.matches.map(m=>m.id));
- // Members never see a realm during placement: rows and stats carry only the settled count and 段位分 then.
+ // Members never see a realm during placement: rows and stats carry only the settled count and 修为 then.
  const realmView=(realm:RealmSnapshot)=>realm.placement?null:realm.realm;
  const board=<T extends {rating:number;realm:string;realmScore:RealmSnapshot}>(rows:T[])=>rows.map(r=>({...r,rating:admin?r.rating:null,realm:realmView(r.realmScore),realmScore:visibleRealm(r.realmScore)}));
  const fullSocial=socialSnapshot(s,period,year,now,history,ledger.snapshot);

@@ -56,7 +56,7 @@ test('朋友开通正式账号后能按原有比赛记录入榜，停用成员�
  assert.deepEqual(s.matches,history);
 });
 
-test('修仙境界按段位分五级门槛，与积分排名分开',()=>{
+test('修仙境界按修为五级门槛，与积分排名分开',()=>{
  for(const [score,realm] of [[0,'炼气'],[849,'炼气'],[850,'筑基'],[999,'筑基'],[1000,'金丹'],[1149,'金丹'],[1150,'元婴'],[1299,'元婴'],[1300,'化神'],[1600,'化神']] as const)assert.equal(realmByScore(score),realm);
  const s=fixture();s.matches.push(match('loss','2026-06-01T13:00:00Z',10,21));
  const before=structuredClone(s.players);

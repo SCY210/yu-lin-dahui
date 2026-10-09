@@ -81,7 +81,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <Fact label="惯用手" value={hands[p.profile?.hand]}/>
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
       </dl>
-      <p className="hint">球龄与性别仅作档案展示，不影响段位分或自动分组。</p>
+      <p className="hint">球龄与性别仅作档案展示，不影响修为或自动分组。</p>
       <div className="pp-style"><span>{isOwn ? '我的口号' : '这位球友的口号'}</span><p className={profile.motto ? '' : 'pp-unfilled'}>{profile.motto || '尚未填写'}</p></div>
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section></Disclosure>

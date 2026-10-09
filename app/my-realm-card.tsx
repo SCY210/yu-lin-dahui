@@ -19,7 +19,7 @@ export default function MyRealmCard({stats}: {
     </div> : realm ? <div className="me-realm-badge-wrap">
       <RealmBadge className="me-realm-badge" realm={realm} stage={realmScore?.stage ?? undefined}/>
     </div> : <strong>暂无境界</strong>}
-    <small>{placement ? '定级期间暂不显示境界，段位分照常加减' : '境界由段位分决定，赢强队多加、输弱队多扣'}</small>
+    <small>{placement ? '定级期间暂不显示境界，修为照常加减' : '境界由修为决定，赢强队多加、输弱队多扣'}</small>
     <RealmProgress compact value={realmScore}/>
   </section>;
 }

@@ -11,9 +11,9 @@ export function isDoublesMatch(m:Pick<Match,'a'|'b'>){return m.a.length===2&&m.b
 /** all: the established board (every recorded website match plus owner grants). singles: 1v1 matches only, same rules, no grants. */
 export type RankingFormat='all'|'singles'|'doubles';
 export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return hi<=r.ceiling&&((hi===r.target&&lo<=hi-r.lead)||(hi>r.target&&hi<r.ceiling&&hi-lo===r.lead)||(hi===r.ceiling&&lo>=r.ceiling-r.lead&&lo<hi))}
-/** Grouping strength: the same 段位分 formula (per game, team average, novice K, long-break restart) replayed over
+/** Grouping strength: the same 修为 formula (per game, team average, novice K, long-break restart) replayed over
  * doubles games only, live including running activities. Automatic grouping, partner modes and handicap suggestions
- * read it; singles never move it, the owner's 段位分 grants do. For doubles-only players it equals their 段位分. Owner-set initial ratings and
+ * read it; singles never move it, the owner's 修为 grants do. For doubles-only players it equals their 修为. Owner-set initial ratings and
  * season K values no longer change it. */
 export const strengthAlgorithm='realm-elo-v2';
 export function replayRating(s:State,now=Date.now()){
@@ -22,7 +22,7 @@ export function replayRating(s:State,now=Date.now()){
  const changes=games.map(g=>({id:g.matchId+':'+g.gameIndex+':'+g.playerId,matchId:g.matchId,playerId:g.playerId,before:g.before,after:g.after,delta:g.delta,algorithm:strengthAlgorithm,k:g.k}));
  s.ratingChanges=changes;return changes;
 }
-/** One-time switch from the separate hidden grouping rating to 段位分. */
+/** One-time switch from the separate hidden grouping rating to 修为. */
 export function mergeStrengthRating(s:State,now=Date.now()){
  if(!s.settings.initialized)return null;
  const before=new Map(s.players.map(p=>[p.id,p.rating]));replayRating(s,now);
@@ -34,7 +34,7 @@ export function mergeStrengthRating(s:State,now=Date.now()){
  return {version:strengthAlgorithm,players:s.players.map(p=>({playerId:p.id,before:before.get(p.id)??null,after:p.rating}))};
 }
 export {seasonPointsPolicy,upsetBonus,gamePoints} from './season-points';
-/** Ranking points are the 赛季积分 of the period's rated games (plus owner grants on the combined board), never 段位分.
+/** Ranking points are the 赛季积分 of the period's rated games (plus owner grants on the combined board), never 修为.
  * Points stay live: games of a running activity count at once (shown as pending) while realms wait for the activity to end.
  * `leaderboard` (one month) only backs the owner's history-rules preview; members see quarterly and annual boards. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}

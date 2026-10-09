@@ -105,7 +105,7 @@ test('群组投影提供季度与年度单打榜，普通球友看不到实力�
  const admin=projectClubState(s,s.accounts[0] as Account,'2026-10',2026,now),member=projectClubState(s,s.accounts[1] as Account,'2026-10',2026,now);
  assert.deepEqual(admin.singlesQuarterlyLeaderboard.map(r=>r.playerId),['A','B']);assert.deepEqual(admin.singlesAnnualLeaderboard.map(r=>r.playerId),['A','B']);
  assert.ok(member.singlesQuarterlyLeaderboard.every(r=>r.rating===null));assert.ok(member.singlesAnnualLeaderboard.every(r=>r.rating===null));
- // Doubles board: d1 only. Team A,B (1016, 984) averages 1000 against C,D 1000 and wins (3); 段位分 A 1016 then 1032.
+ // Doubles board: d1 only. Team A,B (1016, 984) averages 1000 against C,D 1000 and wins (3); 修为 A 1016 then 1032.
  assert.equal(admin.quarterlyLeaderboard.length,5);assert.equal(row(admin.quarterlyLeaderboard,'A')!.points,3);
  assert.equal(admin.social.stats.find(p=>p.playerId==='A')!.realmScore.score,1032);
  assert.deepEqual(projectClubState(s,s.accounts[1] as Account,'2026-04',2025,now).singlesQuarterlyLeaderboard,[]);
@@ -121,7 +121,7 @@ test('单打榜选择随浏览器历史保存，旧记录默认综合榜',()=>{
  assert.deepEqual(new ClubNavigation(port,'member-A','session-three').rankingSelection,{period:'2026-10',year:2026,rankingPeriod:'quarterly'});
 });
 
-test('单打榜积分录入即时更新，行内境界与段位分和综合榜一样在活动结束后才结算',()=>{
+test('单打榜积分录入即时更新，行内境界与修为和综合榜一样在活动结束后才结算',()=>{
  const s=fixture(),start=Date.parse('2026-10-06T13:00:00Z'),end=start+3*3600000,mid=start+3600000;
  s.events.push({id:'event',creatorId:'account-A',title:'单打活动',start,end,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'});
  s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));

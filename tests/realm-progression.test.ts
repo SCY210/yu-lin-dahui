@@ -40,7 +40,7 @@ test('单打为标准一对一 Elo，换算表与说明一致',()=>{
  assert.deepEqual(exchangeRow(0),['0','各 +8 / −8','各 +8 / −8']);assert.deepEqual(exchangeRow(100),['100','强方 +6，弱方 −6','弱方 +10，强方 −10']);
  assert.equal(roundDelta(-4.5),-5);assert.equal(roundDelta(4.5),5);
  const guide=getFeatureGuide('rating');assert.deepEqual(guide.table?.rows,realms.map(r=>[r.name,r.range]));assert.equal(guide.tables?.[0].rows[2][1],'强方 +6，弱方 −6');
- assert.ok(!JSON.stringify([guide,getFeatureGuide('ranking'),getFeatureGuide('annualRanking'),getFeatureGuide('matches'),getFeatureGuide('modes')]).includes('修为'));
+ assert.ok(!JSON.stringify([guide,getFeatureGuide('ranking'),getFeatureGuide('annualRanking'),getFeatureGuide('matches'),getFeatureGuide('modes')]).includes('段位分'),'the old name 段位分 is gone from the guides');
 });
 
 test('新手期前20个计分小局 K=32，之后 K=16，搭档各用自己的 K',()=>{
@@ -61,7 +61,7 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
  const later=start+281*86400000,snap=realmSnapshot(s,later),mean=ids.reduce((n,id)=>n+snap.get(id)!.score,0)/ids.length;
  assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
  assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
- // Season points are independent of 段位分: win 3, loss 1, plus the upset bonus.
+ // Season points are independent of 修为: win 3, loss 1, plus the upset bonus.
  const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids){const rows=[year,next].map(b=>b.find(r=>r.playerId===id)!);assert.equal(rows.reduce((n,r)=>n+r.points,0),rows.reduce((n,r)=>n+3*r.wins-r.losses+r.upsetPoints,0))}
 });
 
@@ -88,14 +88,14 @@ test('保级缓冲按活动结算后判断：同一活动中途跌破又回升�
  play('e3',[false]);const fall=score(s,'A');assert.deepEqual([fall.score,fall.realm,fall.guarded],[968,'筑基',false]);
 });
 
-test('少于10个计分小局为定级中：内部仍按段位分记境界且不用缓冲',()=>{
+test('少于10个计分小局为定级中：内部仍按修为记境界且不用缓冲',()=>{
  const s=fixture(['A','B']);for(let i=0;i<9;i++){const m=match('p'+i,start+i*120000,false,['A'],['B']);m.eventId='e'+i;s.matches.push(m)}
  const a=score(s,'A');assert.equal(a.placement,true);assert.equal(a.ratedGames,9);assert.equal(a.realm,realmByScore(a.score));assert.ok(a.score<900);
  const m=match('p9',start+20*120000,false,['A'],['B']);m.eventId='e9';s.matches.push(m);assert.equal(score(s,'A').placement,false);
  assert.equal(playerStats(s,'A',score(s,'A')).provisional,false);assert.equal(playerStats(s,'B',realmSnapshot(s,start).get('B')).provisional,true);
 });
 
-test('定级期间页面不显示境界：只给已结算局数与段位分，进行中小局不计入，第10局结算后才显示境界',()=>{
+test('定级期间页面不显示境界：只给已结算局数与修为，进行中小局不计入，第10局结算后才显示境界',()=>{
  const s=fixture(),member={id:'C',email:'',role:'member' as const,playerId:'C'},admin={id:'D',email:'',role:'admin' as const,playerId:'D'};
  for(let i=0;i<9;i++){const m=match('q'+i,start+i*120000);m.eventId='q'+i;s.matches.push(m)}
  const internal=score(s,'A');assert.equal(internal.realm,realmByScore(internal.score),'the full snapshot keeps the realm internally');
@@ -116,7 +116,7 @@ test('定级期间页面不显示境界：只给已结算局数与段位分，�
  assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='A')!.realm,after.tier);
 });
 
-test('友谊赛、让分局、弃权、取消、未完成和未来完赛不改段位分；作废与纠错按历史回放',()=>{
+test('友谊赛、让分局、弃权、取消、未完成和未来完赛不改修为；作废与纠错按历史回放',()=>{
  const s=fixture();s.matches=[match('real')];assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A',now+30*86400000).score,1016,'absence costs nothing');
  const friendly=match('friend');friendly.monthly=false;const handicap=match('handicap');handicap.handicap={side:'a',points:4,applied:true};handicap.elo=false;const forfeit=match('forfeit');forfeit.status='forfeit';const playing=match('playing');playing.status='playing';const future=match('future',now+86400000);
  s.matches.push(friendly,handicap,forfeit,playing,future,{...match('real')});assert.equal(score(s,'A').score,1016);assert.equal(score(s,'A').ratedGames,1);
@@ -130,11 +130,11 @@ test('回放顺序确定：按完赛时间、比赛编号与小局顺序，与�
  const forward=realmSnapshot(s,now);s.matches.reverse();assert.deepEqual(realmSnapshot(s,now),forward);
  const {games}=replayRealmScores(s,()=>true);assert.deepEqual([...new Set(games.map(g=>g.matchId+':'+g.gameIndex))],['a:0','z:0','bo3:0','bo3:1','bo3:2','next:0']);
  assert.equal(forward.get('A')!.ratedGames,6);assert.equal(forward.get('A')!.wins,4);
- // Grouping strength is the same per-game replay, so it matches the 段位分 exactly.
+ // Grouping strength is the same per-game replay, so it matches the 修为 exactly.
  replayRating(s,now);assert.equal(s.players[0].ratedGames,6);assert.equal(s.players[0].rating,forward.get('A')!.score);
 });
 
-test('活动进行中段位分与境界保持，显示待结算局数和暂计变化；结束后一次结算',()=>{
+test('活动进行中修为与境界保持，显示待结算局数和暂计变化；结束后一次结算',()=>{
  const s=fixture(),e:Event={id:'event',creatorId:'A',title:'周四活动',start,end:start+3*3600000,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};s.events.push(e);
  s.matches=[match('first'),match('second',start+3600000,false)];const mid=start+2*3600000;
  const live=score(s,'A',mid);assert.deepEqual([live.score,live.realm,live.pendingGames,live.ratedGames],[1000,'金丹',2,0]);assert.equal(live.pendingChange,16-17);
@@ -178,7 +178,7 @@ test('自动预计出勤不产生早到或压线称号，手动和旧历史出�
   {id:'only-expected',eventId:'automatic',playerId:'A',start,end:null,state:'ready',source:'automatic'});
  const p=personality(s,2026).find(p=>p.playerId==='A')!;assert.equal(p.early,1);assert.equal(p.onTime,1);
 });
-test('连续3个月没有计分小局：段位分回到1000并重新定级、重回新手期；3个月内回来不重置',()=>{
+test('连续3个月没有计分小局：修为回到1000并重新定级、重回新手期；3个月内回来不重置',()=>{
  const history=()=>{const s=fixture(['A','B']);for(let i=0;i<12;i++){const m=match('r'+String(i).padStart(2,'0'),start+i*120000,true,['A'],['B']);m.eventId='first';s.matches.push(m)}return s};
  const last=start+11*120000+60000,due=Date.parse('2027-01-04T13:23:00Z');
  assert.equal(inactiveAt(last,due-1),false);assert.equal(inactiveAt(last,due),true);
@@ -195,7 +195,7 @@ test('连续3个月没有计分小局：段位分回到1000并重新定级、重
  assert.ok(!replayRealmScores(soon,()=>true).games.some(g=>g.reset));assert.equal(score(soon,'A',due+86400000).ratedGames,13);assert.ok(score(soon,'A',due+86400000).score>1050);
 });
 
-test('赛季积分：胜3负−1，赢段位分高50/150以上的对手另加1/2分，与段位分加减无关',()=>{
+test('赛季积分：胜3负−1，赢修为高50/150以上的对手另加1/2分，与修为加减无关',()=>{
  assert.deepEqual([[false,900,1300],[true,1000,1049],[true,1000,1050],[true,1000,1149],[true,1000,1150],[true,1300,900]].map(([won,team,opponent])=>gamePoints({won:won as boolean,team:team as number,opponent:opponent as number})),[-1,3,4,4,5,3]);
  assert.equal(upsetBonus({won:false,team:800,opponent:1300}),0);
  // B loses three singles to A (A 1044, B 956: 88 apart), then beats A: 3 + 1.
@@ -207,7 +207,7 @@ test('赛季积分：胜3负−1，赢段位分高50/150以上的对手另加1/2
  const doubles=annualLeaderboard(d,2026,now);assert.deepEqual(['A','B','C','D'].map(id=>doubles.find(r=>r.playerId===id)!.points),[8,8,1,1]);
 });
 
-test('一次性合并隐藏分组实力：球友实力改为段位分，写入版本并幂等',()=>{
+test('一次性合并隐藏分组实力：球友实力改为修为，写入版本并幂等',()=>{
  const s=fixture();s.settings.initialized=true;s.players[0].initialRating=1400;s.players[0].rating=1400;s.matches=[match('m1')];
  const audit=mergeStrengthRating(s,now)!;assert.equal(audit.version,'realm-elo-v2');assert.equal(s.settings.strengthVersion,'realm-elo-v2');
  assert.deepEqual(audit.players.find(p=>p.playerId==='A'),{playerId:'A',before:1400,after:1016});assert.deepEqual(s.players.map(p=>p.rating),[1016,1016,984,984]);
