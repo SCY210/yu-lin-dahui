@@ -71,7 +71,7 @@ test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者�
  for(const key of ['bookings','registrations','attendance','rounds','matches','costs','settlements','awardVotes','drafts'] as const)assert.ok(v[key].every(r=>r.eventId!=='own'));
  assert.ok(!('own' in v.rotationPlans));assert.ok(!('own' in v.social.arenas));assert.ok(!('own-match' in v.social.matchLevels));assert.deepEqual(v.challenges,[]);
  assert.deepEqual(v.photos.map(p=>p.id).sort(),['other-photo','racket','avatar'].sort());
- assert.deepEqual(v.leaderboard,before.leaderboard);assert.deepEqual(v.annualLeaderboard,before.annualLeaderboard);assert.deepEqual(v.social.stats,before.social.stats);
+ assert.deepEqual(v.quarterlyLeaderboard,before.quarterlyLeaderboard);assert.deepEqual(v.annualLeaderboard,before.annualLeaderboard);assert.deepEqual(v.social.stats,before.social.stats);
  assert.equal(s.matches.length,2,'Projection must not persist record removal');
  await apply(s,owner,'restoreEvent',{eventId:'own',reason:'恢复'},at+3600001);const restored=projectClubState(s,owner,'2026-10',2026,at+3600000);assert.deepEqual(restored.events,before.events);assert.deepEqual(restored.matches,before.matches);assert.deepEqual(restored.deletedEvents,[]);
 });

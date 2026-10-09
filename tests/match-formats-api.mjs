@@ -14,7 +14,7 @@ function statement(query,parameters=[]){return {query,parameters,bind(...args){r
 fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
 const api=await import(pathToFileURL(resolve('.test-output/formats-api.mjs')).href);
 try{
- const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.progressionVersion='weekly-v2';s.settings.scoringPolicy='all-ranked-v1';
+ const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.progressionVersion='weekly-v2';s.settings.scoringPolicy='all-ranked-v1';s.settings.strengthVersion='realm-elo-v2';
  s.accounts=Array.from({length:6},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await api.save(s,'seed',empty);
  const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'};
  const command=async(action,payload)=>({action,payload,requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision});
@@ -28,7 +28,7 @@ try{
  await send('liveStart',{eventId:single.id});stored=await api.load();const first=stored.matches[0];assert.equal(first.a.length,1);assert.equal(first.b.length,1);
  user('member5');assert.equal((await post(await command('score',{matchId:first.id,a:21,b:19}))).status,403);
  user('member1');const score=await command('score',{matchId:first.id,a:21,b:19});assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);stored=await api.load();assert.equal(stored.matches.length,2);assert.deepEqual(new Set([...stored.matches[1].a,...stored.matches[1].b]),new Set(['p2','p3']));
- const visible=await view();assert.equal(visible.singlesQuarterlyLeaderboard.length,2);assert.ok(visible.quarterlyLeaderboard.every(r=>r.games===0&&r.pointsChange===0));assert.ok(visible.singlesQuarterlyLeaderboard.some(r=>r.pointsChange===16));
+ const visible=await view();assert.equal(visible.singlesQuarterlyLeaderboard.length,2);assert.ok(visible.quarterlyLeaderboard.every(r=>r.games===0&&r.points===0));assert.ok(visible.singlesQuarterlyLeaderboard.some(r=>r.points===3));
  await send('score',{matchId:first.id,a:19,b:21,reason:''});stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.audits.at(-1).reason,'常规修改');assert.ok(stored.players.every(p=>p.rating===1000));
  const before=structuredClone(stored),second=stored.matches.find(m=>m.status==='playing'),request=await command('score',{matchId:second.id,a:21,b:19}),batch=fixture.env.DB.batch;
  fixture.env.DB.batch=async list=>{sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw Error('injected failure')}finally{sql.exec('ROLLBACK')}};

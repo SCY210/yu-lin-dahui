@@ -24,7 +24,7 @@ test('two singles players can start, score and correct without notes; rest is re
  const {s,e,owner}=await fixture('singles',2);await apply(s,owner,'livePreference',{eventId:e.id,playerId:'p0',avoidConsecutive:true},now);
  await apply(s,owner,'liveStart',{eventId:e.id},now);const first=s.matches[0];assert.equal(first.a.length,1);assert.equal(first.b.length,1);
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:21,b:19},now+1000);assert.equal(first.status,'complete');assert.equal(s.matches.length,1);assert.ok(e.livePlay!.rest.some(r=>r.playerId==='p0'));
- const board=projectClubState(s,owner,'2030-10',2030,now+1000);assert.equal(board.singlesQuarterlyLeaderboard.length,2);assert.ok(board.quarterlyLeaderboard.every(r=>r.pointsChange===0&&r.games===0));assert.ok(board.singlesQuarterlyLeaderboard.some(r=>r.pointsChange===16));
+ const board=projectClubState(s,owner,'2030-10',2030,now+1000);assert.equal(board.singlesQuarterlyLeaderboard.length,2);assert.ok(board.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));assert.ok(board.singlesQuarterlyLeaderboard.some(r=>r.points===3));
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:19,b:21,reason:''},now+2000);assert.equal(s.matches.length,1);assert.equal(s.audits.at(-1)!.reason,'常规修改');
  await apply(s,owner,'liveReady',{eventId:e.id,playerId:'p0'},now+3000);assert.equal(s.matches.length,2);assert.equal(s.matches[1].status,'playing');
  assert.ok(s.players.every(p=>p.rating===1000),'Singles must not change doubles matchmaking Elo');
