@@ -1,3 +1,5 @@
+import {automaticEventTitle,eventFormat} from './match-format';
+import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
@@ -26,7 +28,7 @@ import { findVenue } from '../venues';
 import { authorizeEventAction, isEventAction, canManageEvent } from './permissions';
 import { businessTimestamp as time } from './timestamp';
 const id = () => crypto.randomUUID();
-const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = z.string().trim().min(1).max(500), mode = z.enum(['equal', 'duration', 'interval']);
+const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
 export function authorized(a: Account, action: string) { if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'event', 'shuttleVote', 'pointsModeVote', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
@@ -34,10 +36,10 @@ export function authorized(a: Account, action: string) { if (!['register', 'canc
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
-    event: z.object({ title: text, start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
+    event: z.object({ title: text.optional(), matchFormat:z.enum(['singles','doubles']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
     eventStatus: z.object({ eventId: pid, status: z.enum(['draft', 'open', 'locked', 'live', 'ended', 'cancelled']) }),
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
-    eventEdit: z.object({ eventId: pid, title: text, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
+    eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles']).optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
     booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }),
     register: z.object({ eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
     moveQueue: z.object({ eventId: pid, playerId: pid, beforePlayerId: pid, reason }),
@@ -122,7 +124,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             for (const b of p.bookings)
                 checkBooking(p, b);
             const { bookings, ...details } = p;
-            const e: Event = { ...details, signupDeadline: p.end, cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
+            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: p.end, cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             s.events.push(e);
             for (const b of bookings)
@@ -167,7 +169,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const e = event(p.eventId);
             if (p.capacity < s.registrations.filter(r => r.eventId === e.id && r.status === 'confirmed' && !r.bookingSignups).length)
                 fail('上限不能低于当前正式人数，请先调整报名名单');
-            Object.assign(e, { title: p.title, venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
+            if(p.matchFormat&&p.matchFormat!==eventFormat(e)){if(s.matches.some(m=>m.eventId===e.id&&m.status!=='cancelled'))fail('已有分组或比赛，不能更改单打 / 双打');e.matchFormat=p.matchFormat;e.automaticTitle=true;e.pointsChoice=undefined;e.playMode='balanced';e.identityMode='off';}
+            Object.assign(e, { title: p.title??(e.automaticTitle?automaticEventTitle(e.start,eventFormat(e)):e.title), venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
             promote(s, e, now);
             break;
         }
@@ -184,6 +187,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             e.start = Math.min(e.start, p.start);
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
+            if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
             break;
         }
         case 'bookingEdit': {
@@ -205,6 +209,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             e.start = Math.min(e.start, p.start);
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
+            if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
             promoteBooking(s, e, b, now);
             break;
         }

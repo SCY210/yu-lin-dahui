@@ -1,3 +1,4 @@
+import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { fail, type Account, type State } from './types';
@@ -6,7 +7,7 @@ import { canManageEvent } from './permissions';
 import { cancellationNeedsApproval } from './cancellation';
 import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
-const id = z.string().min(1).max(100), reason = z.string().trim().min(1).max(500);
+const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
     courtRegister: z.object({ bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
     courtCancel: z.object({ bookingId: id, playerId: id, reason }),

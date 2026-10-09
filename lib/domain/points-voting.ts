@@ -1,5 +1,6 @@
 import {shuttleParticipantIds} from './shuttle-voting';
 import type {Event,Account} from './types';
+import {eventFormat} from './match-format';
 
 export type PointsMode='rotate'|'fixed';
 export const pointsModeLabels={rotate:'每轮换搭档',fixed:'固定搭档'};
@@ -10,6 +11,7 @@ export function pointsChoiceCounts(s:Parameters<typeof shuttleParticipantIds>[0]
 }
 /** An unconfigured, unconfirmed activity starts open; explicit closures stay closed. */
 export function pointsVotingOpen(e:Event,now=Date.now()){
+ if(eventFormat(e)==='singles')return false;
  const open=e.pointsChoice?.votingOpen??!e.pointsChoice?.selectedMode;
  return e.deletedAt===undefined&&['open','locked'].includes(e.status)&&now<e.start&&open;
 }

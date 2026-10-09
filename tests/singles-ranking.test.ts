@@ -106,7 +106,7 @@ test('群组投影提供季度与年度单打榜，普通球友看不到实力�
  assert.deepEqual(admin.singlesQuarterlyLeaderboard.map(r=>r.playerId),['A','B']);assert.deepEqual(admin.singlesAnnualLeaderboard.map(r=>r.playerId),['A','B']);
  assert.ok(member.singlesQuarterlyLeaderboard.every(r=>r.rating===null));assert.ok(member.singlesAnnualLeaderboard.every(r=>r.rating===null));
  // s1: A +16 (1016), B 984. d1: team A,B averages 1000 against C,D 1000, so each +16.
- assert.equal(admin.quarterlyLeaderboard.length,5);assert.equal(row(admin.quarterlyLeaderboard,'A')!.pointsChange,16+16);
+ assert.equal(admin.quarterlyLeaderboard.length,5);assert.equal(row(admin.quarterlyLeaderboard,'A')!.pointsChange,16);
  assert.equal(admin.social.stats.find(p=>p.playerId==='A')!.realmScore.score,1032);
  assert.deepEqual(projectClubState(s,s.accounts[1] as Account,'2026-04',2025,now).singlesQuarterlyLeaderboard,[]);
 });

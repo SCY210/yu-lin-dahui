@@ -2,6 +2,7 @@ import {propose} from './grouping';
 import {balanceCost,compareBalance} from './match-balance';
 import {venueParticipation,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
+import {eventFormat} from './match-format';
 
 export function fixedPartnerTeams(s:State,e:Event){
  const regs=s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&r.arrival<e.end&&r.departure>e.start&&s.players.some(p=>p.id===r.playerId&&p.enabled));
@@ -17,6 +18,7 @@ export function fixedPartnerTeams(s:State,e:Event){
 
 /** Reuse attendance, courts and fair-turn debt; keep partners throughout the activity. */
 export function proposeFixed(s:State,e:Event,at:number,duration:number,seed:number,teams:string[][]){
+ if(eventFormat(e)==='singles')return propose(s,e,at,duration,seed);
  const base=propose(s,e,at,duration,seed),eligible=new Set(base.eligible);
  const available=teams.filter(t=>t.length===2&&t.every(id=>eligible.has(id)));
  if(available.length<2)fail('本轮完整到场的固定搭档不足两队，请检查参加时间或改用轮换搭档');

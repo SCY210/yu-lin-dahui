@@ -7,6 +7,7 @@ import {balanceCost,compareBalance} from './match-balance';
 import {canManageEvent} from './permissions';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
+import {eventFormat,courtPlayers} from './match-format';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
 
 const id=z.string().min(1).max(100);
@@ -36,6 +37,7 @@ function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }
 function pair(s:State,e:Event,ids:string[]){
+ if(eventFormat(e)==='singles')return {a:[ids[0]],b:[ids[1]]};
  const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000;
  const recent=s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&!['draft','cancelled'].includes(m.status));
  const cost=(order:string[])=>{
@@ -65,12 +67,12 @@ export function fillLiveCourts(s:State,e:Event,now:number){
   if(s.matches.some(m=>m.eventId===e.id&&playing(m)&&physical(s,e,m.courtId)===key))continue;
   const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,now,now+1)).sort(order);
   let teams:{a:string[];b:string[]}|undefined;
-  if(e.pointsChoice?.selectedMode==='fixed'){
+  if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
    const candidates=fixed.filter(team=>team.length===2&&team.every(id=>pool.includes(id)))
     .sort((a,b)=>Math.max(...a.map(id=>liveAppearances(s,e.id,id)))-Math.max(...b.map(id=>liveAppearances(s,e.id,id)))||order(a[0],b[0]));
    if(candidates.length>=2)teams={a:candidates[0],b:candidates[1]};
-  }else if(pool.length>=4)teams=pair(s,e,pool.slice(0,4));
+  }else if(pool.length>=courtPlayers(e))teams=pair(s,e,pool.slice(0,courtPlayers(e)));
   if(!teams)continue;
   const participants=[...teams.a,...teams.b];participants.forEach(id=>busy.add(id));
   const sequence=1+s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&m.status!=='cancelled'&&physical(s,e,m.courtId)===key).length;

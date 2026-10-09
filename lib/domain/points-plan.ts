@@ -1,3 +1,4 @@
+import {eventFormat} from './match-format';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { propose, validateRound } from './grouping';
@@ -49,6 +50,7 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
                 fail('擂台依赖上一轮胜负，请先切换为公平轮转或个人轮转，再提前分配积分赛');
             const working = structuredClone(s), event = working.events.find(x => x.id === e.id)!;
             event.attendanceMode = 'automatic';
+            if(eventFormat(event)==='singles'&&p.pairing==='fixed')fail('单打请使用个人轮转安排');
             const teams = p.pairing === 'fixed' ? fixedPartnerTeams(working, event) : undefined;
             const replaced = new Set(working.rounds.filter(r => r.eventId === e.id && ['draft', 'published'].includes(r.status)).map(r => r.id));
             working.rounds.filter(r => replaced.has(r.id)).forEach(r => r.status = 'cancelled');

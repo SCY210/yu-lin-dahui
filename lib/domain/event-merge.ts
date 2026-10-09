@@ -1,3 +1,4 @@
+import {eventFormat} from './match-format';
 import {clubOwnerId,isClubOwner} from './ownership';
 import {cancellationDeadline} from './cancellation';
 import {bookingCapacity,syncRegistration} from './booking-signups';
@@ -22,6 +23,7 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
  if(!sourceIds.length||sourceIds.length>10||new Set([targetId,...sourceIds]).size!==sourceIds.length+1)fail('请选择不同的活动');
  const work=structuredClone(s),target=work.events.find(e=>e.id===targetId&&e.deletedAt===undefined)??fail('保留的活动不存在');
  const sources=sourceIds.map(id=>work.events.find(e=>e.id===id&&e.deletedAt===undefined)??fail('待合并活动不存在'));
+ if(sources.some(e=>eventFormat(e)!==eventFormat(target)))fail('单打和双打活动不能合并');
  const ids=new Set([targetId,...sourceIds]);
  for(const e of [target,...sources]){
   if(e.creatorId!==clubOwnerId(work))fail('只能迁移群主创建的活动');

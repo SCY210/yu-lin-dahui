@@ -10,7 +10,7 @@ export function isSinglesMatch(m:Pick<Match,'a'|'b'>){return m.a.length===1&&m.b
 /** The hidden doubles-elo-v1 strength only rates 2v2 matches, so singles never move doubles grouping strength. */
 export function isDoublesMatch(m:Pick<Match,'a'|'b'>){return m.a.length===2&&m.b.length===2}
 /** all: the established board (every recorded website match plus owner grants). singles: 1v1 matches only, same rules, no grants. */
-export type RankingFormat='all'|'singles';
+export type RankingFormat='all'|'singles'|'doubles';
 export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return hi<=r.ceiling&&((hi===r.target&&lo<=hi-r.lead)||(hi>r.target&&hi<r.ceiling&&hi-lo===r.lead)||(hi===r.ceiling&&lo>=r.ceiling-r.lead&&lo<hi))}
 export function replayRating(s:State){for(const p of s.players){p.rating=p.initialRating;p.ratedGames=0}const changes:{matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string}[]=[];
  for(const m of s.matches.filter(m=>m.status==='complete'&&m.elo&&isDoublesMatch(m)).sort((a,b)=>(a.end!-b.end!)||a.id.localeCompare(b.id))){const a=m.a.map(id=>s.players.find(p=>p.id===id)!),b=m.b.map(id=>s.players.find(p=>p.id===id)!);const ra=(a[0].rating+a[1].rating)/2,rb=(b[0].rating+b[1].rating)/2;const rules=s.seasons.find(x=>x.id===month(m.start!))?.rules??s.settings.rules;const expected=1/(1+10**((rb-ra)/400)),delta=rules.k*((winner(m)==='a'?1:0)-expected);for(const [ps,d]of [[a,delta],[b,-delta]] as const)for(const p of ps){changes.push({matchId:m.id,playerId:p.id,before:p.rating,after:p.rating+d,delta:d,algorithm:rules.algorithm});p.rating+=d;p.ratedGames++}}
@@ -25,12 +25,12 @@ export const periodPointsBase=1000;
  * combined board); pointsChange is the signed part alone. Points stay live: games of a running activity count at once (shown as pending) while realms wait for the activity to end. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
 function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
- const singles=format==='singles',chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
+ const singles=format==='singles',accept=(m:Match)=>format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m)),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
  const members=new Set(s.accounts.map(account=>account.playerId));
  const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{
-  const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&(!singles||isSinglesMatch(m))&&gameFacts(m).length>0);
-  const rated=(ledger.byPlayer.get(p.id)??[]).filter(g=>chosen.has(month(g.start))&&(!singles||isSinglesMatch(matches.get(g.matchId)!)));
+  const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&accept(m)&&gameFacts(m).length>0);
+  const rated=(ledger.byPlayer.get(p.id)??[]).filter(g=>chosen.has(month(g.start))&&accept(matches.get(g.matchId)!));
   const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=rated.reduce((n,g)=>n+g.delta,0),pending=rated.filter(g=>!g.settled);
   const realm=ledger.snapshot.get(p.id)!;
   return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,strengthProvisional:p.ratedGames<10,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:periodPointsBase+score+(bonus.get(p.id)??0),pointsChange:score+(bonus.get(p.id)??0),matchPoints:score,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+g.delta,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
@@ -45,3 +45,6 @@ export function annualLeaderboard(s:State,year:number,now=Date.now(),ledger?:Rea
 export function singlesLeaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'singles',ledger)}
 export function singlesQuarterlyLeaderboard(s:State,quarter:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,quarterMonths(quarter),now,'singles',ledger)}
 export function singlesAnnualLeaderboard(s:State,year:number,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,yearMonths(year),now,'singles',ledger)}
+export function doublesLeaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'doubles',ledger)}
+export function doublesQuarterlyLeaderboard(s:State,quarter:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,quarterMonths(quarter),now,'doubles',ledger)}
+export function doublesAnnualLeaderboard(s:State,year:number,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,yearMonths(year),now,'doubles',ledger)}

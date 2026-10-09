@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import {canManageEvent} from '../lib/domain/permissions';
 import {canVotePointsMode,pointsVotingOpen,pointsChoiceCounts,pointsModeLabels,type PointsMode} from '../lib/domain/points-voting';
 import type {Event} from '../lib/domain/types';
+import {eventFormat} from '../lib/domain/match-format';
 import './event-points-plan.css';
 
 export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;planning?:boolean}){
@@ -16,6 +17,7 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
  const waiting=data.registrations.some((r:any)=>r.eventId===e.id&&r.playerId===data.me.playerId&&r.status==='waitlist');
  const started=data.matches.some((m:any)=>m.eventId===e.id&&['playing','complete','forfeit'].includes(m.status));
  function confirm(mode:PointsMode){open('确认搭档方式','pointsModeSelect',{eventId:e.id,mode},[],undefined,`确认「${pointsModeLabels[mode]}」并关闭投票。更换方式会取消尚未开始的分组，需要重新分配。`)}
+ if(eventFormat(e)==='singles')return <section className="card event-points-plan"><h3>单打轮转</h3><p className="hint">每方一人，按上场次数和轮休意愿安排下一局；单打比分进入单打榜。</p></section>;
  return <section className="card event-points-plan" aria-label="搭档方式投票">
   <div className="row"><h3>搭档方式</h3></div>
   <h4>搭档方式投票{e.pointsChoice?.selectedMode?' · 已确认'+pointsModeLabels[e.pointsChoice.selectedMode]:''}</h4>

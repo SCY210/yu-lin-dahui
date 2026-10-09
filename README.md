@@ -119,3 +119,5 @@ Complete the real operator information and privacy decisions in [legal readiness
 - [Visual assets and provenance](docs/VISUAL_ASSETS.md)
 
 Known boundaries: rescheduling a whole event does not automatically update all dependent records; individual bookings and supported event fields can be edited. Chat, payments, inventory, and a multi-club platform are outside scope. Cost forms support two time-adjusted shuttle intervals at once; additional records can represent more intervals. Large historical datasets still need further pagination. Automated checks are not a substitute for real-device, production-access, or load testing.
+
+Activity creation supports Singles and Doubles with automatically generated date-based names and separate ranking boards. Modification forms use automatic audit descriptions instead of mandatory notes; see [Singles and doubles activities](docs/SINGLES_RANKING.md).

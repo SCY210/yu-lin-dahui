@@ -3,8 +3,9 @@ import {balanceCost,compareBalance} from './match-balance';
 import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
+import {eventFormat,teamSize} from './match-format';
 export function readyIds(s:State,eventId:string,at:number,duration=0){const e=s.events.find(e=>e.id===eventId);if(!e)return [];const automatic=usesAutomaticAttendance(e);return [...new Set(attendanceForEvent(s,e).filter(a=>a.start<=at&&(automatic?(a.end??e.end)>at&&(a.end??e.end)>=at+duration*60000:a.end===null)&&a.state==='ready').map(a=>a.playerId))].filter(id=>(!automatic||s.registrations.some(r=>r.eventId===eventId&&r.playerId===id&&r.status==='confirmed'))&&s.players.some(p=>p.id===id&&p.enabled)&&!s.matches.some(m=>m.status==='playing'&&[...m.a,...m.b].includes(id)))}
-export function propose(s:State,e:Event,at:number,duration:number,seed:number){const eligible=readyIds(s,e.id,at,duration);const bookings=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>=at+duration*60000&&!s.matches.some(m=>m.courtId===b.id&&m.status==='playing'));let courts=bookings.filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name&&(x.venue??e.venue)===(b.venue??e.venue))===i);const arenaName=s.bookings.find(x=>x.id===e.arenaCourtId)?.name;const arenaCourt=courts.find(b=>b.name===arenaName);if(e.playMode==='arena'&&arenaCourt)courts=[arenaCourt,...courts.filter(b=>b.name!==arenaName)];if(eligible.length<4)fail('目前可上场人数不足4人，无法生成双打');if(!courts.length)fail('预计比赛时段内没有完整可用的场地');
+export function propose(s:State,e:Event,at:number,duration:number,seed:number){if(eventFormat(e)==='singles')return proposeSingles(s,e,at,duration,seed);const eligible=readyIds(s,e.id,at,duration);const bookings=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>=at+duration*60000&&!s.matches.some(m=>m.courtId===b.id&&m.status==='playing'));let courts=bookings.filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name&&(x.venue??e.venue)===(b.venue??e.venue))===i);const arenaName=s.bookings.find(x=>x.id===e.arenaCourtId)?.name;const arenaCourt=courts.find(b=>b.name===arenaName);if(e.playMode==='arena'&&arenaCourt)courts=[arenaCourt,...courts.filter(b=>b.name!==arenaName)];if(eligible.length<4)fail('目前可上场人数不足4人，无法生成双打');if(!courts.length)fail('预计比赛时段内没有完整可用的场地');
  const allowed=new Map(courts.map(b=>[b.id,new Set(eligible.filter(id=>bookingAllowsPlayer(s,e.id,b.id,id,at,at+duration*60000)))]));
  const canUse=(courtId:string,id:string)=>allowed.get(courtId)?.has(id)??false;
  const prior=s.rounds.filter(r=>r.eventId===e.id&&['published','playing','complete'].includes(r.status));
@@ -62,4 +63,25 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){c
 
  return {eligible,rest,courts:courts.slice(0,best.length/4).map((court,i)=>({courtId:court.id,a:best.slice(i*4,i*4+2),b:best.slice(i*4+2,i*4+4)})),stats:Object.fromEntries(eligible.map(id=>[id,debt(id)])),penalty:bestCost.variety,balance:bestCost};
 }
-export function validateRound(s:State,eventId:string,start:number,duration:number,matches:Match[]){const ids=matches.flatMap(m=>[...m.a,...m.b]);if(new Set(ids).size!==ids.length)fail('同一轮有重复选手');const ready=readyIds(s,eventId,start,duration);const names=new Set<string>();for(const m of matches){if(m.a.length!==2||m.b.length!==2||[...m.a,...m.b].some(id=>!ready.includes(id)))fail('分组包含不在参加时段内或正在比赛的成员');const b=s.bookings.find(b=>b.id===m.courtId&&b.eventId===eventId&&b.start<=start&&b.end>=start+duration*60000);if(!b||names.has((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name))fail('场地不可用或重复');if([...m.a,...m.b].some(id=>!bookingAllowsPlayer(s,eventId,b.id,id,start,start+duration*60000)))fail('分组包含不在该球馆参加时段内的成员');names.add((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name)}}
+export function validateRound(s:State,eventId:string,start:number,duration:number,matches:Match[]){const ids=matches.flatMap(m=>[...m.a,...m.b]);if(new Set(ids).size!==ids.length)fail('同一轮有重复选手');const ready=readyIds(s,eventId,start,duration);const names=new Set<string>();for(const m of matches){if(m.a.length!==teamSize(s.events.find(e=>e.id===eventId)??{})||m.b.length!==teamSize(s.events.find(e=>e.id===eventId)??{})||[...m.a,...m.b].some(id=>!ready.includes(id)))fail('分组包含不在参加时段内或正在比赛的成员');const b=s.bookings.find(b=>b.id===m.courtId&&b.eventId===eventId&&b.start<=start&&b.end>=start+duration*60000);if(!b||names.has((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name))fail('场地不可用或重复');if([...m.a,...m.b].some(id=>!bookingAllowsPlayer(s,eventId,b.id,id,start,start+duration*60000)))fail('分组包含不在该球馆参加时段内的成员');names.add((b.venue??s.events.find(e=>e.id===eventId)?.venue)+'/'+b.name)}}
+
+/** Same fair-turn debt and venue constraints as doubles, with one player per side. */
+function proposeSingles(s:State,e:Event,at:number,duration:number,seed:number){
+ const eligible=readyIds(s,e.id,at,duration),end=at+duration*60000;
+ if(eligible.length<2)fail('目前可上场人数不足2人，无法生成单打');
+ const bookings=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>=end&&!s.matches.some(m=>m.courtId===b.id&&m.status==='playing'))
+  .filter((b,i,all)=>all.findIndex(x=>x.name===b.name&&(x.venue??e.venue)===(b.venue??e.venue))===i);
+ if(!bookings.length)fail('预计比赛时段内没有完整可用的场地');
+ const prior=s.rounds.filter(r=>r.eventId===e.id&&['published','playing','complete'].includes(r.status));
+ const debt=(id:string)=>{let deficit=0,wait=0,games=0;for(const r of prior){if(!r.eligible.includes(id))continue;const ms=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled'),played=ms.some(m=>[...m.a,...m.b].includes(id));deficit+=ms.length*2/r.eligible.length-(played?1:0);if(played){wait=0;games++}else wait++}return {deficit,wait,games}};
+ eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});
+ const selected:string[]=[],used=new Set<string>(),courts:typeof bookings=[];
+ const canUse=(i:number,id:string)=>bookingAllowsPlayer(s,e.id,courts[i].id,id,at,end);
+ for(const b of bookings){const pool=eligible.filter(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,b.id,id,at,end));if(pool.length<2)continue;const pair=pool.slice(0,2);pair.forEach(id=>used.add(id));selected.push(...pair);courts.push(b)}
+ if(!courts.length)fail('本时段同球馆正式球友不足2人，无法安排单打');
+ const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000,history=s.matches.filter(m=>m.eventId===e.id&&!['draft','cancelled'].includes(m.status));
+ const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));repeats+=history.filter(m=>(m.a.includes(a)&&m.b.includes(b))||(m.b.includes(a)&&m.a.includes(b))).length*75}return balanceCost(gaps,repeats)};
+ let best=[...selected],cost=penalty(best),rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
+ for(let n=0;n<180;n++){const next=[...best],i=Math.floor(rand()*next.length),j=Math.floor(rand()*next.length);[next[i],next[j]]=[next[j],next[i]];const nextCost=penalty(next);if(compareBalance(nextCost,cost)<0){best=next;cost=nextCost}}
+ return {eligible,rest:eligible.filter(id=>!used.has(id)),courts:courts.map((court,i)=>({courtId:court.id,a:[best[i*2]],b:[best[i*2+1]]})),stats:Object.fromEntries(eligible.map(id=>[id,debt(id)])),penalty:cost.variety,balance:cost};
+}

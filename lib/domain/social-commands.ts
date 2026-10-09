@@ -1,5 +1,7 @@
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
+import {eventFormat} from './match-format';
+
 import { assertPlayerMutable } from './ownership';
 import { z } from 'zod';
 import { fail, type State, type Account } from './types';
@@ -151,6 +153,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
         case 'playSettings': {
             const p = command.payload;
             const e = s.events.find(e => e.id === p.eventId) ?? fail('活动不存在');
+            if(eventFormat(e)==='singles'&&(p.playMode!=='balanced'||p.identityMode!=='off'))fail('单打使用个人公平轮转，不使用搭档身份或双打擂台');
             if (p.playMode === 'arena' && e.pointsChoice?.selectedMode === 'fixed')
                 fail('擂台按胜负换人，请先确认轮换搭档，再切换擂台玩法');
             if (s.matches.some(m => m.eventId === e.id && ['published', 'playing'].includes(m.status)))

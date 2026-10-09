@@ -83,7 +83,7 @@ test('删除状态零值仍有效，自动维护不修改删除活动或生成�
 test('不存在的活动与无效删除原因被拒绝，不修改原状态',async()=>{
  const s=fixture(),before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'missing',reason:'删除'},at),/不存在/);
- await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:' '},at));assert.deepEqual(s,before);
+ await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:'x'.repeat(501)},at));assert.deepEqual(s,before);
 });
 
 test('其他管理员也看不到删除列表、关联导出与审计，不能直接恢复；创建者和群主可恢复',async()=>{

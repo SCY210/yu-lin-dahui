@@ -1,31 +1,21 @@
-# Singles leaderboard
+# Singles and doubles activities
 
-The ranking page adds a Combined / Singles selector below the Quarterly / Annual selector. Both selections work together with the period picker, detailed statistics, points explanation and podium. On mobile the format selector takes a full row with equal-width buttons and follows the active theme. Returning from a player profile restores period and format; legacy history markers default to Combined.
+Creation starts with Singles / Doubles, venue, start/end, capacity and the existing EUR 6.90 hourly court price control. A title is generated on the server from the Madrid date and format; users do not fill in a name. Court name, draft status and activity description are optional advanced settings. Existing activities without matchFormat remain doubles and keep their historical titles and records. automaticTitle distinguishes generated titles from legacy/custom titles.
 
-## Eligible matches
+## Match creation
 
-Singles requires exactly one distinct player per side (`isSinglesMatch`: one ID in each side, with different IDs). No match fields are added.
+Singles uses one player per side and two players per court. Doubles uses two per side and four per court. Live courts advance independently after scoring; availability, venue restrictions, equal appearances and optional breaks apply to both formats. A singles court waits when too few eligible players are available. Single-round generation and advance planning also support singles. Fixed-partner voting and doubles partner identities remain available only for doubles. Once any non-cancelled match has been scheduled, the activity format cannot change. Different formats cannot be merged.
 
-The current match creation flows still generate doubles: live courts, scheduled points matches, fixed partners and grouping validation all use four players and two per side. This change does not add singles match creation. When no singles records exist, the singles board is empty and explains that the website currently arranges doubles. Future recorded singles matches appear automatically.
+## Separate boards
 
-## Calculation
+The ranking page offers Doubles / Singles together with Quarterly / Annual. The existing leaderboard, quarterlyLeaderboard and annualLeaderboard API fields now contain doubles matches only; the singles fields contain singles only. Singles still lists members with completed singles records in the selected period. Doubles keeps all enabled account-backed members and existing owner adjustments. Proxy guests remain excluded from both boards.
 
-- Points are 1000 (`periodPointsBase`, the same start for every player and period) plus the sum of the selected period's rated singles-game realm-rating changes, so a net loss shows below 1000 instead of a negative number; `pointsChange` holds the signed sum. Only players with a singles match in the period are listed, so nobody appears at a bare 1000 without playing. Singles and doubles share one visible realm rating; see [REALM_PROGRESSION.md](REALM_PROGRESSION.md). Madrid start month determines the period. Best-of-three matches count each game. Quarterly and annual totals aggregate the relevant months. Legacy win/loss amounts and monthly caps no longer calculate ranking points.
-- Sort by points, rated win rate and average score margin. Identical rows share a rank and subsequent ranks skip the tied positions.
-- Only enabled players with their own account qualify. Proxy guest profiles and disabled players do not appear. A singles row additionally requires at least one completed singles match in the period.
-- Owner point adjustments apply only to Combined, preventing duplicate attribution to Singles.
-- Points update immediately after scoring. Visible realms and realm ratings settle when the activity ends by clock, ends early, or is cancelled; they stay fixed during play, with pending results indicated.
+Points remain 1000 plus the selected format's rated-game realm-rating changes in the period. Singles changes do not enter the doubles board, or vice versa. Madrid start time determines month/quarter/year; best-of-three counts each game. Sorting, ties, immediate pending points and activity-end settlement retain the current rules. Owner adjustments belong to doubles only. The established shared visible realm rating is unchanged; this update separates board contributions, not the realm policy. Hidden doubles matchmaking Elo remains doubles-only. Internal combined domain helpers remain available for compatibility, but the member ranking UI displays the two separate formats.
 
-## Combined board and matchmaking
+## Modification forms
 
-Combined continues to include every recorded website match, including singles, rather than becoming doubles-only.
-
-Hidden `doubles-elo-v1` matchmaking strength applies only to two-versus-two matches using team averages. Replay skips singles and other team sizes, avoiding missing-teammate errors without changing existing doubles results. Visible realm ratings calculate singles using standard one-versus-one Elo.
-
-## API and navigation
-
-Authenticated club data adds `singlesQuarterlyLeaderboard` and `singlesAnnualLeaderboard`, using the same quarter/year as the combined arrays, so conditional-read cache scope is unchanged. Members still cannot obtain raw matchmaking ratings. Domain functions are `singlesLeaderboard`, `singlesQuarterlyLeaderboard` and `singlesAnnualLeaderboard`. Browser history preserves the selected format.
+User-entered reason prose is no longer required. Forms and score corrections supply a short operation description automatically; domain commands accept omitted/blank reasons and save non-empty audit text. Actor identity, time, authorization, input limits, revisions, idempotence and transactional persistence remain enforced. Destructive actions retain their confirmation. Optional activity/signup descriptions remain available. Existing malformed grant records without saved audit text remain excluded from the durable adjustment ledger.
 
 ## Verification
 
-`tests/singles-ranking.test.ts`, registered in `scripts/test.mjs`, covers recognition and empty states; mixed singles/doubles rating points, best-of-three games, wins, margins and ranks; Combined including both formats; removal of legacy monthly caps; Madrid quarter boundaries and aggregate totals; proxy/disabled players and invalid, unfinished or void results; exclusion of owner grants; unchanged hidden doubles strength; projection privacy; navigation restoration; immediate points and activity-end realm settlement.
+Domain coverage includes automatic names and Madrid dates, two-player starts, multi-court fairness, breaks, single-round and planned scheduling, format immutability and existing doubles behavior. Isolated SQLite tests exercise real activity creation, signup, scoring, correction, separate boards, authorization, idempotence and rollback. Headless React tests exercise the actual edit/confirmation/score forms without a reason input. These tests never write production business data.
