@@ -26,8 +26,17 @@ deduplicated against the confirmation notice), at most once every six hours per 
 disabled when everyone has paid, and the server refuses the request in that case. Reminders respect the fee confirmation
 notification preference and are cancelled if a newer version is confirmed before delivery.
 
+## Saved payees
+
+Every transfer recipient saved for an activity is kept in the club settings as a saved payee (matched by the digits
+of the phone number, so a renamed payee updates in place), newest use first and at most 20. Activity managers see them
+in the transfer section of the fees page and apply one with a single tap instead of typing the name and number again.
+The member who added a payee, or an administrator, can remove it; removing it never changes recipients already set on
+activities. The member view receives each payee's name, phone and whether the viewer added it, never the adder's id.
+
 ## Verification
 
 `tests/fee-payments.test.ts` covers fee contacts, confirmation and reminder notices, mark and unmark permissions, raised
-amounts, the six-hour limit and the projected fields. `tests/push-api.mjs` covers encrypted delivery of reminders,
-request idempotence and the six-hour refusal.
+amounts, the six-hour limit and the projected fields. `tests/fee-payees.test.ts` covers saving, renaming, the
+20-payee limit, removal permissions and the projected fields. `tests/push-api.mjs` covers encrypted delivery of
+reminders, request idempotence and the six-hour refusal.
