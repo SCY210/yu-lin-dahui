@@ -101,7 +101,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!isClubOwner(s, a))
                 fail('403: 只有群主可以调整积分');
             if (!player(p.playerId).enabled)
-                fail('该球友已停用，不能调整积分或段位分');
+                fail('该球友已停用，不能调整积分或修为');
             break;
         }
         case 'profile': {
@@ -668,7 +668,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
     }
     s.audits.push({ id: id(), at: now, actor: a.id, action, reason: action === 'blockedWords' ? '更新屏蔽词' : typeof p.reason === 'string' ? p.reason : `${action} 操作`, changes: action === 'settings' ? { name: p.name, rules: p.rules } : before ? { before, input: p } : p });
-    // A 段位分 grant changes the stored grouping strength at once.
+    // A 修为 grant changes the stored grouping strength at once.
     if (action === 'grantPoints' && p.rating)
         replayRating(s, now);
     return null;

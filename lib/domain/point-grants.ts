@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {editReason} from './edit-reason';
 import type {State} from './types';
 
-/** points change the period's doubles-board points; rating (optional) changes 段位分, and with it the realm and the
+/** points change the period's doubles-board points; rating (optional) changes 修为, and with it the realm and the
  * doubles grouping strength, from the moment of the grant. At least one of the two must be non-zero. */
 const grantFields=z.object({
  playerId:z.string().min(1).max(100),
@@ -25,7 +25,7 @@ export function pointGrants(s:Pick<State,'audits'>){
  });
 }
 export type RatingAdjustment={playerId:string;at:number;delta:number};
-/** The 段位分 part of the owner's grants, in time order, for the realm and grouping replays. */
+/** The 修为 part of the owner's grants, in time order, for the realm and grouping replays. */
 export function ratingAdjustments(s:Partial<Pick<State,'audits'>>):RatingAdjustment[]{
  if(!s.audits)return [];
  return pointGrants({audits:s.audits}).filter(g=>g.rating!==0).map(g=>({playerId:g.playerId,at:g.at,delta:g.rating})).sort((x,y)=>x.at-y.at);
