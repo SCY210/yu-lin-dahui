@@ -18,7 +18,7 @@ body .shell.app-compact .feature-actions{margin:10px 0;gap:8px}
 body .shell.app-compact .pp-card .pp-header{gap:12px}
 body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
 @media(max-width:640px){
- body .shell.app-compact{padding:14px 16px 110px}
+ body .shell.app-compact{padding:14px 16px calc(128px + env(safe-area-inset-bottom,0px))}
  body .shell.app-compact .heading h1,
  body .shell.app-compact .event-heading h1,
  body .shell.app-compact .home-heading h1{font-size:24px}
