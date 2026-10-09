@@ -7,3 +7,5 @@ Style-tag voting and other award categories are retired. Their historical rows r
 Player profiles, recorded match statistics, partner/opponent relationships, challenges, activity photos, racket photos and owner-controlled profile editing retain their existing behavior. Automatically calculated relationship highlights are match statistics rather than votes. Social voting does not add leaderboard points or alter Elo, realms, expense allocations or permissions.
 
 Verification includes the activity-voting unit suite and isolated SQLite award API tests covering eligibility, one-vote replacement/withdrawal, stale withdrawal protection, self/outsider rejection, activity boundaries, privacy, rollback and legacy-record preservation.
+
+Season points and long-term realm ratings remain separate. Rated games earn 3 points for a win or 1 for a loss, with the documented upset bonus. Grouping uses the realm-rating formula over doubles only; applied handicap games do not earn season or realm points. See [realm progression](REALM_PROGRESSION.md).

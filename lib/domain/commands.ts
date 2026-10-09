@@ -56,7 +56,7 @@ const schemas = {
     notifyFees: z.object({ eventId: pid, settlementId: pid, reason }),
     settle: z.object({ eventId: pid, confirmed: z.boolean(), reason }),
     blockedWords: blockedWordsInput,
-    settings: z.object({ name: text, invite: z.string().max(100).refine(v => v === '' || v.length >= 8, '邀请码至少8位，或留空保留'), rules: rulesSchema }), rating: z.object({ playerId: pid, value: z.number().min(0).max(4000), enabled: z.boolean(), reason }), role: z.object({ accountId: pid, role: z.enum(['admin', 'member']), reason }),
+    settings: z.object({ name: text, invite: z.string().max(100).refine(v => v === '' || v.length >= 8, '邀请码至少8位，或留空保留'), rules: rulesSchema }), rating: z.object({ playerId: pid, value: z.number().min(0).max(4000).optional(), enabled: z.boolean(), reason }), role: z.object({ accountId: pid, role: z.enum(['admin', 'member']), reason }),
     historyPreview: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema }), historyRules: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema, reason }),
 };
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
@@ -101,7 +101,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!isClubOwner(s, a))
                 fail('403: 只有群主可以调整积分');
             if (!player(p.playerId).enabled)
-                fail('该球友已停用，不能调整积分');
+                fail('该球友已停用，不能调整积分或段位分');
             break;
         }
         case 'profile': {
@@ -499,7 +499,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const r = round(m.roundId);
             if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
                 r.status = 'complete';
-            replayRating(s);
+            replayRating(s, now);
             if (firstCompletion)
                 finishLiveMatch(s, matchEvent, m, now);
             break;
@@ -512,7 +512,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!p.monthly)
                 fail('网站对局统一计入积分赛，不能关闭积分');
             markRanked(m);
-            replayRating(s);
+            replayRating(s, now);
             break;
         }
         case 'void': {
@@ -523,7 +523,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const r = round(m.roundId);
             if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
                 r.status = 'complete';
-            replayRating(s);
+            replayRating(s, now);
             if (wasPlaying)
                 finishLiveMatch(s, event(m.eventId), m, now);
             break;
@@ -627,10 +627,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             assertPlayerMutable(s, a, p.playerId);
             const pl = player(p.playerId);
-            pl.initialRating = p.value;
+            if (p.value !== undefined)
+                pl.initialRating = p.value;
             pl.ratingReason = p.reason;
             pl.enabled = p.enabled;
-            replayRating(s);
+            replayRating(s, now);
             break;
         }
         case 'role': {
@@ -653,7 +654,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const season = s.seasons.find(x => x.id === p.season) ?? fail('赛季不存在');
             season.rules = p.rules;
             season.version = (season.version ?? 1) + 1;
-            replayRating(s);
+            replayRating(s, now);
             break;
         }
         case 'historyPreview': {
@@ -661,12 +662,15 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const copy = structuredClone(s);
             const season = copy.seasons.find(x => x.id === p.season) ?? fail('赛季不存在');
             season.rules = p.rules;
-            replayRating(copy);
+            replayRating(copy, now);
             return copy;
             break;
         }
     }
     s.audits.push({ id: id(), at: now, actor: a.id, action, reason: action === 'blockedWords' ? '更新屏蔽词' : typeof p.reason === 'string' ? p.reason : `${action} 操作`, changes: action === 'settings' ? { name: p.name, rules: p.rules } : before ? { before, input: p } : p });
+    // A 段位分 grant changes the stored grouping strength at once.
+    if (action === 'grantPoints' && p.rating)
+        replayRating(s, now);
     return null;
 }
 function checkBooking(e: {

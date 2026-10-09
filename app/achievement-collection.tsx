@@ -35,6 +35,6 @@ export default function AchievementCollection({summary,own=false,players=[]}:{su
     })}</ol>
    </div>}
   </>}
-  <p className="achievement-note">按全部生涯的已完成比赛自动计算，历史记录按当前门槛重算等级；每级同时要求累计指标与打球日期数，同一天多场只计一天，无需连续出勤。取消、弃权和未来比赛不计入。连胜按生涯最高连胜计算。修正或作废比赛会重新计算等级，成就不影响积分或实力分。</p>
+  <p className="achievement-note">按全部生涯的已完成比赛自动计算，历史记录按当前门槛重算等级；每级同时要求累计指标与打球日期数，同一天多场只计一天，无需连续出勤。取消、弃权和未来比赛不计入。连胜按生涯最高连胜计算。修正或作废比赛会重新计算等级，成就不影响积分或段位分。</p>
  </section>;
 }
