@@ -1,58 +1,9 @@
-# 社群与趣味赛制扩展
+# Social features
 
-入口：**首页 → 球友圈**；活动入口：**活动详情 → 玩法**。费用仍只显示每个人分摊多少，没有待付账单或付款确认。
+Post-match voting now consists only of MVP. Eligible participants, activity creators and administrators have one vote per activity, may change or withdraw their choice, and cannot vote for themselves. The activity must have concluded and must not be cancelled. Late score entry does not prevent voting. See [MVP-only voting](MVP_ONLY_VOTING.md).
 
-| 功能 | 如何使用 / 当前规则 |
-|---|---|
-| 智能排搭档 | “生成下一轮”先公平选人，再平衡队伍实力；对上一位搭档增加额外惩罚，尽量避免连续重复。手动交换和锁定仍可使用。 |
-| 复仇挑战 | 在本人球友卡片的对位战绩中，向曾在有效比赛中击败你的球友发起挑战。目标本人（或其代报者）回应，管理员在双方分居两队的未开始比赛上关联挑战。结果由比分自动判定。 |
-| 搭档默契度 | 显示组队场数、胜负和胜率。“最佳搭档 / 最坑搭档”至少3场样本，最坑标签至少有两位可比较的搭档。 |
-| 克制关系 | 按双打对位显示胜负、胜率；至少3场样本才产生“最克 / 最被克”标签。包含搭档影响，不等同于单打实力。 |
-| 随机身份局 | 活动玩法设置普通、本轮随机CP、随机师徒或大腿带萌新。随机种子可复现；身份标签随本轮分组生成。每轮继续按实际可参与机会选人。 |
-| 球友卡片 | 球友圈选择球友，可编辑本人或自己代报朋友的球龄、惯用手、单双打偏好、打法、装备。自评水平已移除，不再展示或编辑。管理员可管理。头像上传JPEG/PNG/WebP，最大5MB。 |
-| 打法投票 | 8种预设标签，每账号每标签一票，再次点击撤回；多个球友可以累加投票。 |
-| 赛后MVP等 | 活动结束后，实际参加者可投MVP、最佳防守、最佳网前、最拼命球员。候选人必须到场，每账号每类一票，可改投；不能投给自己。管理员可参与管理。 |
-| 搞笑数据 | 本月21:19决胜局失利次数、实际三局场数、最长连败、超过21分的加班局、最长实际比赛时长；没有记录时显示暂无。 |
-| 关系网络 | 选择球友和“搭档/交手”，网络显示最常关联的6位球友，下面保留完整关系列表。节点可点击进入卡片。 |
-| 状态系统 | 最近最多10场有效完整比赛的胜率作为0–100状态值；70及以上火热、30及以下低迷；少于5场显示样本不足。 |
-| 段位分和境界 | 可见境界来自段位分（Elo，每人从1000起，赢强者加得多、输弱者扣得多），门槛 850/1000/1150/1300，降级缓冲30分，连续3个月没有计分小局才重置。自动分组用同一公式只计双打小局，单打不影响分组，精确数值只给管理员看。规则见 REALM_PROGRESSION.md。 |
-| 让分建议 | 活动设置开启后，队伍平均段位分差至少120时提出强队负分开局建议，每60分差约1分，最多8分。管理员开赛前确认；确认让分的比赛作为友谊赛，不计赛季积分和段位分。 |
-| 擂台 | 指定一块物理场地为擂台，胜方两人继续搭档留场，败方不能下一轮立即回到擂台，新的挑战者由等待队列选择。其余场地正常轮转。擂主和连胜从有效比赛重建，比分修正也会更新。 |
-| King / Queen | 采用一局制，个人得分累计每局本方实际分数；同分看胜场和净胜分。每轮公平选人，并更强地避免重复搭档。活动玩法页显示个人榜。 |
-| 自动轮转方案 | 根据当前签到、暂停、比赛占用、完整预约时段自动计算可用场地与每轮人数。例如11人3场地使用2片、8人上场3人轮休；人数不变时11轮形成均衡循环。仍按轮次生成，以适应迟到早退。 |
-| 活动人格 | 早到：提前签到（最多提前1小时记录）；压线：开场后5分钟内；报名最快：有新时间戳的第1位报名；候补逆袭：正式记录候补→递补。旧记录缺少报名时间戳不补造。 |
-| 照片关联 | 活动玩法页上传照片并选择比赛，自动关联该场四人；同时显示在比赛卡片、活动相册及这些球友的个人相册。未选比赛时可仅关联活动或指定到场球友。不是人脸识别或图片内容识别。 |
-| 年度总结 | 球友圈 → 年度总结选择年份与球友，按Madrid自然年计算比赛数、活动数、胜场、最常搭档、克制对象、最长连胜和比赛时长。可复制文本，打开时即时生成，无需年底后台任务。 |
-| 三局两胜录入 | 比分表单可选一局制或三局两胜、是否打第三局；每局独立校验。积分、段位分与个人胜率按实际小局累计，局均净胜按实际小局计算。 |
+Style-tag voting and other award categories are retired. Their historical rows remain stored but are not displayed or writable through current voting commands.
 
-## 创建者设置接龙上限
+Player profiles, recorded match statistics, partner/opponent relationships, challenges, activity photos, racket photos and owner-controlled profile editing retain their existing behavior. Automatically calculated relationship highlights are match statistics rather than votes. Social voting does not add leaderboard points or alter Elo, realms, expense allocations or permissions.
 
-创建活动时填写“接龙人数上限（创建者设置）”，每个活动独立保存 `capacity` 与创建者ID，不固定为16人。允许1–500的整数；排场从实际可上场人数计算，不改变接龙上限。管理员编辑活动可以调整上限，不能直接降到当前正式人数以下；提高上限会按报名顺序自动递补。
-
-## 数据与权限
-
-新增Drizzle迁移 `0002_salty_leo.sql` 只新增挑战、标签投票、奖项投票和照片元数据4张表，原始迁移不重写。总共20张表；头像和照片字节使用Sites管理的R2，逻辑绑定BUCKET，D1保留照片与比赛/球友的关系。已存记录中的新增字段缺省时兼容。
-
-球友档案写入验证所有权，挑战验证实际失利和目标身份，投票验证活动与到场资格。每账号投票唯一键和D1原子修订号保护重复提交与并发修改。照片读取必须已登录并加入群；上传者必须是实际参加者或管理员，头像须本人、代报者或管理员；限制格式和大小，并校验文件头。生产不会自动载入本地虚构验收数据。
-
-## 实际验证
-
-- TypeScript检查与Cloudflare Worker构建通过。
-- 34项算法/权限测试全部通过（包含原21项回归和13项社群/上限/混合擂台测试）。
-- `tests/social-api.mjs` 10组真实本地HTTP验收通过：档案与防冒充、投票去重、挑战跨会话、创建者人数上限、师徒与擂台、三局/挑战结果、R2上传读取与四人关联、头像权限及SVG拒绝、MVP、隐藏Elo及年度/人格统计。
-- 重启测试服务后，照片字节、元数据、挑战与投票继续存在。
-- 浏览器实际保存虚构档案并投标签票，读取成功反馈；390px检查球友卡、关系图、年度页、玩法页均无横向溢出。
-- 本地测试使用明确标注的虚构球友和1像素测试图片；没有使用或上传真实成员照片。
-
-尚未覆盖：高并发/大规模压力、真实手机系统多浏览器、跨时区夏令时歧义输入、真实群员参与后的长期统计样本。人物/照片关联由活动与选中比赛的元数据完成，没有自动人脸识别；随机CP是本轮搭档身份，没有全年固定情侣关系。
-
-## 新本地环境迁移
-
-首次初始化本地数据库时，在前两个迁移后执行：
-
-```powershell
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_salty_leo.sql
-```
-
-本工作区已执行，不要重复执行。运行所有独立测试用 `node scripts/test.mjs`。社群API验收需在专用虚构测试数据库和127.0.0.1:8787的已构建服务运行，依赖前一轮API验收创建的模拟比赛；勿对真实数据运行。
-
+Verification includes the activity-voting unit suite and isolated SQLite award API tests covering eligibility, one-vote replacement/withdrawal, stale withdrawal protection, self/outsider rejection, activity boundaries, privacy, rollback and legacy-record preservation.
