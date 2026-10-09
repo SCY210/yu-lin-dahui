@@ -9,3 +9,5 @@
 .home-unpaid-row span:first-child{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
 .home-unpaid-row small{color:var(--muted-foreground)}
 .home-unpaid-row>span:last-child{color:var(--destructive);font-size:13px;white-space:nowrap}
+
+@media(max-width:420px){.my-fee-link{flex-wrap:wrap;gap:8px}.my-fee-link>span:first-child{flex-basis:100%}.my-fee-link>span:last-child{margin-left:auto}.home-unpaid-row{grid-template-columns:minmax(0,1fr) auto}.home-unpaid-row>span:first-child{grid-column:1/-1}.home-unpaid-row>span:last-child{justify-self:end}}
