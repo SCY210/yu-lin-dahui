@@ -13,3 +13,7 @@ Check venue menu opacity, month-dependent ranking data, grouping/matches inside 
 ## Direct event sharing
 
 The signup summary prioritizes sharing to WeChat groups. Inside WeChat, use its top-right forwarding menu; outside WeChat, use the native share sheet when available. Invitations exclude rosters and require normal member authentication. See [event sharing](EVENT_SHARING.md).
+
+## Home current games
+
+Home replaces the doubles quarterly preview with current-game cards above the signup list. The region is absent without an actually playing match in an active, visible activity and playing round. Singles and doubles show both sides, court, activity and a link to the activity rounds tab. Data polling uses the existing three-second cadence while home has playing matches; a local clock and foreground listeners remove expired cards even if the data revision is unchanged. Deleted, draft, cancelled, future and completed data is excluded. Home retains up to six signup cards; full ranking boards remain on the ranking page.
