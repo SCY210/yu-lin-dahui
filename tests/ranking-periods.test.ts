@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import {emptyState,defaultRules,type Match} from '../lib/domain/types';
 import {annualLeaderboard,quarterlyLeaderboard,leaderboard} from '../lib/domain/ranking';
 import {rankingQuarter,quarterMonths,quarterLabel} from '../lib/ranking-quarter';
-import {cultivationRealm,cultivationRealms} from '../lib/domain/cultivation';
+import {realmByScore,realms} from '../lib/domain/realm-rating';
 import {getFeatureGuide} from '../lib/feature-guides';
 import {projectClubState} from '../lib/club-view';
 import {apply} from '../lib/domain/commands';
 
+/** Far enough ahead that every fixture match has finished. */
+const later=Date.parse('2028-06-01T00:00:00Z');
 function fixture() {
  const s=emptyState();
  for(const [i,id] of ['A','B','C','D','E','F','G','H'].entries())s.players.push({id,name:id,ownerId:'account',initialRating:1400-i*100,rating:1400-i*100,ratedGames:i,enabled:true,ratingReason:'test'});
@@ -29,11 +31,10 @@ test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受�
  const before=structuredClone(s);
  for(const rows of [leaderboard(s,'2026-10'),quarterlyLeaderboard(s,'2026-Q4'),annualLeaderboard(s,2026)]){
   assert.equal(rows.length,8);assert.ok(!rows.some(row=>row.playerId===guest.id));
-  assert.equal(rows.find(row=>row.playerId==='A')!.points,10);
-  assert.equal(rows.find(row=>row.playerId==='B')!.points,3);
-  assert.equal(rows.find(row=>row.playerId==='C')!.points,3);
-  assert.deepEqual(rows.slice(0,3).map(row=>row.rank),[1,2,2]);
-  assert.equal(rows[3].rank,4);
+  assert.equal(rows.find(row=>row.playerId==='A')!.points,16);
+  assert.equal(rows.find(row=>row.playerId==='B')!.points,-16);
+  assert.equal(rows.find(row=>row.playerId==='C')!.points,-16);
+  assert.deepEqual(rows.map(row=>row.rank),[1,2,2,2,2,2,7,7]);
  }
  for(const role of ['admin','member'] as const){
   const view=projectClubState(s,{...actor,role},'2026-10',2026);
@@ -55,35 +56,35 @@ test('朋友开通正式账号后能按原有比赛记录入榜，停用成员�
  assert.deepEqual(s.matches,history);
 });
 
-test('修仙境界采用更紧凑五级门槛，与积分排名分开',()=>{
- for(const [rating,realm] of [[59,'炼气'],[60,'筑基'],[179,'筑基'],[180,'金丹'],[399,'金丹'],[400,'元婴'],[799,'元婴'],[800,'化神']] as const)assert.equal(cultivationRealm(rating),realm);
+test('修仙境界按段位分五级门槛，与积分排名分开',()=>{
+ for(const [score,realm] of [[0,'炼气'],[899,'炼气'],[900,'筑基'],[999,'筑基'],[1000,'金丹'],[1099,'金丹'],[1100,'元婴'],[1199,'元婴'],[1200,'化神'],[1500,'化神']] as const)assert.equal(realmByScore(score),realm);
  const s=fixture();s.matches.push(match('loss','2026-06-01T13:00:00Z',10,21));
  const before=structuredClone(s.players);
  assert.equal(leaderboard(s,'2026-06')[0].playerId,'C');
  assert.equal(annualLeaderboard(s,2026)[0].playerId,'C');
- assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.realm,'炼气');
+ assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.realm,'筑基','984 after one loss, still placing');assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.provisional,true);
  assert.deepEqual(s.players,before);
- assert.deepEqual(getFeatureGuide('rating').table?.rows,cultivationRealms.map(r=>[r.name,r.range]));
+ assert.deepEqual(getFeatureGuide('rating').table?.rows,realms.map(r=>[r.name,r.range]));
 });
 
 test('年度按 Madrid 开赛年份计分，跨年结束仍归属开赛年',()=>{
  const s=fixture();
  const old=match('old','2025-12-31T22:59:00Z');old.end=Date.parse('2026-01-01T00:20:00Z');
  s.matches.push(old,match('local-new-year','2025-12-31T23:00:00Z'),match('local-next-year','2026-12-31T23:00:00Z'));
- assert.equal(annualLeaderboard(s,2025).find(r=>r.playerId==='A')?.games,1);
- assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.games,1);
- assert.equal(annualLeaderboard(s,2027).find(r=>r.playerId==='A')?.games,1);
+ assert.equal(annualLeaderboard(s,2025,later).find(r=>r.playerId==='A')?.games,1);
+ assert.equal(annualLeaderboard(s,2026,later).find(r=>r.playerId==='A')?.games,1);
+ assert.equal(annualLeaderboard(s,2027,later).find(r=>r.playerId==='A')?.games,1);
 });
 
-test('年度每月重置个人上限，使用不同月份的历史胜负分与上限',()=>{
+test('旧的月度上限与各月胜负分值不再生效，年度为各月段位分变化之和',()=>{
  const s=fixture();
  s.settings.rules={...defaultRules,win:99,loss:88,cap:99};
  s.seasons.push({id:'2026-01',rules:{...defaultRules,win:3,loss:1,cap:2}},{id:'2026-02',rules:{...defaultRules,win:7,loss:2,cap:1}});
  s.matches.push(match('j3','2026-01-03T12:00:00Z',21,0),match('j2','2026-01-02T12:00:00Z',10,21),match('j1','2026-01-01T12:00:00Z'),match('f2','2026-02-02T12:00:00Z',0,21),match('f1','2026-02-01T12:00:00Z'));
  const annual=annualLeaderboard(s,2026).find(r=>r.playerId==='A')!;
- assert.deepEqual([annual.games,annual.wins,annual.losses,annual.total,annual.points],[3,2,1,5,11]);
+ assert.deepEqual([annual.games,annual.wins,annual.losses,annual.total],[5,3,2,5]);
  assert.equal(annual.points,leaderboard(s,'2026-01').find(r=>r.playerId==='A')!.points+leaderboard(s,'2026-02').find(r=>r.playerId==='A')!.points);
- assert.equal(annual.rate,2/3);assert.equal(annual.margin,11/3);
+ assert.equal(annual.rate,3/5);assert.equal(annual.margin,11/5);
 });
 
 test('年度全年胜率和净胜按计分场数加权，不平均月度比例',()=>{
@@ -91,7 +92,7 @@ test('年度全年胜率和净胜按计分场数加权，不平均月度比例',
  s.matches.push(match('jan','2026-01-01T12:00:00Z',21,10),match('feb1','2026-02-01T12:00:00Z',19,21),match('feb2','2026-02-02T12:00:00Z',18,21),match('feb3','2026-02-03T12:00:00Z',17,21));
  const r=annualLeaderboard(s,2026).find(r=>r.playerId==='A')!;
  assert.equal(r.rate,.25);assert.equal(r.margin,.5);
- assert.equal(r.games,4);assert.equal(r.points,1);
+ assert.equal(r.games,4);assert.equal(r.points,16-17-16-14);
 });
 
 test('年度所有启用球友都入榜，排除非计分和非完整赛，保留实际场数',()=>{
@@ -111,15 +112,15 @@ test('年度按积分、胜率、场均净胜排序，三项相同并列且稳�
  s.matches.push(match('first','2026-05-01T12:00:00Z',21,15),match('second','2026-05-02T12:00:00Z',21,10,[['E','F'],['G','H']]));
  const rows=annualLeaderboard(s,2026);
  assert.deepEqual(rows.map(r=>[r.playerId,r.rank]),[['E',1],['F',1],['A',3],['B',3],['C',5],['D',5],['G',7],['H',7]]);
- assert.equal(rows[0].points,0);assert.equal(rows[0].rate,1);assert.equal(rows[0].margin,11);
+ assert.equal(rows[0].points,16);assert.equal(rows[0].rate,1);assert.equal(rows[0].margin,11);
 });
 
-test('年度同刻计分赛按 ID 取上限，说明公开年度榜并保持总结独立',()=>{
+test('同刻完赛按比赛编号确定回放顺序，旧上限不再截取，说明公开年度榜并保持总结独立',()=>{
  const s=fixture();s.settings.rules.cap=1;s.settings.rules.loss=0;
  s.matches.push(match('z-late-id','2026-07-01T12:00:00Z',21,0),match('a-first-id','2026-07-01T12:00:00Z',0,21));
- assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.points,0);
+ assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')?.points,-16+17,'a-first-id (loss) replays before z-late-id (win)');
  const guide=getFeatureGuide('annualRanking');
- assert.equal(guide.title,'年度积分与排名');assert.ok(guide.sections.some(section=>section.paragraphs?.some(p=>p.includes('没有额外的全年小局上限'))));
+ assert.equal(guide.title,'年度积分与排名');assert.ok(guide.sections.some(section=>section.paragraphs?.some(p=>p.includes('没有月度或全年小局上限'))));
  assert.equal(getFeatureGuide('annual').title,'年度总结');
 });
 
@@ -131,13 +132,13 @@ test('自然季度覆盖三个月，选择器跨年时仍能正确确定季度',
 test('季度按马德里开赛时刻归属，跨季度结束不会移动积分',()=>{
  const s=fixture();s.settings.rules.cap=0;const q1=match('q1','2026-03-31T21:59:00Z');q1.end=Date.parse('2026-04-01T01:00:00Z');
  s.matches.push(q1,match('q2','2026-03-31T22:00:00Z'),match('q3','2026-06-30T22:00:00Z'),match('next-year','2026-12-31T23:00:00Z'));
- for(const q of ['2026-Q1','2026-Q2','2026-Q3','2027-Q1'])assert.equal(quarterlyLeaderboard(s,q).find(r=>r.playerId==='A')?.games,1);
- assert.equal(quarterlyLeaderboard(s,'2026-Q4').find(r=>r.playerId==='A')?.games,0);
+ for(const q of ['2026-Q1','2026-Q2','2026-Q3','2027-Q1'])assert.equal(quarterlyLeaderboard(s,q,later).find(r=>r.playerId==='A')?.games,1);
+ assert.equal(quarterlyLeaderboard(s,'2026-Q4',later).find(r=>r.playerId==='A')?.games,0);
 });
-test('季度汇总三个月历史规则与各月上限，友谊赛和超出上限仍保留实际场数',()=>{
+test('季度汇总三个月的段位分变化，友谊赛只保留实际场数',()=>{
  const s=fixture();s.settings.rules={...defaultRules,win:99,loss:88,cap:0};s.seasons.push({id:'2026-01',rules:{...defaultRules,win:3,loss:1,cap:2}},{id:'2026-02',rules:{...defaultRules,win:7,loss:2,cap:1}},{id:'2026-03',rules:{...defaultRules,win:4,loss:0,cap:0}});
  s.matches.push(match('j3','2026-01-03T12:00:00Z'),match('j2','2026-01-02T12:00:00Z',10,21),match('j1','2026-01-01T12:00:00Z'),match('f2','2026-02-02T12:00:00Z'),match('f1','2026-02-01T12:00:00Z'),match('march','2026-03-01T12:00:00Z'),{...match('friendly','2026-03-02T12:00:00Z'),monthly:false},match('outside','2026-04-01T12:00:00Z'));
- const r=quarterlyLeaderboard(s,'2026-Q1').find(r=>r.playerId==='A')!;assert.deepEqual([r.points,r.games,r.wins,r.losses,r.total],[15,4,3,1,7]);
+ const r=quarterlyLeaderboard(s,'2026-Q1').find(r=>r.playerId==='A')!;assert.deepEqual([r.games,r.wins,r.losses,r.total],[6,5,1,7]);
  assert.equal(r.points,['2026-01','2026-02','2026-03'].reduce((sum,m)=>sum+leaderboard(s,m).find(p=>p.playerId==='A')!.points,0));
 });
 test('季度胜率和净胜按整体场数加权，年度等于四个季度积分之和',()=>{
@@ -152,5 +153,5 @@ test('季度保持并列、启用成员、空榜和排名说明的正确口径',
 });
 test('季度响应标识所选季度，普通成员看不到精确实力分',()=>{
  const s=fixture();s.matches.push(match('quarter-response','2026-05-01T12:00:00Z'));const account={id:'account',email:'',role:'member' as const,playerId:'A'};
- const data=projectClubState(s,account,'2026-06',2026);assert.equal(data.rankingQuarter,'2026-Q2');assert.equal(data.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,10);assert.ok(data.quarterlyLeaderboard.every(r=>r.rating===null));
+ const data=projectClubState(s,account,'2026-06',2026);assert.equal(data.rankingQuarter,'2026-Q2');assert.equal(data.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,16);assert.ok(data.quarterlyLeaderboard.every(r=>r.rating===null));
 });

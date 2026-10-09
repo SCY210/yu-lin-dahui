@@ -16,6 +16,7 @@
 .rv-period-switch button { min-height:44px; padding:8px 19px; border:0; border-radius:10px; background:transparent; color:#756a8b; font-weight:650; white-space:nowrap; }
 .rv-period-switch button[aria-pressed=true] { background:#fff; color:#5e3eb1; box-shadow:0 2px 6px #4030520a; }
 .rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker select:focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
+.rv-format-switch { grid-column:1/-1; justify-self:start; }
 .rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px minmax(0,1fr); align-items:center; gap:10px; min-height:48px; }
 .rv-controls>button { justify-self:end; white-space:nowrap; }
 .rv-control-actions { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
@@ -38,6 +39,7 @@
  .rv-title .eyebrow { font-size:8px; letter-spacing:1px; margin-bottom:5px; }
  .rv-period-switch { padding:3px; border-radius:11px; }
  .rv-period-switch button { padding:7px 12px; font-size:12px; min-height:44px; border-radius:8px; }
+ .rv-format-switch { justify-self:stretch; display:grid; grid-template-columns:1fr 1fr; }
  .rv-controls { grid-template-columns:minmax(0,1fr); gap:8px; }
  .rv-controls .rv-date-picker { width:100%; grid-template-columns:36px minmax(0,1fr) 36px; }
  .rv-control-actions { justify-content:space-between; width:100%; }

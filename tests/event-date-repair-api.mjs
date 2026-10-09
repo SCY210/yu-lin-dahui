@@ -18,7 +18,7 @@ const api=await import(pathToFileURL(resolve('.test-output/date-repair-api-bundl
 const realNow=Date.now;Date.now=()=>Date.parse('2026-10-08T21:00:00Z');
 try{
  const empty=api.emptyState(),s=api.emptyState(),plan=api.requestedEventDateRepair;
- s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';
+ s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';
  s.accounts=['owner','alice','bob','carol'].map((id,i)=>({id,email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.playerId,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const e={id:plan.eventId,creatorId:'owner',title:'Fictional Thursday',start:plan.fromStart,end:plan.fromEnd,venue:'Fictional',address:'',capacity:6,signupDeadline:plan.fromEnd,cancelDeadline:plan.fromStart-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
  s.events=[e,{...e,id:'foreign',status:'draft'}];s.bookings.push({id:'court',eventId:e.id,name:'Fictional',start:e.start,end:e.end,pricing:'total',cents:0});
@@ -28,7 +28,7 @@ try{
  const snapshot=structuredClone(fixed);await api.runRequestedEventDateRepair({eventId:'foreign',toStart:0});assert.deepEqual(await api.load(),snapshot);
  const rollback=structuredClone(fixed);rollback.matches[0].scoreA=30;await assert.rejects(()=>api.save(rollback,plan.key,fixed),/UNIQUE/);assert.deepEqual(await api.load(),snapshot);
  fixture.user={userId:'alice',method:'password',displayName:'alice'};const origin='https://club.example';
- const read=await api.GET(new Request(origin+'/api/club?month=2026-10&year=2026'));assert.equal(read.status,200);const view=await read.json();assert.equal(view.events.find(x=>x.id===e.id).status,'ended');assert.equal(view.leaderboard.find(r=>r.playerId==='p1').points,fixed.settings.rules.win);
+ const read=await api.GET(new Request(origin+'/api/club?month=2026-10&year=2026'));assert.equal(read.status,200);const view=await read.json();assert.equal(view.events.find(x=>x.id===e.id).status,'ended');assert.equal(view.leaderboard.find(r=>r.playerId==='p1').points,16,'first rated game at 1000 with K=32');
  const vote=await api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'awardVote',payload:{eventId:e.id,playerId:'p2',category:'mvp'},revision:fixed.revision,actor:'alice',requestId:crypto.randomUUID()})}));assert.equal(vote.status,200,await vote.text());assert.equal((await api.load()).awardVotes.length,1);
  console.log('PASS date repair API: actual SQLite atomic migration, concurrent once-only ledger, preserved score/roster/foreign activity, rollback, ended projection and authorized voting');
 }finally{Date.now=realNow;sql.close();delete globalThis.__dateRepairTest}

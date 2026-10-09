@@ -4,11 +4,11 @@ import {X} from 'lucide-react';
 import {Dialog,DialogClose,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {getFeatureGuide,guideLabels,guideTopics,type GuideTopic} from '@/lib/feature-guides';
 import type {Rules} from '@/lib/domain/types';
-import {cultivationRealms} from '@/lib/domain/cultivation';
+import {realms} from '@/lib/domain/realm-rating';
 import RealmBadge from './realm-badge';
 
 // Realm rows show the animated badge; clipping keeps its mist from adding a scrollbar.
-const realmNames=new Set<string>(cultivationRealms.map(realm=>realm.name));
+const realmNames=new Set<string>(realms.map(realm=>realm.name));
 export default function FeatureGuideContent({topic,rules,onOpenChange}:{topic:GuideTopic;rules?:Rules;onOpenChange:(open:boolean)=>void}){
   const [selected, setSelected] = useState<GuideTopic>(topic);
   const selectId = useId();
@@ -34,15 +34,15 @@ export default function FeatureGuideContent({topic,rules,onOpenChange}:{topic:Gu
         </select>
       </div>
       <div id={selectId+'-body'} role="region" aria-label={guide.title+'详细说明'} tabIndex={0} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1 text-base leading-7 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
-        {guide.table&&<section>
+        {[guide.table,...(guide.tables??[])].map(table=>table&&<section key={table.caption}>
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="w-full border-collapse text-left text-base">
-              <caption className="bg-[var(--background)] px-3 py-2 text-left font-semibold">{guide.table.caption}</caption>
-              <thead><tr>{guide.table.columns.map(column=><th scope="col" key={column} className="border-t border-[var(--border)] bg-[var(--accent)] px-3 py-2 font-medium">{column}</th>)}</tr></thead>
-              <tbody>{guide.table.rows.map(row=><tr key={row[0]}>{row.map((cell,i)=>i===0?<th key={i} scope="row" className={'border-t border-[var(--border)] px-3 py-2 font-medium'+(realmNames.has(cell)?' overflow-clip':'')}>{realmNames.has(cell)?<RealmBadge realm={cell}/>:cell}</th>:<td key={i} className="border-t border-[var(--border)] px-3 py-2">{cell}</td>)}</tr>)}</tbody>
+              <caption className="bg-[var(--background)] px-3 py-2 text-left font-semibold">{table.caption}</caption>
+              <thead><tr>{table.columns.map(column=><th scope="col" key={column} className="border-t border-[var(--border)] bg-[var(--accent)] px-3 py-2 font-medium">{column}</th>)}</tr></thead>
+              <tbody>{table.rows.map(row=><tr key={row[0]}>{row.map((cell,i)=>i===0?<th key={i} scope="row" className={'border-t border-[var(--border)] px-3 py-2 font-medium'+(realmNames.has(cell)?' overflow-clip':'')}>{realmNames.has(cell)?<RealmBadge realm={cell}/>:cell}</th>:<td key={i} className="border-t border-[var(--border)] px-3 py-2">{cell}</td>)}</tr>)}</tbody>
             </table>
           </div>
-        </section>}
+        </section>)}
         {guide.sections.map(section=><section key={section.title}>
           <h3 className="mb-2 mt-0 text-base font-semibold text-[var(--foreground)]">{section.title}</h3>
           {section.paragraphs?.map(paragraph=><p key={paragraph} className="mb-3 mt-0">{paragraph}</p>)}

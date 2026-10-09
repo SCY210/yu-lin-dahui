@@ -1,7 +1,7 @@
 import {month,type State} from './types';
 
 /** One-time switch for defaults and the current Madrid month only.
- * Older seasons keep their historical rules; cultivation and Elo are separate.
+ * Older seasons keep their historical rules. Since elo-v1 the win/loss values no longer drive points.
  */
 export function enableSignedRanking(s:State,now=Date.now()){
  if(!s.settings.initialized||s.settings.rankingVersion==='signed-v1')return false;

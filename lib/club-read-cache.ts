@@ -53,6 +53,9 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  }
  // A historical score can be entered with a future end time. Achievements only
  // unlock when that completed fact has actually happened.
+ // Realms settle when an activity with results ends, even one this account cannot see.
+ const scored=new Set(s.matches.filter(m=>m.status==='complete').map(m=>m.eventId));
+ for(const e of s.events)if(scored.has(e.id))boundary(e.end);
  const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
  for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
  return expires;

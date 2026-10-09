@@ -6,17 +6,20 @@ export const guideTopics = [
 
 export type GuideTopic = typeof guideTopics[number];
 export type GuideSection = {title:string; paragraphs?:string[]; items?:string[]};
+export type GuideTable = {caption:string; columns:string[]; rows:string[][]};
 export type FeatureGuideContent = {
   title:string;
   description:string;
   sections:GuideSection[];
-  table?:{caption:string; columns:string[]; rows:string[][]};
+  table?:GuideTable;
+  /** Further tables shown after the first one. */
+  tables?:GuideTable[];
   example?:{title:string; text:string};
   related:GuideTopic[];
 };
 
 export const guideLabels:Record<GuideTopic,string> = {
-  ranking:'季度积分与排名', annualRanking:'年度积分与排名', rating:'实力与修仙境界', titles:'称号与投票',
+  ranking:'季度积分与排名', annualRanking:'年度积分与排名', rating:'段位分与修仙境界', titles:'称号与投票',
   activities:'活动与比赛', signup:'报名与候补', grouping:'分组与轮休',
   matches:'比分与计分赛', fees:'费用分摊', partners:'搭档与交手',
   challenges:'复仇挑战', state:'最近状态', modes:'玩法与随机身份',
