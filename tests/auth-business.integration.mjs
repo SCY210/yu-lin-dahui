@@ -12,7 +12,7 @@ const fixture = globalThis.__authBusinessTest = { env: { DB: database.db }, cont
 await build({
   stdin: { contents: `export {POST as authPost,GET as authGet} from './app/api/auth/route';
     export {POST as clubPost,GET as clubGet} from './app/api/club/route';
-    export {load,save} from './lib/store';export {emptyState} from './lib/domain/types';
+    export {load,save} from './lib/store';export {emptyState} from './lib/domain/types';export {loadClubState} from './lib/club-maintenance';
     export {makePassword,checkPassword} from './lib/password';export {hashToken} from './lib/auth';`, resolveDir: process.cwd(), loader: 'ts' },
   bundle: true, platform: 'node', format: 'esm', outfile: '.test-output/auth-business.mjs',
   plugins: [{ name: 'isolated-auth-environment', setup(builder) {
@@ -55,6 +55,8 @@ try {
     return database.db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(id, id, credential.salt, credential.hash, Date.now());
   });
   await api.save(state, 'fixture-seed', previous, extra);
+  const migrated=await api.loadClubState();assert.equal(migrated.settings.strengthVersion,'realm-elo-v2');assert.equal(migrated.audits.filter(a=>a.action==='mergeStrengthRating').length,1);
+  assert.equal((await api.loadClubState()).revision,migrated.revision,'Migration must settle before clients use an optimistic revision');
 
   for (const input of [null, [], 'invalid', { action: 'unknown' }]) assert.equal((await auth(input)).status, 400);
   assert.equal((await auth({ action: 'login', username: 'a', password: credentials.a }, '', 'https://attacker.example')).status, 403);

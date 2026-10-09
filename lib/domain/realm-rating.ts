@@ -29,7 +29,13 @@ export const kFactor=(ratedGames:number)=>ratedGames<realmPolicy.provisionalGame
 /** Change for one player who scored `result` (1 win, 0 loss) against an opponent rating. */
 export function eloChange(own:number,opponent:number,result:0|1,ratedGames:number){return roundDelta(kFactor(ratedGames)*(result-expectedScore(own,opponent)))}
 /** True once `inactivityMonths` calendar months have passed since the last rated game ended. */
-export function inactiveAt(lastEnd:number,at:number){const due=new Date(lastEnd);due.setUTCMonth(due.getUTCMonth()+realmPolicy.inactivityMonths);return at>=due.getTime()}
+export function inactivityDeadline(lastEnd:number){
+ const due=new Date(lastEnd),day=due.getUTCDate();
+ due.setUTCDate(1);due.setUTCMonth(due.getUTCMonth()+realmPolicy.inactivityMonths);
+ const lastDay=new Date(Date.UTC(due.getUTCFullYear(),due.getUTCMonth()+1,0)).getUTCDate();
+ due.setUTCDate(Math.min(day,lastDay));return due.getTime();
+}
+export function inactiveAt(lastEnd:number,at:number){return at>=inactivityDeadline(lastEnd)}
 export function rawRealmIndex(score:number){let index=0;for(let i=1;i<realms.length;i++)if(finite(score,realmPolicy.start)>=realms[i].minimum)index=i;return index}
 export function realmByScore(score:number):RealmName{return realms[rawRealmIndex(score)].name}
 /** Hysteresis: promote at the threshold, keep the held realm (or the next one down) while within the buffer. */

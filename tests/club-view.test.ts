@@ -30,7 +30,7 @@ test('organizing an activity does not grant administrative account or raw rating
  const {s,me,start}=fixture(),v=projectClubState(s,me,'2026-10',2026,start);
  assert.equal(v.me.role,'member');assert.deepEqual(v.accounts,[]);assert.deepEqual(v.audits,[]);assert.deepEqual(v.ratingHistory,[]);
  assert.ok(v.players.every(p=>p.rating===null&&p.initialRating===null));
- assert.ok(!('leaderboard' in v));assert.ok(v.quarterlyLeaderboard.every(p=>p.rating===null));assert.ok(v.annualLeaderboard.every(p=>p.rating===null));
+ assert.ok(v.leaderboard.every(p=>p.rating===null));assert.ok(v.quarterlyLeaderboard.every(p=>p.rating===null));assert.ok(v.annualLeaderboard.every(p=>p.rating===null));
 });
 
 test('administrators retain all drafts and previews without exposing storage object keys',()=>{

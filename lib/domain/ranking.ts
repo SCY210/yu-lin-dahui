@@ -24,8 +24,13 @@ export function replayRating(s:State,now=Date.now()){
 }
 /** One-time switch from the separate hidden grouping rating to 段位分. */
 export function mergeStrengthRating(s:State,now=Date.now()){
- if(!s.settings.initialized||s.settings.strengthVersion===strengthAlgorithm)return null;
- const before=new Map(s.players.map(p=>[p.id,p.rating]));replayRating(s,now);s.settings.strengthVersion=strengthAlgorithm;
+ if(!s.settings.initialized)return null;
+ const before=new Map(s.players.map(p=>[p.id,p.rating]));replayRating(s,now);
+ // Clock-driven restarts must reach grouping on every authoritative load.
+ // Only the first rollout writes a migration marker and audit; later loads
+ // refresh the in-memory strength without creating a new revision.
+ if(s.settings.strengthVersion===strengthAlgorithm)return null;
+ s.settings.strengthVersion=strengthAlgorithm;
  return {version:strengthAlgorithm,players:s.players.map(p=>({playerId:p.id,before:before.get(p.id)??null,after:p.rating}))};
 }
 export {seasonPointsPolicy,upsetBonus,gamePoints} from './season-points';
