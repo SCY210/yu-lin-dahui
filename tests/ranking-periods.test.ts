@@ -21,6 +21,16 @@ function match(id:string,at:string,a=21,b=10,teams=[['A','B'],['C','D']]):Match 
  return {id,eventId:'event',roundId:'round',courtId:'court',a:teams[0],b:teams[1],status:'complete',start,end:start+60000,scoreA:a,scoreB:b,monthly:true,elo:true,locked:false,enteredBy:'account',games:[{a,b}]};
 }
 
+test('negative doubles points remain signed in all member response boards and corrections rebuild from facts',()=>{
+ const s=fixture(),at=Date.parse('2026-10-06T13:00:00Z');
+ for(let i=0;i<4;i++)s.matches.push(match('negative-'+i,new Date(at+i*120000).toISOString(),19,21));
+ const member=s.accounts[0],read=()=>projectClubState(s,member,'2026-10',2026,at+3600000),before=structuredClone(s);
+ const view=read();for(const board of [view.leaderboard,view.quarterlyLeaderboard,view.annualLeaderboard]){const row=board.find(r=>r.playerId==='A')!;assert.equal(row.points,-4);assert.equal(row.games,4);assert.equal(row.losses,4)}
+ assert.deepEqual(view.singlesQuarterlyLeaderboard,[]);assert.deepEqual(s,before,'Reading a negative board must not rewrite facts or grouping strength');
+ s.matches[0].scoreA=21;s.matches[0].scoreB=19;s.matches[0].games=[{a:21,b:19}];assert.equal(read().quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,0,'One corrected win plus three losses');
+ s.matches[1].status='cancelled';assert.equal(read().quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,1,'Voiding a loss removes exactly one deduction');
+});
+
 test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受影响且名次重新排列',async()=>{
  const s=fixture(),actor=s.accounts[0];
  s.settings.rules={...s.settings.rules,win:10,loss:3,cap:0};
