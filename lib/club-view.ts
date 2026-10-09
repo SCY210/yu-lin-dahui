@@ -56,6 +56,8 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>({...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:''})),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
+  // Only what paid status needs: who, for which activity, how much.
+  payments:s.payments.map(({eventId,playerId,cents})=>({eventId,playerId,cents})),
   audits:admin?privateEventState(history,a).audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId,a)==='full',canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  },s.settings.blockedWords??[]);
 }

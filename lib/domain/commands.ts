@@ -20,6 +20,7 @@ import { sameSettlement } from './settlement-state';
 import { validScore, replayRating } from './ranking';
 import { applySocial, memberSocialActions } from './social-commands';
 import { applyShuttles } from './shuttles';
+import { applyFeePayments, feeContact, unpaidBills } from './fee-payments';
 import { applyPointsPlan, defaultPointsMinutes } from './points-plan';
 import { applyPointsChoice } from './points-choice';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
@@ -31,7 +32,7 @@ const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'event', 'shuttleVote', 'pointsModeVote', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
@@ -71,6 +72,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if (await applyPointsPlan(s, a, action, input, now))
         return null;
     if (await applyShuttles(s, a, action, input, now))
+        return null;
+    if (await applyFeePayments(s, a, action, input, now))
         return null;
     if (await applySocial(s, a, action, input, now))
         return null;
@@ -592,6 +595,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请先确认费用分摊，再通知球友');
             if (latest.id !== p.settlementId)
                 fail('409: 分摊版本已更新，请刷新后再通知');
+            // "Remind unpaid": only bills not yet marked paid, and at most once every six hours per version.
+            if (!unpaidBills(s, latest).some(b => feeContact(s, b.playerId)))
+                fail('所有球友都已标记付款，无需提醒');
+            const lastReminder = s.audits.filter(x => x.action === 'notifyFees' && (x.changes as { settlementId?: string } | undefined)?.settlementId === latest.id).at(-1);
+            if (lastReminder && now - lastReminder.at < 6 * 3600000)
+                fail('6 小时内已提醒过，请稍后再提醒');
             break;
         }
         case 'settle': {

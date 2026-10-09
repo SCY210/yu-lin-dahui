@@ -44,7 +44,7 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     if(notice?.kind==='awards')relevant=relevant&&(event.status==='ended'||event.end<=Date.now());
     if(notice?.kind==='fees'){
      const latest=(await db.prepare('SELECT payload FROM settlements WHERE event_id=? ORDER BY version DESC').bind(event.id).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload)).find(b=>b.confirmed);
-     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id);
+     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id||(notice.proxyPlayerIds??[]).includes(b.playerId));
     }
     if(!player.enabled||account.playerId!==player.id||!relevant||(preference.success&&!preference.data[kind])||row.createdAt<Date.now()-86400000){state='cancelled'}
     else{
