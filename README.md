@@ -10,7 +10,7 @@ See [collaboration and checkout hygiene](docs/REPOSITORY_HYGIENE.md), [security]
 
 ## Current application flows
 
-Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, the realm rating (a long-term Elo-style score that sets the visible realm; grouping replays the same formula over doubles games only; reset only after three months without rated games), season points for the quarterly and annual boards (3 per win, 1 per loss, plus an upset bonus) and a singles leaderboard are available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
+Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, the realm rating (a long-term Elo-style score that sets the visible realm; grouping replays the same formula over doubles games only; reset only after three months without rated games), season points for the quarterly and annual boards (3 per win, minus 1 per loss, plus an upset bonus) and a singles leaderboard are available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
 
 ## Local setup
 

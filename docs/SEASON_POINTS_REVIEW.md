@@ -1,6 +1,6 @@
 # Season points review repairs
 
-The season-point policy remains win 3 / loss 1, with a 1 or 2 point upset bonus at pre-game team-rating gaps of 50 or 150. Singles and doubles remain separate in the visible boards. The long-term realm-rating policy and proposed 150-point realm bands are retained.
+The season-point policy is now win 3 / loss −1 (changed from loss +1 so that a 5–0 run is clearly ahead of a 2–4 run), with a 1 or 2 point upset bonus at pre-game team-rating gaps of 50 or 150. Singles and doubles remain separate in the visible boards. The long-term realm-rating policy and proposed 150-point realm bands are retained.
 
 Review regression tests exposed and repaired these integration cases:
 
