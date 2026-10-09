@@ -10,5 +10,6 @@ Review regression tests exposed and repaired these integration cases:
 - The deprecated monthly response field is retained for browser tabs opened before deployment. Current navigation still offers only quarterly/annual singles and doubles boards, and the compatibility rows retain normal privacy and guest filtering.
 - The original clean-install validation exposed a 409 from an authentication fixture using a raw pre-migration revision. The author's concurrent update marks that fixture as already migrated and is preserved. Separate SQLite coverage exercises genuine first-time migration, its revision increment and idempotence.
 - The merge preserves the latest home live-match cards and removal of the home quarterly preview.
+- The author's later owner-only realm-rating adjustment is exercised through real SQLite handlers: score-only grants do not add season points, retries apply once, forged owner flags fail, and injected audit-write failures roll back rating changes too. Current MVP-only ballots and compact mobile sections remain covered.
 
 Coverage includes failing-before/passing-after domain tests, actual SQLite maintenance and live-start handlers, and the existing whole-project verification suite. No production business data is used by tests.
