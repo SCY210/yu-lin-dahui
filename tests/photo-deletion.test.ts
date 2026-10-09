@@ -55,6 +55,13 @@ test('不能复用操作编号删除别的照片，也不能把原上传操作�
  await assert.rejects(()=>deleteStoredPhoto({userId:'uploader',photoId:'second',requestId,revision:8},p.store,now),/不匹配/);assert.ok(p.state().photos.some(p=>p.id==='second'));assert.deepEqual(p.objects,['media/private-photo']);
  const f=fixture(),q=persistence(f.s);await q.store.save(f.s,'uploader:'+requestId,f.s);await assert.rejects(()=>deleteStoredPhoto({userId:'uploader',photoId:'photo',requestId,revision:8},q.store,now),/不匹配/);assert.deepEqual(q.objects,[]);
 });
+test('malformed historical deletion audit cannot trigger storage cleanup',async()=>{
+ const {s}=fixture();s.audits.push({id:'invalid-audit',at:now,actor:'uploader',action:'photoDelete',reason:'fixture',changes:{requestId,photoId:'photo',storageKey:42}});
+ const p=persistence(s);await p.store.save(s,'uploader:'+requestId,s);
+ await assert.rejects(()=>deleteStoredPhoto({userId:'uploader',photoId:'photo',requestId,revision:8},p.store,now),/不匹配/);
+ assert.deepEqual(p.objects,[]);
+});
+
 test('未知成员、越权账号或已删除照片不能触发文件清理',async()=>{
  const {s}=fixture(),p=persistence(s);await assert.rejects(()=>deleteStoredPhoto({userId:'unknown',photoId:'photo',requestId,revision:7},p.store,now),/加入群组/);await assert.rejects(()=>deleteStoredPhoto({userId:'other',photoId:'photo',requestId,revision:7},p.store,now),/403/);await assert.rejects(()=>deleteStoredPhoto({userId:'uploader',photoId:'missing',requestId,revision:7},p.store,now),/不存在/);assert.deepEqual(p.objects,[]);assert.equal(p.saves(),0);
 });

@@ -4,14 +4,20 @@ import type {State} from './domain/types';
 
 export type DeletePhotoInput={userId:string;photoId:string;requestId:string;revision:number};
 export type DeletePhotoStore={load:()=>Promise<State>;committed:(key:string)=>Promise<boolean>;save:(state:State,key:string,previous:State)=>Promise<void>;deleteObject:(key:string)=>Promise<void>};
+function deletionRecord(value:unknown){
+ if(!value||typeof value!=='object'||Array.isArray(value))return;
+ const fields=value as Record<string,unknown>;
+ if(typeof fields.requestId!=='string'||typeof fields.photoId!=='string'||typeof fields.storageKey!=='string'||!fields.storageKey)return;
+ return {requestId:fields.requestId,photoId:fields.photoId,storageKey:fields.storageKey};
+}
 
 export async function deleteStoredPhoto(input:DeletePhotoInput,store:DeletePhotoStore,now=Date.now()){
  const s=await store.load(),a=s.accounts.find(a=>a.id===input.userId);
  if(!a)throw new RequestError('请先加入群组',403);
  const key=a.id+':'+input.requestId;let storageKey:string;
  if(await store.committed(key)){
-  const audit=s.audits.find(audit=>audit.actor===a.id&&audit.action==='photoDelete'&&(audit.changes as any)?.requestId===input.requestId);
-  const changes=audit?.changes as {photoId?:string;storageKey?:string}|undefined;
+  const audit=s.audits.find(audit=>audit.actor===a.id&&audit.action==='photoDelete'&&deletionRecord(audit.changes)?.requestId===input.requestId);
+  const changes=deletionRecord(audit?.changes);
   if(changes?.photoId!==input.photoId||!changes.storageKey)throw new RequestError('操作记录不匹配，请重新删除',409);
   storageKey=changes.storageKey;
  }else{

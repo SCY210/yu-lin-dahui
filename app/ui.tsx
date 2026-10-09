@@ -19,7 +19,7 @@ export function Forms({form,setForm,busy,action,danger,setDanger}:any){
   if(current.action!=='event')return {...current,values:{...current.values,...values}};
   let activityStart=current.activityStart??current.values.start;
   const next=shiftActivityTimes(current.values,values,activityStart);
-  try{madridEpoch(next.start);activityStart=next.start}catch{/* Keep the last valid start while the date is cleared. */}
+  try{if(typeof next.start==='string'){madridEpoch(next.start);activityStart=next.start}}catch{/* Keep the last valid start while the date is cleared. */}
   return {...current,values:next,activityStart};
  });
  const renderField=(f:Field)=><label key={f.key}>

@@ -25,17 +25,18 @@ export function plannedDateChange(value:string,date:string){
 
 // Creation follows the selected start while preserving the duration and each
 // chosen cutoff's distance from it. Invalid intermediate date edits stay editable.
-export function shiftActivityTimes(values:Record<string,any>,updates:Record<string,unknown>,lastValidStart?:string){
- const next={...values,...updates};
- if(typeof updates.start!=='string'||updates.start===values.start)return next;
+export function shiftActivityTimes<T extends Record<string,unknown>,U extends Record<string,unknown>>(values:T,updates:U,lastValidStart?:string):Omit<T,keyof U>&U{
+ const next:Record<string,unknown>={...values,...updates};
+ const result=()=>next as Omit<T,keyof U>&U;
+ if(typeof updates.start!=='string'||updates.start===values.start)return result();
  let previousStart:number,newStart:number;
- try{newStart=madridEpoch(updates.start)}catch{return next}
- try{previousStart=madridEpoch(values.start)}catch{
-  try{previousStart=madridEpoch(lastValidStart??'')}catch{return next}
+ try{newStart=madridEpoch(updates.start)}catch{return result()}
+ try{if(typeof values.start!=='string')throw new Error('时间无效');previousStart=madridEpoch(values.start)}catch{
+  try{previousStart=madridEpoch(lastValidStart??'')}catch{return result()}
  }
  for(const key of ['end','signupDeadline','cancelDeadline']){
   if(key in updates)continue;
-  try{next[key]=madridDateTime(madridEpoch(values[key])+newStart-previousStart)}catch{/* Preserve incomplete input. */}
+  try{const value=values[key];if(typeof value!=='string')continue;next[key]=madridDateTime(madridEpoch(value)+newStart-previousStart)}catch{/* Preserve incomplete input. */}
  }
- return next;
+ return result();
 }
