@@ -3,9 +3,11 @@ import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
 
 /** 段位分 (FIDE-style Elo): everyone starts at 1000 and each rated game moves it. */
-export const realmPolicy={start:1000,k:16,provisionalK:32,provisionalGames:20,placementGames:10,demotionBuffer:15,band:100,doubles:'individual'} as const;
-/** individual: each player's own score against the opponents' average (the club's choice).
- * team: both partners share the expectation of their team average. */
+export const realmPolicy={start:1000,k:16,provisionalK:32,provisionalGames:20,placementGames:10,demotionBuffer:15,band:100,doubles:'team'} as const;
+/** team (the club's choice): both partners share the expectation of their team average against the
+ * opponents' average, so all four scores enter through the two averages; each partner keeps their own K.
+ * individual: each player's own score against the opponents' average. Kept only for comparison:
+ * under balanced grouping it pulls everyone towards the club mean (see docs/REALM_PROGRESSION.md). */
 export type DoublesExpectation='individual'|'team';
 /** Promotion happens at the minimum; a held realm is only lost below minimum − demotionBuffer. */
 export const realms=[
@@ -54,9 +56,9 @@ export function isRatedMatch(m:Match,now=Date.now()){
 export type RatedGame={matchId:string;eventId:string;gameIndex:number;playerId:string;side:'a'|'b';won:boolean;before:number;after:number;delta:number;k:number;expected:number;opponent:number;start:number;end:number;margin:number;settled:boolean};
 type Row={score:number;games:number;wins:number;losses:number;held:number};
 type Rated={score:number;games:number};
-/** One game, all changes computed from the scores before it. Each player compares their
- * own score (or, in team mode, their team's average) with the opponents' average and uses
- * their own K. Singles is the standard one-to-one case of the same formula. */
+/** One game, all changes computed from the scores before it. Each player's expectation compares
+ * their team's average (or, in individual mode, their own score) with the opponents' average; each
+ * player uses their own K. Singles is the standard one-to-one case of the same formula. */
 export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesExpectation=realmPolicy.doubles){
  const average=(team:Rated[])=>team.reduce((n,p)=>n+p.score,0)/team.length,avg={a:average(a),b:average(b)};
  const team=(players:Rated[],side:'a'|'b')=>players.map(p=>{const opponent=avg[side==='a'?'b':'a'],k=kFactor(p.games),expected=expectedScore(doubles==='team'?avg[side]:p.score,opponent);return {delta:roundDelta(k*((winner===side?1:0)-expected)),k,expected,opponent}});

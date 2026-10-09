@@ -14,14 +14,22 @@ const rated=(score:number,games:number=realmPolicy.provisionalGames)=>({score,ga
 const deltas=(c:ReturnType<typeof gameChanges>)=>({a:c.a.map(x=>x.delta),b:c.b.map(x=>x.delta)});
 const score=(s:State,id:string,at=now)=>realmSnapshot(s,at).get(id)!;
 
-test('双打按个人计算：自己的分对比对方平均分，示例 1200+900 对 1050+1050',()=>{
+test('双打按队伍平均计算：两队平均分决定预期，同队两人加减相同，示例 1200+900 对 1050+1050',()=>{
+ assert.equal(realmPolicy.doubles,'team');
  const a=[rated(1200),rated(900)],b=[rated(1050),rated(1050)];
- assert.deepEqual(deltas(gameChanges(a,b,'a')),{a:[5,11],b:[-8,-8]});
- assert.deepEqual(deltas(gameChanges(a,b,'b')),{a:[-11,-5],b:[8,8]});
- assert.equal(gameChanges(a,b,'a').a[0].opponent,1050);assert.equal(gameChanges(a,b,'a').b[0].opponent,1050);
- assert.match(doublesExample(),/1200 分 \+5、900 分 \+11，B 队两人各 −8；A 队输，1200 分 −11、900 分 −5，B 队两人各 \+8/);
- // The team-average variant gives both partners the team's change.
- assert.deepEqual(deltas(gameChanges(a,b,'a','team')),{a:[8,8],b:[-8,-8]});
+ assert.deepEqual(deltas(gameChanges(a,b,'a')),{a:[8,8],b:[-8,-8]});
+ assert.deepEqual(deltas(gameChanges(a,b,'b')),{a:[-8,-8],b:[8,8]});
+ assert.equal(gameChanges(a,b,'a').a[0].opponent,1050);assert.ok(gameChanges(a,b,'a').a.every(x=>x.expected===.5));
+ // Every score enters through the averages: a stronger partner raises the team's expectation for both.
+ assert.deepEqual(deltas(gameChanges([rated(1300),rated(900)],b,'a')),{a:[7,7],b:[-7,-7]});
+ assert.deepEqual(deltas(gameChanges([rated(1300),rated(900)],b,'b')),{a:[-9,-9],b:[9,9]});
+ // Each partner keeps their own K: a provisional partner moves twice as much.
+ assert.deepEqual(deltas(gameChanges([rated(1000,3),rated(1000)],[rated(1000),rated(1000)],'a')),{a:[16,8],b:[-8,-8]});
+ assert.ok(doublesExample().includes('A 队赢，A 队两人各 +8，B 队两人各 −8；A 队输，A 队两人各 −8，B 队两人各 +8'));
+ assert.equal(getFeatureGuide('rating').example?.title,'双打队伍平均示例');
+ // The individual comparison mode is kept in code and still gives its own numbers.
+ assert.deepEqual(deltas(gameChanges(a,b,'a','individual')),{a:[5,11],b:[-8,-8]});
+ assert.deepEqual(deltas(gameChanges(a,b,'b','individual')),{a:[-11,-5],b:[8,8]});
 });
 
 test('单打为标准一对一 Elo，换算表与说明一致',()=>{
