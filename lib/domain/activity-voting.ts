@@ -2,7 +2,7 @@ import {canManageEvent} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import type {Account,Event,State} from './types';
 
-type VotingState=Pick<State,'players'|'registrations'|'attendance'>&Partial<Pick<State,'matches'>>;
+type VotingState={players:Pick<State['players'][number],'id'|'enabled'>[];registrations:State['registrations'];attendance:State['attendance'];matches?:State['matches']};
 
 /** Formal participation and past attendance preserve eligibility after play. */
 export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):string[]{
