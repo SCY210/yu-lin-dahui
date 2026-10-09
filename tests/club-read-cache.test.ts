@@ -86,3 +86,12 @@ test('a clock boundary changes the returned activity status without a write or r
  assert.equal(projectClubState(s,a,'2026-10',2026,e.end).events[0].status,'ended');
  assert.equal(s.events[0].status,'open');assert.equal(s.revision,4);
 });
+
+test('weak and list GET validators reuse an account-scoped entry with one canonical ETag',()=>{
+ const {version,identity}=fixture(),cache=createClubReadCache(),token=cache.remember(version,identity,'2026-10',2026,now+60000,now)!;
+ for(const header of ['W/'+token,'  W/'+token+'  ','"unrelated", W/'+token,token+', "unrelated"']){assert.equal(cache.match(header,version,identity,'2026-10',2026,now+1),token);assert.equal(cache.matches(header,version,identity,'2026-10',2026,now+1),true)}
+ for(const header of ['*','w/'+token,'invalid'+token,'"invented"','x'.repeat(8193)])assert.equal(cache.match(header,version,identity,'2026-10',2026,now+1),null);
+ assert.equal(cache.matches('W/'+token,version,{...identity,userId:'another-user'},'2026-10',2026,now+1),false);
+ assert.equal(cache.matches('W/'+token,{...version,revision:version.revision+1},identity,'2026-10',2026,now+1),false);
+ assert.equal(cache.matches('W/'+token,version,identity,'2026-10',2026,now+60000),false);
+});

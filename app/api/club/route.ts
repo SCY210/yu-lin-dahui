@@ -34,8 +34,9 @@ export async function GET(req: Request) {
         // Authentication precedes every conditional read. Exports always get fresh full data.
         if (url.searchParams.get('export') !== '1' && req.headers.has('If-None-Match')) {
             const version = await clubReadVersion(user.userId);
-            if (readCache.matches(req.headers.get('If-None-Match'), version, identity, period, year, Date.now())) {
-                return new Response(null, { status: 304, headers: { 'Cache-Control': 'no-store', 'ETag': req.headers.get('If-None-Match')! } });
+            const matched=readCache.match(req.headers.get('If-None-Match'), version, identity, period, year, Date.now());
+            if (matched) {
+                return new Response(null, { status: 304, headers: { 'Cache-Control': 'no-store', 'ETag': matched } });
             }
         }
         const s = await loadClubState();

@@ -30,6 +30,8 @@ const read=(path='/api/club?month=2026-10&year=2026',etag=null)=>GET(new Request
 try{
  const initial=await read();assert.equal(initial.status,200);const token=initial.headers.get('ETag');assert.ok(token);assert.equal((await initial.json()).me.role,'admin');assert.equal(fixture.loads,1);
  const unchanged=await read(undefined,token);assert.equal(unchanged.status,304);assert.equal(await unchanged.text(),'');assert.equal(fixture.loads,1);assert.equal(fixture.metadata,1);assert.equal(unchanged.headers.get('Cache-Control'),'no-store');
+ const weak=await read(undefined,'W/'+token);assert.equal(weak.status,304);assert.equal(weak.headers.get('ETag'),token);assert.equal(fixture.loads,1);
+ const list=await read(undefined,'\"unrelated\", W/'+token);assert.equal(list.status,304);assert.equal(list.headers.get('ETag'),token);assert.equal(fixture.loads,1);
  const changedMonth=await read('/api/club?month=2026-09&year=2026',token);assert.equal(changedMonth.status,200);assert.equal((await changedMonth.json()).period,'2026-09');
  state.revision++;const changed=await read(undefined,token);assert.equal(changed.status,200);assert.equal((await changed.json()).revision,11);
  state.settings.name='Fixture View';state.settings.blockedWords=['Fixture'];state.revision++;

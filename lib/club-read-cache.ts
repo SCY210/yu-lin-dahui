@@ -14,14 +14,23 @@ const scope=(version:ClubReadVersion,identity:ClubReadIdentity,period:string,yea
  * A different Worker / a cold start is a harmless miss and reads a full snapshot. */
 export function createClubReadCache(limit=256){
  const entries=new Map<string,{scope:string;expires:number}>();
+ const match=(header:string|null,version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,now:number):string|null=>{
+  if(!header||header.length>8192||!version.settings.initialized||!version.account)return null;
+  const expected=scope(version,identity,period,year);
+  // GET validators use weak comparison. Proxies may weaken ETags after compression.
+  for(const candidate of header.split(',')){
+   const value=candidate.trim();
+   if(!/^(?:W\/)?"club-[0-9a-f-]{36}"$/.test(value))continue;
+   const token=value.startsWith('W/')?value.slice(2):value,entry=entries.get(token);
+   if(!entry)continue;
+   if(now>=entry.expires){entries.delete(token);continue}
+   if(entry.scope===expected)return token;
+  }
+  return null;
+ };
  return {
-  matches(token:string|null,version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,now:number){
-   if(!token||!version.settings.initialized||!version.account)return false;
-   const entry=entries.get(token);
-   if(!entry)return false;
-   if(now>=entry.expires){entries.delete(token);return false}
-   return entry.scope===scope(version,identity,period,year);
-  },
+  match,
+  matches(...args:Parameters<typeof match>){return match(...args)!==null},
   remember(version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,expires:number,now:number){
    if(expires<=now)return null;
    for(const [key,value] of entries)if(value.expires<=now)entries.delete(key);

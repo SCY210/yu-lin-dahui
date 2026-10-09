@@ -2,16 +2,19 @@ import {enableAllRanked} from './domain/all-ranked';
 import {enableEloRealms} from './domain/realm-rating';
 import {enableSignedRanking} from './domain/signed-ranking';
 import {fail,month} from './domain/types';
-import {load,save} from './store';
+import {load,save,raw} from './store';
 import {enableDefaultAttendance} from './domain/attendance';
 import {ensureClubOwner,clubOwnerId} from './domain/ownership';
-import {runRequestedEventDateRepair} from './requested-event-date-repair';
-import {runRequestedThursdaySplit} from './requested-thursday-split';
+import {runRequestedEventDateRepair,requestedEventDateRepair} from './requested-event-date-repair';
+import {runRequestedThursdaySplit,requestedThursdaySplit} from './requested-thursday-split';
 
 /** Upgrade current activities once; completed historical attendance stays intact. */
 export async function loadClubState(){
- await runRequestedEventDateRepair();
- await runRequestedThursdaySplit();
+ const keys=[requestedEventDateRepair.key,requestedThursdaySplit.key];
+ const done=new Set((await raw().prepare('SELECT key FROM commits WHERE key IN (?,?)').bind(...keys).all<{key:string}>()).results.map(row=>row.key));
+ // Keep pending jobs ordered; completed jobs share one indexed lookup.
+ if(!done.has(requestedEventDateRepair.key))await runRequestedEventDateRepair();
+ if(!done.has(requestedThursdaySplit.key))await runRequestedThursdaySplit();
  for(let attempt=0;attempt<4;attempt++){
   const state=await load(),previous=structuredClone(state),now=Date.now();
   const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now),realmMigration=enableEloRealms(state,now);
