@@ -28,5 +28,8 @@ try{
  const origin='https://club.example',read=await api.GET(new Request(origin+'/api/club?month='+api.month(at)+'&year='+new Date(at).getUTCFullYear()));assert.equal(read.status,200);const view=await read.json();assert.ok(Array.isArray(view.leaderboard));assert.ok(view.players.every(p=>p.rating===1000));assert.equal(view.quarterlyLeaderboard.find(p=>p.playerId==='p0').points,3);
  const response=await api.POST(new Request(origin+'/api/club',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({action:'liveStart',payload:{eventId:current.id},revision:fresh.revision,requestId:crypto.randomUUID()})}));assert.equal(response.status,200,await response.clone().text());
  const playing=(await api.loadClubState()).matches.find(m=>m.eventId===current.id);assert.equal(playing.status,'playing');assert.equal(playing.a.length,2);assert.equal(playing.b.length,2);
+ const beforeMigration=await api.load(),unmigrated=structuredClone(beforeMigration);delete unmigrated.settings.strengthVersion;await api.save(unmigrated,'fixture-missing-marker',beforeMigration);
+ const rawBefore=await api.load(),migrated=await api.loadClubState();assert.equal(migrated.revision,rawBefore.revision+1);assert.equal(migrated.audits.filter(a=>a.action==='mergeStrengthRating').length,1);
+ assert.equal((await api.loadClubState()).revision,migrated.revision);assert.deepEqual(migrated.matches,rawBefore.matches,'Migration must retain both historical and currently playing games');
  console.log('PASS season review API: migrated long-break strength catches up before live grouping, reads preserve revision/history, season points survive and legacy tabs remain compatible');
 }finally{database.sql.close();delete globalThis.__seasonReview}

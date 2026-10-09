@@ -8,7 +8,7 @@ Review regression tests exposed and repaired these integration cases:
 - Already migrated grouping strength is refreshed in memory on every authoritative load. The first rollout alone records its marker and audit; clock-driven inactivity catch-up does not create a new revision or erase historical matches, season points or manual adjustments.
 - Conditional-read validators expire before inactivity deadlines, so an unchanged database revision cannot retain stale realm/placement data across that boundary.
 - The deprecated monthly response field is retained for browser tabs opened before deployment. Current navigation still offers only quarterly/annual singles and doubles boards, and the compatibility rows retain normal privacy and guest filtering.
-- The authentication integration fixture completes the genuine one-time strength migration before using an optimistic revision. The original clean-install validation exposed a 409 from using the raw pre-migration revision.
+- The original clean-install validation exposed a 409 from an authentication fixture using a raw pre-migration revision. The author's concurrent update marks that fixture as already migrated and is preserved. Separate SQLite coverage exercises genuine first-time migration, its revision increment and idempotence.
 - The merge preserves the latest home live-match cards and removal of the home quarterly preview.
 
 Coverage includes failing-before/passing-after domain tests, actual SQLite maintenance and live-start handlers, and the existing whole-project verification suite. No production business data is used by tests.
