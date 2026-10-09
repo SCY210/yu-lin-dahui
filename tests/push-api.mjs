@@ -105,5 +105,25 @@ try{
  console.log('PASS deleted activity reminder privacy: existing unregistered recipient inbox, zero timestamp, filtering before limit and unread count, pending change-push cancellation and restoration');
  const beforeMigration=await api.load(),oldRatings=beforeMigration.players.map(p=>p.rating);const migrated=await api.loadClubState();assert.equal(migrated.settings.rules.win,3,'old point values stay stored');assert.equal(migrated.settings.rules.loss,-3);assert.equal(migrated.settings.realmVersion,'elo-v1');assert.equal(migrated.settings.progressionVersion,undefined);assert.deepEqual(migrated.players.map(p=>p.rating),oldRatings);assert.equal(migrated.audits.filter(a=>a.action==='enableEloRealms').length,1);const realmAudit=migrated.audits.find(a=>a.action==='enableEloRealms');assert.equal(realmAudit.changes.version,'elo-v1');assert.equal(realmAudit.changes.players.length,migrated.players.length);assert.ok(realmAudit.changes.players.every(p=>Number.isInteger(p.score)));
  const firstRevision=migrated.revision;const again=await api.loadClubState();assert.equal(again.revision,firstRevision);assert.equal(again.audits.filter(a=>a.action==='enableEloRealms').length,1);console.log('PASS elo realm rollout: real SQLite persistence, preserved hidden Elo and stored rules, audit snapshot of recomputed 修为, idempotent maintenance');
+ // Payment writes bind to the shown version; delayed proxy reminders recheck paid status and contacts.
+ const dueBefore=await api.load(),due=structuredClone(dueBefore);
+ const dueEvent={...feeEvent,id:'delayed-fees'};due.events.push(dueEvent);
+ for(const [id,name] of [['proxy-one','Paid Friend'],['proxy-two','Unpaid Friend']])due.players.push({...due.players.find(p=>p.id==='pa'),id,name,ownerId:'a'});
+ const dueBill={...due.settlements.find(b=>b.id==='fee-v1'),id:'delayed-v1',eventId:dueEvent.id,bills:['pa','proxy-one','proxy-two'].map(playerId=>({playerId,court:600,ball:0,other:0,total:600,minutes:60}))};due.settlements.push(dueBill);
+ await api.save(due,'delayed-base',dueBefore);
+ const queueDue=async key=>{const prev=await api.load(),next=structuredClone(prev);next.audits.push({id:key,at:Date.now(),actor:'a',action:'notifyFees',reason:'Fixture',changes:{eventId:dueEvent.id,settlementId:dueBill.id}});await api.save(next,key,prev,api.clubReminderStatements(next,prev,'a',key,'notifyFees'))};
+ const pay=async(actor,playerId,settlementId='delayed-v1')=>{user(actor);const current=await api.loadClubState();return api.clubPost(new Request('https://club.example/api/club',{method:'POST',headers:{origin:'https://club.example','content-type':'application/json'},body:JSON.stringify({action:'feePaid',payload:{eventId:dueEvent.id,settlementId,playerId,paid:true},requestId:crypto.randomUUID(),actor,revision:current.revision})}))};
+ assert.equal((await pay('d','proxy-one')).status,403);
+ assert.equal((await pay('a','pa','old-version')).status,409);
+ await queueDue('delayed-partial');assert.equal((await pay('a','pa')).status,200);assert.equal((await pay('a','proxy-one')).status,200);
+ captures=[];await api.flushPushOutbox(fixture.env);assert.equal(captures.length,5);
+ for(const capture of captures){const message=await decrypt(capture.request);assert.match(message.body,/Unpaid Friend/);assert.doesNotMatch(message.body,/Paid Friend|你自己/)}
+ await queueDue('delayed-fully-paid');assert.equal((await pay('a','proxy-two')).status,200);captures=[];await api.flushPushOutbox(fixture.env);assert.equal(captures.length,0);
+ assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM push_deliveries WHERE job_id LIKE 'fees-due:delayed-fees:%:delayed-fully-paid:%' AND state='cancelled'").get().n,5);
+ // A friend obtaining their own account must no longer have an old proxy reminder forwarded.
+ const reboundBefore=await api.load(),rebound=structuredClone(reboundBefore);rebound.payments=rebound.payments.filter(p=>p.eventId!==dueEvent.id);await api.save(rebound,'delayed-reset',reboundBefore);await queueDue('delayed-contact');
+ const bindBefore=await api.load(),bound=structuredClone(bindBefore);bound.accounts.push({id:'proxy-login',email:'',role:'member',playerId:'proxy-two'});bound.payments.push(...['pa','proxy-one'].map(playerId=>({id:'fixture-paid:'+playerId,eventId:dueEvent.id,playerId,cents:600,method:'fixture',at:Date.now(),reason:'Fixture',actor:'a'})));await api.save(bound,'delayed-bind',bindBefore);
+ captures=[];await api.flushPushOutbox(fixture.env);assert.equal(captures.length,0,'rebinding cancels an obsolete proxy notice');
+ console.log('PASS fee payment API: authorization, stale-version refusal, delayed paid cancellation, partial proxy notice refresh and changed proxy contact');
  console.log('PASS Web Push: authenticated opt-in, device ownership/limits, CSRF/SSRF, real aes128gcm decryption and VAPID signature, atomic recipient snapshot/rollback, concurrent claims, no reopening duplicates, disabled members and expired-device cleanup');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__pushTest}

@@ -7,7 +7,7 @@ import {fail,type Account,type Bill,type Settlement,type State} from './types';
 /** Payments a player reports themselves; older stored payments (other methods) still count towards paid. */
 export const selfReportedPayment='self-report';
 const pid=z.string().min(1).max(100);
-const schemas={feePaid:z.object({eventId:pid,playerId:pid,paid:z.boolean(),reason:editReason})};
+const schemas={feePaid:z.object({eventId:pid,settlementId:pid,playerId:pid,paid:z.boolean(),reason:editReason})};
 
 export function latestConfirmedSettlement(s:Pick<State,'settlements'>,eventId:string):Settlement|undefined{
  return s.settlements.filter(x=>x.eventId===eventId&&x.confirmed).sort((a,b)=>b.version-a.version)[0];
@@ -37,6 +37,7 @@ export async function applyFeePayments(s:State,a:Account,action:string,input:unk
  const p=command.payload;
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  const latest=latestConfirmedSettlement(s,e.id)??fail('费用分摊尚未确认');
+ if(p.settlementId!==latest.id)fail('409: 分摊版本已更新，请刷新后再标记付款');
  const bill=latest.bills.find(b=>b.playerId===p.playerId)??fail('该球友不在已确认的分摊中');
  if(a.playerId!==p.playerId&&feeContact(s,p.playerId)?.accountId!==a.id&&!canManageEvent(a,e))fail('403: 只能标记自己或自己代报名朋友的付款');
  const id=`self:${e.id}:${p.playerId}`;
