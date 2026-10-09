@@ -1,6 +1,7 @@
 import type {Match,State} from './types';
 import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
+import {ratingAdjustments,type RatingAdjustment} from './point-grants';
 
 /** 段位分 (FIDE-style Elo): everyone starts at 1000 and each rated game moves it. */
 export const realmPolicy={start:1000,k:16,provisionalK:32,provisionalGames:20,placementGames:10,demotionBuffer:30,band:150,inactivityMonths:3,doubles:'team'} as const;
@@ -77,15 +78,19 @@ export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesEx
 }
 /** Deterministic replay of the given matches: match end time, match id, then game order.
  * A player whose previous rated game ended `inactivityMonths` before a match starts (or before `now`) restarts
- * at the start score with placement and the novice K again; otherwise the score never resets. */
-export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number){
+ * at the start score with placement and the novice K again; otherwise the score never resets.
+ * adjustments: the owner's 段位分 grants, applied at their time (realm settles at once; they never count as games). */
+export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[]){
  const fresh=():Row=>({score:realmPolicy.start,games:0,wins:0,losses:0,held:rawRealmIndex(realmPolicy.start),last:null});
  const rows=new Map<string,Row>(s.players.map(p=>[p.id,fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
  const ordered=[...s.matches].sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id)).filter(m=>{if(seen.has(m.id)||!include(m))return false;if(![...m.a,...m.b].every(id=>rows.has(id)))return false;seen.add(m.id);return true});
  // Realms settle once per activity: the last included match of an activity is its checkpoint.
  const last=new Map<string,number>();ordered.forEach((m,i)=>last.set(m.eventId,i));
  const participants=new Map<string,Set<string>>();
+ let nextAdjustment=0;
+ const adjust=(until:number)=>{for(;nextAdjustment<adjustments.length&&adjustments[nextAdjustment].at<until;nextAdjustment++){const g=adjustments[nextAdjustment],row=rows.get(g.playerId);if(!row)continue;if(row.last!==null&&inactiveAt(row.last,g.at))Object.assign(row,fresh());row.score+=g.delta;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}};
  ordered.forEach((m,i)=>{
+  adjust(m.end!);
   const ids=participants.get(m.eventId)??new Set<string>();for(const id of [...m.a,...m.b])ids.add(id);participants.set(m.eventId,ids);
   const restarted=new Set<string>();
   for(const id of [...m.a,...m.b]){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){Object.assign(row,fresh());restarted.add(id)}}
@@ -98,14 +103,16 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:M
   for(const id of [...m.a,...m.b])rows.get(id)!.last=m.end!;
   if(last.get(m.eventId)===i)for(const id of participants.get(m.eventId)!){const row=rows.get(id)!;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}
  });
+ adjust(now===undefined?Infinity:now+1);
  if(now!==undefined)for(const row of rows.values())if(row.last!==null&&inactiveAt(row.last,now))Object.assign(row,fresh());
  return {rows,games};
 }
 export type RealmSnapshot=ReturnType<typeof realmProgress>&{ratedGames:number;wins:number;losses:number;placement:boolean;pendingGames:number;pendingChange:number};
 /** Visible realm and 段位分 include only activities that have concluded; running ones show as pending. */
-export function realmLedger(s:Pick<State,'players'|'matches'|'events'>,now=Date.now()){
+export function realmLedger(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,now=Date.now()){
+ const adjustments=ratingAdjustments(s);
  const settled=settledMatchFilter(s,now),rated=(m:Match)=>isRatedMatch(m,now);
- const done=replayRealmScores(s,m=>rated(m)&&settled(m),()=>true,realmPolicy.doubles,now),live=replayRealmScores(s,rated,settled,realmPolicy.doubles,now),byPlayer=new Map<string,RatedGame[]>();
+ const done=replayRealmScores(s,m=>rated(m)&&settled(m),()=>true,realmPolicy.doubles,now,adjustments),live=replayRealmScores(s,rated,settled,realmPolicy.doubles,now,adjustments),byPlayer=new Map<string,RatedGame[]>();
  for(const g of live.games){const list=byPlayer.get(g.playerId);if(list)list.push(g);else byPlayer.set(g.playerId,[g])}
  const snapshot=new Map(s.players.map(p=>{const row=done.rows.get(p.id)!,liveRow=live.rows.get(p.id)!,pendingGames=(byPlayer.get(p.id)??[]).filter(g=>!g.settled).length;
   return [p.id,{...realmProgress(row.score,row.held),ratedGames:row.games,wins:row.wins,losses:row.losses,placement:row.games<realmPolicy.placementGames,pendingGames,pendingChange:pendingGames?liveRow.score-row.score:0} satisfies RealmSnapshot]}));
@@ -124,8 +131,8 @@ export function visibleRealm(r:RealmSnapshot):VisibleRealm{
  if(!r.placement)return {...r,placement:false,placementGames};
  return {placement:true,ratedGames:r.ratedGames,placementGames,score:r.score,wins:r.wins,losses:r.losses,pendingGames:r.pendingGames,pendingChange:r.pendingChange,realm:null,stage:null};
 }
-export function realmSnapshot(s:Pick<State,'players'|'matches'|'events'>,now=Date.now()){return realmLedger(s,now).snapshot}
-export function playerRealm(s:Pick<State,'players'|'matches'|'events'>,id:string,now=Date.now()){return realmSnapshot(s,now).get(id)!}
+export function realmSnapshot(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,now=Date.now()){return realmLedger(s,now).snapshot}
+export function playerRealm(s:Pick<State,'players'|'matches'|'events'>&Partial<Pick<State,'audits'>>,id:string,now=Date.now()){return realmSnapshot(s,now).get(id)!}
 
 /** One-time switch from cumulative 修为 to 段位分. Scores are derived from match
  * history on every read, so the marker only records the switch and its audit. */
