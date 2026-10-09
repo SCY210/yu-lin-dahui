@@ -1,7 +1,8 @@
 export type Account={id:string;email:string;role:'admin'|'member';playerId:string};
 import type {ProfileGender} from '../player-profile-options';
-/** cultivationBase: legacy 修为 offset from weekly-v2; kept readable, no longer used. */
-export type Player={cultivationBase?:number;id:string;name:string;ownerId:string;initialRating:number;rating:number;ratedGames:number;enabled:boolean;ratingReason:string;avatarId?:string;profile?:{gender?:ProfileGender;years:number;hand:'right'|'left'|'both';preference:'doubles'|'singles'|'mixed'|'all';style:string;equipment:string;level:'beginner'|'intermediate'|'advanced';racket?:string;strings?:string;tension?:string;tensionMin?:number|null;tensionMax?:number|null;grip?:string;shoes?:string;motto?:string}};
+/** cultivationBase: legacy weekly-v2 offset, retained but no longer used. */
+export type Player={cultivationBase?:number;id:string;name:string;ownerId:string;initialRating:number;rating:number;ratedGames:number;enabled:boolean;ratingReason:string;avatarId?:string;profile?:{gender?:ProfileGender;years:number;hand:'right'|'left'|'both';preference:'doubles'|'singles'|'mixed'|'all';style:string;equipment:string;racket?:string;strings?:string;tension?:string;tensionMin?:number|null;tensionMax?:number|null;grip?:string;shoes?:string;motto?:string}};
+
 export type ShuttleOption={id:string;name:string;note:string};
 export type ShuttleVote={id:string;voterId:string;playerId:string;optionId:string;at:number};
 export type ShuttlePlan={options:ShuttleOption[];votes:ShuttleVote[];votingOpen:boolean;selectedId?:string};

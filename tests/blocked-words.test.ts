@@ -5,7 +5,7 @@ import {emptyState} from '../lib/domain/types';
 import {apply} from '../lib/domain/commands';
 import {projectClubState} from '../lib/club-view';
 
-function fixture(){const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';for(const [id,role]of [['owner','admin'],['admin','admin'],['member','member']] as const){s.accounts.push({id,role,playerId:id+'-player',email:''});s.players.push({id:id+'-player',ownerId:id,name:id==='member'?'坏词·球友':id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',profile:{years:1,hand:'right',preference:'doubles',style:'BAD·打法',motto:'不要 坏词',equipment:'坏词 装备',level:'beginner'}})}return s}
+function fixture(){const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';for(const [id,role]of [['owner','admin'],['admin','admin'],['member','member']] as const){s.accounts.push({id,role,playerId:id+'-player',email:''});s.players.push({id:id+'-player',ownerId:id,name:id==='member'?'坏词·球友':id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',profile:{years:1,hand:'right',preference:'doubles',style:'BAD·打法',motto:'不要 坏词',equipment:'坏词 装备'}})}return s}
 test('完整词条按大小写无关匹配，不屏蔽更长词中的部分字符',()=>{
  assert.equal(blockedWordMasker(['坏词','bad'])('坏词 BaD badmintON'),'** *** badmintON');
  assert.equal(blockedWordMasker(['abc','bcd'])('abcd abc bcd'),'abcd *** ***');

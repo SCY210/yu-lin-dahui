@@ -1,32 +1,31 @@
-# 单打排行榜
+# Singles leaderboard
 
-排名页在“季度榜 / 年度榜”切换下方新增“综合榜 / 单打榜”切换，两个切换可以自由组合，季度或年份选择器、详细数据、积分说明和领奖台对两种榜单通用。手机宽度下榜单类型切换占满一行，两段等宽；经典和武侠主题沿用周期切换的样式。查看球员档案后返回，会恢复季度/年度和综合/单打选择；旧的历史记录默认回到综合榜。
+The ranking page adds a Combined / Singles selector below the Quarterly / Annual selector. Both selections work together with the period picker, detailed statistics, points explanation and podium. On mobile the format selector takes a full row with equal-width buttons and follows the active theme. Returning from a player profile restores period and format; legacy history markers default to Combined.
 
-## 哪些比赛算单打
+## Eligible matches
 
-- 单打是每方恰好 1 名、且双方不是同一人的比赛（`isSinglesMatch`：`a.length===1&&b.length===1`）。比赛数据结构不变，没有新增字段。
-- 目前网站无法创建单打：自动排场、预排积分赛、固定搭档和分组校验都按每片场 4 人、每方 2 人生成和校验（`propose` / `validateRound` / 积分赛预排 / 固定搭档）。因此现有数据中没有单打，单打榜显示空状态并说明“网站排场目前只安排双打”。本次没有新增单打建赛流程；以后加入单打比赛后，榜单会自动显示。
+Singles requires exactly one distinct player per side (`isSinglesMatch`: one ID in each side, with different IDs). No match fields are added.
 
-## 计算口径
+The current match creation flows still generate doubles: live courts, scheduled points matches, fixed partners and grouping validation all use four players and two per side. This change does not add singles match creation. When no singles records exist, the singles board is empty and explains that the website currently arranges doubles. Future recorded singles matches appear automatically.
 
-- 与综合榜使用同一套计算：积分是所选周期内单打计分小局的段位分变化之和（单打与双打共用一个段位分，见 [REALM_PROGRESSION.md](REALM_PROGRESSION.md)）；按马德里时间的实际开赛月份归属；三局两胜按每个小局计入；季度和年度为各月结果之和。旧的每胜 / 每负分值和月度小局上限不再参与计算。
-- 同分依次比较积分、计分胜率、局均净胜，仍相同则并列，后续名次跳过并列人数。
-- 入榜范围与综合榜一致：只有拥有正式账号的启用球友；代报名邀请的朋友和停用球友不入榜。此外单打榜只列出所选周期内至少完成过一场单打的球友，不列出 0 场球友。
-- 群主手动加分/扣分只计入综合榜，不进入单打榜，以免同一笔调整在两个榜单重复出现。
-- 与综合榜一样，单打积分在录入比分后即时更新；榜单行内显示的境界和段位分按活动结算：活动进行中保持不变，活动到点结束、提前结束或取消后一次结算，与综合榜同一时刻一致。
+## Calculation
 
-## 综合榜不变
+- Points are the sum of the selected period's rated singles-game realm-rating changes. Singles and doubles share one visible realm rating; see [REALM_PROGRESSION.md](REALM_PROGRESSION.md). Madrid start month determines the period. Best-of-three matches count each game. Quarterly and annual totals aggregate the relevant months. Legacy win/loss amounts and monthly caps no longer calculate ranking points.
+- Sort by points, rated win rate and average score margin. Identical rows share a rank and subsequent ranks skip the tied positions.
+- Only enabled players with their own account qualify. Proxy guest profiles and disabled players do not appear. A singles row additionally requires at least one completed singles match in the period.
+- Owner point adjustments apply only to Combined, preventing duplicate attribution to Singles.
+- Points update immediately after scoring. Visible realms and realm ratings settle when the activity ends by clock, ends early, or is cancelled; they stay fixed during play, with pending results indicated.
 
-原排行榜保持“统计全部网站比赛”，在界面中称为“综合榜”，不改成仅双打；记录的单打同时计入综合榜和单打榜。
+## Combined board and matchmaking
 
-## 隐藏实力
+Combined continues to include every recorded website match, including singles, rather than becoming doubles-only.
 
-隐藏实力算法为 `doubles-elo-v1`，按两人平均分计算，只适用于 2 对 2。重算现在只处理每方 2 人的比赛，单打和其他人数的对局不会改变双打分组实力，也不会因为缺少第二名队友而在重算时报错。现有双打比赛的实力结果不变。可见段位分另行计算单打（标准一对一 Elo）。
+Hidden `doubles-elo-v1` matchmaking strength applies only to two-versus-two matches using team averages. Replay skips singles and other team sizes, avoiding missing-teammate errors without changing existing doubles results. Visible realm ratings calculate singles using standard one-versus-one Elo.
 
-## 接口
+## API and navigation
 
-已登录的群组数据新增 `singlesQuarterlyLeaderboard` 与 `singlesAnnualLeaderboard`，与 `quarterlyLeaderboard`、`annualLeaderboard` 使用同一季度和年份，因此条件读取的缓存范围不变。普通成员同样拿不到实力分原始数值。领域函数为 `singlesLeaderboard`、`singlesQuarterlyLeaderboard`、`singlesAnnualLeaderboard`。
+Authenticated club data adds `singlesQuarterlyLeaderboard` and `singlesAnnualLeaderboard`, using the same quarter/year as the combined arrays, so conditional-read cache scope is unchanged. Members still cannot obtain raw matchmaking ratings. Domain functions are `singlesLeaderboard`, `singlesQuarterlyLeaderboard` and `singlesAnnualLeaderboard`. Browser history preserves the selected format.
 
-## 验证
+## Verification
 
-新增 `tests/singles-ranking.test.ts` 并加入 `scripts/test.mjs`，覆盖：单打识别；没有单打时为空；单打与双打混合时的段位分积分、三局逐局结算、胜率、净胜和名次；综合榜仍包含全部比赛；旧月度上限不再生效、马德里季度边界、季度与年度合计；代报名朋友、停用球友、作废、进行中和非 1 对 1 对局的排除；手动积分不进单打榜；单打不影响隐藏实力；群组投影和成员实力分隐藏；榜单类型在浏览历史中的保存；活动进行中单打积分即时、境界在活动结束后才结算。
+`tests/singles-ranking.test.ts`, registered in `scripts/test.mjs`, covers recognition and empty states; mixed singles/doubles rating points, best-of-three games, wins, margins and ranks; Combined including both formats; removal of legacy monthly caps; Madrid quarter boundaries and aggregate totals; proxy/disabled players and invalid, unfinished or void results; exclusion of owner grants; unchanged hidden doubles strength; projection privacy; navigation restoration; immediate points and activity-end realm settlement.

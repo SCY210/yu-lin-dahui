@@ -4,6 +4,10 @@ import {securityHeaders} from './lib/security-headers';
 const nextConfig: NextConfig = {
   // Leave room for multipart metadata around the API's 5 MiB image limit.
   experimental: { serverActions: { bodySizeLimit: '6mb' } },
+  // The root layout's generateMetadata would otherwise stream <title>, the manifest
+  // and Apple web-app tags into a hidden <div> in <body> for normal browsers.
+  // iPhone "Add to Home Screen" must find them in the first <head> to open full screen.
+  htmlLimitedBots: /.*/,
   async headers(){return [
     {source:'/:path*',headers:securityHeaders},
     {source:'/',headers:[{key:'Cache-Control',value:'private, no-store'}]},
