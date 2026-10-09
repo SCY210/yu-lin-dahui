@@ -4,9 +4,11 @@ import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 import { secureResponse } from "../lib/security-headers";
 import { cancelUnreadWriteBody } from "../lib/write-security";
 import { flushPushOutbox } from "../lib/push-outbox";
+import { requestMetric } from "../lib/observability";
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const started = performance.now();
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
@@ -32,6 +34,12 @@ export default {
     if (response.ok && ['/api/club','/api/notifications'].includes(new URL(request.url).pathname)) {
       ctx.waitUntil(flushPushOutbox(env).catch(() => { console.warn('Push delivery deferred'); }));
     }
-    return secureResponse(response, request);
+    const secured = secureResponse(response, request);
+    if (new URL(request.url).pathname.startsWith('/api/')) {
+      const requestId = response.headers.get('X-Request-ID') ?? crypto.randomUUID();
+      secured.headers.set('X-Request-ID', requestId);
+      console.log(JSON.stringify(requestMetric(request, response.status, performance.now() - started, requestId)));
+    }
+    return secured;
   },
 };

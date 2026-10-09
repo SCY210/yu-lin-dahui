@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {parseDomainCommand} from './command-contract';
 import {eventStatusAt} from './event-lifecycle';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
@@ -9,7 +10,7 @@ import {markRanked} from './all-ranked';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
 
 const id=z.string().min(1).max(100);
-const schemas:Record<string,z.ZodTypeAny>={
+const schemas={
  liveStart:z.object({eventId:id}),livePause:z.object({eventId:id,paused:z.boolean()}),
  livePreference:z.object({eventId:id,playerId:id,avoidConsecutive:z.boolean()}),
  liveReady:z.object({eventId:id,playerId:id}),
@@ -97,31 +98,33 @@ export function finishLiveMatch(s:State,e:Event,m:Match,now:number){
 }
 
 export async function applyLivePlay(s:State,a:Account,action:string,input:unknown,now:number){
- const schema=Object.hasOwn(schemas,action)?schemas[action]:undefined;if(!schema)return false;
- const p=schema.parse(input) as {eventId:string;playerId?:string;paused?:boolean;avoidConsecutive?:boolean};
+ const command=parseDomainCommand(schemas,action,input);if(!command)return false;
+ const p=command.payload;
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(['ended','cancelled','draft'].includes(eventStatusAt(e,now)))fail('请在活动开放后、结束前使用实时排场');
  const manager=canManageEvent(a,e);
- if(action==='liveStart'||action==='livePause'){
+ if(command.action==='liveStart'||command.action==='livePause'){
   if(!manager)fail('403: 只有活动创建者或管理员可以开始或暂停排场');
  }else{
+  const p=command.payload;
   const player=s.players.find(player=>player.id===p.playerId);
   if(!player||!s.registrations.some(r=>r.eventId===e.id&&r.playerId===player.id&&r.status==='confirmed'))fail('只有正式接龙球友可以调整轮休');
   if(!manager&&player.id!==a.playerId&&player.ownerId!==a.id)fail('403: 只能调整自己或代报名朋友的轮休');
  }
  if(action==='liveStart'&&(now<e.start||now>=e.end))fail('请在活动进行时开始实时排场');
  const config=configuration(e);
- if(action==='liveStart'){
+ if(command.action==='liveStart'){
   const pending=new Set(s.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).map(r=>r.id));
   s.rounds.filter(r=>pending.has(r.id)).forEach(r=>r.status='cancelled');
   s.matches.filter(m=>pending.has(m.roundId)).forEach(m=>m.status='cancelled');
   config.enabled=true;config.paused=false;e.playMode='balanced';
- }else if(action==='livePause')config.paused=p.paused!;
- else if(action==='livePreference'){
+ }else if(command.action==='livePause')config.paused=command.payload.paused;
+ else if(command.action==='livePreference'){
+  const p=command.payload;
   config.preferences=config.preferences.filter(pref=>pref.playerId!==p.playerId);
-  config.preferences.push({playerId:p.playerId!,avoidConsecutive:p.avoidConsecutive!});
+  config.preferences.push({playerId:p.playerId,avoidConsecutive:p.avoidConsecutive});
   if(!p.avoidConsecutive)config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId);
- }else config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId);
+ }else config.rest=config.rest.filter(rest=>rest.playerId!==command.payload.playerId);
  fillLiveCourts(s,e,now);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:action==='livePreference'?'调整连续上场意愿':action==='liveReady'?'轮休后准备上场':'实时公平排场',changes:p});
  return true;

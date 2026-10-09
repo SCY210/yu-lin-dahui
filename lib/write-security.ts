@@ -1,6 +1,7 @@
 import {RequestError} from './request-body';
 import {publicApiError} from './api-error';
 import {RateLimitError} from './rate-limit';
+import {reportServerError} from './observability';
 
 /** Cancelling a tee branch can wait for another branch. Start cancellation
  * without blocking an error response; the Worker wrapper keeps it alive. */
@@ -43,6 +44,7 @@ export function assertWriteRequest(req:Request,kind:'json'|'multipart'='json'){
 }
 export function writeErrorResponse(error:unknown){
  const safe=publicApiError(error),headers=new Headers({'Cache-Control':'no-store'});
+ if(safe.status>=500){const requestId=crypto.randomUUID();headers.set('X-Request-ID',requestId);reportServerError(error,requestId)}
  if(error instanceof RateLimitError){headers.set('Retry-After',String(error.retryAfter));return Response.json({error:safe.error,retryAfter:error.retryAfter},{status:429,headers})}
  return Response.json({error:safe.error},{status:safe.status,headers});
 }

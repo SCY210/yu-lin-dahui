@@ -5,6 +5,7 @@ import {toast} from 'sonner';
 import InstallApp from './install-app';
 import Disclosure from './disclosure';
 import {listenForSessionChanges,notifySessionChange} from '../lib/client/session-sync';
+import {readActionResponse} from '../lib/client/api-response';
 export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBound?:()=>void}){
  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const sessionInvalidated=useRef(false);
@@ -16,7 +17,7 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
   return()=>{sync.stop();window.removeEventListener('pageshow',restore)};
  },[binding]);
  async function submit(e:React.FormEvent){e.preventDefault();if(busy||sessionInvalidated.current)return;if(binding&&!/^[A-Za-z0-9]{2,32}$/.test(username.trim())){setError('新账号须为2–32位英文字母或数字');return}if(binding&&password!==confirmation){setError('两次密码不一致');return}setBusy(true);setError('');try{
-  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})}),d:any=await r.json();if(!r.ok)throw new Error(d.error);
+  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})});await readActionResponse(r);
   if(sessionInvalidated.current)return;setPassword('');setConfirmation('');notifySessionChange();
   if(binding){toast.success('账号登录已开通，原权限和记录已保留');onBound?.()}else location.reload();
  }catch(e){if(!sessionInvalidated.current)setError((e as Error).message)}finally{if(!sessionInvalidated.current)setBusy(false)}}

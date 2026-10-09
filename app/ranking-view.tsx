@@ -1,5 +1,6 @@
 'use client';
 import Disclosure from './disclosure';
+import type {ClubData} from '../lib/contracts/club';
 import {Avatar} from './avatar';
 import {useState} from 'react';
 import RealmBadge,{PlacementBadge} from './realm-badge';
@@ -23,7 +24,7 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
  const realmScore=(r:any)=>r.realmScore??data.social?.stats?.find((s:any)=>s.playerId===r.playerId)?.realmScore;
  // Placement rows show only the neutral 定级中 chip: no realm, stage or realm progress.
  const placing=(r:Parameters<typeof realmScore>[0])=>!!(r.provisional||realmScore(r)?.placement);
- const leaders=rows.filter((r:any)=>(r.games>0||r.pointsChange>0)&&r.rank<=3).slice(0,3);
+ const leaders=rows.filter((r:ClubData['quarterlyLeaderboard'][number])=>(r.games>0||r.pointsChange>0)&&r.rank<=3).slice(0,3);
  const signed=(n:number)=>(n>0?'+':'')+n;
  return <>
   <div className="heading rv-heading">
