@@ -8,6 +8,7 @@ import {Plus,Copy,CheckCircle2,FileClock,Phone,Bell} from 'lucide-react';
 import {settlementView} from '../lib/domain/settlement-state';
 import {usesAutomaticAttendance} from '../lib/domain/attendance';
 import './fee-confirmation.css';
+import './fee-status.css';
 import {fmt,hm,dt,epoch,euro,text,timed,halfTimed,number,money,choice,why,modes} from './ui';
 import FeatureGuide from './feature-guide';
 import {bookingCents,ballCents,legacyTubeUnitCents} from '../lib/domain/money';
@@ -19,7 +20,7 @@ const paid=(b:{playerId:string;total:number})=>b.total<=0||payments.filter(p=>p.
 const proxied=(id:string)=>id!==data.me.playerId&&data.players.find((p:{id:string;ownerId:string})=>p.id===id)?.ownerId===data.me.id;
 const canMark=(id:string)=>statusOn&&!!latest?.bills.some((x:{playerId:string})=>x.playerId===id)&&(id===data.me.playerId||proxied(id)||manager);
 const markPaid=(id:string,value:boolean)=>void ctx.action('feePaid',{eventId:ev.id,settlementId:latest!.id,playerId:id,paid:value,reason:value?'标记已付款':'撤销付款标记'},false).catch(()=>{});
-const paidStatus=(b:{playerId:string;total:number})=>statusOn&&<div className="fee-paid-status">{paid(b)?<span className="badge fee-paid">已付款</span>:<span className="badge fee-unpaid">未付款</span>}{canMark(b.playerId)&&b.total>0&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>markPaid(b.playerId,!paid(b))}>{paid(b)?'撤销已付款':'标记已付款'}</button>}</div>;
+const paidStatus=(b:{playerId:string;total:number})=>statusOn&&<div className="fee-paid-status">{paid(b)?<span className="fee-status is-paid">已付款</span>:<span className="fee-status is-unpaid">未付款</span>}{canMark(b.playerId)&&b.total>0&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>markPaid(b.playerId,!paid(b))}>{paid(b)?'撤销已付款':'标记已付款'}</button>}</div>;
 // The reminder targets the latest confirmed version even while a manager previews a newer draft.
 const unpaidCount=latest&&latest.confirmed?latest.bills.filter((b:{playerId:string;total:number})=>!paid(b)).length:0;
 const myFriends=statusOn&&latest?latest.bills.filter((b:{playerId:string})=>proxied(b.playerId)):[];

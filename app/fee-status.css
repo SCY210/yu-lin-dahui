@@ -1,7 +1,9 @@
+/* The one paid / unpaid label used on the fees page, My page and anywhere else: green paid, red unpaid. */
 .fee-status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .fee-status.is-paid{color:#1f7a3d;background:#e3f4e8}
 .fee-status.is-unpaid{color:var(--destructive);background:color-mix(in srgb,var(--destructive) 12%,transparent)}
-.home-unpaid{border:1px solid color-mix(in srgb,var(--destructive) 45%,transparent);background:color-mix(in srgb,var(--destructive) 7%,var(--card));margin:0 0 16px}
+/* Theme card rules (e.g. .wuxia-theme .card) are more specific than one class, so match .card.home-unpaid as well. */
+.home-unpaid,.card.home-unpaid,.wuxia-theme .card.home-unpaid{border:1px solid color-mix(in srgb,var(--destructive) 50%,transparent);border-left:4px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 10%,var(--card));margin:0 0 16px}
 .home-unpaid-title{display:flex;align-items:center;gap:8px;color:var(--destructive);font-size:16px}
 .home-unpaid .hint{margin:6px 0 10px}
 .home-unpaid-list{display:grid;gap:6px}
