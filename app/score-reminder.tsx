@@ -37,7 +37,7 @@ export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Con
  },[tryPrompt]);
  useEffect(()=>{queueMicrotask(tryPrompt)},[ctx.data,ctx.busy,blocked,tryPrompt]);
  useEffect(()=>{
-  const open=(e:Event)=>{const id=(e as CustomEvent<string>).detail;if(pendingOwnScores(current.current.ctx.data).some(m=>m.id===id)){gate.current.suppress();setSelection({id,mode:'score'})}};
+  const open=(e:Event)=>{if(current.current.blocked||current.current.ctx.busy||document.hidden||externalDialog())return;const id=(e as CustomEvent<string>).detail;if(pendingOwnScores(current.current.ctx.data).some(m=>m.id===id)){gate.current.suppress();setSelection({id,mode:'score'})}};
   window.addEventListener(scoreEntryRequest,open);return()=>window.removeEventListener(scoreEntryRequest,open);
  },[]);
  const dismiss=()=>{gate.current.suppress();setSelection(null)};

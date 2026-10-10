@@ -1,5 +1,4 @@
 import {automaticEventTitle,eventFormat} from './match-format';
-import { initialSignupDeadline, signupClosed, signupCloseHours } from './event-lifecycle';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
@@ -129,7 +128,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             for (const b of p.bookings)
                 checkBooking(p, b);
             const { bookings, ...details } = p;
-            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
+            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: p.end, cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             s.events.push(e);
             for (const b of bookings)
@@ -234,8 +233,6 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (p.arrival < e.start || p.departure > e.end || p.departure <= p.arrival)
                 fail('参加时间应在活动时间内');
             const old = s.registrations.find(r => r.eventId === e.id && r.playerId === p.playerId);
-            if (!manager && (!old || old.status === 'cancelled') && signupClosed(e, now))
-                fail('报名已截止（活动开始前 ' + signupCloseHours + ' 小时），请联系活动创建者');
             if (old?.bookingSignups)
                 fail('请在对应的场地时段修改接龙');
             if (old && old.status !== 'cancelled') {

@@ -37,11 +37,11 @@ test('finished activities stay for the recent window, including ones ended early
 });
 test('todos cover closing sign-ups and recent promotions, once per activity',()=>{
  const s=fixture();
- s.events.push(event('soon',now+48*hour,now+50*hour,{signupDeadline:now+2*hour}),event('far',now+96*hour,now+98*hour,{signupDeadline:now+72*hour}),event('joined',now+48*hour,now+50*hour,{signupDeadline:now+hour}),event('promo',now+5*hour,now+7*hour));
+ s.events.push(event('soon',now+2*hour,now+4*hour,{signupDeadline:now+2*hour}),event('far',now+96*hour,now+98*hour,{signupDeadline:now+72*hour}),event('joined',now+48*hour,now+50*hour,{signupDeadline:now+hour}),event('promo',now+5*hour,now+7*hour));
  s.registrations.push(reg('joined','me'),reg('promo','me',{promotedAt:now-hour}));
  const todos=homeTodos(s,now);
  assert.deepEqual(todos.map(t=>t.kind+':'+t.eventId),['promoted:promo','signup:soon']);
- assert.match(todos[1].detail,/2 小时后截止/);
+ assert.match(todos[1].detail,/2 小时后开始/);
  s.registrations[1].promotedAt=now-30*hour;assert.deepEqual(homeTodos(s,now).map(t=>t.eventId),['soon']);
 });
 test('the activities page groups my sign-ups, open activities, the rest and the history',()=>{

@@ -1,12 +1,12 @@
 import type {Account,AwardVote,Booking,Event,Match,Registration,Round,State} from '../domain/types';
-import {eventStatusAt,signupClosesAt} from '../domain/event-lifecycle';
+import {eventStatusAt} from '../domain/event-lifecycle';
 import {canCastAwardVote} from '../domain/activity-voting';
 import {homeLiveMatches} from './home-live-matches';
 import {pendingOwnScores} from './score-reminder';
 
 /** How long a finished activity stays on the home page (and keeps prompting for the MVP vote). */
 export const recentlyEndedHours=5;
-/** Signup reminders start this long before the deadline. */
+/** Upcoming-activity reminders start this long before the activity. */
 export const signupSoonHours=24;
 /** A waitlist promotion is announced on the home page for this long. */
 export const promotionNoticeHours=24;
@@ -50,8 +50,7 @@ export function homeTodos(data:HomeData,now:number):HomeTodo[]{
  for(const e of data.events){
   if(!visible(e)||e.status!=='open'||e.end<=now)continue;
   const mine=myRegistration(data.registrations,e,data.me.playerId);
-  const closes=signupClosesAt(e);
-  if(!mine&&closes>now&&closes-now<=signupSoonHours*hour)todos.push({kind:'signup',eventId:e.id,title:'报名即将截止',detail:e.title+' · '+Math.max(1,Math.ceil((closes-now)/hour))+' 小时后截止',tab:'overview'});
+  if(!mine&&e.start>now&&e.start-now<=signupSoonHours*hour)todos.push({kind:'signup',eventId:e.id,title:'今天可接龙',detail:e.title+' · 活动将在 '+Math.max(1,Math.ceil((e.start-now)/hour))+' 小时后开始',tab:'overview'});
  }
  for(const r of data.registrations){
   const e=events.get(r.eventId);
@@ -68,7 +67,7 @@ export type EventGroups<E extends Event=Event>={mine:E[];open:E[];other:E[];past
 export function groupEvents<E extends Event>(data:Pick<State,'registrations'>&{events:E[];me:Account},now:number):EventGroups<E>{
  const upcoming=data.events.filter(e=>e.end>=now&&!['ended','cancelled'].includes(e.status)).sort((a,b)=>a.start-b.start);
  const mine=upcoming.filter(e=>myRegistration(data.registrations,e,data.me.playerId));
- const open=upcoming.filter(e=>!mine.includes(e)&&eventStatusAt(e,now)==='open'&&signupClosesAt(e)>now);
+ const open=upcoming.filter(e=>!mine.includes(e)&&eventStatusAt(e,now)==='open'&&e.end>now);
  return {mine,open,other:upcoming.filter(e=>!mine.includes(e)&&!open.includes(e)),
   past:data.events.filter(e=>e.end<now||['ended','cancelled'].includes(e.status)).sort((a,b)=>b.start-a.start)};
 }
