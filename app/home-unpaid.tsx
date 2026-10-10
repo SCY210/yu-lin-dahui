@@ -16,7 +16,7 @@ type Props={settlements:FeeSplit[];payments:FeePayment[];players:{id:string;owne
 export default function HomeUnpaid({settlements,payments,players,me,events,onOpen,onMarkPaid,busy}:Props){
  const byId=new Map(events.map(e=>[e.id,e])),rows=unpaidFeesFor(settlements,payments,players,me,new Set(byId.keys()));
  if(!rows.length)return null;
- const groups=[...new Set(rows.map(r=>r.eventId))].map(eventId=>({eventId,bills:rows.filter(r=>r.eventId===eventId)}));
+ const groups=[...new Set(rows.map(r=>r.eventId))].map(eventId=>({eventId,bills:rows.filter(r=>r.eventId===eventId).sort((x,y)=>Number(x.friend)-Number(y.friend))}));
  const name=(id:string)=>players.find(p=>p.id===id)?.name??'代报名朋友';
  const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);toast.success('收款信息已复制')}catch{toast.error('复制失败，请手动复制号码')}};
  return <section className="card home-unpaid" role="status" aria-live="polite">

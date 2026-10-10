@@ -12,3 +12,7 @@
 .match-more{margin-top:12px}
 .match-more .actions{padding-top:4px}
 @media(max-width:640px){.app-disclosure-content{padding:12px}.app-disclosure>summary{padding:14px 12px}.event-toolbar>.app-disclosure{margin:0}.event-toolbar>.app-disclosure>summary{padding:10px 12px;min-height:44px}.event-toolbar>.app-disclosure .app-disclosure-content{max-width:280px}}
+/* Ink-wash theme: paper card like the activity cards, instead of the classic white panel. */
+.wuxia-theme .app-disclosure{background:var(--card);border-color:var(--border);border-radius:4px;color:var(--card-foreground)}
+.wuxia-theme .app-disclosure>summary{color:var(--foreground);font-family:'Songti SC','SimSun',serif;letter-spacing:.06em}.wuxia-theme .app-disclosure>summary:focus-visible{border-radius:4px}
+.wuxia-theme .app-disclosure .app-disclosure{background:transparent}
