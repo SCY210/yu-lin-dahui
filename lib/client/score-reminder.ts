@@ -14,6 +14,10 @@ export function pendingOwnScores(data:ScoreReminderData,now=Date.now()):Match[]{
  }).sort((a,b)=>b.start!-a.start!||a.id.localeCompare(b.id));
 }
 
+/** Window event asking the score reminder to open the form for one pending game (detail: match id). */
+export const scoreEntryRequest='yulin:score-entry';
+export function requestScoreEntry(matchId:string){window.dispatchEvent(new CustomEvent(scoreEntryRequest,{detail:matchId}))}
+
 /** A visit is consumed even when it has no pending games. Polling or the next
  * live assignment must not produce another popup in the middle of a game. */
 export function createScorePromptGate(owner:string){

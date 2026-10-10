@@ -8,7 +8,7 @@ From top to bottom:
 
 1. **Unpaid fees** (`app/home-unpaid.tsx`). One entry per activity with unpaid bills of the latest confirmed split. When the member also owes for friends they registered, the entry lists each bill and the total. When the activity has a fee recipient, the row shows the recipient and a copy button. The "mark paid" button records a self-reported payment (`feePaid`) for every bill of that activity without leaving the page.
 2. **To-dos** (`homeTodos`):
-   - scores to enter for the member's own playing games;
+   - scores to enter for the member's own games of activities that are no longer running (a live game gets a "record score" button on its live card instead);
    - sign-up deadlines within `signupSoonHours` (24 h) for open activities the member has not joined;
    - waitlist promotions from the last `promotionNoticeHours` (24 h).
 

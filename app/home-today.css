@@ -24,3 +24,5 @@
 .home-quiet{display:grid;gap:10px;justify-items:start}
 .home-quiet p{margin:0;color:var(--muted-foreground)}
 @media(prefers-reduced-motion:reduce){.home-live-dot{animation:none}}
+.home-live-mine{flex-wrap:wrap;align-items:center}.home-live-mine>span{flex:1 1 160px}
+.home-live-mine>button{margin-left:auto;flex:none}.home-live-mine>button svg{margin:0;color:inherit}

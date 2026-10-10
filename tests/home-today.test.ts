@@ -19,6 +19,11 @@ test('one live card per running activity, with the viewer\'s own game, partners 
  assert.deepEqual(live.map(a=>a.event.id),['live']);
  assert.equal(live[0].registered,true);assert.equal(live[0].matches.length,1);
  assert.deepEqual(live[0].myMatch?.partners,['b']);assert.deepEqual(live[0].myMatch?.opponents,['c','d']);
+ assert.equal(live[0].myMatch?.canScore,true);
+ assert.deepEqual(homeTodos(s,now).filter(t=>t.kind==='score'),[],'a live game is scored from its card, not the to-do list');
+ s.events[0].end=now-1000;assert.deepEqual(homeTodos(s,now-2000).filter(t=>t.kind==='score'),[]);
+ assert.deepEqual(homeTodos(s,now).filter(t=>t.kind==='score').map(t=>t.matchId),['m'],'once the activity is over the pending score becomes a to-do');
+ s.events[0].end=now+hour;
  s.matches[0].b=['x','y'];assert.equal(liveActivities(s,now)[0].myMatch,undefined);
  s.events[0].status='ended';assert.deepEqual(liveActivities(s,now),[]);
 });

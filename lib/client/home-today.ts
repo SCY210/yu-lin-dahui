@@ -16,16 +16,16 @@ type HomeData=Pick<State,'events'|'matches'|'rounds'|'bookings'|'registrations'|
 const visible=(e:Event)=>e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status);
 const myRegistration=(regs:Registration[],e:Event,playerId:string)=>regs.find(r=>r.eventId===e.id&&r.playerId===playerId&&r.status!=='cancelled');
 
-export type LiveActivity={event:Event;matches:{match:Match;round:Round;court?:Booking}[];myMatch?:{match:Match;court?:Booking;partners:string[];opponents:string[]};registered:boolean};
+export type LiveActivity={event:Event;matches:{match:Match;round:Round;court?:Booking}[];myMatch?:{match:Match;court?:Booking;partners:string[];opponents:string[];canScore:boolean};registered:boolean};
 /** One entry per running activity (not per court), with the viewer's own game if they are on court. */
 export function liveActivities(data:HomeData,now:number):LiveActivity[]{
- const games=homeLiveMatches(data,now);
+ const games=homeLiveMatches(data,now),scorable=new Set(pendingOwnScores(data,now).map(m=>m.id));
  return data.events.filter(e=>visible(e)&&e.start<=now&&now<e.end&&eventStatusAt(e,now)!=='ended').sort((a,b)=>a.start-b.start||a.id.localeCompare(b.id)).map(event=>{
   const matches=games.filter(g=>g.event.id===event.id).map(({match,round,court})=>({match,round,court}));
   const mine=matches.find(g=>[...g.match.a,...g.match.b].includes(data.me.playerId));
   const side=mine?.match.a.includes(data.me.playerId)?'a':'b';
   return {event,matches,registered:!!myRegistration(data.registrations,event,data.me.playerId),
-   myMatch:mine&&{match:mine.match,court:mine.court,partners:mine.match[side].filter(id=>id!==data.me.playerId),opponents:mine.match[side==='a'?'b':'a']}};
+   myMatch:mine&&{match:mine.match,court:mine.court,partners:mine.match[side].filter(id=>id!==data.me.playerId),opponents:mine.match[side==='a'?'b':'a'],canScore:scorable.has(mine.match.id)}};
  });
 }
 
@@ -40,11 +40,13 @@ export function recentlyEnded(data:HomeData,now:number):EndedActivity[]{
    voted:(data.awardVotes as AwardVote[]).some(v=>v.eventId===event.id&&v.voterId===data.me.id)}));
 }
 
-export type HomeTodo={kind:'score'|'signup'|'promoted';eventId:string;title:string;detail:string;tab:'overview'|'rounds'};
-/** Things the viewer should act on now, besides unpaid fees and the MVP vote (shown with their own cards). */
+export type HomeTodo={kind:'score'|'signup'|'promoted';eventId:string;title:string;detail:string;tab:'overview'|'rounds';matchId?:string};
+/** Things the viewer should act on now, besides unpaid fees and the MVP vote (shown with their own cards).
+ * A game on a live card gets its score button there, so only scores left from activities no longer running appear here. */
 export function homeTodos(data:HomeData,now:number):HomeTodo[]{
  const events=new Map(data.events.map(e=>[e.id,e])),todos:HomeTodo[]=[];
- for(const m of pendingOwnScores(data,now)){const e=events.get(m.eventId);if(e)todos.push({kind:'score',eventId:e.id,title:'比分待录入',detail:e.title,tab:'rounds'})}
+ const live=new Set(liveActivities(data,now).map(a=>a.event.id));
+ for(const m of pendingOwnScores(data,now)){const e=events.get(m.eventId);if(e&&!live.has(e.id))todos.push({kind:'score',eventId:e.id,title:'比分待录入',detail:e.title,tab:'rounds',matchId:m.id})}
  for(const e of data.events){
   if(!visible(e)||e.status!=='open'||e.end<=now)continue;
   const mine=myRegistration(data.registrations,e,data.me.playerId);
