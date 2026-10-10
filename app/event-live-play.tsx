@@ -30,7 +30,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
     return <div className="live-player-row" key={r.playerId}><div><strong>{name(r.playerId)}</strong><span>{liveAppearances(data,e.id,r.playerId)} 次上场 · {playingIds.has(r.playerId)?'场上对局':!present.includes(r.playerId)?'尚未到参加时段':resting?'轮休中':'等待上场'}</span></div><div className="live-player-controls"><label><input type="checkbox" checked={preference} disabled={!own||busy||!active} onChange={ev=>send('livePreference',{eventId:e.id,playerId:r.playerId,avoidConsecutive:ev.target.checked})}/>不连续上场</label>{resting&&own&&!playingIds.has(r.playerId)&&active&&<button className="secondary" type="button" disabled={busy} onClick={()=>send('liveReady',{eventId:e.id,playerId:r.playerId})}>休息好了</button>}</div></div>; };
  return <div className="live-play">
   <section className="card live-play-header"><div className="row"><h2>当前对局</h2><span className="badge">{config?.paused?'排场暂停':config?.enabled?'自动同步':'尚未开始排场'}</span></div>
-   <p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先安排上场次数少、等待更久的球友。每场{courtPlayers(e)}人。</p>
+   <p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先让场下可上场的球友替换刚打完的人，再按上场次数和等待时间均衡安排。每场{courtPlayers(e)}人。</p>
    {manager&&active&&<div className="actions">
     {!config?.enabled?<button type="button" className="primary" disabled={busy||!inWindow} onClick={()=>send('liveStart',{eventId:e.id})}><Play size={17}/>开始实时排场</button>:<>
      <button type="button" className="secondary" disabled={busy} onClick={()=>send('livePause',{eventId:e.id,paused:!config.paused})}>{config.paused?<Play size={17}/>:<Pause size={17}/>} {config.paused?'恢复自动排场':'暂停自动排场'}</button>

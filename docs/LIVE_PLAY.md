@@ -11,3 +11,7 @@ Each participant (or the account managing their proxy profile) can choose not to
 Visible activity pages refresh shared state every three seconds, retaining the existing hidden/offline suppression. Results can be corrected without creating an extra next game. Repeated or concurrent requests retain the existing request-key and revision protection.
 
 Validation includes multi-court progression, unique on-court participants, 14-player balanced rotation, fixed teams, missing substitutes, permissions, in-progress games at other events, score corrections, and actual handler/SQLite tests for persistence, request replay, rollback and concurrent scoring. New settings use existing JSON payloads and need no schema migration.
+
+## Bench priority
+
+When a court becomes free, available waiting players take precedence over that court's just-finished players. Fewer cumulative games or an earlier previous start must not bypass the bench. Game counts and waiting time balance players within each priority group; willing just-finished players fill only the remaining places. Fixed partners remain intact, and requested breaks, venue/attendance eligibility and other active courts still apply. The preceding court lineup is derived from stored matches, so pause/resume and write retries preserve this order. Existing games and results are unchanged; the next score advances with the corrected selection.

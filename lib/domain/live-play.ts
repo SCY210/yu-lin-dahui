@@ -60,17 +60,24 @@ export function fillLiveCourts(s:State,e:Event,now:number){
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  const handled=new Set<string>();
  const lastTurn=(id:string)=>Math.max(0,...s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&[...m.a,...m.b].includes(id)).map(m=>m.start!));
- const order=(a:string,b:string)=>liveAppearances(s,e.id,a)-liveAppearances(s,e.id,b)||lastTurn(a)-lastTurn(b)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
+ const fairOrder=(a:string,b:string)=>liveAppearances(s,e.id,a)-liveAppearances(s,e.id,b)||lastTurn(a)-lastTurn(b)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
  for(const court of courts){
   const key=physical(s,e,court.id),venue=court.venue??e.venue;
   if(handled.has(key))continue;handled.add(key);
   if(s.matches.some(m=>m.eventId===e.id&&playing(m)&&physical(s,e,m.courtId)===key))continue;
+  // Bench players get the next turn before this court's just-finished players,
+  // even when the latter have fewer games or started their previous game earlier.
+  // Derive this from stored matches so pause/resume and concurrent retries keep the same order.
+  const previous=s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&!['playing','draft','published'].includes(m.status)&&physical(s,e,m.courtId)===key)
+   .sort((a,b)=>(b.end??b.start!)-(a.end??a.start!)||b.start!-a.start!||a.id.localeCompare(b.id))[0];
+  const justFinished=new Set(previous?[...previous.a,...previous.b]:[]);
+  const order=(a:string,b:string)=>Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
   const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,now,now+1)).sort(order);
   let teams:{a:string[];b:string[]}|undefined;
   if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
    const candidates=fixed.filter(team=>team.length===2&&team.every(id=>pool.includes(id)))
-    .sort((a,b)=>Math.max(...a.map(id=>liveAppearances(s,e.id,id)))-Math.max(...b.map(id=>liveAppearances(s,e.id,id)))||order(a[0],b[0]));
+    .sort((a,b)=>Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(id=>liveAppearances(s,e.id,id)))-Math.max(...b.map(id=>liveAppearances(s,e.id,id)))||order(a[0],b[0]));
    if(candidates.length>=2)teams={a:candidates[0],b:candidates[1]};
   }else if(pool.length>=courtPlayers(e))teams=pair(s,e,pool.slice(0,courtPlayers(e)));
   if(!teams)continue;
