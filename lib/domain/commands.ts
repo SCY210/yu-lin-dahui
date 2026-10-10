@@ -4,6 +4,7 @@ import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
 import { applyLivePlay, finishLiveMatch } from './live-play';
+import {applyLiveLineup} from './live-lineup';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
 import { assertPlayerMutable, assertAccountMutable, clubOwnerId, isClubOwner } from './ownership';
 import { z } from 'zod';
@@ -64,6 +65,8 @@ const schemas = {
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
+    if (await applyLiveLineup(s, a, action, input, now))
+        return null;
     if (await applyLivePlay(s, a, action, input, now))
         return null;
     if (await applyCourtSignup(s, a, action, input, now))

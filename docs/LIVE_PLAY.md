@@ -15,3 +15,7 @@ Validation includes multi-court progression, unique on-court participants, 14-pl
 ## Bench priority
 
 When a court becomes free, available waiting players take precedence over that court's just-finished players. Fewer cumulative games or an earlier previous start must not bypass the bench. Game counts and waiting time balance players within each priority group; willing just-finished players fill only the remaining places. Fixed partners remain intact, and requested breaks, venue/attendance eligibility and other active courts still apply. The preceding court lineup is derived from stored matches, so pause/resume and write retries preserve this order. Existing games and results are unchanged; the next score advances with the corrected selection.
+
+## Correcting the current lineup
+
+Activity creators and administrators can use **Adjust players** beside each current court to choose both teams, for singles or doubles. No reason field is required; a before/after audit is recorded automatically. This explicitly changes only the current game (including partners); the activity's fixed/rotating mode still controls later games. The server resolves permission from the stored match and checks current signup/venue/time availability, duplicate players, other active courts, requested breaks and an expected-lineup snapshot. Completed games and stale lineups cannot be edited this way. Saving keeps the match ID, start, court and round, does not record a result or generate a new game, and updates the waiting roster and appearance counts to the corrected lineup.
