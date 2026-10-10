@@ -39,13 +39,13 @@ test('administrators retain all drafts and previews without exposing storage obj
  assert.ok(v.photos.every(p=>!('key' in p)));
 });
 
-test('future default attendance stays planned: no elapsed fees, available players or invented arrival personality',()=>{
+test('future default attendance provides a planned fee estimate without available players or invented arrival personality',()=>{
  const {s,me,start}=fixture();s.registrations.push({id:'own-reg',eventId:'own',playerId:'self',sequence:1,status:'confirmed',arrival:start,departure:start+3600000,note:'',cancelRequested:false,registeredAt:start-7200000,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
  const v=projectClubState(s,me,'2026-10',2026,start-3600000);
  assert.equal(v.events.find(e=>e.id==='own')!.attendanceMode,'automatic');
  assert.equal(v.attendance.find(a=>a.eventId==='own')!.start,start);
  assert.equal(v.attendance.find(a=>a.eventId==='own')!.source,'automatic');
- assert.equal(v.rotationPlans.own.players,0);assert.equal(v.drafts[0].bills.length,0);
+ assert.equal(v.rotationPlans.own.players,0);assert.equal(v.drafts[0].bills.length,1);assert.equal(v.drafts[0].bills[0].minutes,60);
  const personality=v.social.personality.find(p=>p.playerId==='self')!;assert.equal(personality.early,0);assert.equal(personality.onTime,0);
  assert.equal(s.events.find(e=>e.id==='own')!.attendanceMode,undefined);assert.equal(s.attendance.length,0);
 });

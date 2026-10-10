@@ -11,7 +11,7 @@ import type {State,Account} from './domain/types';
 import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {rankingQuarter} from './ranking-quarter';
-import {calculateSettlement} from './domain/money';
+import {calculateSettlementPreview} from './domain/money';
 import {socialSnapshot} from './domain/social';
 import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
@@ -41,7 +41,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const board=<T extends {rating:number;realm:string;realmScore:RealmSnapshot}>(rows:T[])=>rows.map(r=>({...r,rating:admin?r.rating:null,realm:realmView(r.realmScore),realmScore:visibleRealm(r.realmScore)}));
  const fullSocial=socialSnapshot(s,period,year,now,history,ledger.snapshot);
  const social={...fullSocial,stats:fullSocial.stats.map(st=>({...st,tier:realmView(st.realmScore),realmScore:visibleRealm(st.realmScore)}))};
- const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlement({...s,attendance:actualAttendance},e,now));
+ const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy})=>({id,name,phone,mine:createdBy===a.id})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
   players:s.players.map(p=>({...p,profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),

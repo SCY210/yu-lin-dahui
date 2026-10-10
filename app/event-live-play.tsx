@@ -7,6 +7,7 @@ import {liveAppearances,livePresentIds,liveResting} from '../lib/domain/live-pla
 import type {Event,State,Match,Registration,Player} from '../lib/domain/types';
 import MatchCard from './match-card';
 import {openLiveLineup} from './live-lineup-form';
+import LiveCourtBench from './live-court-bench';
 import Disclosure from './disclosure';
 import Deferred from './deferred';
 import EventPointsPlan from './event-points-plan';
@@ -43,7 +44,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
   </section>
   <div className="courts-grid live-current-courts">{current.map(m=>{
    const round=data.rounds.find((r:any)=>r.id===m.roundId);
-   return <section key={m.id} className="live-court"><div className="live-court-heading"><h3>{data.bookings.find((b:State['bookings'][number])=>b.id===m.courtId)?.name??'场地'} · 第 {round?.liveSequence??1} 轮</h3>{manager&&config?.enabled&&active&&inWindow&&<button type="button" className="secondary" disabled={busy} onClick={()=>openLiveLineup(e,m,ctx,now)}>调整上场人员</button>}</div><MatchCard m={m} ctx={ctx}/></section>;
+   return <section key={m.id} className="live-court"><div className="live-court-heading"><h3>{data.bookings.find((b:State['bookings'][number])=>b.id===m.courtId)?.name??'场地'} · 第 {round?.liveSequence??1} 轮</h3>{manager&&config?.enabled&&active&&inWindow&&<button type="button" className="secondary" disabled={busy} onClick={()=>openLiveLineup(e,m,ctx,now)}>调整上场人员</button>}</div><MatchCard m={m} ctx={ctx}/><LiveCourtBench e={e} m={m} ctx={ctx} now={now}/></section>;
   })}{courts.filter((b:any)=>!current.some(m=>{const court=data.bookings.find((x:any)=>x.id===m.courtId);return court?.name===b.name&&(court.venue??e.venue)===(b.venue??e.venue)})).map((b:any)=><section className="card live-court-waiting" key={b.id}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{config?.enabled?'可上场人数或完整固定搭档不足时保持等待，尊重轮休选择。球友准备好后可点击“休息好了”。':'开始实时排场后显示对局。'}</p></section>)}</div>
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}

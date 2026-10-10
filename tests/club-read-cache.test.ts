@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {emptyState,type Event} from '../lib/domain/types';
 import {createClubReadCache,clubViewValidUntil,type ClubReadVersion} from '../lib/club-read-cache';
 import {projectClubState} from '../lib/club-view';
+import {calculateSettlement} from '../lib/domain/money';
 
 const now=Date.parse('2026-10-04T12:00:00Z'),duration=20*60000;
 function fixture(){
@@ -61,7 +62,8 @@ test('arrival, booking and live fee boundaries never return a stale unchanged vi
  assert.equal(clubViewValidUntil(s,a,e.start-1000),e.start);
  assert.equal(clubViewValidUntil(s,a,e.start),e.start);
  assert.equal(clubViewValidUntil(s,a,e.start+60000),e.start+60000);
- assert.notDeepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts);
+ assert.deepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts,'planned estimates stay stable as time passes');
+ assert.notDeepEqual(calculateSettlement(s,e,e.start+60000),calculateSettlement(s,e,e.start+120000),'actual elapsed accounting still advances');
  const at=now+1000;s.bookings[0].start=at+5000;
  assert.equal(clubViewValidUntil(s,a,at),at+5000);
  s.bookings[0].start=e.start;s.events[0].attendanceMode='manual';

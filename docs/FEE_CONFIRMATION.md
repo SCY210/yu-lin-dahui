@@ -17,3 +17,7 @@
 ## Latest settlement display
 
 The fees page shows a single current per-person allocation. Managers see the current preview until they confirm it; members see the latest confirmed result. Previous versions and per-time-segment reconciliation are no longer displayed. Stored versions and calculation details remain available internally for confirmation comparisons and audit integrity.
+
+## Planned previews versus actual settlement
+
+While an automatic-attendance activity is open, the organizer preview and unconfirmed draft use each signup's complete valid participation intervals and the known expenses. Thus a two-hour signup and a four-hour signup are not both clipped to the elapsed clock in an estimate. The UI labels this as an estimate. Actual accounting (`calculateSettlement`) still clips to elapsed participation; confirmation remains blocked until the activity ends. Cancelled attendance archives, promotions, court fee groups, exemptions, subsidy and existing confirmed versions retain their accounting rules.
