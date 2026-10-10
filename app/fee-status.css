@@ -13,3 +13,8 @@
 .home-unpaid-row>span:last-child{color:var(--destructive);font-size:13px;white-space:nowrap}
 
 @media(max-width:420px){.my-fee-link{flex-wrap:wrap;gap:8px}.my-fee-link>span:first-child{flex-basis:100%}.my-fee-link>span:last-child{margin-left:auto}.home-unpaid-row{grid-template-columns:minmax(0,1fr) auto}.home-unpaid-row>span:first-child{grid-column:1/-1}.home-unpaid-row>span:last-child{justify-self:end}}
+.home-unpaid-item{display:grid;gap:8px;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.home-unpaid-item>.home-unpaid-row{border:0;padding:0;background:none}
+.home-unpaid-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.home-unpaid-payee{flex-basis:100%;font-size:13px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.home-unpaid-actions button svg{vertical-align:-2px}

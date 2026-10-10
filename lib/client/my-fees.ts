@@ -14,6 +14,6 @@ export function feePaid(payments:FeePayment[],eventId:string,bill:{playerId:stri
 /** Unpaid bills of the latest confirmed versions that this member owes: their own and those of friends they registered. */
 export function unpaidFeesFor(settlements:FeeSplit[],payments:FeePayment[],players:FeePlayer[],me:{id:string;playerId:string},visibleEventIds:Set<string>){
  const mine=new Set([me.playerId,...players.filter(p=>p.id!==me.playerId&&p.ownerId===me.id).map(p=>p.id)]);
- return [...latestConfirmedSplits(settlements).values()].filter(s=>visibleEventIds.has(s.eventId)).flatMap(s=>s.bills.filter(b=>mine.has(b.playerId)&&!feePaid(payments,s.eventId,b)).map(b=>({eventId:s.eventId,playerId:b.playerId,total:b.total,friend:b.playerId!==me.playerId,created:s.created})))
+ return [...latestConfirmedSplits(settlements).values()].filter(s=>visibleEventIds.has(s.eventId)).flatMap(s=>s.bills.filter(b=>mine.has(b.playerId)&&!feePaid(payments,s.eventId,b)).map(b=>({eventId:s.eventId,settlementId:s.id,playerId:b.playerId,total:b.total,friend:b.playerId!==me.playerId,created:s.created})))
   .sort((a,b)=>b.created-a.created);
 }

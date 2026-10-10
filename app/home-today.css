@@ -1,0 +1,26 @@
+.home-todos h2,.home-live-activity h2,.home-ended h2{margin:6px 0 10px;font-size:19px}
+.home-todo{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:10px 4px;border:0;border-top:1px solid var(--border);background:none;color:inherit;text-align:left;cursor:pointer}
+.home-todo:first-of-type{border-top:0}
+.home-todo svg{color:var(--primary)}
+.home-todo span:nth-child(2){display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
+.home-todo small{color:var(--muted-foreground)}
+/* Theme card rules (e.g. .wuxia-theme .card) are more specific than one class, so match .card.x as well. */
+.card.home-live-activity,.wuxia-theme .card.home-live-activity{border:1px solid color-mix(in srgb,var(--primary) 55%,transparent);border-left:4px solid var(--primary);background:color-mix(in srgb,var(--primary) 8%,var(--card))}
+.home-live-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.home-live-head small{color:var(--muted-foreground)}
+.home-live-badge{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;background:var(--primary);color:var(--primary-foreground,#fff);font-size:12px;font-weight:700}
+.home-live-dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:home-live-pulse 1.4s ease-in-out infinite}
+@keyframes home-live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.home-live-mine{display:flex;align-items:flex-start;gap:10px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid color-mix(in srgb,var(--primary) 40%,transparent)}
+.home-live-mine svg{flex:none;margin-top:2px;color:var(--primary)}
+.home-live-mine span{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
+.home-live-mine small{color:var(--muted-foreground)}
+.home-live-courts{display:grid;gap:6px;margin:0 0 12px;padding:0;list-style:none}
+.home-live-courts li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:14px}
+.home-live-courts span{overflow-wrap:anywhere}
+.home-live-courts em{font-style:normal;color:var(--muted-foreground)}
+.card.home-ended.needs-vote,.wuxia-theme .card.home-ended.needs-vote{border-left:4px solid var(--primary)}
+.home-ended button svg{vertical-align:-3px}
+.home-quiet{display:grid;gap:10px;justify-items:start}
+.home-quiet p{margin:0;color:var(--muted-foreground)}
+@media(prefers-reduced-motion:reduce){.home-live-dot{animation:none}}
