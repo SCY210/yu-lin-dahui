@@ -11,7 +11,7 @@ export function isStandaloneApp(){
 type Box={parentElement:Box|null;scrollTop:number;closest?:(selector:string)=>unknown};
 /** A pull starts only from the top of the page, outside dialogs and opted-out areas, and not inside a scrolled box. */
 export function pullBlocked(target:Box|null,isScrollable:(el:Box)=>boolean){
- if(target?.closest?.('[role="dialog"],dialog,[data-no-pull-refresh]'))return true;
+ if(target?.closest?.('[role="dialog"],[role="alertdialog"],dialog,[data-no-pull-refresh],input,textarea,select,[contenteditable="true"]'))return true;
  for(let el=target;el;el=el.parentElement)if(isScrollable(el)&&el.scrollTop>0)return true;
  return false;
 }

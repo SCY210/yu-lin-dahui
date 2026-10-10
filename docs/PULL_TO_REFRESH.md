@@ -11,3 +11,5 @@ in standalone mode only; normal browser tabs keep their own behaviour.
 - While the indicator follows the finger, the page bounce is suppressed. The spinner respects reduced motion.
 
 `tests/pull-to-refresh.test.ts` covers the damping, threshold and blocking rules.
+
+A cancelled gesture never reloads. Adding a second finger or scrolling away from the top cancels the pull. Open dialogs and form controls retain their own touch handling. These cases are exercised by `tests/pull-refresh-ui.mjs`.
