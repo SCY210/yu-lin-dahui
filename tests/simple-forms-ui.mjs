@@ -9,8 +9,9 @@ const shell=`import {createElement as h} from 'react';const box=({children})=>h(
 const dialog=shell+`export const Dialog=({open,children})=>open?children:null;export const DialogContent=box,DialogHeader=box,DialogDescription=box,DialogTitle=heading;`;
 const alert=shell+`export const AlertDialog=({open,children})=>open?children:null;export const AlertDialogContent=box,AlertDialogHeader=box,AlertDialogDescription=box,AlertDialogFooter=box,AlertDialogTitle=heading,AlertDialogAction=button,AlertDialogCancel=button;`;
 await build({entryPoints:['tests/fixtures/simple-forms-preview.tsx'],outfile:'.test-output/simple-forms-fixture.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*'],loader:{'.css':'empty'},banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},plugins:[{name:'dialog-shells',setup(b){
+ b.onResolve({filter:/(?:^|\/)venue-field$/},()=>({path:'venue',namespace:'simple-ui'}));
  b.onResolve({filter:/components\/ui\/(dialog|alert-dialog|checkbox)$/},a=>({path:a.path.split('/').at(-1),namespace:'simple-ui'}));
- b.onLoad({filter:/.*/,namespace:'simple-ui'},a=>({loader:'js',contents:a.path==='dialog'?dialog:a.path==='alert-dialog'?alert:`import {createElement} from 'react';export const Checkbox=props=>createElement('input',{type:'checkbox',...props});`}));
+ b.onLoad({filter:/.*/,namespace:'simple-ui'},a=>({loader:'js',contents:a.path==='venue'?`import {createElement} from 'react';export default function Venue({value,onChange}){return createElement('input',{'aria-label':'Fixture venue',value,onChange:e=>onChange(e.target.value,'Fixture address')})}`:a.path==='dialog'?dialog:a.path==='alert-dialog'?alert:`import {createElement} from 'react';export const Checkbox=props=>createElement('input',{type:'checkbox',...props});`}));
 }}]});
 const {default:Preview}=await import(pathToFileURL(resolve('.test-output/simple-forms-fixture.mjs')).href),prior=globalThis.IS_REACT_ACT_ENVIRONMENT;
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let renderer;const calls=[];const onAction=async(action,payload)=>{calls.push({action,payload})};
@@ -22,5 +23,14 @@ try{
  const confirm=renderer.root.findAllByType('button').find(b=>b.children.join('')==='确认删除');assert.ok(confirm);assert.equal(confirm.props.disabled,false);await act(async()=>{confirm.props.onClick()});assert.deepEqual(calls.pop(),{action:'deleteEvent',payload:{eventId:'fixture-event',reason:'确认删除活动'}});
  await act(async()=>{renderer.unmount();renderer=create(React.createElement(Preview,{kind:'score',onAction}))});const inputs=renderer.root.findAllByType('input');assert.equal(inputs.length,2);assert.ok(inputs.every(n=>n.props.type==='number'));
  await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}})});const scored=calls.pop();assert.equal(scored.action,'score');assert.equal(scored.payload.reason,'修正比赛结果');assert.deepEqual(scored.payload.games,[{a:21,b:19}]);
+ await act(async()=>{renderer.unmount();renderer=create(React.createElement(Preview,{kind:'practice',onAction}))});
+ const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');
+ const activity=renderer.root.findAllByType('select').find(s=>s.findAllByType('option').some(o=>o.props.value==='practice'));assert.ok(activity);assert.ok(activity.findAllByType('option').some(o=>o.props.value==='practice'));
+ await act(()=>activity.props.onChange({target:{value:'practice'}}));const content=renderer.root.findByType('textarea');assert.equal(content.props.required,true);await act(()=>content.props.onChange({target:{value:'步法和发接发练习'}}));
+ await act(()=>renderer.root.findByProps({'aria-label':'Fixture venue'}).props.onChange({target:{value:'Fixture Venue'}}));
+ const quantity=renderer.root.findAllByType('label').find(l=>text(l).startsWith('耗球数量')).findByType('input');await act(()=>quantity.props.onChange({target:{value:'3'}}));
+ const price=renderer.root.findAllByType('label').find(l=>text(l).startsWith('单颗球价')).findByType('input');await act(()=>price.props.onChange({target:{value:'1.5'}}));
+ await act(async()=>renderer.root.findByType('form').props.onSubmit({preventDefault(){}}));const practice=calls.pop();assert.equal(practice.action,'event');assert.equal(practice.payload.matchFormat,'practice');assert.equal(practice.payload.note,'步法和发接发练习');assert.equal(practice.payload.practiceBallCount,3);assert.equal(practice.payload.practiceShuttleCents,150);assert.equal(practice.payload.bookings[0].cents,690);assert.equal(practice.payload.bookings[0].signupCapacity,16);
+ console.log('PASS practice creation UI: third type, required multiline content, visible ball price/quantity and real converted event payload');
  console.log('PASS simplified real React forms: no required reason input, automatic audit text, destructive confirmation retained and singles score correction');
 }finally{if(renderer)await act(async()=>renderer.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}

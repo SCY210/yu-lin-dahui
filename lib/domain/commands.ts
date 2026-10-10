@@ -1,4 +1,4 @@
-import {automaticEventTitle,eventFormat} from './match-format';
+import {automaticEventTitle,eventFormat,isPractice} from './match-format';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
@@ -38,10 +38,10 @@ export function authorized(a: Account, action: string) { if (!['register', 'canc
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
-    event: z.object({ title: text.optional(), matchFormat:z.enum(['singles','doubles']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
+    event: z.object({ title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
     eventStatus: z.object({ eventId: pid, status: z.enum(['draft', 'open', 'locked', 'live', 'ended', 'cancelled']) }),
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
-    eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles']).optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
+    eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).optional(), practiceShuttleCents:cents.optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
     booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }),
     register: z.object({ eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
     moveQueue: z.object({ eventId: pid, playerId: pid, beforePlayerId: pid, reason }),
@@ -130,10 +130,13 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请检查活动起止时间');
             for (const b of p.bookings)
                 checkBooking(p, b);
-            const { bookings, ...details } = p;
+            if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
+            const { bookings, practiceShuttleCents, practiceBallCount, ...details } = p;
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: p.end, cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
-            e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
+            if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
+            else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             s.events.push(e);
+            if(isPractice(e)&&(practiceBallCount??0)>0)s.costs.push({id:id(),eventId:e.id,type:'ball',name:'练球用球',pricing:'unit',cents:e.practiceShuttleCents!,tubeCount:1,used:practiceBallCount!,start:null,end:null,bearer:'members'});
             for (const b of bookings)
                 s.bookings.push({ ...b, signupCapacity: b.signupCapacity ?? e.capacity, id: id(), eventId: e.id });
             break;
@@ -174,9 +177,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'eventEdit': {
             const p = command.payload;
             const e = event(p.eventId);
+            if((p.matchFormat??eventFormat(e))==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
             if (p.capacity < s.registrations.filter(r => r.eventId === e.id && r.status === 'confirmed' && !r.bookingSignups).length)
                 fail('上限不能低于当前正式人数，请先调整报名名单');
-            if(p.matchFormat&&p.matchFormat!==eventFormat(e)){if(s.matches.some(m=>m.eventId===e.id&&m.status!=='cancelled'))fail('已有分组或比赛，不能更改单打 / 双打');e.matchFormat=p.matchFormat;e.automaticTitle=true;e.pointsChoice=undefined;e.playMode='balanced';e.identityMode='off';}
+            if(p.matchFormat&&p.matchFormat!==eventFormat(e)){if(s.matches.some(m=>m.eventId===e.id&&m.status!=='cancelled'))fail('已有分组或比赛，不能更改活动类型');e.matchFormat=p.matchFormat;e.automaticTitle=true;e.pointsChoice=undefined;e.livePlay=undefined;e.pointsPlan=undefined;e.playMode='balanced';e.identityMode='off';}
+            if(isPractice(e))e.practiceShuttleCents=p.practiceShuttleCents??e.practiceShuttleCents??200;
             Object.assign(e, { title: p.title??(e.automaticTitle?automaticEventTitle(e.start,eventFormat(e)):e.title), venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
             promote(s, e, now);
             break;

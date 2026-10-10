@@ -1,4 +1,5 @@
 import type {Match,State} from './types';
+import {isPractice} from './match-format';
 import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
 import {ratingAdjustments,type RatingAdjustment} from './point-grants';
@@ -80,10 +81,11 @@ export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesEx
  * A player whose previous rated game ended `inactivityMonths` before a match starts (or before `now`) restarts
  * at the start score with placement and the novice K again; otherwise the score never resets.
  * adjustments: the owner's 修为 grants, applied at their time (realm settles at once; they never count as games). */
-export function replayRealmScores(s:Pick<State,'players'|'matches'>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[]){
+export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick<State,'events'>>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[]){
  const fresh=():Row=>({score:realmPolicy.start,games:0,wins:0,losses:0,held:rawRealmIndex(realmPolicy.start),last:null});
  const rows=new Map<string,Row>(s.players.map(p=>[p.id,fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
- const ordered=[...s.matches].sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id)).filter(m=>{if(seen.has(m.id)||!include(m))return false;if(![...m.a,...m.b].every(id=>rows.has(id)))return false;seen.add(m.id);return true});
+ const practice=new Set(s.events?.filter(isPractice).map(e=>e.id)??[]);
+ const ordered=[...s.matches].sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id)).filter(m=>{if(practice.has(m.eventId)||seen.has(m.id)||!include(m))return false;if(![...m.a,...m.b].every(id=>rows.has(id)))return false;seen.add(m.id);return true});
  // Realms settle once per activity: the last included match of an activity is its checkpoint.
  const last=new Map<string,number>();ordered.forEach((m,i)=>last.set(m.eventId,i));
  const participants=new Map<string,Set<string>>();

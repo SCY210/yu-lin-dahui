@@ -1,3 +1,4 @@
+import {isPractice} from './match-format';
 import {pointGrants,ratingAdjustments} from './point-grants';
 import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
 import {gameFacts} from './game-facts';
@@ -39,7 +40,8 @@ export {seasonPointsPolicy,upsetBonus,gamePoints} from './season-points';
  * `leaderboard` (one month) only backs the owner's history-rules preview; members see quarterly and annual boards. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
 function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
- const singles=format==='singles',accept=(m:Match)=>format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m)),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
+ const practice=new Set(s.events.filter(isPractice).map(e=>e.id));
+ const singles=format==='singles',accept=(m:Match)=>!practice.has(m.eventId)&&(format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m))),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
  const members=new Set(s.accounts.map(account=>account.playerId));
  const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{

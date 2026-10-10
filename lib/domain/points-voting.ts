@@ -11,7 +11,7 @@ export function pointsChoiceCounts(s:Parameters<typeof shuttleParticipantIds>[0]
 }
 /** An unconfigured, unconfirmed activity starts open; explicit closures stay closed. */
 export function pointsVotingOpen(e:Event,now=Date.now()){
- if(eventFormat(e)==='singles')return false;
+ if(eventFormat(e)!=='doubles')return false;
  const open=e.pointsChoice?.votingOpen??!e.pointsChoice?.selectedMode;
  return e.deletedAt===undefined&&['open','locked'].includes(e.status)&&now<e.start&&open;
 }

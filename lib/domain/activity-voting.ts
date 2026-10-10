@@ -1,4 +1,5 @@
 import {canManageEvent} from './permissions';
+import {isPractice} from './match-format';
 import {eventStatusAt} from './event-lifecycle';
 import type {Account,Event,State} from './types';
 
@@ -15,7 +16,7 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
 }
 
 export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()):boolean{
- if(e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start)return false;
+ if(isPractice(e)||e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start)return false;
  // Missing score entry must not hold a finished activity's voting hostage.
  if(now>=e.end)return true;
  return eventStatusAt(e,now)==='ended'&&!s.matches.some(m=>m.eventId===e.id&&m.status==='playing');

@@ -1,10 +1,11 @@
 import type {State} from '../domain/types';
+import {isPractice} from '../domain/match-format';
 import {eventStatusAt} from '../domain/event-lifecycle';
 
 /** Read only the viewer's projected data; scheduled, deleted and finished games
  * cannot become live cards just because an activity exists. */
 export function homeLiveMatches(data:Pick<State,'events'|'matches'|'rounds'|'bookings'>,now:number){
- const events=new Map(data.events.filter(e=>e.deletedAt===undefined&&e.start<=now&&now<e.end&&['open','locked','live'].includes(eventStatusAt(e,now))).map(e=>[e.id,e]));
+ const events=new Map(data.events.filter(e=>!isPractice(e)&&e.deletedAt===undefined&&e.start<=now&&now<e.end&&['open','locked','live'].includes(eventStatusAt(e,now))).map(e=>[e.id,e]));
  const rounds=new Map(data.rounds.map(r=>[r.id,r])),bookings=new Map(data.bookings.map(b=>[b.id,b]));
  return data.matches.flatMap(match=>{
   const event=events.get(match.eventId),round=rounds.get(match.roundId);

@@ -1,10 +1,11 @@
 import {registrationSpans,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
-import {courtPlayers} from './match-format';
+import {courtPlayers,isPractice} from './match-format';
 const minute=60000;
 
 /** Stable attendance / court windows, shared by the planner and its explanation. */
 export function pointsPhases(s:State,e:Event,start:number,end:number){
+ if(isPractice(e))return [];
  const needed=courtPlayers(e);
  if(end<=start)return [];
  const regs=s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&s.players.some(p=>p.id===r.playerId&&p.enabled));

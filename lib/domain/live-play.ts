@@ -7,7 +7,7 @@ import {balanceCost,compareBalance} from './match-balance';
 import {canManageEvent} from './permissions';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
-import {eventFormat,courtPlayers} from './match-format';
+import {eventFormat,courtPlayers,isPractice} from './match-format';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
 
 const id=z.string().min(1).max(100);
@@ -54,7 +54,7 @@ function pair(s:State,e:Event,ids:string[]){
  * Attendance/court times constrain availability internally; no duration is guessed. */
 export function fillLiveCourts(s:State,e:Event,now:number){
  const config=e.livePlay;
- if(!config?.enabled||config.paused||e.deletedAt!==undefined||['draft','ended','cancelled'].includes(e.status)||now<e.start||now>=e.end)return;
+ if(isPractice(e)||!config?.enabled||config.paused||e.deletedAt!==undefined||['draft','ended','cancelled'].includes(e.status)||now<e.start||now>=e.end)return;
  const present=livePresentIds(s,e,now),busy=new Set(s.matches.filter(playing).flatMap(m=>[...m.a,...m.b]));
  const courts=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now)
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
@@ -111,6 +111,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  const p=command.payload;
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(['ended','cancelled','draft'].includes(eventStatusAt(e,now)))fail('请在活动开放后、结束前使用实时排场');
+ if(isPractice(e))fail('练球活动不生成比赛或积分');
  const manager=canManageEvent(a,e);
  if(command.action==='liveStart'||command.action==='livePause'){
   if(!manager)fail('403: 只有活动创建者或管理员可以开始或暂停排场');
