@@ -26,8 +26,12 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
         fail('本活动使用实时排场，不再按预计时间预排比赛');
     if (['draft', 'ended', 'cancelled'].includes(e.status))
         fail('请在活动开放后、结束前安排积分赛');
-    if (s.matches.some(m => m.eventId === e.id && ['playing', 'complete', 'forfeit'].includes(m.status)))
-        fail('已有比赛开始或完成，请保留现有安排；积分赛须在开打前一次分配');
+    if(command.action==='planPoints'){
+        if(s.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('已有比赛开始，请先录完当前轮全部对局再预排剩余赛程');
+        const history=s.matches.filter(m=>m.eventId===e.id&&['complete','forfeit'].includes(m.status));
+        if(history.length&&command.payload.at<Math.max(now,...history.map(m=>m.end??m.start??e.start)))fail('已有比赛完成，剩余赛程必须从当前时间之后安排');
+        if(history.length&&command.payload.pairing!==(e.pointsChoice?.selectedMode??'rotate'))fail('已有对局完成，剩余赛程请保留已确认搭档方式');
+    }
     switch (command.action) {
         case 'publishPoints': {
             const rounds = s.rounds.filter(r => r.eventId === e.id && r.pointsSlot !== undefined && r.status === 'draft');
@@ -51,11 +55,12 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
             const working = structuredClone(s), event = working.events.find(x => x.id === e.id)!;
             event.attendanceMode = 'automatic';
             if(eventFormat(event)==='singles'&&p.pairing==='fixed')fail('单打请使用个人轮转安排');
-            const teams = p.pairing === 'fixed' ? fixedPartnerTeams(working, event) : undefined;
+            const teams = p.pairing === 'fixed' ? (event.pointsChoice?.selectedMode==='fixed'&&event.pointsChoice.teams?structuredClone(event.pointsChoice.teams):fixedPartnerTeams(working,event)) : undefined;
             const replaced = new Set(working.rounds.filter(r => r.eventId === e.id && ['draft', 'published'].includes(r.status)).map(r => r.id));
             working.rounds.filter(r => replaced.has(r.id)).forEach(r => r.status = 'cancelled');
             working.matches.filter(m => replaced.has(m.roundId)).forEach(m => m.status = 'cancelled');
             const windows = pointsRoundWindows(working, event, p.at, end, p.roundMinutes);
+            const slotBase=Math.max(0,...working.rounds.filter(r=>r.eventId===e.id&&['complete','playing'].includes(r.status)).map(r=>r.pointsSlot??0));
             const plannedRounds: Round[] = [], plannedMatches: Match[] = [];
             for (const [i, { start: at, duration }] of windows.entries()) {
                 let proposal: ReturnType<typeof propose>;
@@ -65,7 +70,7 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
                 catch (error) {
                     fail(`第${i + 1}轮无法安排：${error instanceof Error ? error.message : '请检查参加时间和场地'}`);
                 }
-                const r: Round = { id: crypto.randomUUID(), eventId: e.id, start: at, duration, status: 'published', eligible: proposal.eligible, rest: proposal.rest, seed: ((p.seed + i * 7919) % 2147483647) || 1, pointsSlot: i + 1 };
+                const r: Round = { id: crypto.randomUUID(), eventId: e.id, start: at, duration, status: 'published', eligible: proposal.eligible, rest: proposal.rest, seed: ((p.seed + i * 7919) % 2147483647) || 1, pointsSlot: slotBase + i + 1 };
                 working.rounds.push(r);
                 plannedRounds.push(r);
                 for (const court of proposal.courts) {
@@ -77,6 +82,7 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
             }
             plannedRounds.forEach(r => r.status = 'draft');
             plannedMatches.forEach(m => m.status = 'draft');
+            e.schedulingMode='planned';
             e.pointsPlan = { start: p.at, end, roundMinutes: p.roundMinutes, seed: p.seed, generatedAt: now };
             e.attendanceMode = 'automatic';
             e.pointsChoice = { ...(e.pointsChoice ?? { votes: [] }), selectedMode: p.pairing, votingOpen: false, teams };

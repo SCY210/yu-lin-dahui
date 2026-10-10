@@ -4,6 +4,7 @@ import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
 import { applyLivePlay, finishLiveMatch } from './live-play';
+import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
 import { assertPlayerMutable, assertAccountMutable, clubOwnerId, isClubOwner } from './ownership';
@@ -65,6 +66,8 @@ const schemas = {
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
+    if (await applyScheduling(s, a, action, input, now))
+        return null;
     if (await applyLiveLineup(s, a, action, input, now))
         return null;
     if (await applyLivePlay(s, a, action, input, now))
@@ -345,6 +348,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'generate': {
             const p = command.payload;
             const e = event(p.eventId);
+            if(e.schedulingMode==='round'&&s.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('请先录完当前轮全部对局，再生成下一轮');
             if (e.livePlay?.enabled)
                 fail('本活动使用实时排场，请在比赛页面开始或恢复排场');
             if (p.usePointsWindow && !e.pointsPlan)
@@ -388,6 +392,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 s.matches.push({ ...m, id: id(), eventId: e.id, roundId: r.id, status: 'draft', start: null, end: null, scoreA: null, scoreB: null, monthly: true, elo: true, locked: false, enteredBy: null, games: [] });
             for (const m of s.matches.filter(m => m.roundId === r.id && !m.locked))
                 decorateMatch(s, e, m);
+            e.schedulingMode='round';
             break;
         }
         case 'swap': {

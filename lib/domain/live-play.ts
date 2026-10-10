@@ -1,3 +1,4 @@
+import {cancelPendingScheduling} from './scheduling';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {eventStatusAt} from './event-lifecycle';
@@ -124,9 +125,8 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(action==='liveStart'&&(now<e.start||now>=e.end))fail('请在活动进行时开始实时排场');
  const config=configuration(e);
  if(command.action==='liveStart'){
-  const pending=new Set(s.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).map(r=>r.id));
-  s.rounds.filter(r=>pending.has(r.id)).forEach(r=>r.status='cancelled');
-  s.matches.filter(m=>pending.has(m.roundId)).forEach(m=>m.status='cancelled');
+  cancelPendingScheduling(s,e.id);
+  e.schedulingMode='live';
   config.enabled=true;config.paused=false;e.playMode='balanced';
  }else if(command.action==='livePause')config.paused=command.payload.paused;
  else if(command.action==='livePreference'){

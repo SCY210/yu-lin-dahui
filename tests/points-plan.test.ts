@@ -54,9 +54,9 @@ test('积分赛不能越界、不能由普通成员管理，擂台仍用逐轮�
  await assert.rejects(()=>act('planPoints',{at:start,pointsMinutes:90,roundMinutes:15,seed:12,pairing:'rotate'},'actor1'),/403/);assert.deepEqual(s,before);
  e.playMode='arena';before=structuredClone(s);await assert.rejects(()=>plan(),/擂台/);assert.deepEqual(s,before);
 });
-test('重新预排仅取消未开始轮次，开始后禁止重排，原成绩不被修改',async()=>{
+test('重新预排仅取消未开始轮次，不允许覆盖已完成时段，原成绩不被修改',async()=>{
  const {s,plan}=fixture();await plan();const old=s.rounds.map(r=>r.id);await plan('fixed');assert.ok(s.rounds.filter(r=>old.includes(r.id)).every(r=>r.status==='cancelled'));assert.equal(s.rounds.filter(r=>r.status==='draft').length,6);
- const m=s.matches.find(m=>m.status==='draft')!;m.status='complete';m.start=start;m.end=start+15*minute;m.scoreA=21;m.scoreB=17;const before=structuredClone(s);await assert.rejects(()=>plan(),/比赛开始或完成/);assert.deepEqual(s,before);
+ const m=s.matches.find(m=>m.status==='draft')!;m.status='complete';m.start=start;m.end=start+15*minute;m.scoreA=21;m.scoreB=17;const before=structuredClone(s);await assert.rejects(()=>plan(),/剩余赛程必须/);assert.deepEqual(s,before);
 });
 test('发布全部轮次先完整验证，名单改变时不会部分发布',async()=>{
  const {s,act,plan}=fixture();await plan();s.registrations[0].status='cancelled';const before=structuredClone(s);await assert.rejects(()=>act('publishPoints'),/参加时段/);assert.deepEqual(s,before);

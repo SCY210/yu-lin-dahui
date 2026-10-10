@@ -18,7 +18,7 @@ export function canRecordScore(s:Pick<State,'registrations'>,a:Pick<Account,'id'
   (r.bookingSignups?r.bookingSignups.some(row=>['confirmed','waitlist'].includes(row.status)):['confirmed','waitlist'].includes(r.status)));
 }
 
-const eventActions=new Set(['liveLineup','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','notifyFees','settle','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['schedulingMode','liveLineup','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','notifyFees','settle','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
@@ -31,7 +31,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['liveLineup','moveCourt','lock','score','matchScoring','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
- if(isPractice(event)&&['liveLineup','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','playSettings','handicap','challengeMatch'].includes(action))fail('练球活动不生成比赛或积分，请使用活动接龙和费用功能');
+ if(isPractice(event)&&['schedulingMode','liveLineup','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','playSettings','handicap','challengeMatch'].includes(action))fail('练球活动不生成比赛或积分，请使用活动接龙和费用功能');
  if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
  if(action==='score'){
   if(!canRecordScore(s,a,event))fail('403: 只有本活动已接龙的球友、创建者或管理员可以录入比分');
