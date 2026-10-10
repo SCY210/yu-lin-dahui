@@ -1,4 +1,5 @@
 import {editReason} from './edit-reason';
+import { signupClosed, signupCloseHours } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { fail, type Account, type State } from './types';
@@ -34,6 +35,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 fail('当前活动未开放报名');
             if (!manager && now >= b.end)
                 fail('该场地时段已结束');
+            if (!manager && (!r || r.status === 'cancelled') && signupClosed(e, now))
+                fail('报名已截止（活动开始前 ' + signupCloseHours + ' 小时），请联系活动创建者');
             if (p.arrival < b.start || p.departure > b.end || p.departure <= p.arrival)
                 fail('参加时间必须在所选场地时段内');
             if (r?.bookingSignups?.some(x => x.bookingId !== b.id && x.status !== 'cancelled' && x.arrival < p.departure && x.departure > p.arrival))
