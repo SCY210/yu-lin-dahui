@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Account,type Event,type Registration} from '../lib/domain/types';
-import {groupEvents,homeTodos,liveActivities,recentlyEnded,recentlyEndedHours} from '../lib/client/home-today';
+import {courtLine,groupEvents,homeTodos,liveActivities,recentlyEnded,recentlyEndedHours} from '../lib/client/home-today';
 const now=Date.parse('2030-10-08T12:00:00Z'),hour=3600000;
 const me:Account={id:'acc-me',email:'me@club.example',role:'member',playerId:'me'};
 const event=(id:string,start:number,end:number,extra:Partial<Event>={}):Event=>({id,title:'Fixture '+id,matchFormat:'doubles',creatorId:'host',start,end,venue:'Fixture venue',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'open',courtMode:'equal',ballMode:'equal',...extra});
@@ -45,4 +45,8 @@ test('the activities page groups my sign-ups, open activities, the rest and the 
  s.registrations.push(reg('mine','me'),reg('open','me',{status:'cancelled'}));
  const g=groupEvents(s,now);
  assert.deepEqual([g.mine,g.open,g.other,g.past].map(l=>l.map(e=>e.id)),[['mine'],['open'],['locked'],['cancelled','past']]);
+});
+test('the on-court line spaces out numbered court names and falls back without a court',()=>{
+ assert.equal(courtLine('1 号场'),'你正在 1 号场比赛');assert.equal(courtLine('Court A'),'你正在 Court A 比赛');
+ assert.equal(courtLine('主场'),'你正在主场比赛');assert.equal(courtLine(undefined),'你正在场上比赛');
 });

@@ -6,7 +6,7 @@ The home page shows only what needs attention today. The Activities tab is the f
 
 From top to bottom:
 
-1. **Unpaid fees** (`app/home-unpaid.tsx`). One row per unpaid bill of the latest confirmed split, including bills for friends the member registered. When the activity has a fee recipient, the row shows the recipient and a copy button. The "mark paid" button records a self-reported payment (`feePaid`) without leaving the page.
+1. **Unpaid fees** (`app/home-unpaid.tsx`). One entry per activity with unpaid bills of the latest confirmed split. When the member also owes for friends they registered, the entry lists each bill and the total. When the activity has a fee recipient, the row shows the recipient and a copy button. The "mark paid" button records a self-reported payment (`feePaid`) for every bill of that activity without leaving the page.
 2. **To-dos** (`homeTodos`):
    - scores to enter for the member's own playing games;
    - sign-up deadlines within `signupSoonHours` (24 h) for open activities the member has not joined;

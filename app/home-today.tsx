@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {ClipboardList,Trophy,Radio,CalendarClock,UserCheck} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
-import {homeTodos,liveActivities,recentlyEnded} from '../lib/client/home-today';
+import {courtLine,homeTodos,liveActivities,recentlyEnded} from '../lib/client/home-today';
 import {hm} from './form-fields';
 import './home-today.css';
 
@@ -27,7 +27,7 @@ export default function HomeToday({data,onOpen,onBrowse,hasUnpaid}:{data:ClubDat
   {live.map(({event,matches,myMatch,registered})=><section className="card home-live-activity" key={event.id} aria-label={event.title+' 进行中'}>
    <div className="home-live-head"><span className="home-live-badge"><span className="home-live-dot" aria-hidden="true"/>进行中</span><small>{hm(event.start)}–{hm(event.end)} · {event.venue}</small></div>
    <h2>{event.title}</h2>
-   {myMatch?<div className="home-live-mine"><Radio size={18} aria-hidden="true"/><span><strong>你正在{myMatch.court?.name??'场上'}比赛</strong><small>{myMatch.partners.length?'你和 '+team(myMatch.partners):'你'} 对阵 {team(myMatch.opponents)}</small></span></div>
+   {myMatch?<div className="home-live-mine"><Radio size={18} aria-hidden="true"/><span><strong>{courtLine(myMatch.court?.name)}</strong><small>{myMatch.partners.length?'你和 '+team(myMatch.partners):'你'} 对阵 {team(myMatch.opponents)}</small></span></div>
     :registered&&<p className="hint">{matches.length?'你这一轮轮休，留意下一轮安排。':'还没有开始排场，稍后查看分组。'}</p>}
    {matches.length>0&&<ul className="home-live-courts">{matches.map(({match,court})=><li key={match.id}><strong>{court?.name??'场地'}</strong><span>{team(match.a)} <em>对阵</em> {team(match.b)}</span></li>)}</ul>}
    <button type="button" className="primary" onClick={()=>onOpen(event.id,'rounds')}>查看本场对局</button>

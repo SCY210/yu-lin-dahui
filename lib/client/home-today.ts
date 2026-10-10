@@ -29,6 +29,9 @@ export function liveActivities(data:HomeData,now:number):LiveActivity[]{
  });
 }
 
+/** "You are playing on court X", with a space where the court name meets Chinese text with a digit or Latin letter. */
+export const courtLine=(court?:string)=>!court?'你正在场上比赛':'你正在'+(/^[0-9A-Za-z]/.test(court)?' ':'')+court+(/[0-9A-Za-z]$/.test(court)?' ':'')+'比赛';
+
 export type EndedActivity={event:Event;canVote:boolean;voted:boolean};
 /** Activities that ended within the last few hours; the MVP prompt shows while the viewer may still vote. */
 export function recentlyEnded(data:HomeData,now:number):EndedActivity[]{
