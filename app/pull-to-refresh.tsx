@@ -13,26 +13,30 @@ export default function PullToRefresh({onRefresh=()=>window.location.reload()}:{
  useEffect(()=>{
   if(!isStandaloneApp())return;
   const scrollable=(el:{scrollTop:number})=>el instanceof Element&&/(auto|scroll)/.test(getComputedStyle(el).overflowY);
+  const cancel=()=>{start.current=null;distance.current=0;setPull(0)};
   const down=(e:TouchEvent)=>{
+   cancel();
+   if(document.querySelector('[role="dialog"][data-state="open"],[role="alertdialog"][data-state="open"],dialog[open]'))return;
    start.current=!busy.current&&window.scrollY<=0&&e.touches.length===1&&!pullBlocked(e.target as unknown as Element,scrollable)?e.touches[0].clientY:null;
    distance.current=0;
   };
   const move=(e:TouchEvent)=>{
    if(start.current===null)return;
-   if(window.scrollY>0){start.current=null;setPull(0);return}
+   if(e.touches.length!==1||window.scrollY>0){cancel();return}
    const {distance:d}=pullProgress(e.touches[0].clientY-start.current);distance.current=d;setPull(d);
    // Stop the page bouncing while the indicator follows the finger.
    if(d>4&&e.cancelable)e.preventDefault();
   };
-  const up=()=>{
+  const up=(e:TouchEvent)=>{
+   if(e.touches.length){cancel();return}
    if(start.current===null)return;
    start.current=null;
    if(distance.current>=pullThreshold){busy.current=true;setRefreshing(true);setPull(pullThreshold*0.75);refresh.current()}
    else setPull(0);
   };
   window.addEventListener('touchstart',down,{passive:true});window.addEventListener('touchmove',move,{passive:false});
-  window.addEventListener('touchend',up);window.addEventListener('touchcancel',up);
-  return ()=>{window.removeEventListener('touchstart',down);window.removeEventListener('touchmove',move);window.removeEventListener('touchend',up);window.removeEventListener('touchcancel',up)};
+  window.addEventListener('touchend',up);window.addEventListener('touchcancel',cancel);
+  return ()=>{window.removeEventListener('touchstart',down);window.removeEventListener('touchmove',move);window.removeEventListener('touchend',up);window.removeEventListener('touchcancel',cancel)};
  },[]);
  if(!pull&&!refreshing)return null;
  const ready=refreshing||pull>=pullThreshold;
