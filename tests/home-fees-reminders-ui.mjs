@@ -8,7 +8,7 @@ import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
 writeFileSync('.test-output/home-fee-entry.ts',"export {default as ReminderButton} from '../app/reminder-button';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as MyFeeList} from '../app/my-fee-list';");
-await build({entryPoints:['.test-output/home-fee-entry.ts'],outfile:'.test-output/home-fee-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','lucide-react'],loader:{'.css':'empty'}});
+await build({entryPoints:['.test-output/home-fee-entry.ts'],outfile:'.test-output/home-fee-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner'],loader:{'.css':'empty'}});
 const {ReminderButton,HomeUnpaid,MyFeeList}=await import(pathToFileURL(resolve('.test-output/home-fee-ui.mjs')).href);
 const original={fetch:globalThis.fetch,document:globalThis.document,setInterval:globalThis.setInterval,clearInterval:globalThis.clearInterval,act:globalThis.IS_REACT_ACT_ENVIRONMENT};
 const requests=[],listeners=new Map(),timers=new Map();let nextTimer=0,ui;

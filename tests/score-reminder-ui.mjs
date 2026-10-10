@@ -25,10 +25,13 @@ async function click(label){await act(async()=>{const target=button(label);asser
 try{
  await act(async()=>{renderer=create(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:true})));await pause()});
  assert.equal(headings().includes('录入本局比分'),false,'An existing dialog/write must defer the reminder');
+ await act(()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'fixture-match'})});assert.equal(headings().includes('录入本局比分'),false,'home score events respect blocked dialogs');
  await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:false})));await pause()});assert.ok(headings().includes('录入本局比分'));
  await click('稍后再录');assert.equal(headings().includes('录入本局比分'),false);
  await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview)));await pause()});assert.equal(headings().includes('录入本局比分'),false,'Polling/rerender must not re-open a postponed prompt');
- await click('去录分');assert.ok(headings().includes('录入本局比分'));
+ await act(()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'unknown-match'})});assert.equal(headings().includes('录入本局比分'),false);
+ await act(async()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'fixture-match'});await pause()});assert.ok(headings().includes('录入本局比分'),'a home score event opens the current own match');
+ await click('稍后再录');await click('去录分');assert.ok(headings().includes('录入本局比分'));
  let inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs.length,2);assert.ok(inputs.every(n=>n.props.value===''&&n.props.inputMode==='numeric'));assert.equal(renderer.root.findAllByType('input').length,2,'First entry has only two score inputs, no reason input');assert.equal(inputs[0].props.autoFocus,true);
  await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}})});assert.ok(renderer.root.findAll(n=>n.props.role==='alert').some(n=>text(n).includes('实际比分')));assert.equal(renderer.root.findAll(n=>n.props.role==='status').length,0);
  await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[1].props.onChange({target:{value:'19'}})});

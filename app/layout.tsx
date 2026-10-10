@@ -4,6 +4,7 @@ import {BRAND_COOKIE,themeBrand,brandMetadata} from "../lib/theme-brand";
 import "./globals.css";
 import "./decor-layout.css";
 import "./wuxia-theme.css";
+import "./wuxia-toast.css";
 import AppRuntime from './app-runtime';
 import './legal.css';
 import {VisualThemeProvider,ThemeSwitcher} from './visual-theme';
