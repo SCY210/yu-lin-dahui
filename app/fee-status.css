@@ -1,3 +1,4 @@
+/* The one paid / unpaid label used on the fees page, My page and anywhere else: green paid, red unpaid. */
 .fee-status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .fee-status.is-paid{color:#1f7a3d;background:#e3f4e8}
 .fee-status.is-unpaid{color:var(--destructive);background:color-mix(in srgb,var(--destructive) 12%,transparent)}
