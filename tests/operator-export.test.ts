@@ -41,6 +41,11 @@ test('partial database failures fail closed and do not reveal error contents', a
   assert.equal(response.status, 503);
   assert.ok(!(await response.text()).includes('secret'));
 });
+test('configuration exports only the explicit business permission setting', async () => {
+  const environment = { ...config, PROFILE_GENDER_ONLY_PLAYER_IDS: '["player-1"]', PUSH_VAPID_PRIVATE_KEY: 'never-export' };
+  const response = (await operatorExport(req('configuration'), environment, now))!;
+  assert.deepEqual(await response.json(), { profileGenderOnlyPlayerIds: '["player-1"]' });
+});
 test('object downloads require a matching source etag', async () => {
   let called = false;
   const BUCKET = { async get(key: string, options: unknown) {

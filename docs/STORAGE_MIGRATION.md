@@ -19,6 +19,9 @@ in one transactional D1 batch without cell truncation. GET `objects` lists R2
 objects with metadata and a continuation cursor. GET `object?key=...` requires
 an `If-Match` header containing the listed etag and fails if the object changed.
 No endpoint accepts SQL or writes to the source. Responses are private/no-store.
+GET `configuration` exports only the optional profile editing permission setting.
+The environment export is an explicit allowlist and never includes signing keys,
+API tokens, sessions or the operator token. Preserve that policy on the target.
 
 Configure secrets using the hosting provider's runtime secret controls. Deploy
 the source version to apply them. Remove both variables and redeploy immediately

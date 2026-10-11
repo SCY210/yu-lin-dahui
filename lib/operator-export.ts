@@ -14,6 +14,7 @@ export interface ExportEnvironment {
   BUCKET?: R2Bucket;
   MIGRATION_EXPORT_TOKEN?: string;
   MIGRATION_EXPORT_EXPIRES_AT?: string;
+  PROFILE_GENDER_ONLY_PLAYER_IDS?: string;
 }
 const root = '/_operator/migration/';
 const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' };
@@ -36,6 +37,11 @@ export async function operatorExport(request: Request, env: ExportEnvironment, n
   if (!authorized(request, env, now)) return json({ error: 'Not found' }, 404);
   if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
   try {
+    if (url.pathname === `${root}configuration`) {
+      // Only this business permission setting is portable. Never export API,
+      // push-signing, session, or operator secrets from the environment.
+      return json({ profileGenderOnlyPlayerIds: env.PROFILE_GENDER_ONLY_PLAYER_IDS ?? null });
+    }
     if (url.pathname === `${root}snapshot`) {
       if (!env.DB) return json({ error: 'Storage unavailable' }, 503);
       // A single D1 batch is transactional: tables and schema share one snapshot.
