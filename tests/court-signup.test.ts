@@ -17,20 +17,29 @@ function fixture(cap=4){
 }
 async function join(s:ReturnType<typeof emptyState>,id:string,court='A',now=early,overrides={}){const b=s.bookings.find(b=>b.id===court)!;return apply(s,s.accounts.find(a=>a.playerId===id)!,'courtRegister',{bookingId:court,playerId:id,arrival:b.start,departure:b.end,note:'',...overrides},now)}
 
-test('旧报名截止已过仍可加入场地和旧活动接龙，时段结束后拒绝',async()=>{
- const {s,e}=fixture();e.signupDeadline=early-1;
+test('新报名在活动开始前 2 小时截止，已报名可调整，创建者仍可代加，时段结束后拒绝',async()=>{
+ const {s,e}=fixture();
  await join(s,'1');assert.equal(bookingRows(s,'A')[0].status,'confirmed');
  await apply(s,s.accounts[2],'register',{eventId:e.id,playerId:'2',arrival:start,departure:end,note:''},early);
  assert.equal(s.registrations.find(r=>r.playerId==='2')!.status,'confirmed');
+ const closed=structuredClone(s);
+ await assert.rejects(()=>join(s,'4','A',start-2*hour),/报名已截止/);
+ await assert.rejects(()=>apply(s,s.accounts[4],'register',{eventId:e.id,playerId:'4',arrival:start,departure:end,note:''},start-hour),/报名已截止/);
+ assert.deepEqual(s,closed);
+ await join(s,'4','A',start-2*hour-1);assert.ok(bookingRows(s,'A').some(r=>r.playerId==='4'),'just before the deadline still works');
+ await apply(s,s.accounts[2],'register',{eventId:e.id,playerId:'2',arrival:start,departure:start+2*hour,note:''},start-hour);
+ assert.equal(s.registrations.find(r=>r.playerId==='2')!.departure,start+2*hour,'an existing sign-up can still be adjusted');
+ await apply(s,s.accounts[0],'register',{eventId:e.id,playerId:'5',arrival:start,departure:end,note:''},start-hour);
+ assert.ok(s.registrations.some(r=>r.playerId==='5'&&r.status!=='cancelled'),'the organiser can still add players');
  const before=structuredClone(s);
  await assert.rejects(()=>join(s,'3','A',start+hour),/时段已结束/);
  await assert.rejects(()=>apply(s,s.accounts[3],'register',{eventId:e.id,playerId:'3',arrival:start,departure:end,note:''},end),/时段已结束/);
  assert.deepEqual(s,before);
 });
 
-test('取消截止后仍可报名，未开放或已结束的活动继续阻止报名',async()=>{
- const {s,e}=fixture();e.signupDeadline=early-1;
- await join(s,'1','A',start-hour);assert.equal(bookingRows(s,'A')[0].status,'confirmed');
+test('取消截止后、报名截止前仍可报名，未开放或已结束的活动继续阻止报名',async()=>{
+ const {s,e}=fixture();
+ await join(s,'1','A',start-3*hour);assert.equal(bookingRows(s,'A')[0].status,'confirmed');
  for(const status of ['draft','locked','ended','cancelled'] as const){
   e.status=status;const before=structuredClone(s);
   await assert.rejects(()=>join(s,'2'),/未开放报名|活动已结束/);assert.deepEqual(s,before);
