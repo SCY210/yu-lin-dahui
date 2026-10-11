@@ -1,4 +1,5 @@
 'use client';
+import EventTournament from './event-tournament';
 import {useState} from 'react';
 import {Play,Check,Shuffle,CalendarDays} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
@@ -20,11 +21,12 @@ import GroupPlayer from './group-player';
 import Disclosure from './disclosure';
 import './event-scheduling.css';
 type FormOpen=(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:(v:Record<string,unknown>)=>Record<string,unknown>,description?:string)=>void;
-type Context={data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
+export type SchedulingContext={data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
 const compareRounds=(a:Round,b:Round)=>a.start-b.start||(a.pointsSlot??0)-(b.pointsSlot??0)||a.id.localeCompare(b.id);
-export default function EventScheduling({e,ctx}:{e:Event;ctx:Context}){
+export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canManageEvent(ctx.data.me,e);
  if(isPractice(e))return null;
+ if(e.tournament)return <EventTournament e={e} ctx={ctx}/>;
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
  return <div className="event-scheduling"><section className="card scheduling-selector"><h2>排场方式</h2><div className="scheduling-options" role="group" aria-label="排场方式">{(['planned','round','live'] as const).map(value=><button type="button" key={value} className={mode===value?'primary':'secondary'} aria-pressed={mode===value} disabled={ctx.busy||!manager||!active||mode===value} onClick={()=>change(value)}>{schedulingLabels[value]}</button>)}</div><p className="hint">{mode==='planned'?'提前分配多轮，检查草稿后发布，再逐轮开赛、录分。':mode==='round'?'当前轮全部打完并录分后，再手动生成下一轮。':'每片场地录分后立即安排下一局，其他场地继续比赛。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></section>
@@ -32,7 +34,7 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:Context}){
   {ctx.data.rounds.some(r=>r.eventId===e.id&&r.status==='cancelled')&&<Disclosure label={'已撤销轮次 · '+ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled').length}>{ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled').slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}
  </div>;
 }
-export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:Context;mode:'planned'|'round';now:number}){
+export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode:'planned'|'round';now:number}){
  const {data,name,send,busy,open,setDanger}=ctx,[selected,setSelected]=useState<{roundId:string;playerId:string}|null>(null);
  const manager=!ctx.readOnly&&canManageEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),editable=manager&&active;
  const rounds=data.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled').slice().sort(compareRounds),pending=rounds.filter(r=>['draft','published'].includes(r.status)),next=pending[0];

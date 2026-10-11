@@ -1,0 +1,28 @@
+// Real competition controls with fictional in-memory state only.
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import React from 'react';
+import renderer,{act} from 'react-test-renderer';
+mkdirSync('.test-output',{recursive:true});writeFileSync('.test-output/tournament-ui-entry.ts',"export {default as Competition} from '../app/event-tournament';export {emptyState} from '../lib/domain/types';export {apply} from '../lib/domain/commands';");
+await build({entryPoints:['.test-output/tournament-ui-entry.ts'],outfile:'.test-output/tournament-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner'],loader:{'.css':'empty'},banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"}});
+const {Competition,emptyState,apply}=await import(pathToFileURL(resolve('.test-output/tournament-ui.mjs')).href);
+const prior={window:globalThis.window,document:globalThis.document,act:globalThis.IS_REACT_ACT_ENVIRONMENT},listeners=new Set(),surface={addEventListener:(n,f)=>listeners.add(f),removeEventListener:(n,f)=>listeners.delete(f)};globalThis.window=surface;globalThis.document={...surface,hidden:false};globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const now=Date.now(),s=emptyState(),a={id:'owner',playerId:'p0',role:'admin',email:''},e={id:'t',creatorId:'owner',matchFormat:'doubles',title:'Fixture competition',start:now-600000,end:now+3600000,venue:'Fixture venue',address:'',capacity:8,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval',tournament:{phase:'setup',teams:[],groups:[],advance:1,fixtures:[]}};
+s.events=[e];s.accounts=[a];s.players=Array.from({length:8},(_,i)=>({id:'p'+i,name:'Player '+i,ownerId:'owner',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));s.registrations=s.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,status:'confirmed',sequence:i,arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));s.bookings=[{id:'court',eventId:e.id,name:'Fixture court',start:e.start,end:e.end,pricing:'total',cents:1000}];
+const data={...s,me:a,social:{matchLevels:{}}},opened=[],ctx={data,admin:true,busy:false,name:id=>s.players.find(p=>p.id===id)?.name??id,open:(...args)=>opened.push(args),send:()=>{},setDanger:()=>{}};let ui;
+const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');const buttons=()=>ui.root.findAllByType('button');const click=async label=>{const b=buttons().find(b=>text(b).trim()===label);assert.ok(b,label);assert.ok(!b.props.disabled,label+' enabled');await act(()=>b.props.onClick())};const mount=async()=>{if(ui)await act(()=>ui.unmount());await act(async()=>{ui=renderer.create(React.createElement(Competition,{e,ctx}))})};
+try{
+ await mount();assert.ok(text(ui.toJSON()).includes('指定双打固定搭档'));assert.equal(buttons().find(b=>text(b)==='抽签并生成小组赛').props.disabled,true);
+ for(let i=0;i<4;i++){await click('添加双打队伍');for(let j=0;j<2;j++)await act(()=>ui.root.findByProps({'aria-label':'队伍 '+(i+1)+' 球友 '+(j+1)}).props.onChange({target:{value:'p'+(i*2+j)}}))}
+ await click('抽签并生成小组赛');assert.equal(opened.at(-1)[1],'tournamentDraw');assert.deepEqual(opened.at(-1)[2].teams,[['p0','p1'],['p2','p3'],['p4','p5'],['p6','p7']]);
+ await apply(s,a,'tournamentDraw',{...opened.at(-1)[2],advance:1},now);await mount();assert.equal(ui.root.findAllByType('table').length,2);assert.equal(buttons().find(b=>text(b)==='生成淘汰赛对战表').props.disabled,true);await click('安排开赛');assert.equal(opened.at(-1)[1],'tournamentStart');assert.equal(opened.at(-1)[3].length,1);assert.equal(opened.at(-1)[3][0].key,'courtId');
+ let clock=now;for(const f of e.tournament.fixtures){await apply(s,a,'tournamentStart',{eventId:e.id,fixtureId:f.id,courtId:'court'},clock);clock+=60000;await apply(s,a,'score',{matchId:f.matchId,a:21,b:19},clock)}
+ await mount();await click('生成淘汰赛对战表');assert.equal(opened.at(-1)[1],'tournamentKnockout');await apply(s,a,'tournamentKnockout',opened.at(-1)[2],clock);await mount();assert.ok(text(ui.toJSON()).includes('淘汰赛对战表'));assert.ok(text(ui.toJSON()).includes('决赛'));await click('返回小组赛');assert.equal(opened.at(-1)[1],'tournamentReopen');
+ const final=e.tournament.fixtures.at(-1);await apply(s,a,'tournamentStart',{eventId:e.id,fixtureId:final.id,courtId:'court'},clock);clock+=60000;await apply(s,a,'score',{matchId:final.matchId,a:21,b:19},clock);await mount();assert.ok(text(ui.toJSON()).includes('冠军'));assert.ok(!buttons().some(b=>text(b)==='返回小组赛'));
+ data.me={id:'member',role:'member',playerId:'p1'};ctx.admin=false;await mount();assert.ok(text(ui.toJSON()).includes('淘汰赛对战表'));assert.ok(!buttons().some(b=>text(b)==='安排开赛'));
+ e.matchFormat='singles';e.tournament={phase:'setup',teams:[],groups:[],advance:1,fixtures:[]};data.me=a;ctx.admin=true;await mount();assert.equal(ui.root.findAllByType('input').filter(n=>n.props.type==='checkbox').length,8);await click('抽签并生成小组赛');assert.ok(opened.at(-1)[2].teams.every(team=>team.length===1));
+ await act(()=>ui.unmount());ui=null;assert.equal(listeners.size,0);console.log('PASS tournament UI: explicit fixed partners, singles selection, group standings, time-free court/start form, qualification gating, bracket, champion and member read access');
+}finally{if(ui)await act(()=>ui.unmount());Object.assign(globalThis,{window:prior.window,document:prior.document,IS_REACT_ACT_ENVIRONMENT:prior.act})}
