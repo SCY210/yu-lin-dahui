@@ -37,3 +37,5 @@ At the club owner's request, every confirmed signup is present by default. There
 - **Not coming or unreachable** (`noShow`, the "someone is not coming" button): see `docs/NO_SHOW.md`.
 
 Both confirmation dialogs point to the other option.
+
+Temporary guests remain excluded from season points and rating. Late/absent records can pause their scheduling, but the interface does not advertise a guest point or rating penalty. Arrival never refunds a real member penalty; only the organiser-only mistaken-mark action can do that.
