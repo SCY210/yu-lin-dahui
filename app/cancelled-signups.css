@@ -1,0 +1,2 @@
+.cancelled-signup{display:grid;gap:2px;padding:8px 0;border-bottom:1px solid var(--border)}.cancelled-signup:last-child{border-bottom:0}
+.cancelled-signup span,.cancelled-signup small{font-size:13px;color:var(--muted-foreground)}
