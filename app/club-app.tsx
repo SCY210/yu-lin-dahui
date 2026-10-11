@@ -19,6 +19,7 @@ import MyFeeList from './my-fee-list';
 import ReminderButton from './reminder-button';
 import HomeUnpaid from './home-unpaid';
 import HomeToday from './home-today';
+import {viewGuest} from '../lib/client/guests';
 import {unpaidFeesFor} from '../lib/client/my-fees';
 import {groupEvents} from '../lib/client/home-today';
 import PullToRefresh from './pull-to-refresh';
@@ -137,7 +138,7 @@ export default function ClubApp(){
  const admin=data?.me?.role==='admin',name=(id:string)=>data?.players?.find((p:any)=>p.id===id)?.name??'未知成员';
  const open=(title:string,a:string,v:any,fields:Field[],convert?:Form['convert'],description?:string)=>setForm({title,action:a,values:v,fields,convert,description});
  const formatSelection=(format=rankingFormat)=>format==='singles'?{format:'singles' as const}:{};
- const openProfile=(id=data?.me?.playerId)=>id?navigation?.openPlayer(id,{period,year,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection()}):navigation?.navigate({page:'social'});
+ const openProfile=(id=data?.me?.playerId)=>id&&viewGuest(data?.players??[],id)?undefined:id?navigation?.openPlayer(id,{period,year,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection()}):navigation?.navigate({page:'social'});
  const selectRankingQuarter=(value:string)=>{setPeriod(value);navigation?.updateRankingSelection({period:value,year,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection()})};
  const selectRankingYear=(value:number)=>{setYear(value);navigation?.updateRankingSelection({period,year:value,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection()})};
  const selectRankingPeriod=(value:string)=>{const cycle=value==='annual'?'annual':'quarterly';setRankingPeriod(cycle);navigation?.updateRankingSelection({period,year,rankingPeriod:cycle,...formatSelection()})};

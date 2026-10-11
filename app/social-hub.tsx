@@ -29,7 +29,8 @@ export default function SocialHub({ctx,year,initialPlayerId,activeTab='players',
  const stats=data.social.stats.find((row:any)=>row.playerId===p?.id)??{partners:[],opponents:[]};
  const center=data.players.find((player:any)=>player.id===centerId)??data.players[0];
  const centerStats=data.social.stats.find((row:any)=>row.playerId===center?.id)??{partners:[],opponents:[]};
- const roster=data.players.filter((player:any)=>player.enabled);
+ // Friends brought by members have no profile; they appear only in signups and matches.
+ const roster=data.players.filter((player:{enabled:boolean;guest?:boolean})=>player.enabled&&!player.guest);
  const [rosterCardId,setRosterCardId]=useState(roster[0]?.id??'');
  const openPlayer=(id:string)=>onPlayerSelect(id);
  const returnToPlayers=()=>onBackToPlayers();
