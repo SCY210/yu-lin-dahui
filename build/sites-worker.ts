@@ -6,10 +6,13 @@ import { cancelUnreadWriteBody } from "../lib/write-security";
 import { flushPushOutbox } from "../lib/push-outbox";
 import { requestMetric } from "../lib/observability";
 import { hostingRequest } from "../lib/hosting-request";
+import { operatorExport } from "../lib/operator-export";
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     request = hostingRequest(request, env.YULIN_HOSTING_PROVIDER);
+    const exported = await operatorExport(request, env);
+    if (exported) return exported;
     const started = performance.now();
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
