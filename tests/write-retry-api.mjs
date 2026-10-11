@@ -18,6 +18,10 @@ try{
  const initial=api.emptyState(),s=api.emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=['owner','memberA','memberB'].map((id,i)=>({id,email:'',role:i?'member':'admin',playerId:'p-'+id}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
+ const start=Math.ceil((Date.now()+86400000)/1800000)*1800000,end=start+7200000;
+ s.events=[{id:'event',creatorId:'owner',title:'Fictional retry activity',start,end,venue:'Fictional venue',address:'',capacity:8,signupDeadline:start-7200000,cancelDeadline:start-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
+ s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:8}];
+ const guest=name=>({mode:'new',bookingId:'court',arrival:start,departure:end,note:'',name});
  await api.save(s,'seed',initial);
  const origin='https://club.example';
  const signIn=id=>fixture.user={userId:id,email:'',username:id,displayName:id,fullName:null,method:'password'};
@@ -27,13 +31,13 @@ try{
 
  // The same account resends after losing the response: one record only.
  signIn('memberA');
- const lost={action:'friend',payload:{name:'虚构代报球友甲'},requestId:crypto.randomUUID(),actor:'memberA'};
+ const lost={action:'friendSignup',payload:guest('虚构代报球友甲'),requestId:crypto.randomUUID(),actor:'memberA'};
  let r=await post(lost);assert.equal(r.status,200);assert.equal((await r.json()).duplicate,undefined);
  r=await post(lost);assert.equal(r.status,200);assert.equal((await r.json()).duplicate,true);
  assert.deepEqual((await friends('虚构代报球友甲')).map(p=>p.ownerId),['memberA']);
 
  // The browser switches to B while the retry waits: nothing is saved as B.
- const switched={action:'friend',payload:{name:'虚构代报球友乙'},requestId:crypto.randomUUID(),actor:'memberA'};
+ const switched={action:'friendSignup',payload:guest('虚构代报球友乙'),requestId:crypto.randomUUID(),actor:'memberA'};
  signIn('memberA');assert.equal((await post(switched)).status,200);
  signIn('memberB');r=await post(switched);assert.equal(r.status,409);
  const refused=await r.json();assert.equal(refused.actorMismatch,true);assert.match(refused.error,/登录账号已切换/);
@@ -48,8 +52,8 @@ try{
  assert.deepEqual(await friends('不应保存的名字'),[]);
 
  // B's own writes, and older pages that send no actor, keep working.
- r=await post({action:'friend',payload:{name:'虚构代报球友丙'},requestId:crypto.randomUUID(),actor:'memberB'});assert.equal(r.status,200);
- r=await post({action:'friend',payload:{name:'虚构代报球友丁'},requestId:crypto.randomUUID()});assert.equal(r.status,200);
+ r=await post({action:'friendSignup',payload:guest('虚构代报球友丙'),requestId:crypto.randomUUID(),actor:'memberB'});assert.equal(r.status,200);
+ r=await post({action:'friendSignup',payload:guest('虚构代报球友丁'),requestId:crypto.randomUUID()});assert.equal(r.status,200);
  assert.deepEqual((await friends('虚构代报球友丙')).map(p=>p.ownerId),['memberB']);
  assert.deepEqual((await friends('虚构代报球友丁')).map(p=>p.ownerId),['memberB']);
  console.log('PASS write retries: lost responses saved once; account switches never write as the new account');

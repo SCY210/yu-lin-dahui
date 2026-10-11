@@ -72,7 +72,7 @@ test('单打榜按马德里季度、年度归属；旧的月度上限与每胜�
 });
 
 test('单打榜排除代报名朋友与停用球友，作废、未完成和其他人数的对局不计入',async()=>{
- const s=fixture();await apply(s,s.accounts[0],'friend',{name:'朋友'},now);const guest=s.players.at(-1)!;
+ const s=fixture();s.players.push({...s.players[0],id:'legacy-proxy-friend',name:'朋友',ownerId:s.accounts[0].id});const guest=s.players.at(-1)!;
  s.matches.push(match('guest','2026-10-06T13:00:00Z',[guest.id],['B']),match('disabled','2026-10-06T14:00:00Z',['E'],['C']));
  const voided=match('void','2026-10-06T15:00:00Z',['A'],['D']);voided.status='cancelled';
  const playing=match('playing','2026-10-06T16:00:00Z',['A'],['D']);playing.status='playing';

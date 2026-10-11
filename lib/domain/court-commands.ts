@@ -21,6 +21,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
     const p = command.payload;
     const b = s.bookings.find(x => x.id === p.bookingId) ?? fail('场地时段不存在'), e = s.events.find(x => x.id === b.eventId && x.deletedAt === undefined) ?? fail('活动不存在或已删除');
     const manager = canManageEvent(a, e), player = s.players.find(x => x.id === p.playerId) ?? fail('球友不存在');
+    if(player.guestEventId&&player.guestEventId!==e.id)fail('临时来宾只能参加原活动，请在本活动重新添加');
     if (!manager && player.ownerId !== a.id)
         fail('403: 只能管理自己及自己代报的朋友');
     if (['ended', 'cancelled'].includes(eventStatusAt(e,now)))

@@ -8,7 +8,7 @@ import {sqliteD1} from './helpers/sqlite-d1.mjs';
 
 mkdirSync('.test-output',{recursive:true});
 const fixture=globalThis.__friendSignupTest={env:{},user:null};
-writeFileSync('.test-output/friend-signup-entry.ts',`export {POST} from '../app/api/club/route';export {load,save} from '../lib/store';export {emptyState} from '../lib/domain/types';export {rateLimitId,uploadDayWindow} from '../lib/rate-limit';`);
+writeFileSync('.test-output/friend-signup-entry.ts',`export {GET,POST} from '../app/api/club/route';export {load,save} from '../lib/store';export {emptyState} from '../lib/domain/types';export {rateLimitId,uploadDayWindow} from '../lib/rate-limit';`);
 await build({entryPoints:['.test-output/friend-signup-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/friend-signup-api.mjs',plugins:[{name:'isolated-friend-auth',setup(b){
  b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'friend-test'}));
  b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'friend-test'}));
@@ -25,13 +25,15 @@ try{
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:1}];
  await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
- const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:0})}));
+ const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:0})}));
  const fresh=name=>({mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});
  signIn(null);assert.equal((await post(fresh('No login'))).status,401);
  signIn('member');assert.equal((await post(fresh('Wrong origin'),crypto.randomUUID(),{origin:'https://attacker.example'})).status,403);
  assert.equal((await post(fresh('Wrong actor'),crypto.randomUUID(),{actor:'other'})).status,409);
  const requestId=crypto.randomUUID();assert.equal((await post({...fresh('Fictional guest'),ownerId:'forged'},requestId)).status,200);
- const state=await api.load(),friend=state.players.find(p=>p.name==='Fictional guest');assert.ok(friend);assert.equal(friend.ownerId,'member');
+ const state=await api.load(),friend=state.players.find(p=>p.name==='Fictional guest');assert.ok(friend);assert.equal(friend.ownerId,'member');assert.equal(friend.guestEventId,'event');assert.equal(friend.profile,undefined);
+ const projected=await (await api.GET(new Request(origin+'/api/club?month=2026-11&year=2026'))).json();assert.ok(!projected.social.stats.some(p=>p.playerId===friend.id));
+ signIn('owner');assert.equal((await post({playerId:friend.id,name:'Forbidden profile'},crypto.randomUUID(),{action:'profile'})).status,403);signIn('member');
  assert.equal(state.registrations.length,1);assert.equal(state.registrations[0].playerId,friend.id);assert.equal(state.registrations[0].bookingSignups[0].status,'confirmed');
  assert.equal((await post(fresh('Fictional guest'),requestId)).status,200);assert.equal((await api.load()).players.length,4);assert.equal((await api.load()).registrations.length,1);
  const quotaId=await api.rateLimitId('creation-daily:friend:member:'+api.uploadDayWindow().day);
@@ -43,6 +45,6 @@ try{
  assert.deepEqual((await api.load()).players,before.players);assert.deepEqual((await api.load()).registrations,before.registrations);
  database.injectFailure(query=>/INSERT INTO registrations\(/i.test(query));
  const rollback=await post(fresh('Rollback guest'));assert.equal(rollback.status,503);database.injectFailure(null);
- loaded=await api.load();assert.deepEqual(loaded.players,before.players);assert.deepEqual(loaded.registrations,before.registrations);assert.equal(loaded.revision,before.revision,'database failure rolls back the new profile and signup together');
+ loaded=await api.load();assert.deepEqual(loaded.players,before.players);assert.deepEqual(loaded.registrations,before.registrations);assert.equal(loaded.revision,before.revision,'database failure rolls back the new activity participant and signup together');
  console.log('PASS friend signup API: one-step persistence, authenticated ownership, CSRF/actor checks, full-court waitlist, replay deduplication, existing-profile reuse, quota and atomic rollback');
 }finally{database.close();delete globalThis.__friendSignupTest}

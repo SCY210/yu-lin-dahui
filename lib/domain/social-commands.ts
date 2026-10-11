@@ -61,7 +61,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             const p = command.payload;
             if (p.targetId === a.playerId)
                 fail('不能挑战自己');
-            player(p.targetId);
+            if(player(p.targetId).guestEventId)fail('临时来宾没有球员档案，不能发起复仇挑战');
             const loss = [...finished(s)].reverse().find(m => s.events.some(e => e.id === m.eventId && e.deletedAt === undefined) && [...m.a, ...m.b].includes(a.playerId) && !won(m, a.playerId) && m[m.a.includes(a.playerId) ? 'b' : 'a'].includes(p.targetId));
             if (!loss)
                 fail('尚未在有效比赛中输给这位球友');

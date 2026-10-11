@@ -3,7 +3,8 @@ import type {Tournament} from './tournament';
 export type Account={id:string;email:string;role:'admin'|'member';playerId:string};
 import type {ProfileGender} from '../player-profile-options';
 /** cultivationBase: legacy weekly-v2 offset, retained but no longer used. */
-export type Player={cultivationBase?:number;id:string;name:string;ownerId:string;initialRating:number;rating:number;ratedGames:number;enabled:boolean;ratingReason:string;avatarId?:string;profile?:{gender?:ProfileGender;years:number;hand:'right'|'left'|'both';preference:'doubles'|'singles'|'mixed'|'all';style:string;equipment:string;racket?:string;strings?:string;tension?:string;tensionMin?:number|null;tensionMax?:number|null;grip?:string;shoes?:string;motto?:string}};
+/** guestEventId identifies a minimal activity participant, never a reusable member profile. */
+export type Player={guestEventId?:string;cultivationBase?:number;id:string;name:string;ownerId:string;initialRating:number;rating:number;ratedGames:number;enabled:boolean;ratingReason:string;avatarId?:string;profile?:{gender?:ProfileGender;years:number;hand:'right'|'left'|'both';preference:'doubles'|'singles'|'mixed'|'all';style:string;equipment:string;racket?:string;strings?:string;tension?:string;tensionMin?:number|null;tensionMax?:number|null;grip?:string;shoes?:string;motto?:string}};
 
 export type ShuttleOption={id:string;name:string;note:string};
 export type ShuttleVote={id:string;voterId:string;playerId:string;optionId:string;at:number};

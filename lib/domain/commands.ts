@@ -135,11 +135,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             player(target).name = p.name;
             break;
         }
-        case 'friend': {
-            const p = command.payload;
-            s.players.push({ id: id(), ownerId: a.id, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '新成员默认初值' });
-            break;
-        }
+        case 'friend': fail('不再创建朋友档案，请在活动中添加临时来宾');
         case 'event': {
             const p = command.payload;
             if (p.end <= p.start || p.cancelDeadline > p.end)
@@ -251,6 +247,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'register': {
             const p = command.payload;
             const e = event(p.eventId), manager = canManageEvent(a, e);
+            if(player(p.playerId).guestEventId&&player(p.playerId).guestEventId!==e.id)fail('临时来宾只能参加原活动');
             if (!manager)
                 own(p.playerId);
             if (!player(p.playerId).enabled)
@@ -286,6 +283,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'cancel': {
             const p = command.payload;
             const e = event(p.eventId), manager = canManageEvent(a, e);
+            if(player(p.playerId).guestEventId&&player(p.playerId).guestEventId!==e.id)fail('临时来宾只能参加原活动');
             if (!manager)
                 own(p.playerId);
             const r = reg(e.id, p.playerId);
