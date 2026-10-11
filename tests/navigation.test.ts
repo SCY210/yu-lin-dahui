@@ -21,6 +21,18 @@ function browser(href='https://club.example/',state:unknown=null){
  return {navigation,port,entries,moves,flush,back,forward,setScroll:(y:number)=>{scroll=y},get scroll(){return scroll}};
 }
 
+test('treasure shop deep links and mobile back preserve the originating page and scroll',()=>{
+ const route=readClubRoute('https://club.example/?page=treasure&event=E&player=P');
+ assert.equal(route.page,'treasure');assert.equal(route.eventId,'');assert.equal(route.playerId,'');
+ assert.equal(clubRouteUrl('https://club.example/',route),'/?page=treasure');
+ for(const source of ['home','me'] as const){
+  const b=browser();b.navigation.navigate({page:source});b.setScroll(350);
+  b.navigation.navigate({page:'treasure'});b.navigation.openDialog('exchange',()=>{});
+  b.back();assert.equal(b.navigation.route.page,'treasure');b.back();
+  assert.equal(b.navigation.route.page,source);assert.equal(b.scroll,350);
+ }
+});
+
 test('initial page only replaces the existing entry; repeated navigation does not add duplicates',()=>{
  const b=browser();assert.equal(b.entries.length,1);assert.equal(b.moves.length,0);
  b.navigation.navigate({page:'home'});assert.equal(b.entries.length,1);

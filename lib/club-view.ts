@@ -11,6 +11,7 @@ import type {State,Account} from './domain/types';
 import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {cancellationView} from './domain/cancellations';
+import {treasureShopView} from './domain/treasure-shop';
 import {guestIds,guestHostName,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlementPreview} from './domain/money';
@@ -55,6 +56,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   singlesQuarterlyLeaderboard:board(singlesQuarterly),singlesAnnualLeaderboard:board(singlesAnnual),
   social,
   pointGrants:isClubOwner(s,a)?pointGrants(s):[],
+  treasureShop:treasureShopView(s,a),
   achievements,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
   tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>({...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:''})),

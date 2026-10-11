@@ -139,9 +139,12 @@ export async function POST(req: Request) {
             else {
                 if (!a)
                     return response({ error: '403: 请先加入群组' }, 403);
-                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action) && body.revision !== s.revision)
+                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
-                const preview = await apply(s, a, body.action, body.payload, Date.now());
+                // Domain replay keys come from the authenticated write envelope, never a client-selected payload key.
+                const payload = ['treasureGrant','treasureRedeem'].includes(body.action) && body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
+                    ? { ...body.payload, requestId: body.requestId } : body.payload;
+                const preview = await apply(s, a, body.action, payload, Date.now());
                 if (body.action === 'historyPreview' && preview)
                     return response({ preview: { input: body.payload, leaderboard: leaderboard(preview, z.object({ season: z.string() }).parse(body.payload).season), ratingHistory: replayRating(preview) } });
             }
@@ -151,7 +154,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action))
+                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

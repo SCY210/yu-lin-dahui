@@ -3,7 +3,7 @@ import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
 import {profileRestrictionsFromConfig} from './profile-policy-config';
-const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos'] as const;
+const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger'] as const;
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
 /** Indexed metadata reads verify freshness and current permissions on every poll. */
@@ -76,6 +76,14 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
             else if (n === 'players') {
                 columns.push('owner_id');
                 values.push(r.ownerId);
+            }
+            else if (n === 'treasureOrders' || n === 'treasureLedger') {
+                columns.push('player_id'); values.push(r.playerId);
+                if(n === 'treasureOrders'){columns.push('product_id','account_id','request_id');values.push(r.productId,r.accountId,r.requestId)}
+                else {columns.push('actor','request_id');values.push(r.actor,r.requestId)}
+            }
+            else if (n === 'treasureProducts') {
+                // Catalog records have no activity foreign key.
             }
             else if (!['seasons', 'audits', 'events', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos'].includes(n)) {
                 columns.push('event_id');

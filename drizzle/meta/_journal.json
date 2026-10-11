@@ -78,6 +78,13 @@
       "when": 1791280012825,
       "tag": "0010_yellow_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791755559918,
+      "tag": "0011_treasure_shop",
+      "breakpoints": true
     }
   ]
 }
