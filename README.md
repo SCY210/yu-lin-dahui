@@ -98,6 +98,8 @@ The read-only request-body HTTP regression uses port 8794 by default and require
 
 ## Deployment
 
+For a standalone deployment in the owner's Cloudflare account, see [Cloudflare deployment](docs/CLOUDFLARE_DEPLOYMENT.md).
+
 .openai/hosting.json identifies the shared existing Sites project and logical DB/BUCKET bindings. It is required deployment configuration, not a personal Codex profile. The Sites build plugin produces a Cloudflare Worker ESM bundle and includes Drizzle migrations. Deploy only the supported build artifacts, hosting metadata, and migrations; exclude local state and credentials.
 
 Source synchronization to GitHub does not deploy a Site. Follow the authorized Sites hosting workflow and verify its successful receipt. Do not alter audiences, collaborator protections, identities, or production data incidentally.

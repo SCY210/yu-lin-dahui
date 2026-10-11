@@ -1,5 +1,6 @@
 declare namespace Cloudflare {
   interface Env {
+    YULIN_HOSTING_PROVIDER?: "cloudflare";
     PROFILE_GENDER_ONLY_PLAYER_IDS?: string;
     DB?: D1Database;
     BUCKET?: R2Bucket;

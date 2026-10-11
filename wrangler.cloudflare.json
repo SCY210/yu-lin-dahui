@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "yu-lin-dahui",
+  "main": "./build/sites-worker.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "site-creator-d1",
+      "database_id": "bbaa3b9d-6612-47e3-b3a2-6fd1728c4c1b",
+      "migrations_dir": "./drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "site-creator-r2"
+    }
+  ],
+  "vars": {
+    "YULIN_HOSTING_PROVIDER": "cloudflare"
+  }
+}
