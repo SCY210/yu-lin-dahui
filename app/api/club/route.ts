@@ -1,3 +1,4 @@
+import {friendSignupCreatesProfile} from '../../../lib/domain/friend-signup';
 import { privateEventState } from '../../../lib/domain/event-privacy';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, reserveDailyCreation, trustedClientIP } from '../../../lib/rate-limit';
@@ -95,7 +96,8 @@ export async function POST(req: Request) {
         if (body.actor !== undefined && body.actor !== user.userId)
             return response({ error: '登录账号已切换，本次操作未保存。请确认当前账号后再操作', actorMismatch: true }, 409);
         const key = user.userId + ':' + body.requestId;
-        if (body.action === 'friend' || body.action === 'event') {
+        const creationAction=body.action==='friendSignup'&&friendSignupCreatesProfile(body.payload)?'friend':body.action;
+        if (creationAction === 'friend' || creationAction === 'event') {
             const account = await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{
                 role: string;
             }>();
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
                 return response({ error: '请先加入群组' }, 403);
             if (await committed(key))
                 return response({ ok: true, duplicate: true });
-            await reserveDailyCreation(user.userId, body.requestId, body.action, account.role === 'admin');
+            await reserveDailyCreation(user.userId, body.requestId, creationAction, account.role === 'admin');
         }
         for (let attempt = 0; attempt < 5; attempt++) {
             const s = await loadClubState();
@@ -137,7 +139,7 @@ export async function POST(req: Request) {
             else {
                 if (!a)
                     return response({ error: '403: 请先加入群组' }, 403);
-                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action) && body.revision !== s.revision)
+                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
                 const preview = await apply(s, a, body.action, body.payload, Date.now());
                 if (body.action === 'historyPreview' && preview)
@@ -149,7 +151,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action))
+                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

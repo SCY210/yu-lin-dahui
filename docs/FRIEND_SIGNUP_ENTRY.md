@@ -1,9 +1,11 @@
-# Visible friend signup entries
+# Add a friend directly to a court signup
 
-The friend creation endpoint and ordinary-member proxy signup permission remain enabled. Their UI entry was below the courts inside the collapsed friend section, while the primary court button combined personal editing and proxy signup. This made friend registration difficult to discover after the compact layout update.
+The initial compact-layout repair made the friend creation entry visible, but it still created only a player profile. The owner clarified that entering a friend's nickname should register that friend, without a second signup dialog.
 
-The signup header now includes Add friend without expanding another section. Every court has a separate Register a friend action. It opens the existing court registration dialog with an owned friend selected and excludes the current player from that proxy selector. If there are no enabled proxy candidates, it opens the existing friend creation form and explains how to select that friend on the chosen court after saving. Existing friends can be registered directly. The primary personal-signup action is labelled separately.
+The header and each court now use one Add friend and sign up form. New-friend mode creates the profile and the court registration atomically. Existing-friend mode reuses the selected player. With several eligible court slots, the header requires the court choice; a court-specific entry keeps its court fixed. Participation defaults to the chosen court's complete planned interval, with optional start/end fields for a shorter visit. Switching the selected court also changes those default times. Full courts place the friend on the normal waitlist.
 
-Ordinary members see only their own enabled proxy players; activity managers retain their existing broader registration scope. This change does not relax ownership, capacity, waitlist, cancellation, or activity-time validation. Full courts continue to queue a friend normally. Creating a friend profile alone does not occupy a place.
+Server validation resolves the actual court and activity, uses the authenticated account as profile owner, and delegates enrollment to the existing court signup rules. Failed, closed, foreign or invalid-time submissions leave no extra profile or signup. The API applies the friend creation quota to new-friend mode, preserves signup retries, and uses the existing request-id transaction ledger to prevent duplicate profiles after a lost response. Existing-friend mode does not consume the profile creation allowance.
 
-Validation includes actual component interaction through the collapsed-roster layout, ordinary-member proxy selection, the no-friend creation entry, and server-domain tests for ownership, successful registration and full-court waitlisting.
+Old standalone friend creation remains available for compatibility, but activity-page entries all use the combined flow. People who already created a profile can choose Existing friend instead of creating it again. This release does not automatically enroll existing profiles into an inferred activity.
+
+Validation covers the real form conversion, multiple court defaults, ordinary-member ownership, waitlists, failed-domain-state preservation, real SQLite API idempotence and transactional rollback. Fictional tests never modify production rosters.
