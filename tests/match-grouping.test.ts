@@ -42,7 +42,7 @@ test('several courts are balanced without duplicates or losing the resting playe
  assert.equal(new Set(playing).size,8);assert.equal(next.rest.length,2);
  assert.ok(next.courts.every(m=>gap(s,m)<=BALANCE_TOLERANCE));
 });
-test('self-declared years, gender and a retired level field do not influence Elo or grouping',async()=>{
+test('self-declared years, a non-female gender and a retired level field do not influence Elo or grouping',async()=>{
  const {s,e}=fixture();s.matches.push(match('rated',['A','D'],['B','C']));replayRating(s);
  const before=s.players.map(p=>({rating:p.rating,initialRating:p.initialRating,ratedGames:p.ratedGames}));
  const grouping=propose(s,e,start+120000,15,5);
