@@ -1,3 +1,4 @@
+import {applyFriendSignup} from './friend-signup';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
@@ -10,6 +11,8 @@ import { markRanked } from './all-ranked';
 import { applyLivePlay, finishLiveMatch } from './live-play';
 import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
+import {applyNoShow} from './no-show';
+import { initialSignupDeadline, signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
 import { assertPlayerMutable, assertAccountMutable, clubOwnerId, isClubOwner } from './ownership';
 import { z } from 'zod';
@@ -38,7 +41,7 @@ const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
@@ -76,7 +79,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         return null;
     if (await applyLiveLineup(s, a, action, input, now))
         return null;
+    if (await applyNoShow(s, a, action, input, now))
+        return null;
     if (await applyLivePlay(s, a, action, input, now))
+        return null;
+    if (await applyFriendSignup(s, a, action, input, now))
         return null;
     if (await applyCourtSignup(s, a, action, input, now))
         return null;
@@ -142,7 +149,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
             const { bookings, practiceShuttleCents, practiceBallCount, tournament, ...details } = p;
-            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: p.end, cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
+            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             if(tournament){e.tournament=emptyTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
@@ -208,7 +215,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.bookings.some(b => b.eventId === e.id && b.name === p.name && (b.venue ?? e.venue) === (p.venue ?? e.venue) && b.start < p.end && b.end > p.start))
                 fail('同一场地预约时段不能重叠');
             s.bookings.push({ ...p, signupCapacity: p.signupCapacity ?? e.capacity, id: id() });
+            const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
+            if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
             if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
@@ -230,7 +239,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.matches.some(m => m.courtId === b.id && ['published', 'playing'].includes(m.status) && ((m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) < p.start || (m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) + s.rounds.find(r => r.id === m.roundId)!.duration * 60000 > p.end)))
                 fail('调整时段与已发布或进行中的比赛冲突');
             Object.assign(b, { name: p.name, start: p.start, end: p.end, pricing: p.pricing, cents: p.cents, ...(p.venue !== undefined ? { venue: p.venue, address: p.address ?? '' } : {}), ...(p.signupCapacity !== undefined ? { signupCapacity: p.signupCapacity } : {}) });
+            const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
+            if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
             if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
@@ -248,11 +259,13 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('当前活动未开放报名');
             if (!manager && now >= e.end)
                 fail('活动时段已结束');
-            if (['ended', 'cancelled'].includes(e.status))
+            if (['ended', 'cancelled'].includes(eventStatusAt(e,now)))
                 fail('活动已结束');
             if (p.arrival < e.start || p.departure > e.end || p.departure <= p.arrival)
                 fail('参加时间应在活动时间内');
             const old = s.registrations.find(r => r.eventId === e.id && r.playerId === p.playerId);
+            if (!manager && (!old || old.status === 'cancelled') && signupClosed(e, now))
+                fail('报名已截止（活动开始前 ' + signupCloseHours + ' 小时），请联系活动创建者');
             if (old?.bookingSignups)
                 fail('请在对应的场地时段修改接龙');
             if (old && old.status !== 'cancelled') {

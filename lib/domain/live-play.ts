@@ -24,10 +24,10 @@ const physical=(s:Pick<State,'bookings'>,e:Event,courtId:string)=>{
  const b=s.bookings.find(b=>b.id===courtId);return JSON.stringify([b?.venue??e.venue,b?.name??courtId]);
 };
 export function liveAppearances(s:Pick<State,'matches'>,eventId:string,playerId:string){
- return s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status)&&[...m.a,...m.b].includes(playerId)).length;
+ return s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status)&&[...m.a,...m.b].includes(playerId)&&(!m.noShow?.length||m.noShow.includes(playerId))).length;
 }
 export function livePresentIds(s:Pick<State,'players'|'registrations'|'bookings'|'attendance'>,e:Event,now:number){
- const enabled=new Set(s.players.filter(p=>p.enabled).map(p=>p.id));
+ const enabled=new Set(s.players.filter(p=>p.enabled&&!e.noShowHold?.includes(p.id)).map(p=>p.id));
  return s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&!awaitingArrival(e,r.playerId)&&enabled.has(r.playerId)&&
   registrationSpans(s as State,e,r).some(span=>span.start<=now&&(span.end??e.end)>now)&&
   !s.attendance.some(at=>at.eventId===e.id&&at.playerId===r.playerId&&at.state==='paused'&&at.end===null))

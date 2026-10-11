@@ -90,6 +90,7 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
    const row=session.attendance.find(row=>row.playerId===p.playerId);
    if(p.status==='on-time'&&row?.late)fail('已标记迟到，请使用已到场或撤销误标');
    const delta=p.status==='clear-late'&&row?.late?1:0;
+   if(e.noShowHold){e.noShowHold=e.noShowHold.filter(id=>id!==p.playerId);if(!e.noShowHold.length)delete e.noShowHold}
    session.attendance=session.attendance.filter(row=>row.playerId!==p.playerId);session.attendance.push({playerId:p.playerId,late:p.status==='clear-late'?false:row?.late??false,available:true,at:now});
    changes={...changes,playerId:p.playerId,period:month(e.start),format:eventFormat(e),delta,status:p.status};break;
   }

@@ -4,6 +4,7 @@ import type {SimulationView} from '../lib/admin-simulation';
 import type {SchedulingContext} from './event-scheduling';
 import type {Form} from './form-fields';
 import EventScheduling from './event-scheduling';
+import {NoShowHold} from './match-no-show';
 import {Forms} from './ui';
 import Disclosure from './disclosure';
 import './admin-simulation.css';
@@ -38,7 +39,7 @@ function SimulationSession({accountId,back,retry}:{accountId:string;back:()=>voi
  return <div className="admin-simulation"><button type="button" className="ghost" onClick={back}>返回真实活动</button><section className="card simulation-heading"><span className="badge">管理员专用 · 模拟数据</span><h1>模拟活动 · 12人 / 两场地</h1><p>12 位虚拟球友已正式接龙。模拟记录单独保存并在管理员之间同步；普通成员无法访问，不进入真实榜单、费用或通知。</p><div className="actions"><button type="button" className="secondary" disabled={busy} onClick={()=>void action('preplan',{}).catch(()=>{})}>一键预排90分钟</button><button type="button" className="ghost" disabled={busy} onClick={()=>setForm({title:'重置模拟活动',action:'reset',values:{expectedRevision:view.revision},fields:[],description:'清除本模拟空间的测试记录，重新建立当前时间的12人、两场地活动。真实活动不受影响。'})}>重置模拟活动</button></div><p className="hint">可切换三种排场方式。首次测试预排可用“一键预排90分钟”；活动过期后可重置。录分后检查场下球友是否上场。</p></section>
   {error&&<p className="connection-note" role="alert">{error}</p>}
   <Disclosure label="已接龙的模拟球友 · 12人"><div className="simulation-roster">{data.registrations.map(r=><span key={r.id}>{data.players.find(p=>p.id===r.playerId)?.name??r.playerId} · 正式</span>)}</div></Disclosure>
-  <EventScheduling e={e} ctx={ctx}/>
+  <NoShowHold e={e} ctx={ctx}/><EventScheduling e={e} ctx={ctx}/>
   <Disclosure label="模拟积分 · 不计入真实榜单"><div className="simulation-roster">{data.quarterlyLeaderboard.map(row=><span key={row.playerId}>{row.name} · {row.points} 分 · {row.games} 局</span>)}</div></Disclosure>
   <Forms form={form} setForm={setForm} danger={danger} setDanger={setDanger} busy={busy} action={action}/>
  </div>;
