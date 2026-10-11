@@ -1,4 +1,5 @@
 import {editReason} from './edit-reason';
+import { recordCancellation } from './cancellations';
 import { signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
@@ -95,6 +96,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 row.status = 'cancelled';
                 row.cancelRequested = false;
                 syncRegistration(r);
+                if (r.status === 'cancelled')
+                    recordCancellation(s, r, a, now, 'reason' in p ? p.reason : undefined);
                 promoteBooking(s, e, b, now);
             }
             break;
