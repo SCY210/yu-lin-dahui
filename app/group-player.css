@@ -8,3 +8,5 @@
 .group-player-swap[aria-pressed=true]{background:var(--accent)}
 .group-player button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .guest-note{display:block;font-size:12px;color:var(--muted-foreground);font-weight:400}
+
+.group-player-profile:disabled{opacity:1;cursor:default}

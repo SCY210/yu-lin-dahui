@@ -25,7 +25,7 @@ try{
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:1}];
  await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
- const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:0})}));
+ const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:options.revision??(await api.load()).revision})}));
  const fresh=name=>({mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});
  signIn(null);assert.equal((await post(fresh('No login'))).status,401);
  signIn('member');assert.equal((await post(fresh('Wrong origin'),crypto.randomUUID(),{origin:'https://attacker.example'})).status,403);
@@ -34,6 +34,13 @@ try{
  const state=await api.load(),friend=state.players.find(p=>p.name==='Fictional guest');assert.ok(friend);assert.equal(friend.ownerId,'member');assert.equal(friend.guestEventId,'event');assert.equal(friend.profile,undefined);
  const projected=await (await api.GET(new Request(origin+'/api/club?month=2026-11&year=2026'))).json();assert.ok(!projected.social.stats.some(p=>p.playerId===friend.id));
  signIn('owner');assert.equal((await post({playerId:friend.id,name:'Forbidden profile'},crypto.randomUUID(),{action:'profile'})).status,403);signIn('member');
+ const levelKey=crypto.randomUUID();assert.equal((await post({playerId:friend.id,level:1300},levelKey,{action:'guestLevel'})).status,200);assert.equal((await post({playerId:friend.id,level:1300},levelKey,{action:'guestLevel'})).status,200);
+ let levelState=await api.load();assert.equal(levelState.players.find(p=>p.id===friend.id).guestLevels.at(-1).level,1300);assert.equal(levelState.audits.filter(a=>a.action==='guestLevel').length,1);
+ signIn('other');assert.equal((await post({playerId:friend.id,level:850},crypto.randomUUID(),{action:'guestLevel'})).status,403);signIn('member');
+ assert.equal((await post({playerId:friend.id,level:999},crypto.randomUUID(),{action:'guestLevel'})).status,400);
+ database.injectFailure(query=>/INSERT INTO players\(/i.test(query));assert.equal((await post({playerId:friend.id,level:1150},crypto.randomUUID(),{action:'guestLevel'})).status,503);database.injectFailure(null);
+ assert.deepEqual((await api.load()).players,levelState.players);assert.deepEqual((await api.load()).audits,levelState.audits);
+ const levelView=await (await api.GET(new Request(origin+'/api/club?month=2026-11&year=2026'))).json(),guestView=levelView.players.find(p=>p.id===friend.id);assert.equal(guestView.guest,true);assert.equal(guestView.guestLevel,1300);assert.equal(guestView.guestHost,'Fictional member');
  assert.equal(state.registrations.length,1);assert.equal(state.registrations[0].playerId,friend.id);assert.equal(state.registrations[0].bookingSignups[0].status,'confirmed');
  assert.equal((await post(fresh('Fictional guest'),requestId)).status,200);assert.equal((await api.load()).players.length,4);assert.equal((await api.load()).registrations.length,1);
  const quotaId=await api.rateLimitId('creation-daily:friend:member:'+api.uploadDayWindow().day);

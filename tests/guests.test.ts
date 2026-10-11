@@ -69,3 +69,18 @@ test('adding a friend with a level stores it for all of the friend\'s games',asy
  await apply(s,s.accounts[1],'friendSignup',{mode:'new',name:'新朋友',guestLevel:1150,bookingId:'court',arrival:start,departure:start+3*3600000,note:''},start-86400000);
  const friend=s.players.at(-1)!;assert.deepEqual(friend.guestLevels,[{at:0,level:1150}]);assert.ok(guestIds(s).has(friend.id));
 });
+
+test('legacy guests cannot receive a profile, gender edit or manual points through administrative commands',async()=>{
+ const s=fixture(),owner=s.accounts[0],before=structuredClone(s);
+ await assert.rejects(()=>apply(s,owner,'profile',{playerId:'g',name:'Not a profile'},start),/没有球员档案/);
+ await assert.rejects(()=>apply(s,owner,'profileGender',{playerId:'g',gender:'female'},start),/没有球员档案/);
+ await assert.rejects(()=>apply(s,owner,'grantPoints',{playerId:'g',period:'2026-11',points:10,rating:0,reason:'No guest points'},start),/临时来宾不累计/);
+ assert.deepEqual(s,before);
+});
+
+test('scoped guests are recognised without account metadata and their level history uses chronological time',()=>{
+ const s=fixture(),guest=s.players.find(p=>p.id==='g')!;guest.guestEventId='e';
+ guest.guestLevels=[{at:20,level:1300},{at:10,level:850}];
+ assert.equal(guestLevelAt(guest,9),1000);assert.equal(guestLevelAt(guest,15),850);assert.equal(guestLevelAt(guest,25),1300);
+ assert.ok(guestIds({players:s.players}).has(guest.id));
+});

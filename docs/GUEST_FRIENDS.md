@@ -23,3 +23,7 @@ The club projection marks friends with `guest`, the registrant's name in `guestH
 - The signup tab has a "temporary friends" section that lists the activity's friends with their levels and a change button for those allowed.
 
 Tests: `tests/guests.test.ts`.
+
+New guests keep the activity scope introduced by the Add friend flow: they cannot be reused in another activity. `guestEventId` also identifies a guest when a calculation receives only a partial state without the account list. Merging upcoming activities makes a separate target-scoped guest identity and preserves the recoverable source.
+
+Profile, gender, avatar and racket writes for both legacy proxy guests and scoped guests are rejected on the server; activity level changes remain allowed for their authorised registrants/managers. No historical profiles, registrations, scores or fee records are deleted. When applying this rule to existing proxy friends, member rating history and strength-based upset bonuses are replayed against the guest's fixed historical level (1000 when no chosen level exists), so derived member totals can change. Recorded scores remain unchanged.
