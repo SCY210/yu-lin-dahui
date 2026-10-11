@@ -7,3 +7,6 @@
 .group-player-swap{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:6px;background:transparent;border:0;border-left:1px solid var(--border);border-radius:0 14px 14px 0;color:var(--primary)}
 .group-player-swap[aria-pressed=true]{background:var(--accent)}
 .group-player button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.guest-note{display:block;font-size:12px;color:var(--muted-foreground);font-weight:400}
+
+.group-player-profile:disabled{opacity:1;cursor:default}

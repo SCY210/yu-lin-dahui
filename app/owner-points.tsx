@@ -9,7 +9,7 @@ type GrantRow={id:string;playerId:string;period:string;points:number;rating?:num
 
 export default function OwnerPoints({data,open,busy}:any){
  if(!data.me.isOwner)return null;
- const players=data.players.filter((p:{enabled:boolean;guestEventId?:string})=>p.enabled&&!p.guestEventId);
+ const players=data.players.filter((p:{enabled:boolean;guestEventId?:string;guest?:boolean})=>p.enabled&&!p.guestEventId&&!p.guest);
  const name=(id:string)=>data.players.find((p:any)=>p.id===id)?.name??'已移除球友';
  const fields:Field[]=[choice('playerId','球友',players.map((p:PlayerOption)=>[p.id,p.name])),choice('operation','操作',[['add','加积分'],['subtract','扣积分']]),{key:'period',label:'计入月份',type:'month'},{key:'points',label:'调整积分（0–1000，可填 0）',type:'number',min:0,max:1000,step:1},{key:'rating',label:'调整修为（−300 到 300，可填 0）',type:'number',min:-300,max:300,step:1},{key:'reason',label:'调整原因'}];
  return <Disclosure label="手动调整积分"><section className="card">

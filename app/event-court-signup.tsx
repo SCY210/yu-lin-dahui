@@ -2,6 +2,7 @@
 import {Plus,MapPin,Clock,UserPlus} from 'lucide-react';
 import {canManageEvent} from '../lib/domain/permissions';
 import {signupClosesAt} from '../lib/domain/event-lifecycle';
+import {guestNote} from '../lib/client/guests';
 import {bookingCapacity,bookingRows} from '../lib/domain/booking-signups';
 import {bookingCents} from '../lib/domain/money';
 import {findVenue,googleMapsUrl} from '../lib/venues';
@@ -21,7 +22,7 @@ import './event-court-signup.css';
 
 export default function EventCourtSignup({e,ctx,rules}:any){
  const joined=(ctx.data.registrations as {eventId:string;playerId:string;status:string}[]).some(r=>r.eventId===e.id&&r.playerId===ctx.data.me.playerId&&r.status!=='cancelled');
- const {data,name,open,openProfile}=ctx,manager=canManageEvent(data.me,e);
+ const {data,open,openProfile}=ctx,manager=canManageEvent(data.me,e),name=(id:string)=>{const note=guestNote(data.players,id);return ctx.name(id)+(note?' · '+note:'')};
  const closes=signupClosesAt(e),now=useActivityClock({...e,start:closes}),closed=now>=closes;
  const courts=data.bookings.filter((b:any)=>b.eventId===e.id).slice().sort((a:any,b:any)=>a.start-b.start||a.name.localeCompare(b.name));
  const own=(id:string)=>manager||data.players.find((p:any)=>p.id===id)?.ownerId===data.me.id;

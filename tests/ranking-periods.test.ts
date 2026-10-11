@@ -49,7 +49,7 @@ test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受�
   const view=projectClubState(s,{...actor,role},'2026-10',2026);
   for(const rows of [view.leaderboard,view.quarterlyLeaderboard,view.annualLeaderboard])assert.ok(!rows.some(row=>row.playerId===guest.id));
   assert.ok(view.players.some(p=>p.id===guest.id));
-  assert.equal(view.social.stats.find(p=>p.playerId===guest.id)!.games,1);
+  assert.ok(!view.social.stats.some(p=>p.playerId===guest.id),'proxy guests have no permanent profile stats');
  }
  assert.deepEqual(s,before);
 });

@@ -1,5 +1,6 @@
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
+import {isGuest} from './guests';
 import {eventFormat} from './match-format';
 
 import { assertPlayerMutable } from './ownership';
@@ -37,6 +38,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
         case 'profileGender': {
             const p=command.payload;
             assertPlayerMutable(s,a,p.playerId);
+            if(isGuest(s,p.playerId))fail('403: 临时来宾没有球员档案');
             const pl=player(p.playerId);
             if(a.role!=='admin'&&p.playerId!==a.playerId)fail('403: 只能编辑自己的档案');
             pl.profile={years:0,hand:'right',preference:'doubles',style:'',equipment:'',...pl.profile,gender:p.gender};
@@ -61,7 +63,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             const p = command.payload;
             if (p.targetId === a.playerId)
                 fail('不能挑战自己');
-            if(player(p.targetId).guestEventId)fail('临时来宾没有球员档案，不能发起复仇挑战');
+            if(isGuest(s,player(p.targetId).id))fail('临时来宾没有球员档案，不能发起复仇挑战');
             const loss = [...finished(s)].reverse().find(m => s.events.some(e => e.id === m.eventId && e.deletedAt === undefined) && [...m.a, ...m.b].includes(a.playerId) && !won(m, a.playerId) && m[m.a.includes(a.playerId) ? 'b' : 'a'].includes(p.targetId));
             if (!loss)
                 fail('尚未在有效比赛中输给这位球友');
