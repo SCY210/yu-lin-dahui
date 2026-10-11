@@ -21,3 +21,5 @@ Absent players are added to the activity's `noShowHold`. Live rotation (`livePre
 Tests: `tests/no-show.test.ts`.
 
 Arrival clears both absence and lateness scheduling holds when both exist, while preserving both historical penalties. The administrator simulation supports these same commands in its isolated state.
+
+Managers can cancel a mistaken absence penalty using the existing void command. This replays points and ratings without changing a replacement match. Arrival confirmation remains separate.

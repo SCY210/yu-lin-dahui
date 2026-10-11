@@ -105,3 +105,7 @@ test('manual-round selection does not count a no-show as a played turn for the p
 test('arrival recovery clears both absence and lateness scheduling holds without refunding either penalty',async()=>{
  const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const m=active(s)[0],absent=m.a[0];await apply(s,owner,'noShow',{matchId:m.id,playerIds:[absent]},now+60000);e.pointsSession={attendance:[{playerId:absent,late:true,available:false,at:now}],waiting:[]};await apply(s,owner,'noShowArrived',{eventId:e.id,playerId:absent},now+120000);assert.equal(e.noShowHold,undefined);assert.equal(e.pointsSession.attendance[0].available,true);assert.equal(e.pointsSession.attendance[0].late,true);assert.equal(realmLedger(s,now+120000).byPlayer.get(absent)!.length,1);
 });
+
+test('a manager can cancel a mistaken absence penalty without altering the replacement match',async()=>{
+ const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const m=active(s)[0],absent=m.a[0];await apply(s,owner,'noShow',{matchId:m.id,playerIds:[absent]},now+60000);const refill=structuredClone(active(s)[0]);await apply(s,owner,'void',{matchId:m.id,status:'cancelled'},now+120000);assert.equal(realmLedger(s,now+120000).byPlayer.get(absent)?.length??0,0);assert.equal(s.players.find(p=>p.id===absent)!.rating,1000);assert.deepEqual(active(s)[0],refill);
+});
