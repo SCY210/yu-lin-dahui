@@ -37,3 +37,12 @@ test('header court selection uses that court default interval, not another court
  const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
  const form=friendSignupForm(e,data,now)!;assert.ok(form.fields.some(f=>f.key==='bookingId'));const payload=form.convert({...form.values,name:'Fictional later guest',bookingId:'later'});assert.equal(payload.arrival,start+3600000);assert.equal(payload.departure,end+3600000);
 });
+
+test('all combined friend form entries close at the member signup deadline while managers retain access',()=>{
+ const {s,e,member}=fixture();e.signupDeadline=e.start-7200000;
+ const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ assert.ok(friendSignupForm(e,data,e.signupDeadline-1));
+ assert.equal(friendSignupForm(e,data,e.signupDeadline),null);
+ assert.equal(friendSignupForm(e,data,e.signupDeadline,data.bookings[0],true),null);
+ assert.ok(friendSignupForm(e,{...data,me:{...data.me,role:'admin'}},e.signupDeadline));
+});

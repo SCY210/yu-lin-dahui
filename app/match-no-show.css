@@ -1,0 +1,6 @@
+.match-no-show{margin-top:10px}
+.match-no-show details>summary{cursor:pointer;font-size:14px;color:var(--muted-foreground);padding:6px 0}
+.match-no-show .actions{margin-top:6px}
+.match-no-show-result{display:flex;align-items:center;gap:6px;margin:4px 0;color:var(--destructive);font-size:14px;font-weight:600}
+.no-show-hold{display:grid;gap:10px;border-left:4px solid var(--destructive)}
+.no-show-hold>strong{display:flex;align-items:center;gap:8px;color:var(--destructive)}

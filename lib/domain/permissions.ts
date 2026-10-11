@@ -42,3 +42,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
 }
 
 export function isEventAction(action:string){return eventActions.has(action)}
+/** Who may report an absence: the activity's managers, or a player of the same match who is there. */
+export function canReportNoShow(a:Pick<Account,'id'|'role'|'playerId'>,e:Parameters<typeof canManageEvent>[1],m:{a:string[];b:string[]},absent:string[]){
+ return canManageEvent(a,e)||([...m.a,...m.b].includes(a.playerId)&&!absent.includes(a.playerId));
+}
