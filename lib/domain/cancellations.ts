@@ -4,11 +4,12 @@ import type {Account,Registration,State} from './types';
 const automaticReasons=new Set(['取消报名','申请取消报名','cancel 操作','courtCancel 操作']);
 
 /** Store who cancelled, when and why once a registration becomes fully cancelled. */
-export function recordCancellation(r:Registration,a:Pick<Account,'id'>,now:number,reason?:string){
+export function recordCancellation(s:Pick<State,'players'>,r:Registration,a:Pick<Account,'id'|'playerId'>,now:number,reason?:string){
  r.cancelledAt=now;r.cancelledBy=a.id;
+ r.cancelledAs=a.playerId===r.playerId?'self':s.players.find(p=>p.id===r.playerId)?.ownerId===a.id?'registrant':'organizer';
  const text=reason?.trim();if(text&&!automaticReasons.has(text))r.cancelReason=text.slice(0,200);else delete r.cancelReason;
 }
-export function clearCancellation(r:Registration){delete r.cancelledAt;delete r.cancelledBy;delete r.cancelReason}
+export function clearCancellation(r:Registration){delete r.cancelledAt;delete r.cancelledBy;delete r.cancelReason;delete r.cancelledAs}
 
 export type CancellationView={at?:number;by:'self'|'registrant'|'organizer'|'unknown';byName?:string;reason?:string};
 /** What everyone who can see the activity sees about a cancelled signup. Older cancellations, from before the time was
@@ -26,7 +27,7 @@ export function cancellationView(s:Pick<State,'audits'|'accounts'|'players'|'boo
   if(audit){at=audit.at;actor=audit.actor;const text=audit.reason?.trim();reason=text&&!automaticReasons.has(text)?text.slice(0,200):undefined}
  }
  const account=s.accounts.find(x=>x.id===actor),player=s.players.find(p=>p.id===r.playerId);
- const by:CancellationView['by']=!account?'unknown':account.playerId===r.playerId?'self':player?.ownerId===account.id?'registrant':'organizer';
+ const by:CancellationView['by']=r.cancelledAs??(!account?'unknown':account.playerId===r.playerId?'self':player?.ownerId===account.id?'registrant':s.events.some(e=>e.id===r.eventId&&e.creatorId===account.id)?'organizer':'unknown');
  const byName=account?s.players.find(p=>p.id===account.playerId)?.name:undefined;
  return {...(at!==undefined?{at}:{}),by,...(byName?{byName}:{}),...(reason?{reason}:{})};
 }

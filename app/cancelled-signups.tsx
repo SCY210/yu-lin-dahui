@@ -13,7 +13,7 @@ export default function CancelledSignups({e,ctx}:{e:ClubEvent;ctx:Ctx}){
  const rows=data.registrations.flatMap(r=>r.eventId===e.id&&'cancellation' in r&&r.cancellation?[{r,c:r.cancellation}]:[])
   .sort((a,b)=>(b.c.at??0)-(a.c.at??0));
  if(!rows.length)return null;
- const by=(c:typeof rows[number]['c'])=>c.by==='self'?'本人取消':c.by==='registrant'?'由 '+(c.byName??'代报名的人')+' 取消':c.by==='organizer'?'由组织者 '+(c.byName??'')+' 取消':'已取消';
+ const by=(c:typeof rows[number]['c'])=>c.by==='self'?'本人取消':c.by==='registrant'?'由 '+(c.byName??'代报名的人')+' 取消':c.by==='organizer'?'由组织者'+(c.byName?' '+c.byName:'')+'取消':c.byName?'由 '+c.byName+' 取消':'已取消';
  return <details className="ev-details cancelled-signups"><summary>已取消 · {rows.length} 人</summary><div className="ev-details-content">
   {rows.map(({r,c})=>{const note=guestNote(data.players,r.playerId);return <div className="cancelled-signup" key={r.id}>
    <strong>{name(r.playerId)}{note&&<small> · {note}</small>}</strong>

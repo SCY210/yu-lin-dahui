@@ -51,12 +51,26 @@ test('signing up again removes the cancellation; court signups record it only on
 
 test('older cancellations are recovered from the audit log, and everyone sees them without account ids',async()=>{
  const s=fixture();await join(s,'m2','p2');await apply(s,account(s,'m2'),'cancel',{eventId:'e',playerId:'p2',reason:'家里有事'},start-2*day);
- const r=reg(s,'p2');delete r.cancelledAt;delete r.cancelledBy;delete r.cancelReason;
+ const r=reg(s,'p2');delete r.cancelledAt;delete r.cancelledBy;delete r.cancelReason;delete r.cancelledAs;
  assert.deepEqual(cancellationView(s,r),{at:start-2*day,by:'self',byName:'球友p2',reason:'家里有事'});
  const unknown=fixture();await join(unknown,'m3','p3');const u=reg(unknown,'p3');u.status='cancelled';
  assert.deepEqual(cancellationView(unknown,u),{by:'unknown'});
  await apply(s,account(s,'m3'),'register',{eventId:'e',playerId:'p3',arrival:start,departure:end,note:''},start-3*day);
  const view=projectClubState(s,account(s,'m3'),'2027-03',2027,start-day),row=view.registrations.find(r=>r.playerId==='p2')!;
  assert.ok('cancellation' in row&&row.cancellation?.reason==='家里有事');
- assert.ok(!('cancelledBy' in row),'the cancelling account id is not sent to members');
+ for(const field of ['cancelledAt','cancelledBy','cancelledAs','cancelReason'])assert.ok(!(field in row),'raw cancellation metadata is not sent to members');
+});
+
+test('the cancellation actor keeps their recorded role after a proxy friend gets their own account',async()=>{
+ const s=fixture();await join(s,'m2','friend');
+ await apply(s,account(s,'m2'),'cancel',{eventId:'e',playerId:'friend',reason:'临时有事'},start-2*day);
+ s.accounts.push({id:'friend-login',email:'',role:'member',playerId:'friend'});
+ s.players.find(p=>p.id==='friend')!.ownerId='friend-login';
+ assert.deepEqual(cancellationView(s,reg(s,'friend')),{at:start-2*day,by:'registrant',byName:'球友p2',reason:'临时有事'});
+});
+
+test('legacy cancellation actor roles are not invented from a later account role',async()=>{
+ const s=fixture();await join(s,'m2','friend');await apply(s,account(s,'m2'),'cancel',{eventId:'e',playerId:'friend',reason:'有事'},start-2*day);
+ delete reg(s,'friend').cancelledAs;s.players.find(p=>p.id==='friend')!.ownerId='new-owner';account(s,'m2').role='admin';
+ assert.deepEqual(cancellationView(s,reg(s,'friend')),{at:start-2*day,by:'unknown',byName:'球友p2',reason:'有事'});
 });

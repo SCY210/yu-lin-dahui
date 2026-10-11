@@ -26,3 +26,5 @@ Cancellations from before these fields existed are recovered from the latest `ca
 The club projection replaces the raw fields with a `cancellation` view, so members never receive account ids or the audit log.
 
 Tests: `tests/cancellations.test.ts`.
+
+New cancellation records also store the actor category at cancellation time (`cancelledAs`), so later account ownership or role changes do not relabel a registrant as an organiser. All raw cancellation fields are removed from the client projection. Older records lacking reliable role evidence can still display the actor's name with a generic cancellation label, instead of claiming the actor was an organiser.

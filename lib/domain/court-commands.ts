@@ -97,7 +97,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 row.cancelRequested = false;
                 syncRegistration(r);
                 if (r.status === 'cancelled')
-                    recordCancellation(r, a, now, 'reason' in p ? p.reason : undefined);
+                    recordCancellation(s, r, a, now, 'reason' in p ? p.reason : undefined);
                 promoteBooking(s, e, b, now);
             }
             break;

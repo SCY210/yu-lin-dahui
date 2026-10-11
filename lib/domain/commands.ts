@@ -306,7 +306,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 archiveDefaultAttendance(s, e, p.playerId, now);
                 r.status = 'cancelled';
                 r.cancelRequested = false;
-                recordCancellation(r, a, now, p.reason);
+                recordCancellation(s, r, a, now, p.reason);
                 for (const at of s.attendance.filter(x => x.eventId === e.id && x.playerId === p.playerId && x.end === null)) {
                     at.end = Math.max(at.start, Math.min(now, e.end));
                     at.state = 'left';
