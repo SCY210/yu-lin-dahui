@@ -36,6 +36,12 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
  if(action==='score'){
   if(!canRecordScore(s,a,event))fail('403: 只有本活动已接龙的球友、创建者或管理员可以录入比分');
+ }else if(action==='pointsLate'){
+  const m=s.matches.find(m=>m.id===p.matchId);
+  if(!canManageEvent(a,event)&&!(m&&[...m.a,...m.b].includes(a.playerId)&&a.playerId!==p.playerId))fail('403: 只有同场到场的球友、创建者或管理员可以报告迟到');
+ }else if(action==='pointsPresence'&&p.status==='arrived'){
+  const player=s.players.find(x=>x.id===p.playerId);
+  if(!canManageEvent(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能确认自己或代报名朋友已到场');
  }else if(!canManageEvent(a,event))fail('403: 只能管理自己创建的活动');
  if(event.deletedAt!==undefined&&!['deleteEvent','restoreEvent'].includes(action))fail('活动已删除，请先恢复活动');
  return true;

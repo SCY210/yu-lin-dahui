@@ -28,3 +28,14 @@ An audit-backed ledger is committed atomically with lineup and event metadata.
 These controls do not apply to practice activities or group/knockout tournaments.
 No historical scores or production data are rewritten, and JSON event metadata
 uses the existing persistence schema without a destructive migration.
+
+## Present by default; late versus not coming
+
+At the club owner's request, every confirmed signup is present by default. There is no per-person arrival roster to tick: scheduling already includes everyone except players who are currently marked late or absent. Reports come from the people on the spot, and the two reports are distinguished by whether the player is still coming:
+
+- **Late, still coming** (`pointsLate`, the "someone is late" button): the match is withdrawn and refilled from the bench, the player loses one point on this activity's board, and the long-term rating is unchanged. The activity's organisers, or another present player of the same match, can report it; the late player cannot report themselves. The late player (or their registrant) or an organiser reports the arrival (`pointsPresence` with `arrived`). Only organisers can refund a mistaken mark (`clear-late`).
+- **Not coming or unreachable** (`noShow`, the "someone is not coming" button): see `docs/NO_SHOW.md`.
+
+Both confirmation dialogs point to the other option.
+
+Temporary guests remain excluded from season points and rating. Late/absent records can pause their scheduling, but the interface does not advertise a guest point or rating penalty. Arrival never refunds a real member penalty; only the organiser-only mistaken-mark action can do that.
