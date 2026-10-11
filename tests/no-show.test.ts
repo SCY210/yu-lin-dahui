@@ -71,3 +71,13 @@ test('both absent players of a team each lose once against the other team; a pla
  for(const id of m.a)assert.equal((ledger.byPlayer.get(id)??[]).filter(g=>!g.won).length,1);
  for(const id of [...m.b,...n.a,...n.b])assert.equal((ledger.byPlayer.get(id)??[]).length,0);
 });
+
+test('absences on both teams use the same pre-match ratings regardless of side',async()=>{
+ const {s,e,owner}=fixture();await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const m=active(s)[0],absent=[m.a[0],m.b[0]];
+ await apply(s,owner,'noShow',{matchId:m.id,playerIds:absent},now+60000);
+ const ledger=realmLedger(s,now+120000),left=ledger.byPlayer.get(absent[0])!,right=ledger.byPlayer.get(absent[1])!;
+ assert.equal(left.length,1);assert.equal(right.length,1);
+ assert.equal(left[0].delta,right[0].delta,'equal players must receive equal no-show losses');
+ assert.equal(left[0].opponent,right[0].opponent,'neither loss uses the other side after its penalty');
+});

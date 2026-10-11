@@ -101,9 +101,10 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick
   const ids=participants.get(m.eventId)??new Set<string>();for(const id of counted)ids.add(id);participants.set(m.eventId,ids);
   const restarted=new Set<string>();
   for(const id of counted){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){Object.assign(row,fresh());restarted.add(id)}}
+  const ratingRows=absent.length?new Map([...rows].map(([id,row])=>[id,{...row}])):rows;
   const facts=absent.length?(['a','b'] as const).filter(team=>m[team].some(id=>absent.includes(id))).map(team=>({index:0,a:0,b:0,winner:team==='a'?'b' as const:'a' as const})):gameFacts(m);
   for(const g of facts){
-   const side=(ids:string[])=>ids.map(id=>rows.get(id)!),changes=gameChanges(side(m.a),side(m.b),g.winner,doubles),average=(ids:string[])=>ids.reduce((n,id)=>n+rows.get(id)!.score,0)/ids.length,teamAverage={a:average(m.a),b:average(m.b)};
+   const side=(ids:string[])=>ids.map(id=>ratingRows.get(id)!),changes=gameChanges(side(m.a),side(m.b),g.winner,doubles),average=(ids:string[])=>ids.reduce((n,id)=>n+ratingRows.get(id)!.score,0)/ids.length,teamAverage={a:average(m.a),b:average(m.b)};
    const updates=(['a','b'] as const).flatMap(team=>m[team].map((id,i)=>({id,i})).filter(({id})=>!absent.length||(absent.includes(id)&&g.winner!==team)).map(({id,i})=>{const row=rows.get(id)!,c=changes[team][i];
     return {row,game:{matchId:m.id,eventId:m.eventId,gameIndex:g.index,playerId:id,side:team,won:g.winner===team,before:row.score,after:row.score+c.delta,delta:c.delta,k:c.k,expected:c.expected,opponent:c.opponent,team:teamAverage[team],start:m.start??m.end!,end:m.end!,margin:team==='a'?g.a-g.b:g.b-g.a,settled:settled(m),reset:restarted.delete(id)}}}));
    for(const {row,game} of updates){row.score=game.after;row.games++;if(game.won)row.wins++;else row.losses++;games.push(game)}

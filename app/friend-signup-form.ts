@@ -1,5 +1,6 @@
 import type {Event} from '../lib/domain/types';
 import type {ClubData} from '../lib/contracts/club';
+import {signupClosed} from '../lib/domain/event-lifecycle';
 import {canManageEvent} from '../lib/domain/permissions';
 import {plannedInterval,plannedEpoch} from '../lib/time-planning';
 import {choice,text,halfTimed,hm,type Field} from './form-fields';
@@ -9,7 +10,7 @@ type Court=Data['bookings'][number];
 type Values={bookingId:string;mode:'new'|'existing';name:string;playerId:string;arrival:string;departure:string;note:string};
 export function friendSignupForm(e:Event,data:Data,now:number,court?:Court,preferExisting=false){
  const manager=canManageEvent(data.me,e);
- if(['ended','cancelled'].includes(e.status)||(!manager&&e.status!=='open'))return null;
+ if(['ended','cancelled'].includes(e.status)||(!manager&&(e.status!=='open'||signupClosed(e,now))))return null;
  const courts=data.bookings.filter(b=>b.eventId===e.id&&b.end>now).sort((a,b)=>a.start-b.start||a.name.localeCompare(b.name));
  const selected=court?courts.find(b=>b.id===court.id):courts[0];if(!selected)return null;
  const friends=data.players.filter(p=>p.enabled&&p.id!==data.me.playerId&&(manager||p.ownerId===data.me.id));
