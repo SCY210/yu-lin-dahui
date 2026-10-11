@@ -1,5 +1,5 @@
 import {editReason} from './edit-reason';
-import { signupClosed, signupCloseHours } from './event-lifecycle';
+import { signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { fail, type Account, type State } from './types';
@@ -23,7 +23,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
     const manager = canManageEvent(a, e), player = s.players.find(x => x.id === p.playerId) ?? fail('球友不存在');
     if (!manager && player.ownerId !== a.id)
         fail('403: 只能管理自己及自己代报的朋友');
-    if (['ended', 'cancelled'].includes(e.status))
+    if (['ended', 'cancelled'].includes(eventStatusAt(e,now)))
         fail('活动已结束');
     let r = s.registrations.find(x => x.eventId === e.id && x.playerId === p.playerId), row = r?.bookingSignups?.find(x => x.bookingId === b.id);
     switch (command.action) {

@@ -22,7 +22,7 @@ import './event-court-signup.css';
 export default function EventCourtSignup({e,ctx,rules}:any){
  const joined=(ctx.data.registrations as {eventId:string;playerId:string;status:string}[]).some(r=>r.eventId===e.id&&r.playerId===ctx.data.me.playerId&&r.status!=='cancelled');
  const {data,name,open,openProfile}=ctx,manager=canManageEvent(data.me,e);
- const now=useActivityClock(e),closes=signupClosesAt(e),closed=now>=closes;
+ const closes=signupClosesAt(e),now=useActivityClock({...e,start:closes}),closed=now>=closes;
  const courts=data.bookings.filter((b:any)=>b.eventId===e.id).slice().sort((a:any,b:any)=>a.start-b.start||a.name.localeCompare(b.name));
  const own=(id:string)=>manager||data.players.find((p:any)=>p.id===id)?.ownerId===data.me.id;
  const owned=data.players.filter((p:any)=>own(p.id)&&p.enabled);

@@ -6,7 +6,7 @@ import {pendingSchedulingIds,schedulingMode} from './domain/scheduling';
 export const simulationKey='admin-simulation-v1';
 export type SimulationDocument={version:1;revision:number;state:State;requests:string[]};
 export type SimulationView={revision:number;data:ClubData};
-const commands=new Set(['pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','schedulingMode','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','lock','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
+const commands=new Set(['noShow','noShowArrived','pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','schedulingMode','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','lock','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
 /** A separate, persisted sandbox. No real member or activity enters this graph. */
 export function createSimulation(now:number):SimulationDocument{
  const s=emptyState(),start=Math.floor(now/1800000)*1800000,end=start+6*3600000;

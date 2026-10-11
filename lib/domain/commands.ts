@@ -12,7 +12,7 @@ import { applyLivePlay, finishLiveMatch } from './live-play';
 import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
 import {applyNoShow} from './no-show';
-import { initialSignupDeadline, signupClosed, signupCloseHours } from './event-lifecycle';
+import { initialSignupDeadline, signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
 import { assertPlayerMutable, assertAccountMutable, clubOwnerId, isClubOwner } from './ownership';
 import { z } from 'zod';
@@ -215,7 +215,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.bookings.some(b => b.eventId === e.id && b.name === p.name && (b.venue ?? e.venue) === (p.venue ?? e.venue) && b.start < p.end && b.end > p.start))
                 fail('同一场地预约时段不能重叠');
             s.bookings.push({ ...p, signupCapacity: p.signupCapacity ?? e.capacity, id: id() });
+            const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
+            if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
             if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
@@ -237,7 +239,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.matches.some(m => m.courtId === b.id && ['published', 'playing'].includes(m.status) && ((m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) < p.start || (m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) + s.rounds.find(r => r.id === m.roundId)!.duration * 60000 > p.end)))
                 fail('调整时段与已发布或进行中的比赛冲突');
             Object.assign(b, { name: p.name, start: p.start, end: p.end, pricing: p.pricing, cents: p.cents, ...(p.venue !== undefined ? { venue: p.venue, address: p.address ?? '' } : {}), ...(p.signupCapacity !== undefined ? { signupCapacity: p.signupCapacity } : {}) });
+            const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
+            if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
             if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
@@ -255,7 +259,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('当前活动未开放报名');
             if (!manager && now >= e.end)
                 fail('活动时段已结束');
-            if (['ended', 'cancelled'].includes(e.status))
+            if (['ended', 'cancelled'].includes(eventStatusAt(e,now)))
                 fail('活动已结束');
             if (p.arrival < e.start || p.departure > e.end || p.departure <= p.arrival)
                 fail('参加时间应在活动时间内');

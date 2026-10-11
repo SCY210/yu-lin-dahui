@@ -12,7 +12,7 @@ const hour=3600000;
 /** Deadline stored when an activity is created. One created at shorter notice stays open until it starts. */
 export function initialSignupDeadline(start:number,now:number){const deadline=start-signupCloseHours*hour;return now>deadline?start:deadline}
 /** When new sign-ups close. Activities created before the rule stored their end time (or nothing); they follow the rule too. */
-export function signupClosesAt(e:Pick<Event,'start'|'end'|'signupDeadline'>){return !Number.isFinite(e.signupDeadline)||e.signupDeadline>=e.end?e.start-signupCloseHours*hour:e.signupDeadline}
+export function signupClosesAt(e:Pick<Event,'start'|'end'|'signupDeadline'>){return !Number.isFinite(e.signupDeadline)||e.signupDeadline>=e.end?e.start-signupCloseHours*hour:Math.min(e.start,e.signupDeadline)}
 /** Members (not organisers) can no longer start a new sign-up. Existing sign-ups can still be adjusted. */
 export function signupClosed(e:Pick<Event,'start'|'end'|'signupDeadline'>,now:number){return now>=signupClosesAt(e)}
 

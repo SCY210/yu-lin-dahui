@@ -25,3 +25,11 @@ test('creating an activity stores the deadline from the rule',async()=>{
  assert.equal(s.events.find(e=>e.title==='提前创建')!.signupDeadline,start-2*hour);
  assert.equal(s.events.find(e=>e.title==='临时加场')!.signupDeadline,start+24*hour);
 });
+test('an earlier added court brings the deadline forward and later stored deadlines never allow signup after start',async()=>{
+ const s=emptyState();s.settings.initialized=true;s.accounts=[{id:'host',playerId:'p',role:'admin',email:''}];s.players=[{id:'p',name:'Fixture host',ownerId:'host',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}];
+ await apply(s,s.accounts[0],'event',{start,end,venue:'Fixture',address:'',capacity:8,cancelDeadline:start,note:'',status:'open',bookings:[{name:'Court',start,end,pricing:'total',cents:1000}]},start-48*hour);const e=s.events[0];await apply(s,s.accounts[0],'booking',{eventId:e.id,name:'Earlier court',start:start-hour,end,pricing:'total',cents:1000},start-24*hour);assert.equal(e.signupDeadline,start-3*hour);assert.equal(signupClosesAt({...e,signupDeadline:e.start+hour}),e.start);
+});
+
+test('the organiser override ends with the actual activity even if its stored status remains open',async()=>{
+ const s=emptyState(),a={id:'host',playerId:'p',role:'admin' as const,email:''};s.accounts=[a];s.players=[{id:'p',name:'Fixture host',ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}];await apply(s,a,'event',{start,end,venue:'Fixture',address:'',capacity:8,cancelDeadline:start,note:'',status:'open',bookings:[{name:'Court',start,end,pricing:'total',cents:1000}]},start-24*hour);const e=s.events[0],b=s.bookings[0],before=structuredClone(s);await assert.rejects(()=>apply(s,a,'courtRegister',{bookingId:b.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);await assert.rejects(()=>apply(s,a,'register',{eventId:e.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);
+});
