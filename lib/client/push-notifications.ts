@@ -29,7 +29,7 @@ export const pushStateChanged='yulin:push-changed';
 /** Call directly from a user click so the permission request retains its gesture. */
 export async function enablePush(accountId:string,publicKey:string){
  const permission=await Notification.requestPermission();
- if(permission!=='granted')throw new Error('尚未允许通知。你可以稍后再开启。');
+ if(permission!=='granted')throw new Error('尚未允许通知，请在系统提示中选择允许后重试。');
  const registration=await connectPushWorker();let subscription=await registration.pushManager.getSubscription();
  if(subscription){const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice){await subscription.unsubscribe();subscription=null}}
  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(publicKey)});
