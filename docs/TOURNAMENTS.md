@@ -31,3 +31,15 @@ or walkovers. No existing activities are converted and no production data is see
 Tournament metadata lives in the existing event JSON, with ordinary persisted
 matches and rounds. No destructive database migration or parallel score store is
 introduced. All tournament mutations require the persisted creator/admin authority.
+
+## Bracket presentation
+
+The elimination draw is a connected tree. Its two halves advance from the left
+and right toward a central final, using persisted fixture dependencies. Nodes
+show both teams, scores, the winner and live status. Selecting a fixture reveals
+the existing start and score controls below the chart. All viewers can explore
+the diagram; server-side management and scoring permissions remain unchanged.
+
+The chart scrolls within its own region on small screens, with zoom, fit-all and
+original-size controls. It never rearranges the bracket into an unconnected
+vertical list. Group standings and all tournament rules remain unchanged.
