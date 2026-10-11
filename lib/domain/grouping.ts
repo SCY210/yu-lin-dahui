@@ -1,6 +1,7 @@
 import {awaitingArrival} from './points-attendance';
 import {arenaStatus} from './social';
 import {balanceCost,compareBalance} from './match-balance';
+import {genderMismatches} from './gender-balance';
 import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
@@ -19,9 +20,10 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  const cohort=(id:string)=>cohortValues.get(id);
  const mixedCohorts=new Set(eligible.map(cohort).filter(Boolean)).size>1;
  const lastPartner=new Map<string,string>();for(const m of [...history].sort((a,b)=>(a.start??s.rounds.find(r=>r.id===a.roundId)?.start??0)-(b.start??s.rounds.find(r=>r.id===b.roundId)?.start??0)||a.id.localeCompare(b.id))){for(const t of [m.a,m.b]){lastPartner.set(t[0],t[1]);lastPartner.set(t[1],t[0])}}const penalty=(list:string[])=>{
-  let variety=0;const gaps:number[]=[];
+  let variety=0,mismatches=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
+   mismatches+=genderMismatches(s,a,b,rating);
    if([...a,...b].some(id=>!canUse(courts[i/4].id,id)))return balanceCost([Infinity],Infinity);
    gaps.push(Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2));
    if(mixedCohorts&&cohort(a[0])&&[...a,...b].every(id=>cohort(id)===cohort(a[0])))variety+=90;
@@ -34,7 +36,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
     for(const x of a)for(const y of b)if((m.a.includes(x)&&m.b.includes(y))||(m.b.includes(x)&&m.a.includes(y)))variety+=12;
    }
   }
-  return balanceCost(gaps,variety);
+  return balanceCost(gaps,variety,mismatches);
  };
  // Check all three pairings on each court, including the unchanged one.
  // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.

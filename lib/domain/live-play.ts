@@ -6,6 +6,7 @@ import {eventStatusAt} from './event-lifecycle';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {balanceCost,compareBalance} from './match-balance';
+import {genderMismatches} from './gender-balance';
 import {canManageEvent} from './permissions';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
@@ -45,7 +46,7 @@ function pair(s:State,e:Event,ids:string[]){
  const cost=(order:string[])=>{
   const a=order.slice(0,2),b=order.slice(2);
   const repeats=recent.reduce((n,m)=>n+[a,b].filter(t=>[m.a,m.b].some(team=>t.every(id=>team.includes(id)))).length,0);
-  return balanceCost([Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2)],repeats);
+  return balanceCost([Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2)],repeats,genderMismatches(s,a,b,rating));
  };
  let best=ids;
  for(const candidate of [[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]])if(compareBalance(cost(candidate),cost(best))<0)best=candidate;
