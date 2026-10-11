@@ -1,3 +1,4 @@
+import {awaitingArrival,clearFilledPointsWaiting} from './points-attendance';
 import {cancelPendingScheduling} from './scheduling';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
@@ -26,7 +27,7 @@ export function liveAppearances(s:Pick<State,'matches'>,eventId:string,playerId:
 }
 export function livePresentIds(s:Pick<State,'players'|'registrations'|'bookings'|'attendance'>,e:Event,now:number){
  const enabled=new Set(s.players.filter(p=>p.enabled).map(p=>p.id));
- return s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&enabled.has(r.playerId)&&
+ return s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&!awaitingArrival(e,r.playerId)&&enabled.has(r.playerId)&&
   registrationSpans(s as State,e,r).some(span=>span.start<=now&&(span.end??e.end)>now)&&
   !s.attendance.some(at=>at.eventId===e.id&&at.playerId===r.playerId&&at.state==='paused'&&at.end===null))
   .sort((a,b)=>a.sequence-b.sequence||a.playerId.localeCompare(b.playerId)).map(r=>r.playerId);
@@ -87,7 +88,7 @@ export function fillLiveCourts(s:State,e:Event,now:number){
   const roundId=crypto.randomUUID();
   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
-  decorateMatch(s,e,match);markRanked(match);s.matches.push(match);
+  decorateMatch(s,e,match);markRanked(match);s.matches.push(match);clearFilledPointsWaiting(s,e);
   const season=month(now);if(!s.seasons.some(p=>p.id===season))s.seasons.push({id:season,rules:{...s.settings.rules},version:1});
  }
 }

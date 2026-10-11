@@ -1,3 +1,5 @@
+import {clearFilledPointsWaiting} from './points-attendance';
+import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
 import {emptyTournament,assertTournamentScore} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice} from './match-format';
@@ -68,6 +70,7 @@ const schemas = {
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
+    if(await applyPointsSession(s,a,action,input,now,apply)) return null;
     if (await applyTournament(s, a, action, input, now)) return null;
     if (await applyScheduling(s, a, action, input, now))
         return null;
@@ -364,7 +367,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.rounds.some(r => r.eventId === e.id && r.pointsSlot !== undefined && ['draft', 'published', 'playing'].includes(r.status)))
                 fail('已有预排积分赛，请按赛程完成或取消预排轮次，再逐轮生成');
             const old = s.rounds.find(x => x.eventId === e.id && x.status === 'draft');
-            const locked = s.matches.filter(m => m.roundId === old?.id && m.locked);
+            const locked = s.matches.filter(m => m.roundId === old?.id && m.status==='draft' && m.locked);
             validateRound(s, e.id, p.at, p.duration, locked);
             const eligible = readyIds(s, e.id, p.at, p.duration);
             if (old) {
@@ -408,7 +411,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('固定搭档不能单轮交换成员，请在开打前重新分配搭档');
             if (r.status !== 'draft')
                 fail('仅可交换草稿');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             const has = (m: State['matches'][number], p: string) => [...m.a, ...m.b].includes(p);
             if (ms.some(m => m.locked && (has(m, p.p1) || has(m, p.p2))))
                 fail('请先解除锁定');
@@ -447,7 +450,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const r = round(p.roundId);
             if (r.status !== 'draft')
                 fail('轮次已发布');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             validateRound(s, r.eventId, r.start, r.duration, ms);
             r.status = 'published';
             ms.forEach(m => m.status = 'published');
@@ -465,7 +468,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请按预排顺序开赛，先结束或取消前面的轮次');
             if (r.pointsSlot !== undefined && s.matches.some(m => m.eventId === e.id && m.status === 'playing'))
                 fail('请先录入当前轮全部比赛的结果，再开始下一轮');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             validateRound(s, r.eventId, p.at, r.duration, ms);
             r.start = p.at;
             r.status = 'playing';
@@ -473,6 +476,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!s.seasons.some(x => x.id === season))
                 s.seasons.push({ id: season, rules: { ...s.settings.rules }, version: 1 });
             ms.forEach(m => { m.start = p.at; m.status = 'playing'; markRanked(m); });
+            clearFilledPointsWaiting(s,e);
             break;
         }
         case 'cancelRound': {
@@ -481,7 +485,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!['draft', 'published'].includes(r.status))
                 fail('只能取消尚未开始的轮次');
             r.status = 'cancelled';
-            s.matches.filter(m => m.roundId === r.id).forEach(m => m.status = 'cancelled');
+            s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled').forEach(m => m.status = 'cancelled');
             break;
         }
         case 'score': {
