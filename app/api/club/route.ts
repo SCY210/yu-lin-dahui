@@ -1,4 +1,4 @@
-import {friendSignupCreatesProfile} from '../../../lib/domain/friend-signup';
+import {friendSignupCreatesGuest} from '../../../lib/domain/friend-signup';
 import { privateEventState } from '../../../lib/domain/event-privacy';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, reserveDailyCreation, trustedClientIP } from '../../../lib/rate-limit';
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
         if (body.actor !== undefined && body.actor !== user.userId)
             return response({ error: '登录账号已切换，本次操作未保存。请确认当前账号后再操作', actorMismatch: true }, 409);
         const key = user.userId + ':' + body.requestId;
-        const creationAction=body.action==='friendSignup'&&friendSignupCreatesProfile(body.payload)?'friend':body.action;
+        const creationAction=body.action==='friendSignup'&&friendSignupCreatesGuest(body.payload)?'friend':body.action;
         if (creationAction === 'friend' || creationAction === 'event') {
             const account = await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{
                 role: string;

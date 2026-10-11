@@ -44,7 +44,11 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
    const copy={...b,id:crypto.randomUUID(),eventId:target.id,venue:b.venue??source.venue,address:b.address??source.address,signupCapacity:bookingCapacity(b,source)};mapping.set(b.id,copy.id);work.bookings.push(copy);
   }
   const scoped=structuredClone(work);upgradeActivitySignups(scoped,scoped.events.find(e=>e.id===source.id)!);
-  for(const original of scoped.registrations.filter(r=>r.eventId===source.id)){
+  for(const stored of scoped.registrations.filter(r=>r.eventId===source.id)){
+   const guest=work.players.find(p=>p.id===stored.playerId&&p.guestEventId===source.id);
+   const participantId=guest?crypto.randomUUID():stored.playerId;
+   if(guest)work.players.push({...guest,id:participantId,guestEventId:target.id});
+   const original={...stored,playerId:participantId};
    const slots=(original.bookingSignups??[]).map(x=>({...x,bookingId:mapping.get(x.bookingId)??fail('报名关联场地不存在')}));
    let r=work.registrations.find(r=>r.eventId===target.id&&r.playerId===original.playerId);
    if(r){

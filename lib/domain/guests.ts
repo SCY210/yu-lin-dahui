@@ -7,15 +7,14 @@ export const defaultGuestLevel=1000;
 export const guestLevelValues:readonly number[]=guestLevels.map(([value])=>value);
 export function guestLevelLabel(value:number|undefined){return guestLevels.find(([v])=>v===(value??defaultGuestLevel))?.[1]??'一般'}
 
-type GuestState={players:Pick<Player,'id'|'ownerId'|'guestLevels'>[];accounts?:Pick<Account,'id'|'playerId'>[]};
+type GuestState={players:Pick<Player,'id'|'ownerId'|'guestLevels'|'guestEventId'>[];accounts?:Pick<Account,'id'|'playerId'>[]};
 /** The friend's level at a time: the last change made before it, or the default. A change only affects later games. */
-export function guestLevelAt(p:Pick<Player,'guestLevels'>,at=Infinity){let level=defaultGuestLevel;for(const x of p.guestLevels??[])if(x.at<=at)level=x.level;return level}
+export function guestLevelAt(p:Pick<Player,'guestLevels'>,at=Infinity){let level=defaultGuestLevel,latest=-Infinity;for(const x of p.guestLevels??[])if(x.at<=at&&x.at>=latest){level=x.level;latest=x.at}return level}
 /** A friend brought by a member: a player without an account of their own, owned by another member's account.
  * Members become regular players (profile, rating, points) once they have their own account. */
 export function guestIds(s:GuestState){
- if(!s.accounts)return new Set<string>();
- const own=new Set(s.accounts.map(a=>a.playerId)),owners=new Set(s.accounts.map(a=>a.id));
- return new Set(s.players.filter(p=>!own.has(p.id)&&owners.has(p.ownerId)).map(p=>p.id));
+ const own=new Set(s.accounts?.map(a=>a.playerId)),owners=new Set(s.accounts?.map(a=>a.id));
+ return new Set(s.players.filter(p=>!own.has(p.id)&&(p.guestEventId||owners.has(p.ownerId))).map(p=>p.id));
 }
 export function isGuest(s:GuestState,playerId:string){return guestIds(s).has(playerId)}
 /** All guests, by player id, with their level history. */

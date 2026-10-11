@@ -63,5 +63,5 @@ export async function reserveUploadBytes(accountId:string,requestId:string,bytes
 
 export async function reserveDailyCreation(accountId:string,requestId:string,action:'friend'|'event',isAdmin:boolean,now=Date.now()){
  const {day,expires}=uploadDayWindow(now),max=isAdmin?100:action==='friend'?20:10;
- return reserveIdempotentAmount('creation-daily:'+action+':'+accountId+':'+day,'creation-request:'+action+':'+accountId+':'+requestId,1,max,expires,action==='friend'?'今日新增朋友档案已达上限，请明天再试':'今日创建活动已达上限，请明天再试',now);
+ return reserveIdempotentAmount('creation-daily:'+action+':'+accountId+':'+day,'creation-request:'+action+':'+accountId+':'+requestId,1,max,expires,action==='friend'?'今日新增临时来宾已达上限，请明天再试':'今日创建活动已达上限，请明天再试',now);
 }

@@ -6,7 +6,6 @@ import {rankingQuarter,quarterMonths,quarterLabel} from '../lib/ranking-quarter'
 import {realmByScore,realms} from '../lib/domain/realm-rating';
 import {getFeatureGuide} from '../lib/feature-guides';
 import {projectClubState} from '../lib/club-view';
-import {apply} from '../lib/domain/commands';
 
 /** Far enough ahead that every fixture match has finished. */
 const later=Date.parse('2028-06-01T00:00:00Z');
@@ -34,7 +33,7 @@ test('negative doubles points remain signed in all member response boards and co
 test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受影响且名次重新排列',async()=>{
  const s=fixture(),actor=s.accounts[0];
  s.settings.rules={...s.settings.rules,win:10,loss:3,cap:0};
- await apply(s,actor,'friend',{name:'邀请朋友'},Date.parse('2026-10-06T12:00:00Z'));
+ s.players.push({...s.players[0],id:'legacy-proxy-friend',name:'邀请朋友',ownerId:actor.id}); // Existing historical proxy profile.
  const guest=s.players.at(-1)!;
  assert.equal(guest.ownerId,actor.id);
  s.matches.push(match('with-guest','2026-10-06T13:00:00Z',21,19,[[guest.id,'A'],['B','C']]));

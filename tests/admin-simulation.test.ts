@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {createSimulation,changeSimulation,simulationView} from '../lib/admin-simulation';
 import {pendingSchedulingIds,schedulingMode} from '../lib/domain/scheduling';
 import {liveAppearances} from '../lib/domain/live-play';
+import {emptyState} from '../lib/domain/types';
+import {realmSnapshot} from '../lib/domain/realm-rating';
 const now=Date.parse('2030-10-10T13:03:00Z');
 const request=()=>crypto.randomUUID();
 const start=(d:ReturnType<typeof createSimulation>)=>({eventId:'sim-event',expectedMode:schedulingMode(d.state,d.state.events[0]),expectedPendingIds:pendingSchedulingIds(d.state,'sim-event')});
@@ -19,4 +21,17 @@ test('preplanning and reset use the same commands but never keep stale test scor
 });
 test('simulation refuses account, real event, notification, fee and profile operations without changing its state',async()=>{
  const d=createSimulation(now),before=structuredClone(d);for(const action of ['event','grantPoints','notifyFees','feePaid','profile','role','createAccount','photoUpload'])await assert.rejects(()=>changeSimulation(d,action,{},request(),now),/只允许/);assert.deepEqual(d,before);await assert.rejects(()=>changeSimulation(d,'liveStart',{eventId:'real-event'},request(),now),/不存在/);assert.deepEqual(d,before);
+});
+
+test('real member snapshots preserve names, avatars, gender and replayed strength with isolated identities',async()=>{
+ const club=emptyState();for(let i=0;i<14;i++){const id='real-'+i;club.accounts.push({id:'account-'+i,email:'private@example.test',role:'member',playerId:id});club.players.push({id,ownerId:'account-'+i,name:'真实球友 '+i,enabled:i!==0,initialRating:2000,rating:2000,ratedGames:20,ratingReason:'private note',avatarId:'avatar-'+i,profile:{gender:i%2?'female':'male',years:5,hand:'left',preference:'mixed',style:'private style',equipment:'private equipment'}})}
+ club.players.unshift({...club.players[1],id:'invited',name:'代报朋友'});
+ club.audits=[300,300,50].map((rating,i)=>({id:'seed-'+i,actor:'account-1',action:'grantPoints',reason:'test strength',at:now-100,changes:{playerId:'real-1',period:'2030-10',points:0,rating,reason:'test strength'}}));
+ const original=structuredClone(club),d=createSimulation(now,club);assert.equal(d.version,2);assert.equal(d.state.players.length,12);assert.equal(d.state.bookings.length,2);assert.equal(d.state.players[0].name,'真实球友 1');assert.equal(d.state.players[0].avatarId,'avatar-1');assert.equal(d.state.players[0].profile?.gender,'female');assert.equal(d.state.players[0].rating,1650);assert.equal(realmSnapshot(d.state,now).get('sim-player-1')!.score,1650);assert.ok(d.state.players.every(p=>p.id.startsWith('sim-')&&p.ownerId.startsWith('sim-')));assert.ok(!JSON.stringify(d).includes('private@example.test'));assert.ok(!JSON.stringify(d).includes('private style'));assert.ok(!JSON.stringify(d).includes('real-1"'));assert.ok(simulationView(d,now).data.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));
+ const live=await changeSimulation(d,'pointsStart',start(d),request(),now),m=live.state.matches[0];await changeSimulation(live,'score',{matchId:m.id,a:21,b:19},request(),now+1000);assert.deepEqual(club,original);
+ club.players[1].name='刷新后的球友';club.players[1].enabled=false;const reset=await changeSimulation(live,'reset',{},request(),now+2000,club);assert.ok(!reset.state.players.some(p=>p.name==='代报朋友'));assert.equal(reset.state.matches.length,0);assert.equal(reset.revision,live.revision+1);
+});
+
+test('fewer members never create fictional replacements, while an empty roster refuses initialization',()=>{
+ const club=createSimulation(now).state;club.players=club.players.slice(0,5);const d=createSimulation(now,club);assert.equal(d.state.players.length,5);assert.equal(d.state.registrations.length,5);assert.equal(d.state.bookings.length,2);assert.equal(d.state.events[0].capacity,5);assert.match(d.state.events[0].title,/5人/);club.players=[];assert.throws(()=>createSimulation(now,club),/暂无可用于模拟的真实球友/);
 });

@@ -29,3 +29,12 @@ test('原活动链接指向已合并活动，恢复备份后不再重定向',asy
 test('附加费用或分摊模式不同不合并，拒绝时原记录完整保留',()=>{for(const kind of ['cost','mode']){const {s,target,source}=fixture();if(kind==='cost')s.costs.push({eventId:source.id} as any);else source.ballMode='equal';const before=structuredClone(s);assert.throws(()=>mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'迁移'),/费用/);assert.deepEqual(s,before)}});
 test('来源预排轮次与比赛原样保留在可恢复备份中',()=>{const {s,target,source}=fixture();s.rounds.push({id:'source-round',eventId:source.id,status:'draft'} as any);s.matches.push({id:'source-match',roundId:'source-round',eventId:source.id,status:'draft'} as any);const rounds=structuredClone(s.rounds),matches=structuredClone(s.matches);mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'迁移');assert.deepEqual(s.rounds,rounds);assert.deepEqual(s.matches,matches)});
 test('两场原首位报名者的快速报名统计在场地接龙中保留，不因活动顺序重排丢失',()=>{const {s,target,source}=fixture();mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'迁移');const view=projectClubState(s,s.accounts[0],'2030-10',2030,now);assert.equal(view.social.personality.find(p=>p.playerId==='p0')!.fastSignup,1);assert.equal(view.social.personality.find(p=>p.playerId==='p5')!.fastSignup,1)});
+
+test('merging activity guests creates a target-scoped identity and preserves the recoverable source',()=>{
+ const {s,target,source}=fixture(),original=s.registrations.find(r=>r.eventId===source.id)!;
+ const sourcePlayer=s.players.find(p=>p.id===original.playerId)!;sourcePlayer.guestEventId=source.id;
+ const oldId=sourcePlayer.id;mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'Guest migration');
+ const targetGuest=s.players.find(p=>p.guestEventId===target.id)!;assert.ok(targetGuest);assert.notEqual(targetGuest.id,oldId);
+ assert.ok(s.registrations.some(r=>r.eventId===target.id&&r.playerId===targetGuest.id));
+ assert.ok(s.registrations.some(r=>r.eventId===source.id&&r.playerId===oldId));assert.equal(sourcePlayer.guestEventId,source.id);
+});

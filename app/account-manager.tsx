@@ -13,7 +13,7 @@ export default function AccountManager({data,refresh,onEditName,onSelfUsernameCh
  const [form,setForm]=useState<any>(null),[usernameTarget,setUsernameTarget]=useState<any>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const name=(id:string)=>data.players.find((p:any)=>p.id===id)?.name??'球友';
  const login=(id:string)=>(data.loginAccounts??[]).find((c:any)=>c.accountId===id);
- const available=data.players.filter((p:any)=>!data.accounts.some((a:any)=>a.playerId===p.id));
+ const available=data.players.filter((p:{id:string;guestEventId?:string})=>!p.guestEventId&&!data.accounts.some((a:{playerId:string})=>a.playerId===p.id));
  function open(account?:any,reset=false){setError('');setForm({accountId:account?.id,reset,name:account?name(account.playerId):'',username:account?login(account.id)?.username??'':'',playerId:'new',password:'',confirmation:'',requestId:crypto.randomUUID()})}
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy)return;if(form.password!==form.confirmation){setError('两次密码不一致');return}if(!form.reset&&!/^[A-Za-z0-9]{2,32}$/.test(form.username.trim())){setError('新账号须为2–32位英文字母或数字');return}setBusy(true);setError('');
