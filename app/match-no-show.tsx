@@ -13,12 +13,12 @@ const penalty='判 TA 本局负：只扣 TA 的修为和赛季积分（按输一
 /** On a started match (before any score): who did not show up. Absent players of a no-show are listed. */
 export function MatchNoShow({m,ctx}:{m:Match;ctx:Ctx}){
  const {data,name}=ctx,e=data.events?.find(x=>x.id===m.eventId);
- if(!e||e.tournament)return null;
+ if(!e||e.tournament||e.matchFormat==='practice')return null;
  const absent=m.status==='forfeit'?m.noShow??[]:[];
  const open=(m.status==='playing'&&m.start!==null&&!m.games?.length&&m.scoreA==null)||absent.length>0;
  if(!open)return null;
  const players=[...m.a,...m.b],candidates=players.filter(id=>!absent.includes(id)&&id!==data.me.playerId);
- const allowed=!ctx.readOnly&&!!data.me&&typeof ctx.setDanger==='function'&&canReportNoShow(data.me,e,m,absent)&&candidates.length>0&&absent.length+1<players.length;
+ const allowed=!['draft','ended','cancelled'].includes(e.status)&&!ctx.readOnly&&!!data.me&&typeof ctx.setDanger==='function'&&canReportNoShow(data.me,e,m,absent)&&candidates.length>0&&absent.length+1<players.length;
  return <div className="match-no-show">
   {absent.length>0&&<p className="match-no-show-result"><UserX size={16} aria-hidden="true"/>{absent.map(name).join('、')} 没到场 · 本局判负</p>}
   {allowed&&<details><summary>{absent.length?'还有人没到？':'有人没到场？'}</summary><div className="actions">{candidates.map(id=><button type="button" key={id} className="ghost danger" disabled={ctx.busy||absent.length+1>=players.length} onClick={()=>ctx.setDanger({action:'noShow',payload:{matchId:m.id,playerIds:[id]},title:'确认 '+name(id)+' 没到场',description:penalty.replaceAll('TA',name(id)),reason:''})}>{name(id)} 没到</button>)}</div></details>}
@@ -30,6 +30,7 @@ export function NoShowHold({e,ctx}:{e:ClubEvent;ctx:Ctx}){
  const {data,name}=ctx,held=e.noShowHold??[];
  if(!held.length||ctx.readOnly)return null;
  const manager=canManageEvent(data.me,e),own=(id:string)=>id===data.me.playerId||data.players.find(p=>p.id===id)?.ownerId===data.me.id;
+ if(['draft','ended','cancelled'].includes(e.status))return null;
  const visible=held.filter(id=>manager||own(id));
  if(!visible.length)return null;
  return <section className="card no-show-hold" role="status">

@@ -5,6 +5,8 @@ import {liveAppearances,livePresentIds} from '../lib/domain/live-play';
 import {realmLedger} from '../lib/domain/realm-rating';
 import {gamePoints} from '../lib/domain/season-points';
 import {emptyState,type Event} from '../lib/domain/types';
+import {singlesLeaderboard,doublesLeaderboard} from '../lib/domain/ranking';
+import {propose} from '../lib/domain/grouping';
 
 const now=Date.parse('2026-10-10T15:00:00Z');
 function fixture(count=10,courts=2){
@@ -70,4 +72,36 @@ test('both absent players of a team each lose once against the other team; a pla
  const ledger=realmLedger(s,now+120000);
  for(const id of m.a)assert.equal((ledger.byPlayer.get(id)??[]).filter(g=>!g.won).length,1);
  for(const id of [...m.b,...n.a,...n.b])assert.equal((ledger.byPlayer.get(id)??[]).length,0);
+});
+
+test('sequential absence reports withdraw an unscored refill containing the newly absent player',async()=>{
+ const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const original=active(s)[0],first=original.a[0];
+ await apply(s,owner,'noShow',{matchId:original.id,playerIds:[first]},now+60000);const refill=active(s)[0],second=[...original.a,...original.b].find(id=>id!==first&&[...refill.a,...refill.b].includes(id))!;assert.ok(second);
+ await apply(s,owner,'noShow',{matchId:original.id,playerIds:[second]},now+120000);
+ assert.ok(!active(s).some(m=>[...m.a,...m.b].some(id=>e.noShowHold?.includes(id))),'held players must never remain on a refilled court');
+ assert.equal(active(s).length,1);assert.equal(s.matches.find(m=>m.id===refill.id)!.status,'cancelled');
+ const ledger=realmLedger(s,now+120000);for(const id of [first,second])assert.equal(ledger.byPlayer.get(id)!.length,1);
+ for(const p of s.players.filter(p=>![first,second].includes(p.id)))assert.equal(ledger.byPlayer.get(p.id)?.length??0,0);
+});
+
+test('opposite-side absent players both lose against the same pre-match snapshot',async()=>{
+ const {s,e,owner}=fixture(4,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const m=active(s)[0],absent=[m.a[0],m.b[0]];
+ await apply(s,owner,'noShow',{matchId:m.id,playerIds:absent},now+60000);const ledger=realmLedger(s,now+60000);
+ for(const id of absent){const game=ledger.byPlayer.get(id)![0];assert.equal(game.opponent,1000);assert.equal(game.team,1000);assert.equal(game.delta,-16);assert.equal(gamePoints(game),-1)}
+});
+test('a singles-only absence remains visible on the singles board and does not enter the doubles board',async()=>{
+ const {s,e,owner}=fixture(3,1);e.matchFormat='singles';await apply(s,owner,'liveStart',{eventId:e.id},now);const m=active(s)[0],absent=m.b[0];await apply(s,owner,'noShow',{matchId:m.id,playerIds:[absent]},now+60000);
+ const row=singlesLeaderboard(s,'2026-10',now+60000).find(r=>r.playerId===absent)!;assert.equal(row.points,-1);assert.equal(row.losses,1);assert.equal(row.games,1);assert.equal(doublesLeaderboard(s,'2026-10',now+60000).find(r=>r.playerId===absent)!.points,0);
+});
+test('additional absence reports never rewrite a later scored game, and ended or practice requests are refused',async()=>{
+ const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const original=active(s)[0];await apply(s,owner,'noShow',{matchId:original.id,playerIds:[original.a[0]]},now+60000);const refill=active(s)[0],second=[...original.a,...original.b].find(id=>id!==original.a[0]&&[...refill.a,...refill.b].includes(id))!;await apply(s,owner,'score',{matchId:refill.id,a:21,b:19},now+120000);const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,owner,'noShow',{matchId:original.id,playerIds:[second]},now+180000),/后续赛果/);assert.deepEqual(s,before);await assert.rejects(()=>apply(s,owner,'noShow',{matchId:active(s)[0].id,playerIds:[active(s)[0].a[0]]},e.end),/活动进行时/);assert.deepEqual(s,before);
+ e.matchFormat='practice';const practice=structuredClone(s);await assert.rejects(()=>apply(s,owner,'noShow',{matchId:active(s)[0].id,playerIds:[active(s)[0].a[0]]},now+180000),/练球/);assert.deepEqual(s,practice);
+});
+test('manual-round selection does not count a no-show as a played turn for the present players',async()=>{
+ const {s,e,owner}=fixture(8,2);await apply(s,owner,'liveStart',{eventId:e.id},now);e.livePlay!.enabled=false;const [m,other]=active(s);await apply(s,owner,'noShow',{matchId:m.id,playerIds:[m.a[0]]},now+60000);await apply(s,owner,'score',{matchId:other.id,a:21,b:19},now+60000);const next=propose(s,e,now+120000,15,1);
+ for(const id of [m.a[1],...m.b])assert.equal(next.stats[id].games,0);for(const id of [...other.a,...other.b])assert.equal(next.stats[id].games,1);
+});
+test('arrival recovery clears both absence and lateness scheduling holds without refunding either penalty',async()=>{
+ const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);const m=active(s)[0],absent=m.a[0];await apply(s,owner,'noShow',{matchId:m.id,playerIds:[absent]},now+60000);e.pointsSession={attendance:[{playerId:absent,late:true,available:false,at:now}],waiting:[]};await apply(s,owner,'noShowArrived',{eventId:e.id,playerId:absent},now+120000);assert.equal(e.noShowHold,undefined);assert.equal(e.pointsSession.attendance[0].available,true);assert.equal(e.pointsSession.attendance[0].late,true);assert.equal(realmLedger(s,now+120000).byPlayer.get(absent)!.length,1);
 });

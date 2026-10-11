@@ -1,3 +1,4 @@
+import {attendancePointAdjustments} from './points-attendance';
 import {isPractice} from './match-format';
 import {pointGrants,ratingAdjustments} from './point-grants';
 import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
@@ -43,14 +44,15 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
  const practice=new Set(s.events.filter(isPractice).map(e=>e.id));
  const singles=format==='singles',accept=(m:Match)=>!practice.has(m.eventId)&&(format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m))),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
+ const attendance=new Map<string,number>();for(const g of attendancePointAdjustments(s))if(chosen.has(g.period)&&(format==='all'||g.format===format))attendance.set(g.playerId,(attendance.get(g.playerId)??0)+g.delta);
  const members=new Set(s.accounts.map(account=>account.playerId));
  const rows=s.players.filter(p=>p.enabled&&members.has(p.id)).map(p=>{
   const all=s.matches.filter(m=>m.status==='complete'&&m.start!==null&&chosen.has(month(m.start))&&[...m.a,...m.b].includes(p.id)&&accept(m)&&gameFacts(m).length>0);
   const rated=(ledger.byPlayer.get(p.id)??[]).filter(g=>chosen.has(month(g.start))&&accept(matches.get(g.matchId)!));
   const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=rated.reduce((n,g)=>n+gamePoints(g),0),upsets=rated.reduce((n,g)=>n+upsetBonus(g),0),pending=rated.filter(g=>!g.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0),matchPoints:score,upsetPoints:upsets,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+gamePoints(g),0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
- }).filter(row=>!singles||row.totalMatches>0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0)+(attendance.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,matchPoints:score,upsetPoints:upsets,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,g)=>n+gamePoints(g),0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+ }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
 const yearMonths=(year:number)=>Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0'));
