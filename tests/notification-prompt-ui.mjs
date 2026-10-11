@@ -14,9 +14,9 @@ await build({entryPoints:['app/notification-prompt.tsx'],outfile:'.test-output/n
 }}]});
 const {default:Prompt}=await import(pathToFileURL(resolve('.test-output/notification-prompt-ui.mjs')).href);
 const originals=Object.fromEntries(['window','document','Notification','MutationObserver','localStorage','IS_REACT_ACT_ENVIRONMENT','setTimeout'].map(k=>[k,globalThis[k]]));
-const values=new Map(),timers=[],observers=new Set(),listeners=new Set();let otherDialog=false,ui,enableCalls=0,permissionCalls=0,configCalls=0;
+const values=new Map([['yulin:notification-prompt:v1:fictional-member',String(Date.now()+7*86400000)]]),timers=[],observers=new Set(),listeners=new Set(),windowListeners=new Map();let otherDialog=false,ui,enableCalls=0,permissionCalls=0,configCalls=0;
 const push={support:'supported',sync:async()=>false,config:async()=>{configCalls++;return {configured:true,publicKey:'fictional-public-key'}},enable:async()=>{enableCalls++}};
-globalThis.window={push,Notification:{}};globalThis.Notification={permission:'default',requestPermission:()=>{permissionCalls++;return Promise.resolve('granted')}};
+globalThis.window={push,Notification:{},addEventListener:(name,f)=>{if(!windowListeners.has(name))windowListeners.set(name,new Set());windowListeners.get(name).add(f)},removeEventListener:(name,f)=>windowListeners.get(name)?.delete(f)};globalThis.Notification={permission:'default',requestPermission:()=>{permissionCalls++;return Promise.resolve('granted')}};
 globalThis.document={hidden:false,body:{},querySelector:()=>otherDialog?{}:null,addEventListener:(_,f)=>listeners.add(f),removeEventListener:(_,f)=>listeners.delete(f)};
 globalThis.MutationObserver=class{constructor(f){this.f=f}observe(){observers.add(this.f)}disconnect(){observers.delete(this.f)}};
 globalThis.localStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
@@ -28,18 +28,22 @@ const dialogs=()=>ui.root.findAll(n=>n.props.role==='dialog');
 async function flush(){await act(async()=>{for(const f of timers.splice(0))f();await pause()})}
 async function mount(props={}){if(ui)await act(()=>ui.unmount());await act(async()=>{ui=create(React.createElement(React.StrictMode,null,React.createElement(Prompt,{accountId:'fictional-member',...props})));await pause()});await flush()}
 async function click(label){const button=ui.root.findAllByType('button').find(n=>text(n)===label);assert.ok(button,label);await act(async()=>{button.props.onClick();await pause()})}
+async function foreground(){await act(async()=>{document.hidden=true;for(const f of listeners)f();document.hidden=false;for(const f of listeners)f();await pause()});await flush()}
 try{
  await mount();assert.equal(dialogs().length,1);assert.equal(permissionCalls,0);assert.equal(enableCalls,0,'entry never enables notifications implicitly');
- await click('暂不开启');assert.equal(dialogs().length,0);await mount();assert.equal(dialogs().length,0,'dismissal persists on later entries');
+ await click('暂不开启');assert.equal(dialogs().length,0);await act(async()=>{ui.update(React.createElement(React.StrictMode,null,React.createElement(Prompt,{accountId:'fictional-member'})));await pause()});await flush();assert.equal(dialogs().length,0,'polling/rerenders do not reopen the current visit');
+ await foreground();assert.equal(dialogs().length,1,'returning to the app offers again when still disabled');await click('暂不开启');
+ await act(async()=>{for(const f of windowListeners.get('pageshow')??[])f({persisted:true});await pause()});await flush();assert.equal(dialogs().length,1,'restoring a page rechecks eligibility');await click('暂不开启');
+ await mount();assert.equal(dialogs().length,1,'new page entry ignores old seven-day snooze values');
  await mount({accountId:'another-member'});assert.equal(dialogs().length,1,'a different account has its own choice');await click('开启通知');assert.equal(enableCalls,1);assert.equal(dialogs().length,0);
- values.clear();push.sync=async()=>true;await mount();assert.equal(dialogs().length,0,'enabled devices stay quiet');push.sync=async()=>null;await mount();assert.equal(dialogs().length,0,'unknown status is not an opt-in decision');push.sync=async()=>false;
+ push.sync=async()=>true;await mount();assert.equal(dialogs().length,0,'enabled devices stay quiet');await foreground();assert.equal(dialogs().length,0,'enabled devices remain quiet on return');push.sync=async()=>null;await mount();assert.equal(dialogs().length,0,'unknown status is not an opt-in decision');push.sync=async()=>false;
  push.support='unsupported';await mount();assert.equal(dialogs().length,0);push.support='iphone-install';await mount();assert.equal(dialogs().length,1);assert.ok(text(ui.toJSON()).includes('添加到主屏幕'));assert.ok(!text(ui.toJSON()).includes('点击开启后'));push.support='supported';
  Notification.permission='denied';await mount();assert.equal(dialogs().length,1);assert.ok(text(ui.toJSON()).includes('系统已阻止通知'));assert.equal(ui.root.findAllByType('button').some(n=>text(n)==='开启通知'),false);Notification.permission='default';
  await mount({blocked:true});assert.equal(dialogs().length,0);await act(async()=>{ui.update(React.createElement(Prompt,{accountId:'fictional-member',blocked:false}));await pause()});await flush();assert.equal(dialogs().length,1,'score/write dialogs defer the offer');
  otherDialog=true;await mount();assert.equal(dialogs().length,0);otherDialog=false;await act(async()=>{for(const f of observers)f();await pause()});assert.equal(dialogs().length,1,'closing another dialog releases the queued offer');
  push.enable=async()=>{enableCalls++;throw Error('模拟连接失败，请重试')};await click('开启通知');assert.equal(dialogs().length,1);assert.ok(text(ui.toJSON()).includes('模拟连接失败'));assert.equal(ui.root.findByProps({role:'alert'}).children.length,1);assert.ok(ui.root.findAllByType('button').every(n=>!n.props.disabled));
- push.enable=async()=>{enableCalls++};await click('开启通知');assert.equal(dialogs().length,0,'retry succeeds without forcing a reload');
+ let finishEnable;push.enable=()=>{enableCalls++;return new Promise(resolve=>{finishEnable=resolve})};await click('开启通知');assert.equal(dialogs()[0].props.historyCloseBlocked,true);await foreground();assert.equal(dialogs().length,1,'a system permission foreground return must not restart an in-flight enable');assert.equal(dialogs()[0].props.historyCloseBlocked,true);await act(async()=>{finishEnable();await pause()});assert.equal(dialogs().length,0,'retry succeeds without forcing a reload');
  push.config=async()=>({configured:false,publicKey:null});await mount();assert.equal(dialogs().length,0,'unconfigured service does not advertise a working enable button');
  assert.equal(permissionCalls,0);assert.ok(configCalls>0);
- console.log('PASS notification entry opt-in: enabled/unknown/unsupported suppression, account-local snooze, explicit enable/retry, denied/iPhone guidance and dialog priority.');
+ console.log('PASS notification entry opt-in: fresh/foreground/restored visit reminders, ignored legacy snooze, no polling repeats, enabled-device suppression, permission-flow protection, retry and dialog priority.');
 }finally{if(ui)await act(()=>ui.unmount());for(const [k,v] of Object.entries(originals))globalThis[k]=v}

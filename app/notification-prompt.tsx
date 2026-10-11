@@ -4,18 +4,22 @@ import {Bell} from 'lucide-react';
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {enablePush,notificationConfig,pushSupport,syncPushAccount} from '../lib/client/push-notifications';
-import {notificationPromptDue,postponeNotificationPrompt} from '../lib/client/notification-prompt';
 import './notification-prompt.css';
 
-const storage={getItem:(key:string)=>localStorage.getItem(key),setItem:(key:string,value:string)=>localStorage.setItem(key,value)};
 type Offer={support:string;publicKey:string|null};
 export default function NotificationPrompt({accountId,blocked=false}:{accountId:string;blocked?:boolean}){
  const [offer,setOffer]=useState<Offer|null>(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false);
- const handled=useRef(false);
+ const [visit,setVisit]=useState(0),handled=useRef(false),enabling=useRef(false);
+ useEffect(()=>{
+  const enter=()=>{if(document.hidden||enabling.current)return;handled.current=false;setOpen(false);setOffer(null);setError('');setVisit(value=>value+1)};
+  const show=(event:PageTransitionEvent)=>{if(event.persisted)enter()};
+  document.addEventListener('visibilitychange',enter);window.addEventListener('pageshow',show);
+  return()=>{document.removeEventListener('visibilitychange',enter);window.removeEventListener('pageshow',show)};
+ },[]);
  useEffect(()=>{let active=true;
   void (async()=>{
    const enabled=await syncPushAccount(accountId);
-   if(!active||enabled!==false||!notificationPromptDue(storage,accountId))return;
+   if(!active||enabled!==false)return;
    const support=pushSupport();if(support==='unsupported')return;
    const isDenied='Notification' in window&&Notification.permission==='denied';
    try{const config=support==='supported'&&!isDenied?await notificationConfig(accountId):null;
@@ -23,7 +27,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
     setDenied(isDenied);setOffer({support,publicKey:config?.publicKey??null});
    }catch{/* Leave the app usable; retry discovery on the next visit. */}
   })();return()=>{active=false};
- },[accountId]);
+ },[accountId,visit]);
  useEffect(()=>{
   if(!offer||blocked||handled.current)return;
   let ready=false;
@@ -33,12 +37,12 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['role']});document.addEventListener('visibilitychange',check);
   return()=>{clearTimeout(timer);observer.disconnect();document.removeEventListener('visibilitychange',check)};
  },[offer,blocked]);
- function dismiss(){if(busy)return;postponeNotificationPrompt(storage,accountId);setOpen(false)}
+ function dismiss(){if(busy)return;setOpen(false)}
  async function enable(){
-  if(!offer?.publicKey||busy)return;setBusy(true);setError('');
+  if(!offer?.publicKey||enabling.current)return;enabling.current=true;setBusy(true);setError('');
   try{await enablePush(accountId,offer.publicKey);setOpen(false);toast.success('已开启这台设备的活动提醒')}
   catch(e){setDenied('Notification' in window&&Notification.permission==='denied');setError(e instanceof Error?e.message:'开启通知失败，请稍后重试')}
-  finally{setBusy(false)}
+  finally{enabling.current=false;setBusy(false)}
  }
  if(!offer)return null;
  const install=offer.support==='iphone-install';
@@ -47,6 +51,6 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
   {install?<p className="hint">苹果手机请先用 Safari 将网站“添加到主屏幕”，再从桌面图标打开并开启通知（iOS 16.4 及以上）。</p>:denied?<p className="hint">系统已阻止通知。请在浏览器或手机的通知设置中允许本网站，再到“我的 → 通知与安装”开启。</p>:<p className="hint">点击开启后，系统会询问是否允许通知。每台设备需要单独开启。</p>}
   {error&&<p className="connection-note" role="alert">{error}</p>}
   <div className="actions notification-optin-actions">{!install&&!denied&&<button type="button" className="primary" disabled={busy} onClick={()=>void enable()}>{busy?'正在开启…':'开启通知'}</button>}<button type="button" className="ghost notification-optin-later" disabled={busy} onClick={dismiss}>{install||denied?'我知道了':'暂不开启'}</button></div>
-  <p className="hint">关闭后 7 天内不再提醒；随时可在“我的 → 通知与安装”中设置。</p>
+  <p className="hint">暂不开启的话，下次进入仍会提醒；随时可在“我的 → 通知与安装”中设置。</p>
  </DialogContent></Dialog>;
 }
