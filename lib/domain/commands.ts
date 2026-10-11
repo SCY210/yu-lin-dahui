@@ -1,7 +1,9 @@
+import {applyFriendSignup} from './friend-signup';
+import {clearFilledPointsWaiting} from './points-attendance';
+import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
 import {emptyTournament,assertTournamentScore} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice} from './match-format';
-import { initialSignupDeadline, signupClosed, signupCloseHours } from './event-lifecycle';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
@@ -10,6 +12,7 @@ import { applyLivePlay, finishLiveMatch } from './live-play';
 import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
 import {applyNoShow} from './no-show';
+import { initialSignupDeadline, signupClosed, signupCloseHours } from './event-lifecycle';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
 import { assertPlayerMutable, assertAccountMutable, clubOwnerId, isClubOwner } from './ownership';
 import { z } from 'zod';
@@ -38,7 +41,7 @@ const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isEventAction(action) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
@@ -70,6 +73,7 @@ const schemas = {
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
+    if(await applyPointsSession(s,a,action,input,now,apply)) return null;
     if (await applyTournament(s, a, action, input, now)) return null;
     if (await applyScheduling(s, a, action, input, now))
         return null;
@@ -78,6 +82,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if (await applyNoShow(s, a, action, input, now))
         return null;
     if (await applyLivePlay(s, a, action, input, now))
+        return null;
+    if (await applyFriendSignup(s, a, action, input, now))
         return null;
     if (await applyCourtSignup(s, a, action, input, now))
         return null;
@@ -370,7 +376,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.rounds.some(r => r.eventId === e.id && r.pointsSlot !== undefined && ['draft', 'published', 'playing'].includes(r.status)))
                 fail('已有预排积分赛，请按赛程完成或取消预排轮次，再逐轮生成');
             const old = s.rounds.find(x => x.eventId === e.id && x.status === 'draft');
-            const locked = s.matches.filter(m => m.roundId === old?.id && m.locked);
+            const locked = s.matches.filter(m => m.roundId === old?.id && m.status==='draft' && m.locked);
             validateRound(s, e.id, p.at, p.duration, locked);
             const eligible = readyIds(s, e.id, p.at, p.duration);
             if (old) {
@@ -414,7 +420,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('固定搭档不能单轮交换成员，请在开打前重新分配搭档');
             if (r.status !== 'draft')
                 fail('仅可交换草稿');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             const has = (m: State['matches'][number], p: string) => [...m.a, ...m.b].includes(p);
             if (ms.some(m => m.locked && (has(m, p.p1) || has(m, p.p2))))
                 fail('请先解除锁定');
@@ -453,7 +459,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const r = round(p.roundId);
             if (r.status !== 'draft')
                 fail('轮次已发布');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             validateRound(s, r.eventId, r.start, r.duration, ms);
             r.status = 'published';
             ms.forEach(m => m.status = 'published');
@@ -471,7 +477,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请按预排顺序开赛，先结束或取消前面的轮次');
             if (r.pointsSlot !== undefined && s.matches.some(m => m.eventId === e.id && m.status === 'playing'))
                 fail('请先录入当前轮全部比赛的结果，再开始下一轮');
-            const ms = s.matches.filter(m => m.roundId === r.id);
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
             validateRound(s, r.eventId, p.at, r.duration, ms);
             r.start = p.at;
             r.status = 'playing';
@@ -479,6 +485,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!s.seasons.some(x => x.id === season))
                 s.seasons.push({ id: season, rules: { ...s.settings.rules }, version: 1 });
             ms.forEach(m => { m.start = p.at; m.status = 'playing'; markRanked(m); });
+            clearFilledPointsWaiting(s,e);
             break;
         }
         case 'cancelRound': {
@@ -487,7 +494,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!['draft', 'published'].includes(r.status))
                 fail('只能取消尚未开始的轮次');
             r.status = 'cancelled';
-            s.matches.filter(m => m.roundId === r.id).forEach(m => m.status = 'cancelled');
+            s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled').forEach(m => m.status = 'cancelled');
             break;
         }
         case 'score': {

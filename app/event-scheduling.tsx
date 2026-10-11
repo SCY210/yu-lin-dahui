@@ -1,4 +1,5 @@
 'use client';
+import PointsAttendance from './points-attendance';
 import EventTournament from './event-tournament';
 import {useState} from 'react';
 import {Play,Check,Shuffle,CalendarDays} from 'lucide-react';
@@ -22,14 +23,14 @@ import Disclosure from './disclosure';
 import './event-scheduling.css';
 type FormOpen=(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:(v:Record<string,unknown>)=>Record<string,unknown>,description?:string)=>void;
 export type SchedulingContext={data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
-const compareRounds=(a:Round,b:Round)=>a.start-b.start||(a.pointsSlot??0)-(b.pointsSlot??0)||a.id.localeCompare(b.id);
+const compareRounds=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefined?a.pointsSlot-b.pointsSlot:0)||a.start-b.start||a.id.localeCompare(b.id);
 export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canManageEvent(ctx.data.me,e);
  if(isPractice(e))return null;
  if(e.tournament)return <EventTournament e={e} ctx={ctx}/>;
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
- return <div className="event-scheduling"><section className="card scheduling-selector"><h2>排场方式</h2><div className="scheduling-options" role="group" aria-label="排场方式">{(['planned','round','live'] as const).map(value=><button type="button" key={value} className={mode===value?'primary':'secondary'} aria-pressed={mode===value} disabled={ctx.busy||!manager||!active||mode===value} onClick={()=>change(value)}>{schedulingLabels[value]}</button>)}</div><p className="hint">{mode==='planned'?'提前分配多轮，检查草稿后发布，再逐轮开赛、录分。':mode==='round'?'当前轮全部打完并录分后，再手动生成下一轮。':'每片场地录分后立即安排下一局，其他场地继续比赛。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></section>
+ return <div className="event-scheduling"><PointsAttendance e={e} ctx={ctx}/><section className="card scheduling-selector"><h2>排场方式</h2><div className="scheduling-options" role="group" aria-label="排场方式">{(['planned','round','live'] as const).map(value=><button type="button" key={value} className={mode===value?'primary':'secondary'} aria-pressed={mode===value} disabled={ctx.busy||!manager||!active||mode===value} onClick={()=>change(value)}>{schedulingLabels[value]}</button>)}</div><p className="hint">{mode==='planned'?'提前分配多轮，检查草稿后发布，再逐轮开赛、录分。':mode==='round'?'当前轮全部打完并录分后，再手动生成下一轮。':'每片场地录分后立即安排下一局，其他场地继续比赛。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></section>
   {mode==='live'?<EventLivePlay e={e} ctx={ctx}/>:<EventRounds e={e} ctx={ctx} mode={mode} now={now}/>}
   {ctx.data.rounds.some(r=>r.eventId===e.id&&r.status==='cancelled')&&<Disclosure label={'已撤销轮次 · '+ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled').length}>{ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled').slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}
  </div>;
@@ -51,9 +52,10 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
    <p className="hint">{playing?'请先录完当前轮全部对局；切换排场方式不会打断当前比赛。':mode==='round'&&pending.length?'当前已有未开打轮次，请先发布、开赛或取消。':mode==='planned'?'草稿支持换人、换场和锁定；发布后按赛程顺序开始。':'每轮结束后再生成，保留公平轮休与实力平衡。'}</p>
   </section>
   {!rounds.length&&<p className="empty">{mode==='planned'?'正式接龙后即可预排赛程。':'正式接龙后可生成第一轮。'}</p>}
-  {rounds.map((r,index)=>{const matches:Match[]=data.matches.filter(m=>m.roundId===r.id);return <Disclosure key={r.id+':'+r.status} defaultOpen={r.status==='playing'||r.id===next?.id} label={'第 '+(index+1)+' 轮 · '+labels[r.status]+' · '+hm(r.start)}>
+  {rounds.map((r,index)=>{const allMatches=data.matches.filter(m=>m.roundId===r.id),matches:Match[]=allMatches.filter(m=>m.status!=='cancelled'),withdrawn=allMatches.filter(m=>m.status==='cancelled');return <Disclosure key={r.id+':'+r.status} defaultOpen={r.status==='playing'||r.id===next?.id} label={'第 '+(index+1)+' 轮 · '+labels[r.status]+' · '+hm(r.start)}>
    <p className="hint">{r.live?'实时对局记录':'预计 '+r.duration+' 分钟'}{r.status==='draft'&&!fixed?' · 点击两位球友旁的交换图标调整位置，也可与场下成员交换。':''}</p>
    <div className="courts-grid">{matches.map(m=><MatchCard key={m.id} m={m} ctx={ctx} interactive={editable&&r.status==='draft'&&!fixed} selected={selected?.roundId===r.id?selected.playerId:''} onSelect={id=>swap(r,id)}/>)}</div>
+   {withdrawn.length>0&&<Disclosure label={'已撤销对局 · '+withdrawn.length}>{withdrawn.map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</Disclosure>}
    <div className="rest"><strong>本轮轮休 · {r.rest.length} 人</strong><div className="actions">{r.rest.map(id=><GroupPlayer key={id} id={id} ctx={ctx} interactive={editable&&r.status==='draft'&&!fixed} selected={selected?.roundId===r.id?selected.playerId:''} onSelect={id=>swap(r,id)}/>)}</div></div>
    <Disclosure label="上场与等待机会">{r.eligible.map(id=>{const prior=rounds.filter(x=>['published','playing','complete'].includes(x.status)&&x.eligible.includes(id)),played=prior.filter(x=>data.matches.some(m=>m.roundId===x.id&&m.status!=='cancelled'&&[...m.a,...m.b].includes(id)));return <div className="row small-line" key={id}><span>{name(id)}</span><span>{played.length}/{prior.length} 轮上场</span></div>})}</Disclosure>
    {editable&&<div className="actions">{r.status==='draft'&&<button type="button" className="primary" disabled={busy} onClick={()=>send('publish',{roundId:r.id})}><Check size={17}/>确认发布</button>}{r.status==='published'&&<button type="button" className="primary" disabled={busy||playing||r.id!==next?.id||now<e.start||now<r.start} onClick={()=>send('start',{roundId:r.id,at:roundStartTime(e,r,now),monthly:true,elo:true})}><Play size={17}/>开始本轮</button>}{['draft','published'].includes(r.status)&&<button type="button" className="ghost danger" disabled={busy} onClick={()=>setDanger({action:'cancelRound',payload:{roundId:r.id},title:'取消未开始的轮次',description:'仅撤销本轮尚未开始的对局，不修改历史比分。',reason:''})}>取消本轮</button>}</div>}

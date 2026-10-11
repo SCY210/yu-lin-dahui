@@ -1,0 +1,8 @@
+.notification-optin [data-slot="dialog-title"]{padding-right:32px;display:flex;align-items:center;gap:10px}
+.notification-optin [data-slot="dialog-close"]{top:8px;right:8px;width:44px;height:44px;display:grid;place-items:center;color:var(--muted-foreground);opacity:.7}
+.notification-optin [data-slot="dialog-close"] svg{width:12px;height:12px}
+.notification-optin [data-slot="dialog-close"]:hover,.notification-optin [data-slot="dialog-close"]:focus-visible{opacity:1}
+.notification-optin-actions{align-items:center;gap:10px}
+.notification-optin-actions>.primary{flex:1;min-height:48px;font-weight:700}
+.notification-optin-actions>.notification-optin-later{min-height:44px;padding:10px 12px;font-size:13px;border-color:transparent;background:transparent;box-shadow:none;color:var(--muted-foreground)}
+.notification-optin-actions>.notification-optin-later:hover{color:var(--foreground);text-decoration:underline}

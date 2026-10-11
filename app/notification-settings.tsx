@@ -4,10 +4,11 @@ import './notification-settings.css';
 import {reminderLabels,reminderKinds,type ReminderKind,type Reminder} from '../lib/reminder-contract';
 import {Bell,BellOff,CheckCheck} from 'lucide-react';
 import {toast} from 'sonner';
-import {pushSupport,notificationConfig,notificationRequest,localPushSubscription,connectPushWorker,vapidBytes,type NotificationConfig} from '../lib/client/push-notifications';
+import {pushSupport,notificationConfig,notificationRequest,localPushSubscription,enablePush,syncPushAccount,pushStateChanged,type NotificationConfig} from '../lib/client/push-notifications';
 
 export default function NotificationSettings({accountId,onOpen}:{accountId:string;onOpen?:(eventId:string,tab:string)=>void}){
  const [config,setConfig]=useState<NotificationConfig|null>(null),[support,setSupport]=useState('checking'),[enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false),[unreadOnly,setUnreadOnly]=useState(false);
+ useEffect(()=>{let current=true;const changed=()=>{void syncPushAccount(accountId).then(value=>{if(current&&value!==null){setEnabled(value);setDenied('Notification' in window&&Notification.permission==='denied')}})};window.addEventListener(pushStateChanged,changed);return()=>{current=false;window.removeEventListener(pushStateChanged,changed)}},[accountId]);
  async function reload(){try{setConfig(await notificationConfig(accountId))}catch(e){setError(e instanceof Error?e.message:'无法读取提醒')}}
  useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')void reload()},60000);return()=>clearInterval(timer)},[accountId]);
  async function preference(kind:ReminderKind,value:boolean){if(!config||busy)return;setBusy(true);setError('');try{const next={...config.preferences,[kind]:value};await notificationRequest(accountId,'preferences',{preferences:next});setConfig({...config,preferences:next})}catch(e){setError(e instanceof Error?e.message:'设置保存失败')}finally{setBusy(false)}}
@@ -19,12 +20,8 @@ export default function NotificationSettings({accountId,onOpen}:{accountId:strin
   if(!config?.publicKey||support!=='supported')return;setBusy(true);setError('');
   try{
    // Permission is requested only from this explicit button press, before awaits.
-   const permission=await Notification.requestPermission();setDenied(permission==='denied');if(permission!=='granted')throw new Error('尚未允许通知。你可以稍后再开启。');
-   const registration=await connectPushWorker();let subscription=await registration.pushManager.getSubscription();
-   if(subscription){const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice){await subscription.unsubscribe();subscription=null}}
-   if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(config.publicKey)});
-   await notificationRequest(accountId,'subscribe',{subscription:subscription.toJSON()});setEnabled(true);toast.success('已开启这台设备的活动提醒');
-  }catch(e){setError(e instanceof Error?e.message:'开启通知失败，请稍后重试')}finally{setBusy(false)}
+   await enablePush(accountId,config.publicKey);setDenied(false);setEnabled(true);toast.success('已开启这台设备的活动提醒');
+  }catch(e){setDenied('Notification' in window&&Notification.permission==='denied');setError(e instanceof Error?e.message:'开启通知失败，请稍后重试')}finally{setBusy(false)}
  }
  async function disable(){setBusy(true);setError('');try{const subscription=await localPushSubscription();if(subscription){await notificationRequest(accountId,'unsubscribe',{endpoint:subscription.endpoint});await subscription.unsubscribe()}setEnabled(false);toast.success('这台设备已关闭系统提醒')}catch(e){setError(e instanceof Error?e.message:'关闭失败，请稍后重试')}finally{setBusy(false)}}
  async function test(){setBusy(true);setError('');try{const subscription=await localPushSubscription();if(!subscription)throw new Error('通知连接已失效，请重新开启');await notificationRequest(accountId,'test',{endpoint:subscription.endpoint});toast.success('测试提醒已发送，请查看手机或电脑的系统通知')}catch(e){setError(e instanceof Error?e.message:'测试失败，请稍后重试')}finally{setBusy(false)}}

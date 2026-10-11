@@ -51,10 +51,6 @@ next-env.d.ts
 
 # Private deployment customizations are not part of the shared repository.
 /assets/private-*/
-*aquarium*
-*AQUARIUM*
-*CAPYBARA*
-**/theme-access*
 
 # Personal editor/agent state, caches, databases and local backups.
 .vscode/

@@ -38,10 +38,10 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
             if (!rounds.length)
                 fail('请先安排积分赛轮次');
             for (const r of rounds)
-                validateRound(s, e.id, r.start, r.duration, s.matches.filter(m => m.roundId === r.id));
+                validateRound(s, e.id, r.start, r.duration, s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled'));
             for (const r of rounds) {
                 r.status = 'published';
-                s.matches.filter(m => m.roundId === r.id).forEach(m => m.status = 'published');
+                s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled').forEach(m => m.status = 'published');
             }
             break;
         }
