@@ -59,7 +59,10 @@ export function realmProgress(score:number,held=rawRealmIndex(score)){
 }
 
 /** Rated games: complete, rated for strength and ranking, no applied handicap, distinct non-empty sides. */
+/** A started match forfeited because these players did not show up. */
+export function noShowPlayers(m:Pick<Match,'status'|'noShow'|'a'|'b'>){return m.status==='forfeit'&&m.noShow?.length?m.noShow.filter(id=>m.a.includes(id)||m.b.includes(id)):[]}
 export function isRatedMatch(m:Match,now=Date.now()){
+ if(noShowPlayers(m).length)return !!m.monthly&&!!m.elo&&!m.handicap?.applied&&m.start!==null&&m.end!==null&&Number.isFinite(m.end)&&m.end<=now&&!!m.a.length&&!!m.b.length&&new Set([...m.a,...m.b]).size===m.a.length+m.b.length;
  if(m.status!=='complete'||!m.monthly||!m.elo||m.handicap?.applied||m.end===null||!Number.isFinite(m.end)||m.end>now)return false;
  if(!m.a.length||!m.b.length||new Set([...m.a,...m.b]).size!==m.a.length+m.b.length)return false;
  return gameFacts(m).length>0;
@@ -93,16 +96,19 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick
  const adjust=(until:number)=>{for(;nextAdjustment<adjustments.length&&adjustments[nextAdjustment].at<until;nextAdjustment++){const g=adjustments[nextAdjustment],row=rows.get(g.playerId);if(!row)continue;if(row.last!==null&&inactiveAt(row.last,g.at))Object.assign(row,fresh());row.score+=g.delta;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}};
  ordered.forEach((m,i)=>{
   adjust(m.end!);
-  const ids=participants.get(m.eventId)??new Set<string>();for(const id of [...m.a,...m.b])ids.add(id);participants.set(m.eventId,ids);
+  // A no-show only rates the absent players: one loss each against the other team, from the scores before it.
+  const absent=noShowPlayers(m),counted=absent.length?absent:[...m.a,...m.b];
+  const ids=participants.get(m.eventId)??new Set<string>();for(const id of counted)ids.add(id);participants.set(m.eventId,ids);
   const restarted=new Set<string>();
-  for(const id of [...m.a,...m.b]){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){Object.assign(row,fresh());restarted.add(id)}}
-  for(const g of gameFacts(m)){
+  for(const id of counted){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){Object.assign(row,fresh());restarted.add(id)}}
+  const facts=absent.length?(['a','b'] as const).filter(team=>m[team].some(id=>absent.includes(id))).map(team=>({index:0,a:0,b:0,winner:team==='a'?'b' as const:'a' as const})):gameFacts(m);
+  for(const g of facts){
    const side=(ids:string[])=>ids.map(id=>rows.get(id)!),changes=gameChanges(side(m.a),side(m.b),g.winner,doubles),average=(ids:string[])=>ids.reduce((n,id)=>n+rows.get(id)!.score,0)/ids.length,teamAverage={a:average(m.a),b:average(m.b)};
-   const updates=(['a','b'] as const).flatMap(team=>m[team].map((id,i)=>{const row=rows.get(id)!,c=changes[team][i];
+   const updates=(['a','b'] as const).flatMap(team=>m[team].map((id,i)=>({id,i})).filter(({id})=>!absent.length||(absent.includes(id)&&g.winner!==team)).map(({id,i})=>{const row=rows.get(id)!,c=changes[team][i];
     return {row,game:{matchId:m.id,eventId:m.eventId,gameIndex:g.index,playerId:id,side:team,won:g.winner===team,before:row.score,after:row.score+c.delta,delta:c.delta,k:c.k,expected:c.expected,opponent:c.opponent,team:teamAverage[team],start:m.start??m.end!,end:m.end!,margin:team==='a'?g.a-g.b:g.b-g.a,settled:settled(m),reset:restarted.delete(id)}}}));
    for(const {row,game} of updates){row.score=game.after;row.games++;if(game.won)row.wins++;else row.losses++;games.push(game)}
   }
-  for(const id of [...m.a,...m.b])rows.get(id)!.last=m.end!;
+  for(const id of counted)rows.get(id)!.last=m.end!;
   if(last.get(m.eventId)===i)for(const id of participants.get(m.eventId)!){const row=rows.get(id)!;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}
  });
  adjust(now===undefined?Infinity:now+1);
