@@ -4,6 +4,8 @@ When a match has started (live, round-by-round or planned scheduling) and a play
 
 ## Who can report
 
+This report is for a player who is not coming or cannot be reached. A player who is only late uses the late report in `docs/POINTS_ATTENDANCE.md` instead.
+
 The activity's creator, an administrator, or any other player of the same match who is present can report. Absent players cannot report themselves. The report is only possible after the match has started and before any score has been entered. At least one player must remain. If nobody showed up, the organiser cancels the match instead. A second absent player may be added while the activity is still in progress and before that player has a later scored match. Reporting is unavailable after the activity ends or for practice activities.
 
 ## Effect (`lib/domain/no-show.ts`)

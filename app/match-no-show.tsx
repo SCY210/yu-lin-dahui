@@ -8,7 +8,7 @@ import './match-no-show.css';
 type Danger={action:string;payload:Record<string,unknown>;title:string;description:string;reason:string};
 type Ctx={data:ClubData;name:(id:string)=>string;readOnly?:boolean;busy?:boolean;setDanger:(value:Danger)=>void};
 type ClubEvent=ClubData['events'][number];
-const penalty='判 TA 本局负：只扣 TA 的修为和赛季积分（按输一局算）；同场其他人不加不减，也不算上场次数。TA 到场后点“我到了”才会继续被排上场。';
+const penalty='用于人不来了或联系不上：判 TA 本局负，只扣 TA 的修为和赛季积分（按输一局算）；同场其他人不加不减，也不算上场次数。TA 之后到了点“我到了”才会继续排场。只是会晚点到的话，请改用“有人迟到？”换人。';
 
 /** On a started match (before any score): who did not show up. Absent players of a no-show are listed. */
 export function MatchNoShow({m,ctx}:{m:Match;ctx:Ctx}){
@@ -21,7 +21,7 @@ export function MatchNoShow({m,ctx}:{m:Match;ctx:Ctx}){
  const allowed=!['draft','ended','cancelled'].includes(e.status)&&!ctx.readOnly&&!!data.me&&typeof ctx.setDanger==='function'&&canReportNoShow(data.me,e,m,absent)&&candidates.length>0&&absent.length+1<players.length;
  return <div className="match-no-show">
   {absent.length>0&&<p className="match-no-show-result"><UserX size={16} aria-hidden="true"/>{absent.map(name).join('、')} 没到场 · 本局判负</p>}
-  {allowed&&<details><summary>{absent.length?'还有人没到？':'有人没到场？'}</summary><div className="actions">{candidates.map(id=><button type="button" key={id} className="ghost danger" disabled={ctx.busy||absent.length+1>=players.length} onClick={()=>ctx.setDanger({action:'noShow',payload:{matchId:m.id,playerIds:[id]},title:'确认 '+name(id)+' 没到场',description:penalty.replaceAll('TA',name(id)),reason:''})}>{name(id)} 没到</button>)}</div></details>}
+  {allowed&&<details><summary>{absent.length?'还有人不来了？':'有人不来了？判负'}</summary><div className="actions">{candidates.map(id=><button type="button" key={id} className="ghost danger" disabled={ctx.busy||absent.length+1>=players.length} onClick={()=>ctx.setDanger({action:'noShow',payload:{matchId:m.id,playerIds:[id]},title:'确认 '+name(id)+' 没到场',description:penalty.replaceAll('TA',name(id)),reason:''})}>{name(id)} 不来了</button>)}</div></details>}
  </div>;
 }
 
