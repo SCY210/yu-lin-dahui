@@ -12,19 +12,22 @@ import Disclosure from './disclosure';
 import Deferred from './deferred';
 import EventPointsPlan from './event-points-plan';
 import './event-live-play.css';
+import {matchIncludesPlayer} from '../lib/client/match-player-filter';
 
 export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const {data,name,send,busy}=ctx,[now,setNow]=useState(Date.now);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),3000);return()=>clearInterval(timer)},[]);
  const manager=canManageEvent(data.me,e),config=e.livePlay;
  const eventMatches:Match[]=data.matches.filter((m:Match)=>m.eventId===e.id);
+ const playerId:string=ctx.matchPlayerId??'';
  const current=eventMatches.filter(m=>m.status==='playing');
  const present=livePresentIds(data as State,e,now);
  const roster:Registration[]=data.registrations.filter((r:Registration)=>r.eventId===e.id&&r.status==='confirmed'&&data.players.some((p:Player)=>p.id===r.playerId&&p.enabled));
  const active=!['ended','cancelled','draft'].includes(e.status),inWindow=now>=e.start&&now<e.end;
  const courts=data.bookings.filter((b:any)=>b.eventId===e.id&&b.start<=now&&b.end>now)
   .filter((b:any,i:number,all:any[])=>all.findIndex(c=>c.name===b.name&&(c.venue??e.venue)===(b.venue??e.venue))===i);
- const history=eventMatches.filter(m=>['complete','forfeit','cancelled'].includes(m.status)&&m.start!==null).slice().reverse();
+ const waitingCourts:State['bookings']=playerId?[]:courts.filter((booking:State['bookings'][number])=>!current.some(match=>{const court=data.bookings.find((item:State['bookings'][number])=>item.id===match.courtId);return court?.name===booking.name&&(court.venue??e.venue)===(booking.venue??e.venue)}));
+ const history=eventMatches.filter(m=>['complete','forfeit','cancelled'].includes(m.status)&&m.start!==null&&matchIncludesPlayer(m,playerId)).slice().reverse();
  const playingIds=new Set(current.flatMap(m=>[...m.a,...m.b]));
  const playerRow=(r:Registration)=>{
     const player=data.players.find((p:Player)=>p.id===r.playerId),own=manager||r.playerId===data.me.playerId||player?.ownerId===data.me.id;
@@ -42,14 +45,15 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
    {!config?.enabled&&<p className="hint">由创建者或管理员开始排场。已有正在打的比赛会继续；尚未开打的预排改为实时轮换。</p>}
    {!inWindow&&active&&<p className="hint">请在活动进行时开始排场。已开始的对局仍可正常录入结果。</p>}
   </section>
-  <div className="courts-grid live-current-courts">{current.map(m=>{
+  {playerId&&!current.some(m=>matchIncludesPlayer(m,playerId))&&!history.length&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
+  <div className="courts-grid live-current-courts">{current.filter(m=>matchIncludesPlayer(m,playerId)).map(m=>{
    const round=data.rounds.find((r:any)=>r.id===m.roundId);
    return <section key={m.id} className="live-court"><div className="live-court-heading"><h3>{data.bookings.find((b:State['bookings'][number])=>b.id===m.courtId)?.name??'场地'} · 第 {round?.liveSequence??1} 轮</h3>{manager&&config?.enabled&&active&&inWindow&&<button type="button" className="secondary" disabled={busy} onClick={()=>openLiveLineup(e,m,ctx,now)}>调整上场人员</button>}</div><MatchCard m={m} ctx={ctx}/><LiveCourtBench e={e} m={m} ctx={ctx} now={now}/></section>;
-  })}{courts.filter((b:any)=>!current.some(m=>{const court=data.bookings.find((x:any)=>x.id===m.courtId);return court?.name===b.name&&(court.venue??e.venue)===(b.venue??e.venue)})).map((b:any)=><section className="card live-court-waiting" key={b.id}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{config?.enabled?'可上场人数或完整固定搭档不足时保持等待，尊重轮休选择。球友准备好后可点击“休息好了”。':'开始实时排场后显示对局。'}</p></section>)}</div>
+  })}{waitingCourts.map(b=><section className="card live-court-waiting" key={b.id}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{config?.enabled?'可上场人数或完整固定搭档不足时保持等待，尊重轮休选择。球友准备好后可点击“休息好了”。':'开始实时排场后显示对局。'}</p></section>)}</div>
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}
   <Disclosure label={'其他球友上场与轮休 · '+roster.filter(r=>r.playerId!==data.me.playerId).length+'人'}><section className="card live-rotation-roster"><p className="hint">不连续上场的球友先轮休一局，休息好后可以恢复。</p>{roster.filter(r=>r.playerId!==data.me.playerId).map(playerRow)}</section></Disclosure>
-  <Disclosure label={`已完成对局 · ${history.length} 局`}><div>{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>
+  <Disclosure label={`已完成对局 · ${history.length} 局`} defaultOpen={!!playerId}><div>{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>
   <Disclosure label={eventFormat(e)==='singles'?'单打轮转':'搭档方式与投票'}><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
  </div>;
 }

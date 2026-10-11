@@ -12,9 +12,18 @@ import TournamentBracket from './tournament-bracket';
 import Disclosure from './disclosure';
 import {choice} from './form-fields';
 import './event-tournament.css';
+import {matchIncludesPlayer} from '../lib/client/match-player-filter';
 
 export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),t=e.tournament!,{data,name,busy,open}=ctx;
+ const playerId=ctx.matchPlayerId??'';
+ const matchesFilter=(f:TournamentFixture)=>{
+  if(!playerId)return true;
+  const match=data.matches.find(m=>m.id===f.matchId);
+  if(match)return matchIncludesPlayer(match,playerId);
+  const sides=fixtureSides(t,data,f);
+  return t.teams.some(team=>(team.id===sides.a||team.id===sides.b)&&team.players.includes(playerId));
+ };
  const manager=!ctx.readOnly&&canManageEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now));
  const singles=eventFormat(e)==='singles';
  const eligible=data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&data.players.some(p=>p.id===r.playerId&&p.enabled)).slice().sort((a,b)=>a.sequence-b.sequence).map(r=>r.playerId);
@@ -48,8 +57,9 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
    </section>
   </Disclosure>}
   {t.phase==='setup'&&!manager&&<p className="empty">等待创建者指定参赛队伍并抽签。你可以先在活动接龙报名。</p>}
-  {t.groups.map((group,index)=><Disclosure key={index+':'+t.phase} label={String.fromCharCode(65+index)+' 组 · '+group.length+' '+(singles?'人':'队')} defaultOpen={t.phase==='groups'}><section className="tournament-group"><div className="tournament-table-scroll"><table className="tournament-table"><caption>{String.fromCharCode(65+index)} 组排名</caption><thead><tr><th>名次 / 队伍</th><th>场</th><th>胜</th><th>负</th><th>净胜</th></tr></thead><tbody>{groupStandings(t,data,index).map((row,i)=><tr key={row.id} className={i<t.advance?'qualifying':''}><th scope="row">{i+1}. {label(row.id)}{i<t.advance&&<small>晋级区</small>}</th><td>{row.played}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.difference}</td></tr>)}</tbody></table></div><div className="tournament-fixtures">{t.fixtures.filter(f=>f.stage==='group'&&f.group===index).map(fixture)}</div></section></Disclosure>)}
+  {playerId&&t.phase!=='setup'&&!t.fixtures.some(matchesFilter)&&<p className="match-filter-empty">这位球友暂时没有已确定的对局。</p>}
+  {t.groups.map((group,index)=>playerId&&!t.fixtures.some(f=>f.stage==='group'&&f.group===index&&matchesFilter(f))?null:<Disclosure key={index+':'+t.phase+':'+playerId} label={String.fromCharCode(65+index)+' 组 · '+group.length+' '+(singles?'人':'队')} defaultOpen={!!playerId||t.phase==='groups'}><section className="tournament-group"><div className="tournament-table-scroll"><table className="tournament-table"><caption>{String.fromCharCode(65+index)} 组排名</caption><thead><tr><th>名次 / 队伍</th><th>场</th><th>胜</th><th>负</th><th>净胜</th></tr></thead><tbody>{groupStandings(t,data,index).map((row,i)=><tr key={row.id} className={i<t.advance?'qualifying':''}><th scope="row">{i+1}. {label(row.id)}{i<t.advance&&<small>晋级区</small>}</th><td>{row.played}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.difference}</td></tr>)}</tbody></table></div><div className="tournament-fixtures">{t.fixtures.filter(f=>f.stage==='group'&&f.group===index&&matchesFilter(f)).map(fixture)}</div></section></Disclosure>)}
   {manager&&active&&t.phase==='groups'&&<section className="card"><button type="button" className="primary" disabled={busy||!groupComplete(t,data)} onClick={()=>open('确认晋级名单并生成淘汰赛','tournamentKnockout',{eventId:e.id},[],undefined,'按当前小组排名取各组前 '+t.advance+' 名。请先核对比分；生成后小组赛比分封存。')}>生成淘汰赛对战表</button><p className="hint">全部小组赛录分完成后开放。</p></section>}
-  {t.phase==='knockout'&&<section className="card"><div className="row"><h2>淘汰赛对战表</h2>{manager&&active&&!t.fixtures.some(f=>f.stage==='knockout'&&f.matchId)&&<button type="button" className="ghost" disabled={busy} onClick={()=>open('返回小组赛','tournamentReopen',{eventId:e.id},[],undefined,'清除尚未开打的淘汰赛签位，保留所有小组赛比分，可修正后重新生成晋级名单。')}>返回小组赛</button>}</div><TournamentBracket t={t} data={data} name={name} selected={selectedMatch?.id} onSelect={f=>setSelectedFixture(f.id)}/>{selectedMatch&&<div className="tournament-selected-match"><h3>所选对局 · {selectedMatch.round===Math.max(...t.fixtures.filter(f=>f.stage==='knockout').map(f=>f.round))?'决赛':'淘汰赛第 '+selectedMatch.round+' 轮'}</h3>{fixture(selectedMatch)}</div>}</section>}
+  {t.phase==='knockout'&&<section className="card"><div className="row"><h2>淘汰赛对战表</h2>{manager&&active&&!t.fixtures.some(f=>f.stage==='knockout'&&f.matchId)&&<button type="button" className="ghost" disabled={busy} onClick={()=>open('返回小组赛','tournamentReopen',{eventId:e.id},[],undefined,'清除尚未开打的淘汰赛签位，保留所有小组赛比分，可修正后重新生成晋级名单。')}>返回小组赛</button>}</div>{playerId?<div className="tournament-fixtures">{t.fixtures.filter(f=>f.stage==='knockout'&&matchesFilter(f)).map(fixture)}</div>:<TournamentBracket t={t} data={data} name={name} selected={selectedMatch?.id} onSelect={f=>setSelectedFixture(f.id)}/>} {!playerId&&selectedMatch&&<div className="tournament-selected-match"><h3>所选对局 · {selectedMatch.round===Math.max(...t.fixtures.filter(f=>f.stage==='knockout').map(f=>f.round))?'决赛':'淘汰赛第 '+selectedMatch.round+' 轮'}</h3>{fixture(selectedMatch)}</div>}</section>}
  </div>;
 }
