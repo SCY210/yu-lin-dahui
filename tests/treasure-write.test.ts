@@ -20,3 +20,10 @@ test('ordinary and non-form actions continue generating separate request IDs',()
  assert.notEqual(formWriteRequestId(form,'profile',makeId),formWriteRequestId(form,'profile',makeId));
  assert.notEqual(formWriteRequestId(null,'treasureRedeem',makeId),formWriteRequestId(null,'treasureRedeem',makeId));
 });
+test('manual rating and points forms keep one request ID across an ambiguous response',()=>{
+ let next=0;const makeId=()=>String(++next);
+ const form=prepareTreasureForm({title:'Raise rating',action:'grantPoints',values:{playerId:'p',points:0,rating:100},fields:[]},makeId);
+ const first=formWriteRequestId(form,'grantPoints',makeId);
+ assert.equal(formWriteRequestId({...form,values:{...form.values,rating:150}},'grantPoints',makeId),first);
+ const reopened=prepareTreasureForm({...form},makeId);assert.notEqual(formWriteRequestId(reopened,'grantPoints',makeId),first);
+});

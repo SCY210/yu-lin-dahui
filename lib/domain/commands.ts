@@ -138,7 +138,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             if(isGuest(s,p.playerId))fail('临时来宾不累计积分或修为');
             if (!isClubOwner(s, a))
-                fail('403: 只有群主可以调整积分');
+                fail('403: 只有群主可以调整积分或修为');
             if (!player(p.playerId).enabled)
                 fail('该球友已停用，不能调整积分或修为');
             break;
@@ -479,7 +479,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请按预排顺序开赛，先结束或取消前面的轮次');
             if (r.pointsSlot !== undefined && s.matches.some(m => m.eventId === e.id && m.status === 'playing'))
                 fail('请先录入当前轮全部比赛的结果，再开始下一轮');
-            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
+            // A published round can already contain early-entered results. Start
+            // only its untouched pending courts; completed/forfeit facts and
+            // their players' later availability must never be revalidated/reset.
+            const ms = s.matches.filter(m => m.roundId === r.id && m.status === 'published' && pendingMatchLineup(m));
+            if (!ms.length)
+                fail('本轮没有待开赛的已发布对局');
             validateRound(s, r.eventId, p.at, r.duration, ms);
             r.start = p.at;
             r.status = 'playing';
@@ -495,8 +500,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const r = round(p.roundId);
             if (!['draft', 'published'].includes(r.status))
                 fail('只能取消尚未开始的轮次');
-            r.status = 'cancelled';
-            s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled').forEach(m => m.status = 'cancelled');
+            const matches = s.matches.filter(m => m.roundId === r.id);
+            matches.filter(pendingMatchLineup).forEach(m => m.status = 'cancelled');
+            r.status = matches.some(m => ['complete', 'forfeit'].includes(m.status)) ? 'complete' : 'cancelled';
             break;
         }
         case 'score': {
