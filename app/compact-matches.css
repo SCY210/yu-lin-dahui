@@ -32,12 +32,13 @@
 .compact-match .team.is-winner .match-team-label{color:#176346;font-weight:700}
 .compact-match.is-forfeit{border-top:3px solid var(--destructive,#af423b)}
 .compact-match.is-cancelled{border-style:dashed;opacity:.75}
-/* Phones: two courts side by side; in each court the teams face each other left and right, every player
-   with an avatar above the name, so the score reads across like on court. */
+/* Phones: two courts side by side; in each court the score (or VS) sits centred above the two teams, which face each
+   other left and right with an avatar above every name, so the names get the full width of the card. */
 @media(max-width:800px){
  .event-scheduling .courts-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:start}
  .event-scheduling .match-card.compact-match{padding:7px 6px;margin:4px 0;border-radius:10px}
- .event-scheduling .compact-match .match-teams{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:3px;padding:6px 0;align-items:start}
+ .event-scheduling .compact-match .match-teams{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 5px;padding:4px 0 6px;align-items:start}
+ .event-scheduling .compact-match .match-teams>.team{grid-row:2}
  .event-scheduling .compact-match .team{gap:4px;align-items:stretch}
  .event-scheduling .compact-match .match-team-label{line-height:1.2;text-align:center;font-size:10px}
  .event-scheduling .compact-match .group-player{flex-direction:column;align-items:stretch;border-radius:8px}
@@ -50,8 +51,8 @@
  .event-scheduling .compact-match .group-player-swap{flex:0 0 auto;min-width:0;min-height:30px;padding:3px;border-left:0;border-top:1px solid var(--border);border-radius:0 0 8px 8px}
  .event-scheduling .compact-match .match-team-level{display:none}
  .event-scheduling .compact-match .match-format{display:none}
- .event-scheduling .compact-match .versus{align-self:center;font-size:12px;line-height:1.1;padding:0 1px;white-space:nowrap}
- .event-scheduling .compact-match.is-complete .versus{font-size:15px;letter-spacing:-.02em}
+ .event-scheduling .compact-match .versus{grid-row:1;grid-column:1/-1;justify-self:center;font-size:12px;line-height:1.3;padding:0;white-space:nowrap}
+ .event-scheduling .compact-match.is-complete .versus{font-size:20px;line-height:1.2}
  .event-scheduling .compact-match .match-card-meta{gap:3px}
  .event-scheduling .compact-match .match-status{font-size:10px;padding:1px 4px}
  .event-scheduling .compact-match .court-tag{font-size:11px}
