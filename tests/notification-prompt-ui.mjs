@@ -5,12 +5,14 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import React,{act} from 'react';
 import {create} from 'react-test-renderer';
+await build({entryPoints:['lib/client/push-errors.ts'],outfile:'.test-output/push-errors-ui.mjs',bundle:true,platform:'node',format:'esm'});
+const {browserPushError}=await import(pathToFileURL(resolve('.test-output/push-errors-ui.mjs')).href);
 mkdirSync('.test-output',{recursive:true});
 await build({entryPoints:['app/notification-prompt.tsx'],outfile:'.test-output/notification-prompt-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'},plugins:[{name:'notification-test-shells',setup(b){
  b.onResolve({filter:/components\/ui\/dialog$/},()=>({path:'dialog',namespace:'prompt-test'}));
  b.onResolve({filter:/client\/push-notifications$/},()=>({path:'push',namespace:'prompt-test'}));
  b.onResolve({filter:/^sonner$/},()=>({path:'toast',namespace:'prompt-test'}));
- b.onLoad({filter:/.*/,namespace:'prompt-test'},a=>({loader:'js',contents:a.path==='dialog'?`import {createElement} from 'react';export const Dialog=({open,children,onOpenChange,historyCloseBlocked})=>open?createElement('section',{role:'dialog',onOpenChange,historyCloseBlocked},children):null;export const DialogContent=({children,...props})=>createElement('article',{'data-prompt-content':true,...props},children);export const DialogHeader=({children})=>children;export const DialogTitle=({children})=>createElement('h2',null,children);export const DialogDescription=({children})=>createElement('p',null,children);`:a.path==='toast'?`export const toast={success:()=>{}};`:`export const syncPushAccount=(id)=>window.push.sync(id);export const pushSupport=()=>window.push.support;export const notificationConfig=(id)=>window.push.config(id);export const enablePush=(id,key)=>window.push.enable(id,key);`}));
+ b.onLoad({filter:/.*/,namespace:'prompt-test'},a=>({loader:'js',contents:a.path==='dialog'?`import {createElement} from 'react';export const Dialog=({open,children,onOpenChange,historyCloseBlocked})=>open?createElement('section',{role:'dialog',onOpenChange,historyCloseBlocked},children):null;export const DialogContent=({children,...props})=>createElement('article',{'data-prompt-content':true,...props},children);export const DialogHeader=({children})=>children;export const DialogTitle=({children})=>createElement('h2',null,children);export const DialogDescription=({children})=>createElement('p',null,children);`:a.path==='toast'?`export const toast={success:()=>{window.push.successes=(window.push.successes??0)+1}};`:`export const syncPushAccount=(id)=>window.push.sync(id);export const pushSupport=()=>window.push.support;export const notificationConfig=(id)=>window.push.config(id);export const enablePush=(id,key)=>window.push.enable(id,key);`}));
 }}]});
 const {default:Prompt}=await import(pathToFileURL(resolve('.test-output/notification-prompt-ui.mjs')).href);
 const originals=Object.fromEntries(['window','document','Notification','MutationObserver','localStorage','IS_REACT_ACT_ENVIRONMENT','setTimeout'].map(k=>[k,globalThis[k]]));
@@ -52,9 +54,19 @@ try{
  await mount({blocked:true});assert.equal(dialogs().length,0);await act(async()=>{ui.update(React.createElement(Prompt,{accountId:'fictional-member',blocked:false}));await pause()});await flush();assert.equal(dialogs().length,1,'score/write dialogs retain initial priority');
  otherDialog=true;await mount();assert.equal(dialogs().length,0);otherDialog=false;await act(async()=>{for(const f of observers)f();await pause()});assert.equal(dialogs().length,1);
  push.enable=async()=>{enableCalls++;throw Error('模拟连接失败，请重试')};await click('开启通知');assert.equal(dialogs().length,1);assert.ok(text(ui.toJSON()).includes('模拟连接失败'));assert.equal(ui.root.findByProps({role:'alert'}).children.length,1);
+ assert.ok(!ui.root.findAllByType('button').some(n=>text(n)==='先进入网站，稍后重试'),'generic/server failures keep the normal setup rule');
+ const beforeFailureCalls=enableCalls,storedBefore=JSON.stringify([...values]),successBefore=push.successes??0;
+ push.enable=async()=>{enableCalls++;throw browserPushError(new DOMException('Registration failed - push service error','AbortError'))};
+ await click('开启通知');assert.equal(dialogs().length,1);assert.ok(text(ui.toJSON()).includes('登录不受影响'));assert.ok(!text(ui.toJSON()).includes('Registration failed'));
+ await click('先进入网站，稍后重试');assert.equal(dialogs().length,0);assert.equal(enableCalls,beforeFailureCalls+1);assert.equal(JSON.stringify([...values]),storedBefore,'continuing never persists a snooze');
+ assert.equal(push.successes??0,successBefore,'continuing never reports notification success');
+ await act(async()=>{ui.update(React.createElement(React.StrictMode,null,React.createElement(Prompt,{accountId:'fictional-member',blocked:false})));await pause()});await flush();assert.equal(dialogs().length,0,'ordinary rerenders do not immediately reopen setup');
+ await foreground();assert.equal(dialogs().length,1,'background return offers setup again');assert.ok(!ui.root.findAllByType('button').some(n=>text(n)==='先进入网站，稍后重试'),'the previous provider failure does not bypass a fresh visit');
+ await mount({accountId:'another-member'});assert.equal(dialogs().length,1);assert.ok(!ui.root.findAllByType('button').some(n=>text(n)==='先进入网站，稍后重试'),'a different account never inherits the recovery exception');
+ Notification.permission='denied';await mount();Notification.permission='granted';await click('已允许，重新检测并开启');assert.ok(ui.root.findAllByType('button').some(n=>text(n)==='先进入网站，稍后重试'),'the explicit permission-recovery path can recover from a provider failure too');
  let finishEnable;push.enable=()=>{enableCalls++;return new Promise(resolve=>{finishEnable=resolve})};await click('开启通知');assert.ok(ui.root.findAllByType('button').every(n=>n.props.disabled));await foreground();assert.equal(dialogs().length,1);assert.equal(dialogs()[0].props.historyCloseBlocked,true);await act(async()=>{finishEnable();await pause()});assert.equal(dialogs().length,0);
  push.config=async()=>({configured:false,publicKey:null});await mount();assert.equal(dialogs().length,0,'unconfigured services do not lock the app at entry');
  assert.equal(permissionCalls,0);assert.ok(configCalls>0);
- console.log('PASS locked notification prompt: no dismissal routes, back protection, persistent foreground/restore state, explicit permission gesture, denied/install recovery, service failures, confirmed-success close and dialog priority.');
+ console.log('PASS notification prompt: required setup, provider-only temporary continuation, no persistent snooze, fresh-visit/account isolation, back protection, explicit permission gesture and confirmed-success close.');
 
 }finally{if(ui)await act(()=>ui.unmount());for(const [k,v] of Object.entries(originals))globalThis[k]=v}

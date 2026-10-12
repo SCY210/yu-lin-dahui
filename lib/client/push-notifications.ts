@@ -1,4 +1,5 @@
 import {reminderPreferences,defaultReminderPreferences,type Reminder,type ReminderPreferences} from '../reminder-contract';
+import {browserPushError} from './push-errors';
 export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;items:Reminder[];unread:number;preferences:ReminderPreferences};
 type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean};
 function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)}
@@ -32,7 +33,11 @@ export async function enablePush(accountId:string,publicKey:string){
  if(permission!=='granted')throw new Error('尚未允许通知，请在系统提示中选择允许后重试。');
  const registration=await connectPushWorker();let subscription=await registration.pushManager.getSubscription();
  if(subscription){const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice){await subscription.unsubscribe();subscription=null}}
- if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(publicKey)});
+ if(!subscription){
+  const applicationServerKey=vapidBytes(publicKey);
+  try{subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey})}
+  catch(error){throw browserPushError(error)}
+ }
  await notificationRequest(accountId,'subscribe',{subscription:subscription.toJSON()});
  window.dispatchEvent(new Event(pushStateChanged));
 }

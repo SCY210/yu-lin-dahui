@@ -1,3 +1,4 @@
 .notification-optin [data-slot="dialog-title"]{display:flex;align-items:center;gap:10px}
-.notification-optin-actions{align-items:center;gap:10px}
+.notification-optin-actions{align-items:center;gap:10px;flex-wrap:wrap}
 .notification-optin-actions>.primary{flex:1;min-height:48px;font-weight:700}
+.notification-optin-actions>.secondary{flex-basis:100%;min-height:44px}

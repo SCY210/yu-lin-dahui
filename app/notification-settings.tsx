@@ -5,6 +5,7 @@ import {reminderLabels,reminderKinds,type ReminderKind,type Reminder} from '../l
 import {Bell,BellOff,CheckCheck} from 'lucide-react';
 import {toast} from 'sonner';
 import {pushSupport,notificationConfig,notificationRequest,localPushSubscription,enablePush,syncPushAccount,pushStateChanged,type NotificationConfig} from '../lib/client/push-notifications';
+import {pushFailure} from '../lib/client/push-errors';
 
 export default function NotificationSettings({accountId,onOpen}:{accountId:string;onOpen?:(eventId:string,tab:string)=>void}){
  const [config,setConfig]=useState<NotificationConfig|null>(null),[support,setSupport]=useState('checking'),[enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false),[unreadOnly,setUnreadOnly]=useState(false);
@@ -21,7 +22,7 @@ export default function NotificationSettings({accountId,onOpen}:{accountId:strin
   try{
    // Permission is requested only from this explicit button press, before awaits.
    await enablePush(accountId,config.publicKey);setDenied(false);setEnabled(true);toast.success('已开启这台设备的活动提醒');
-  }catch(e){setDenied('Notification' in window&&Notification.permission==='denied');setError(e instanceof Error?e.message:'开启通知失败，请稍后重试')}finally{setBusy(false)}
+  }catch(e){setDenied('Notification' in window&&Notification.permission==='denied');setError(pushFailure(e).message)}finally{setBusy(false)}
  }
  async function disable(){setBusy(true);setError('');try{const subscription=await localPushSubscription();if(subscription){await notificationRequest(accountId,'unsubscribe',{endpoint:subscription.endpoint});await subscription.unsubscribe()}setEnabled(false);toast.success('这台设备已关闭系统提醒')}catch(e){setError(e instanceof Error?e.message:'关闭失败，请稍后重试')}finally{setBusy(false)}}
  async function test(){setBusy(true);setError('');try{const subscription=await localPushSubscription();if(!subscription)throw new Error('通知连接已失效，请重新开启');await notificationRequest(accountId,'test',{endpoint:subscription.endpoint});toast.success('测试提醒已发送，请查看手机或电脑的系统通知')}catch(e){setError(e instanceof Error?e.message:'测试失败，请稍后重试')}finally{setBusy(false)}}
