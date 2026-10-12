@@ -1,4 +1,6 @@
-import {eventFormat} from './match-format';
+import {eventFormat,isPractice} from './match-format';
+import {schedulingMode} from './scheduling';
+import {eventStatusAt} from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { propose, validateRound } from './grouping';
@@ -12,6 +14,7 @@ export { defaultPointsMinutes, pointsWindow, isPointsTime } from './points-windo
 const minute = 60000;
 const id = z.string().min(1).max(100);
 const schemas = {
+    pointsNext: z.object({eventId:id,expectedRoundIds:z.array(id).max(2000)}),
     planPoints: z.object({ eventId: id, at: businessTimestamp, pointsMinutes: z.number().int().min(5).max(720), roundMinutes: z.number().int().min(5).max(60), seed: z.number().int().min(1).max(2147483647), pairing: z.enum(['rotate', 'fixed']) }),
     publishPoints: z.object({ eventId: id }),
 };
@@ -33,6 +36,27 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
         if(history.length&&command.payload.pairing!==(e.pointsChoice?.selectedMode??'rotate'))fail('已有对局完成，剩余赛程请保留已确认搭档方式');
     }
     switch (command.action) {
+        case 'pointsNext': {
+            if(schedulingMode(s,e)!=='planned'||isPractice(e)||e.tournament)fail('仅预排积分赛可以添加下一场');
+            if(['draft','ended','cancelled'].includes(eventStatusAt(e,now)))fail('活动已结束或未开放，不能添加下一场');
+            const rounds=s.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled'),matches=s.matches.filter(m=>m.eventId===e.id);
+            if(JSON.stringify(rounds.map(r=>r.id).sort())!==JSON.stringify([...command.payload.expectedRoundIds].sort()))fail('409: 赛程已更新，请刷新后再添加');
+            if(!rounds.some(r=>r.pointsSlot!==undefined&&r.status==='complete'))fail('请先完成已有预排积分赛');
+            if(rounds.some(r=>['draft','published','playing'].includes(r.status))||matches.some(m=>['draft','published','playing'].includes(m.status)))fail('请先录完当前对局并完成或取消剩余赛程');
+            const at=Math.max(now,e.start,...matches.filter(m=>['complete','forfeit'].includes(m.status)).map(m=>m.end??m.start??e.start));
+            const duration=Math.min(e.pointsPlan?.roundMinutes??15,60,Math.floor((e.end-at)/minute));
+            if(duration<5)fail('剩余活动时间不足5分钟，不能添加下一场');
+            const work=structuredClone(s),event=work.events.find(x=>x.id===e.id)!;
+            const previous=rounds.at(-1),seed=((previous?.seed??1)+7919)%2147483647||1;
+            const proposal=event.pointsChoice?.selectedMode==='fixed'?proposeFixed(work,event,at,duration,seed,event.pointsChoice.teams??fixedPartnerTeams(work,event)):propose(work,event,at,duration,seed);
+            if(!proposal.courts.length)fail('当前人数或可用场地不足，无法添加下一场');
+            event.pointsPlan={start:event.pointsPlan?.start??e.start,end:Math.max(event.pointsPlan?.end??e.start,at+duration*minute),roundMinutes:event.pointsPlan?.roundMinutes??duration,seed:event.pointsPlan?.seed??seed,generatedAt:now};
+            const round:Round={id:crypto.randomUUID(),eventId:e.id,start:at,duration,status:'draft',eligible:proposal.eligible,rest:proposal.rest,seed,pointsSlot:Math.max(0,...s.rounds.filter(r=>r.eventId===e.id).map(r=>r.pointsSlot??0))+1};
+            const added:Match[]=proposal.courts.map(court=>{const m:Match={...court,id:crypto.randomUUID(),eventId:e.id,roundId:round.id,status:'draft',start:null,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};decorateMatch(work,event,m);return m});
+            validateRound(work,e.id,at,duration,added);
+            e.schedulingMode='planned';e.pointsPlan=event.pointsPlan;s.rounds.push(round);s.matches.push(...added);
+            break;
+        }
         case 'publishPoints': {
             const rounds = s.rounds.filter(r => r.eventId === e.id && r.pointsSlot !== undefined && r.status === 'draft');
             if (!rounds.length)

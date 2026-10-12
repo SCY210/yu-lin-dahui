@@ -1,0 +1,24 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
+// Actual handlers and storage, isolated in memory; never production data.
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+mkdirSync('.test-output',{recursive:true});
+const fixture=globalThis.__pointsNextApiTest={env:{},user:null};
+writeFileSync('.test-output/live-entry.ts',`export {createSimulation} from '../lib/admin-simulation';export {apply} from '../lib/domain/commands';export {GET,POST} from '../app/api/club/route';export {load,save} from '../lib/store';export {emptyState,month} from '../lib/domain/types';export {loadClubState} from '../lib/club-maintenance';`);
+await build({entryPoints:['.test-output/live-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/points-next-api-bundle.mjs',plugins:[{name:'isolated-live',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'live-fixture'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'live-fixture'}));b.onLoad({filter:/.*/,namespace:'live-fixture'},a=>({contents:a.path==='env'?'export const env=globalThis.__pointsNextApiTest.env;':'export const getAppUser=async()=>globalThis.__pointsNextApiTest.user;export const passwordEnabled=async()=>true;',loader:'js'}))}}]});
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
+function statement(query,parameters=[]){return {query,parameters,bind(...args){return statement(query,args)},async first(){return sql.prepare(query).get(...parameters)??null},async all(){return {results:sql.prepare(query).all(...parameters)}},async run(){const r=sql.prepare(query).run(...parameters);return {meta:{changes:Number(r.changes)},results:[]}}}}
+fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
+const api=await import(pathToFileURL(resolve('.test-output/points-next-api-bundle.mjs')).href);
+try{
+ const now=Date.now(),s=api.createSimulation(now-3600000).state,a=s.accounts[0],e=s.events[0],t=now-3600000;
+ await api.apply(s,a,'planPoints',{eventId:e.id,at:t,pointsMinutes:15,roundMinutes:15,seed:1,pairing:'rotate'},t);await api.apply(s,a,'publishPoints',{eventId:e.id},t);await api.apply(s,a,'start',{roundId:s.rounds[0].id,at:t,monthly:true,elo:true},t);for(const m of s.matches)await api.apply(s,a,'score',{matchId:m.id,a:21,b:19},now-3000000);
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());const history=JSON.parse(JSON.stringify(s.matches)),origin='https://club.example',body={action:'pointsNext',payload:{eventId:e.id,expectedRoundIds:s.rounds.map(r=>r.id).sort()},requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision};
+ const post=data=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(data)}));fixture.user={userId:s.accounts[1].id,displayName:'Fixture',method:'password'};assert.equal((await post(body)).status,403);assert.equal((await api.load()).rounds.length,1);fixture.user={userId:a.id,displayName:'Fixture',method:'password'};
+ const results=await Promise.all([post(body),post({...body,requestId:crypto.randomUUID()})]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);const saved=await api.load();assert.equal(saved.rounds.length,2);assert.equal(saved.matches.length,4);assert.deepEqual(saved.matches.filter(m=>history.some(old=>old.id===m.id)).sort((a,b)=>a.id.localeCompare(b.id)),history.sort((a,b)=>a.id.localeCompare(b.id)));assert.equal(saved.events[0].schedulingMode,'planned');
+ assert.equal((await post(body)).status,200,'retry receipt deduplicates successful append');assert.equal((await api.load()).rounds.length,2);console.log('PASS points-next API: stored manager permission, one-round/two-court append, unchanged scores, concurrent stale rejection and durable retry receipt');
+}finally{sql.close();delete globalThis.__pointsNextApiTest}
