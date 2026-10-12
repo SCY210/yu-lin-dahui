@@ -12,7 +12,10 @@ export async function noticeContent():Promise<NoticeContent>{
 export function accountNoticeView(s:State,a:Account,content:NoticeContent){
  const receipts=(s.accountNoticeReceipts??[]).filter(r=>r.accountId===a.id).sort((x,y)=>y.acceptedAt-x.acceptedAt);
  const current=receipts.find(r=>r.version===content.version&&r.contentHash===content.contentHash&&r.contentSnapshot===content.contentSnapshot);
- return {required:!current,currentVersion:content.version,contentHash:content.contentHash,acceptedAt:current?.acceptedAt??null,receipts};
+ // Entry confirmation belongs to the account, not a login session or deployment.
+ // A newer notice remains readable without rewriting an earlier receipt as current consent.
+ const accepted=current??receipts.find(r=>r.method==='explicit-account-confirmation'&&Number.isSafeInteger(r.acceptedAt)&&r.acceptedAt>=0&&!!r.version&&/^[a-f0-9]{64}$/.test(r.contentHash)&&!!r.contentSnapshot);
+ return {required:!accepted,currentVersion:content.version,contentHash:content.contentHash,acceptedAt:accepted?.acceptedAt??null,acceptedVersion:accepted?.version??null,currentConfirmed:!!current,receipts};
 }
 export function requiresAccountNotice(s:State,a:Account,content:NoticeContent){return accountNoticeView(s,a,content).required}
 export function noticeGateResponse(s:State,a:Account,content:NoticeContent){

@@ -1,12 +1,14 @@
 # Account activity-notice gate
 
-Authenticated accounts must actively confirm the current activity notice before entering the application interface or performing business mutations. This includes the owner. The unchecked confirmation is separate from browser notification permission and from each activity signup acknowledgement. Logout and credential recovery remain available.
+Authenticated accounts must actively confirm the displayed activity notice once before first entering the application interface or performing business mutations. This includes the owner. The unchecked confirmation is separate from browser notification permission and from each activity signup acknowledgement. Logout and credential recovery remain available.
 
 The server owns identity, time, text and SHA-256 digest. Clients submit only explicit acceptance plus the displayed version and digest. Old bundles cannot accept unseen updated text. A successful POST alone does not unlock the UI: a refreshed server projection must report acceptance. Failed saves retain the dialog. There is no local-storage acceptance flag or historical-registration backfill.
 
 `accountNoticeReceipts` stores account/player IDs, server time, version, complete canonical JSON text snapshot, digest and confirmation method. Its account/version/hash unique index deduplicates retries. Application persistence only appends; database triggers reject updates/deletes. Evidence survives account retirement. Receipts are technical records, not verified electronic signatures, notarization or guaranteed exemption from liability. The operator must handle retention, correction and erasure requests through a controlled process.
 
 `GET /api/club?noticeExport=1` exports only the authenticated account's evidence. `noticeExport=all` requires the owner. Ordinary administrator business exports exclude other accounts' receipts. The My page offers the corresponding evidence downloads. Authenticated business GET data continues to use its existing access controls; the gate is not a replacement for data authorization.
+
+Entry confirmation is durable per account: refreshes, fresh login sessions, deployments and later notice edits do not repeat the entry gate. The response distinguishes the accepted version from whether the exact current text was confirmed. Later notices stay readable on My; no prior receipt is rewritten or fabricated as acceptance of new text. Accounts without their own explicit receipt still receive the mandatory unchecked gate.
 
 Before changing any displayed agreement text, update `lib/activity-notice.ts` and bump its version. Preserve old persisted receipts and never rewrite them to a new version. Migration `0012_account_notice_receipts.sql` only adds the receipt table/index/triggers; existing event acknowledgements remain intact.
 

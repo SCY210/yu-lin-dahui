@@ -30,7 +30,7 @@ export function createSimulation(now:number,club?:State):SimulationDocument{
  return {version:2,revision:0,state:s,requests:[]};
 }
 export function simulationView(doc:SimulationDocument,now:number):SimulationView{
- const a=doc.state.accounts[0];return {revision:doc.revision,data:{...projectClubState(doc.state,a,month(now),new Date(now).getUTCFullYear(),now),accountNotice:{required:false,currentVersion:'local-preview',contentHash:'',acceptedAt:null,receipts:[]},loginAccounts:[],auth:{method:'password',username:null,passwordEnabled:false,isOwner:true,canChangeUsername:false,usernameChangedAt:null}}};
+ const a=doc.state.accounts[0];return {revision:doc.revision,data:{...projectClubState(doc.state,a,month(now),new Date(now).getUTCFullYear(),now),accountNotice:{required:false,currentVersion:'local-preview',contentHash:'',acceptedAt:null,acceptedVersion:null,currentConfirmed:false,receipts:[]},loginAccounts:[],auth:{method:'password',username:null,passwordEnabled:false,isOwner:true,canChangeUsername:false,usernameChangedAt:null}}};
 }
 export async function changeSimulation(doc:SimulationDocument,action:string,payload:unknown,requestId:string,now:number,club?:State){
  if(action!=='reset'&&action!=='preplan'&&!commands.has(action))fail('模拟空间只允许排场、到场确认和比分操作');
