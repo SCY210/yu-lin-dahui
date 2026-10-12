@@ -1,6 +1,6 @@
 /** Read-only migration capability, disabled unless a short-lived secret is configured. */
 export const exportTables = [
-  'accounts', 'attendance', 'audits', 'auth_rate_limits', 'auth_sessions',
+  'accounts', 'accountNoticeReceipts', 'attendance', 'audits', 'auth_rate_limits', 'auth_sessions',
   'awardVotes', 'bookings', 'challenges', 'commits', 'costs', 'events', 'matches',
   'password_credentials', 'payments', 'photos', 'players', 'push_deliveries',
   'push_jobs', 'push_subscriptions', 'ratingChanges', 'registrations',

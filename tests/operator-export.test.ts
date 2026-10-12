@@ -30,7 +30,8 @@ test('snapshot returns full rows in one batch without running client SQL', async
   assert.equal(response.status, 200);
   const result = await response.json() as { tables: Record<string, { payload: string }[]> };
   assert.equal(result.tables.password_credentials[0].payload.length, 40_000);
-  assert.equal(Object.keys(result.tables).length, 32);
+  assert.equal(Object.keys(result.tables).length, exportTables.length);
+  assert.ok(result.tables.accountNoticeReceipts,'current acknowledgement evidence must be included in migration snapshots');
   assert.equal(batches, 1);
   assert.ok(statements.every(sql => !sql.includes('DROP')));
   assert.match(response.headers.get('Cache-Control')!, /no-store/);
