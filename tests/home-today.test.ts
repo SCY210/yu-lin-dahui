@@ -55,3 +55,16 @@ test('the on-court line spaces out numbered court names and falls back without a
  assert.equal(courtLine('1 号场'),'你正在 1 号场比赛');assert.equal(courtLine('Court A'),'你正在 Court A 比赛');
  assert.equal(courtLine('主场'),'你正在主场比赛');assert.equal(courtLine(undefined),'你正在场上比赛');
 });
+test('every court of a running activity can be scored by anyone signed up; leftover scores are one to-do per activity',()=>{
+ const s=fixture(),e=event('live',now-hour,now+hour);s.events.push(e);s.registrations.push(reg('live','me'));
+ s.bookings.push({id:'c1',eventId:'live',name:'Court 1',start:e.start,end:e.end,pricing:'total',cents:0},{id:'c2',eventId:'live',name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:0});
+ s.rounds.push({id:'round',eventId:'live',start:e.start,duration:15,status:'playing',eligible:['me','b','c','d','x','y','z','w'],rest:[],seed:1});
+ const game=(id:string,courtId:string,a:string[],b:string[])=>({id,eventId:'live',roundId:'round',courtId,a,b,status:'playing' as const,start:now-1000,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]});
+ s.matches.push(game('mine','c1',['me','b'],['c','d']),game('other','c2',['x','y'],['z','w']));
+ const live=liveActivities(s,now)[0];
+ assert.deepEqual(live.matches.map(g=>[g.match.id,g.canScore]),[['mine',true],['other',true]]);
+ s.events[0].end=now-1000;
+ const todos=homeTodos(s,now).filter(t=>t.kind==='score');
+ assert.equal(todos.length,1);assert.equal(todos[0].count,2);assert.equal(todos[0].matchId,'mine','the viewer\'s own game opens first');
+ s.registrations=[];assert.deepEqual(homeTodos(s,now).filter(t=>t.kind==='score'),[],'members not signed up get no score to-do');
+});

@@ -35,3 +35,7 @@ Ended and cancelled activities are collapsed under a **history** disclosure, new
 ## Header and home shortcuts
 
 The treasure shop card on home and on the member page is replaced by a gift icon to the left of the reminders button in the header, on every page. Its accessible name and tooltip carry the balance. Home no longer shows the create-activity, create-tournament and activity-guide buttons; they remain on the activities page. The member page no longer lists the account-notice receipts; the receipts themselves are still stored, as the privacy notice describes.
+
+## Scoring any court from home
+
+Anyone who may score the activity (signed up for it, its organiser or an administrator, the server's score permission) gets a score button on every court of the running activity's card, not only their own game. When an activity is no longer running, its unscored games become one to-do per activity with the number of games; it opens the viewer's own game first. Only the viewer's own game still opens the score form by itself (`pendingScores` and `pendingOwnScores` in `lib/client/score-reminder.ts`).

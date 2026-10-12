@@ -10,6 +10,7 @@ const event:Event={id:'e',status:'open',title:'Fixture',start:1,end:100000,venue
 test('only displayed-lineup commands can rebase; legacy and unrelated writes keep revision checks',()=>{
  assert.equal(canRebaseLineupWrite('liveLineup',{expectedA:['p0'],expectedB:['p1']}),true);
  assert.equal(canRebaseLineupWrite('swap',{expectedLineup:[]}),true);
+ assert.equal(canRebaseLineupWrite('score',{expectedA:['p0'],expectedB:['p1'],expectedGames:[]}),true,'a score with its opened games is guarded by the match itself');
  for(const [action,payload] of [['liveLineup',{}],['liveLineup',{expectedA:[]}],['swap',{}],['score',{expectedA:[],expectedB:[]}],['role',{expectedLineup:[]}]])assert.equal(canRebaseLineupWrite(String(action),payload),false);
 });
 test('live editor closes when displayed teams change, finish or disappear, but unrelated edits preserve it',()=>{

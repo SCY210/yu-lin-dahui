@@ -20,3 +20,9 @@ Activity cards and the activity header show one derived state. The first rule th
 Each state has its own colour in both themes (`app/event-status-badge.css`). The live, ended, cancelled and draft badges also differ in shape (solid, struck-through or dashed), so they can be told apart without relying on colour alone. The badge refreshes at the start and end of the activity, and every 30 seconds, so it changes to closed without a reload.
 
 Tests: `tests/event-display-status.test.ts`.
+
+## Placement on activity cards
+
+On activity cards the badge always sits at the top right of the title; a long title wraps beside it instead of pushing the badge onto its own line. The status rules use higher specificity than the card and theme badge rules, so the colours and borders cannot be overridden by stylesheet order.
+
+In planned and round-by-round scheduling, a finished round's folded header is green and the round on court has a coloured edge, so state is visible without expanding. Finished match cards have a green tint. On phones, the two courts stay side by side and each court shows the teams left and right, with an avatar above every name.

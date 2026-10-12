@@ -23,7 +23,7 @@ try{
  assert.ok(!buttons().some(button=>/更换头像|修改姓名|编辑档案/.test(text(button))));
  const edit=buttons().find(button=>text(button)==='修改性别');assert.ok(edit);
  await act(()=>edit.props.onClick());assert.equal(calls[0][1],'profileGender');assert.deepEqual(calls[0][2],{playerId:player.id,gender:'undisclosed'});assert.deepEqual(calls[0][3].map(field=>field.key),['gender']);
- const equipment=ui.root.findAllByType('details').find(details=>text(details.findByType('summary'))==='战拍与装备');
+ const equipment=ui.root.findAllByType('details').find(details=>text(details.findAllByType('summary')[0])==='战拍与装备');
  await act(async()=>{equipment.props.onToggle({currentTarget:{open:true}});});
  assert.equal(ui.root.findAllByType('input').filter(input=>input.props.type==='file').length,0);
  assert.ok(!buttons().some(button=>/上传照片|删除战拍|更换头像/.test(text(button))));
@@ -33,7 +33,7 @@ try{
  await act(async()=>{ui=renderer.create(React.createElement(PlayerProfile,{p:ownerPlayer,ctx:ownerContext}));});
  assert.ok(buttons().some(button=>text(button)==='更换头像'));assert.ok(buttons().some(button=>text(button)==='修改姓名'));
  await act(()=>buttons().find(button=>text(button)==='编辑档案').props.onClick());assert.equal(calls[0][1],'profileDetails');assert.ok(calls[0][3].some(field=>field.key==='racket'));assert.ok(calls[0][3].some(field=>field.key==='years'));
- const ownerEquipment=ui.root.findAllByType('details').find(details=>text(details.findByType('summary'))==='战拍与装备');await act(async()=>{ownerEquipment.props.onToggle({currentTarget:{open:true}});});
+ const ownerEquipment=ui.root.findAllByType('details').find(details=>text(details.findAllByType('summary')[0])==='战拍与装备');await act(async()=>{ownerEquipment.props.onToggle({currentTarget:{open:true}});});
  assert.ok(ui.root.findAllByType('input').some(input=>input.props.type==='file'));assert.ok(buttons().some(button=>button.props['aria-label']?.includes('删除战拍')));
  console.log('PASS profile controls: gender-only dialog contains one field, avatar/rename/upload/delete controls absent, existing racket photo remains visible; verified owner gets full profile, rename, avatar and racket controls.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
