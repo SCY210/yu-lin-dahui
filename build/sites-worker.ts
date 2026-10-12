@@ -7,9 +7,12 @@ import { flushPushOutbox } from "../lib/push-outbox";
 import { requestMetric } from "../lib/observability";
 import { hostingRequest } from "../lib/hosting-request";
 import { operatorExport } from "../lib/operator-export";
+import {legacySiteRedirect} from '../lib/legacy-redirect';
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const moved=legacySiteRedirect(request,(env as Cloudflare.Env&{CLUB_REDIRECT_ORIGIN?:string}).CLUB_REDIRECT_ORIGIN);
+    if(moved)return moved;
     request = hostingRequest(request, env.YULIN_HOSTING_PROVIDER);
     const exported = await operatorExport(request, env);
     if (exported) return exported;
