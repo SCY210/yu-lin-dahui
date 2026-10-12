@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createSimulation} from '../lib/admin-simulation';
 import {apply} from '../lib/domain/commands';
+import {leaderboard,replayRating} from '../lib/domain/ranking';
 import {startDuePointsSessions} from '../lib/domain/points-auto-start';
 const now=Date.parse('2030-10-10T13:00:00Z'),minute=60000;
 
@@ -58,4 +59,41 @@ test('cancelled first-round drafts remain cancelled instead of being generated a
 test('published delayed rounds catch up after their planned end while activity and bookings remain available',async()=>{
  const s=createSimulation(now).state,e=s.events[0],a=s.accounts[0];await apply(s,a,'planPoints',{eventId:e.id,at:now,pointsMinutes:15,roundMinutes:15,seed:1,pairing:'rotate'},now-1);await apply(s,a,'publishPoints',{eventId:e.id},now);
  assert.equal(await startDuePointsSessions(s,now+20*minute,apply),true);assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.ok(s.matches.every(m=>m.start===now+20*minute));
+});
+
+test('manual and automatic starts preserve early-scored or forfeited courts exactly and start only the other court',async()=>{
+ for(const method of ['manual','automatic'] as const)for(const terminal of ['complete','forfeit'] as const){
+  const s=createSimulation(now).state,e=s.events[0],a=s.accounts[0],scheduled=now+5*minute;
+  await apply(s,a,'planPoints',{eventId:e.id,at:scheduled,pointsMinutes:15,roundMinutes:15,seed:4,pairing:'rotate'},now);
+  await apply(s,a,'publishPoints',{eventId:e.id},now);
+  const [recorded,pending]=s.matches,roundId=s.rounds[0].id;
+  await apply(s,a,'score',{matchId:recorded.id,a:21,b:19,end:scheduled+minute},now+1);
+  assert.equal(recorded.earlyScoreAt,now+1);assert.equal(s.rounds[0].status,'published');
+  if(terminal==='forfeit')await apply(s,a,'void',{matchId:recorded.id,status:'forfeit',reason:'Fixture forfeit'},now+2);
+  const recordedIds=[...recorded.a,...recorded.b];
+  for(const playerId of recordedIds)await apply(s,a,'pointsParticipation',{eventId:e.id,playerId,playing:false},now+3);
+  const facts=structuredClone(s.matches.find(m=>m.id===recorded.id)!),ratings=structuredClone(s.players.map(p=>({id:p.id,rating:p.rating,ratedGames:p.ratedGames})));
+  if(method==='manual')await apply(s,a,'start',{roundId,at:scheduled+minute,monthly:true,elo:true},scheduled+minute);
+  else assert.equal(await startDuePointsSessions(s,scheduled+minute,apply),true);
+  assert.deepEqual(s.matches.find(m=>m.id===recorded.id),facts,method+' '+terminal+' exact preserved result');
+  const active=s.matches.find(m=>m.id===pending.id)!;assert.equal(active.status,'playing');assert.equal(active.start,scheduled+minute);assert.equal(active.end,null);assert.deepEqual(active.games,[]);assert.equal(s.rounds[0].status,'playing');
+  assert.deepEqual(s.players.map(p=>({id:p.id,rating:p.rating,ratedGames:p.ratedGames})),ratings,'start does not replay or duplicate ratings');
+  await apply(s,a,'score',{matchId:pending.id,a:21,b:18},scheduled+2*minute);
+  replayRating(s,scheduled+2*minute);assert.equal(s.rounds[0].status,'complete');assert.deepEqual(s.matches.find(m=>m.id===recorded.id),facts);
+  for(const playerId of recordedIds)assert.equal(s.players.find(p=>p.id===playerId)!.ratedGames,terminal==='complete'?1:0,'the recorded court is counted once');
+  for(const playerId of [...active.a,...active.b])assert.equal(s.players.find(p=>p.id===playerId)!.ratedGames,1,'the remaining court is counted once');
+ }
+});
+
+test('cancelling a partly early-scored round cancels only pending courts and keeps results visible and counted',async()=>{
+ for(const terminal of ['complete','forfeit'] as const){
+  const s=createSimulation(now).state,e=s.events[0],a=s.accounts[0],scheduled=now+5*minute;
+  await apply(s,a,'planPoints',{eventId:e.id,at:scheduled,pointsMinutes:15,roundMinutes:15,seed:6,pairing:'rotate'},now);await apply(s,a,'publishPoints',{eventId:e.id},now);
+  const [recorded,pending]=s.matches,roundId=s.rounds[0].id;await apply(s,a,'score',{matchId:recorded.id,a:21,b:19,end:scheduled+minute},now+1);
+  if(terminal==='forfeit')await apply(s,a,'void',{matchId:recorded.id,status:'forfeit',reason:'Fixture forfeit'},now+2);
+  const facts=structuredClone(recorded),ratings=structuredClone(s.players.map(p=>({id:p.id,rating:p.rating,ratedGames:p.ratedGames}))),points=leaderboard(s,'2030-10',now+3).map(p=>({id:p.playerId,points:p.points,games:p.games}));
+  await apply(s,a,'cancelRound',{roundId,reason:'Cancel only the unplayed court'},now+4);
+  assert.deepEqual(s.matches.find(m=>m.id===recorded.id),facts);assert.equal(s.matches.find(m=>m.id===pending.id)!.status,'cancelled');assert.equal(s.rounds[0].status,'complete','a round with real results stays in completed history');
+  replayRating(s,now+4);assert.deepEqual(s.players.map(p=>({id:p.id,rating:p.rating,ratedGames:p.ratedGames})),ratings);assert.deepEqual(leaderboard(s,'2030-10',now+4).map(p=>({id:p.playerId,points:p.points,games:p.games})),points);
+ }
 });
