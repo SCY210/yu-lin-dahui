@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {applyCourtSignup} from './court-commands';
-import {activityAcknowledgementInput,assertActivityAcknowledgement} from './activity-acknowledgement';
+import {activityAcknowledgementInput} from './activity-acknowledgement';
 import {businessTimestamp} from './timestamp';
 import {guestLevelInput} from './guest-commands';
 import {fail,type State,type Account} from './types';
@@ -16,7 +16,6 @@ export function friendSignupCreatesGuest(input:unknown){return typeof input==='o
 export async function applyFriendSignup(s:State,a:Account,action:string,input:unknown,now:number){
  if(action!=='friendSignup')return false;
  const p=inputSchema.parse(input),work=structuredClone(s),booking=work.bookings.find(b=>b.id===p.bookingId)??fail('场地时段不存在');
- assertActivityAcknowledgement(p);
  if(now>=booking.end)fail('该场地时段已结束，不能添加接龙');
  let playerId:string;
  if(p.mode==='new'){

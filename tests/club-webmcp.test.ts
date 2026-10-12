@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {registerClubWebMcp} from '../lib/client/club-webmcp';
 import type {ClubData} from '../lib/contracts/club';
 
-test('browser signup prepares a human confirmation, validates activity scope and never auto-accepts',async()=>{
+test('browser signup prepares human confirmation without repeated notice consent and validates activity scope',async()=>{
  const registered=new Map<string,{execute:(input:unknown)=>Promise<unknown>}>(),opened:unknown[][]=[];
  let signal:AbortSignal|undefined;
  const data={me:{id:'account',playerId:'player'},events:[{id:'e'}],bookings:[{id:'b',eventId:'e'},{id:'foreign',eventId:'other'}]} as unknown as ClubData;
@@ -13,7 +13,7 @@ test('browser signup prepares a human confirmation, validates activity scope and
  await assert.rejects(()=>signup.execute({eventId:'e',bookingId:'foreign'}),/此活动/);
  assert.equal(opened.length,0);
  const result=await signup.execute({eventId:'e',bookingId:'b'});
- assert.deepEqual(result,{requiresConfirmation:true,message:'已打开接龙表单，请本人阅读并勾选活动参与须知，再确认提交。'});
+ assert.deepEqual(result,{requiresConfirmation:true,message:'已打开接龙表单，请确认参加场地与时段，再提交接龙。'});
  assert.deepEqual(opened,[[data.events[0],data.bookings[0],data.me]]);
  assert.equal(signal?.aborted,false);cleanup();assert.equal(signal?.aborted,true);
  await assert.rejects(()=>signup.execute({eventId:'e',bookingId:'b'}),/已关闭/);

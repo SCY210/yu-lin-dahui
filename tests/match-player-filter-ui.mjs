@@ -32,16 +32,16 @@ try{
  const before=JSON.stringify(data);await mount();assert.deepEqual(cards(),['first']);
  const values=ui.root.findAllByType('option').map(o=>o.props.value);assert.ok(values.includes('p8'));assert.ok(values.includes('p9'),'historical cancelled signup stays selectable');
  await choose('p5');assert.deepEqual(cards(),['second'],'opponent and future round included, rest and other court excluded');assert.ok(text(ui.toJSON()).includes('第 2 轮'));assert.ok(!text(ui.toJSON()).includes('第 1 轮'));
- const start=ui.root.findAllByType('button').find(b=>text(b)==='开始本轮');assert.equal(start.props.disabled,true,'filter cannot bypass earlier pending round');
+ assert.ok(!ui.root.findAllByType('button').some(b=>text(b)==='开始本轮'),'clock-managed start offers no filter bypass');
  await choose('p7');assert.deepEqual(cards(),[]);assert.ok(text(ui.toJSON()).includes('暂时没有对局'));
  await choose('p9');await expand('已撤销轮次');assert.deepEqual(cards(),['retired']);
  await click('只看我的');assert.ok(cards().includes('first'));assert.ok(!cards().includes('second'));
  await click('清除筛选');await expand('第 2 轮');assert.ok(cards().includes('second'));assert.ok(cards().includes('other-court'));assert.equal(JSON.stringify(data),before);assert.equal(calls.length,0,'filter never writes commands');
  e.schedulingMode='live';e.livePlay={enabled:true,paused:false,preferences:[],completions:[],rest:[]};data.rounds=[round('r0',0,'playing'),round('r1',1,'complete')];
  data.matches=[match('live-a','r0',['p0','p1'],['p2','p3'],'playing'),match('live-b','r0',['p4','p6'],['p5','p8'],'playing','court1'),match('past-a','r1',['p0','p4'],['p5','p8'],'complete'),match('past-other','r1',['p0','p1'],['p2','p3'],'complete')];
- await mount();await choose('p5');assert.deepEqual(cards(),['live-b','past-a']);assert.ok(text(ui.toJSON()).includes('已完成对局 · 1 局'));
+ await mount();await choose('p5');assert.deepEqual(cards(),['live-b','past-a']);assert.ok(text(ui.toJSON()).includes('已完成积分赛 · 1 局'));
  await choose('p7');assert.deepEqual(cards(),[]);assert.ok(text(ui.toJSON()).includes('暂时没有对局'));
- const other={...e,id:'other'};data.events.push(other);await act(()=>ui.update(React.createElement(Scheduling,{e:other,ctx})));assert.equal(ui.root.findAllByType('select')[0].props.value,'','activity switch clears unrelated filter');
+ const other={...e,id:'other'};data.events.push(other);await act(()=>ui.update(React.createElement(Scheduling,{e:other,ctx})));assert.equal(ui.root.findByProps({'aria-label':'对局筛选'}).findByType('select').props.value,'','activity switch clears unrelated filter');
  // Future tournament fixtures filter by their resolved teams even before a Match exists.
  e.tournament={phase:'groups',teams:[{id:'A',players:['p0','p1']},{id:'B',players:['p2','p3']},{id:'C',players:['p5','p8']},{id:'D',players:['p4','p6']}],groups:[['A','B','C','D']],advance:2,fixtures:[{id:'f0',stage:'group',group:0,round:1,slot:0,a:'A',b:'B'},{id:'f1',stage:'group',group:0,round:2,slot:0,a:'A',b:'C'}]};
  data.matches=[];data.rounds=[];await mount();await choose('p5');assert.equal(ui.root.findAll(n=>typeof n.props.className==='string'&&n.props.className.startsWith('tournament-match ')).length,1);

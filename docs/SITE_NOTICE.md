@@ -6,7 +6,7 @@ The explanation covers service interruptions, checking arrangements and calculat
 
 Privacy language preserves applicable rights and leaves room for lawful record retention and other participants' rights. It does not promise immediate deletion of every historical fact, unconditional immunity, verified identity, notarized evidence or complete regulatory compliance. Account-level agreement must not be treated as blanket consent for unrelated processing, marketing or public photo distribution.
 
-Activity notice version `2026-10-12-v3` incorporates the new explanation and privacy text. The existing version/hash gate therefore requests explicit confirmation again and records the new snapshot while retaining old receipts unchanged. The separate photo-rights version is unchanged because its confirmation text and scope are unchanged.
+Activity notice version `2026-10-12-v4` describes one-time account entry confirmation and checkbox-free signup. Accounts without any valid historical confirmation are asked on entry; a previously confirmed account can enter without another prompt. Updated text remains readable without relabeling old receipts as current agreement. Signup creates no additional consent records. The separate photo-rights version is unchanged because its confirmation text and scope are unchanged.
 
 The actual operator identity, applicable processing bases, retention criteria, processor/transfer details and other incomplete configuration remain explicitly incomplete. A volunteer/nonprofit statement is not a substitute for those facts. Do not invent them or remove the incompleteness indicator without verified configuration.
 

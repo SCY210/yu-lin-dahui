@@ -41,7 +41,7 @@ import {lazy,useEffect,useLayoutEffect,useState,useCallback,useRef} from 'react'
 import {Home,CalendarDays,Trophy,User,Plus,Clock,Users,Settings,Download} from 'lucide-react';
 import {Toaster,toast} from 'sonner';
 import {month,type Event} from '../lib/domain/types';
-import {fmt,hm,dt,epoch,halfTimed,activityNoticeField,text,number,choice,why,labels,type Field,type Form} from './form-fields';
+import {fmt,hm,dt,epoch,halfTimed,text,number,choice,why,labels,type Field,type Form} from './form-fields';
 const AdminSimulation=lazy(()=>import('./admin-simulation'));
 const EventView=lazy(()=>import('./event-view'));
 import MatchCard from './match-card';
@@ -56,7 +56,6 @@ const TreasureShop=lazy(()=>import('./treasure-shop'));
 import TreasureEntry from './treasure-entry';
 import {prepareTreasureForm,formWriteRequestId} from '../lib/client/treasure-write';
 import {registerClubWebMcp} from '../lib/client/club-webmcp';
-import {activityNoticeVersion} from '../lib/activity-notice';
 import ActivityNoticeGate,{AccountNoticeEvidence} from './activity-notice-gate';
 const AccountManager=lazy(()=>import('./account-manager'));
 const BlockedWordsManager=lazy(()=>import('./blocked-words-manager'));
@@ -199,7 +198,7 @@ export default function ClubApp(){
   else if(['admin','simulation'].includes(route.page)&&data.me.role!=='admin')navigation.replaceRoute({page:'me'});
  },[navigation,data,route]);
  useEffect(()=>registerClubWebMcp({current:()=>live.current.data,refresh:()=>live.current.refresh(),openSignup:(event,booking,me)=>{
-  live.current.open('接龙确认 · '+event.title,'courtRegister',{bookingId:booking.id,playerId:me.playerId,arrival:dt(booking.start),departure:dt(booking.end),note:'',noticeAccepted:false,noticeVersion:activityNoticeVersion},[halfTimed('arrival','参加开始'),halfTimed('departure','参加结束'),text('note','备注'),activityNoticeField(me.playerId)],(values:Record<string,unknown>)=>({...values,arrival:epoch(String(values.arrival)),departure:epoch(String(values.departure))}),'请本人阅读活动参与须知并勾选同意，再确认本次接龙；满员时自动候补。');
+  live.current.open('接龙确认 · '+event.title,'courtRegister',{bookingId:booking.id,playerId:me.playerId,arrival:dt(booking.start),departure:dt(booking.end),note:''},[halfTimed('arrival','参加开始'),halfTimed('departure','参加结束'),text('note','备注')],(values:Record<string,unknown>)=>({...values,arrival:epoch(String(values.arrival)),departure:epoch(String(values.departure))}),'确认参加场地与时段后提交接龙；满员时自动候补。');
  }}),[]);
  const regs=(ev:any)=>data.registrations.filter((r:any)=>r.eventId===ev.id&&r.status!=='cancelled').sort((a:any,b:any)=>a.sequence-b.sequence);
  const eventCard=(ev:ClubData['events'][number])=>{const capacity=eventCapacitySummary(ev,data.bookings,data.registrations);return <button className="event-card" key={ev.id} onClick={()=>openEvent(ev.id)}><div className="date-box"><b>{fmt(ev.start,{day:'2-digit'}).replace(/\D/g,'')}</b><span>{fmt(ev.start,{month:'numeric'})}</span><small>{fmt(ev.start,{weekday:'short'})}</small></div><div className="event-info"><div className="row"><h3>{ev.title}</h3><EventStatusBadge e={ev} capacity={capacity}/></div><p><span>{formatLabel(eventFormat(ev))}</span> · <Clock size={15}/>{hm(ev.start)}–{hm(ev.end)} · {ev.venue}</p><div className="row event-capacity-row"><span className="event-capacity-count" aria-label={'已报名'+capacity.occupied+'，上限'+capacity.capacity+(capacity.slots>1?'个名额':'人')} title={capacity.people+'位球友，占用'+capacity.occupied+'个名额'}><Users size={15}/><strong>{capacity.occupied} / {capacity.capacity}</strong>{capacity.slots>1?'名额':'人'}<span className="event-capacity-slots">· {capacity.slots}时段</span></span><span className="muted">我：{labels[regs(ev).find((r:ClubData['registrations'][number])=>r.playerId===data.me.playerId)?.status]??'尚未报名'}</span></div>{eventFormat(ev)==='practice'&&<small className="prewrap">{ev.note}</small>}{capacity.courts.length>1&&<small>{capacity.courts.length} 个场地时段 · 点开查看接龙</small>}</div></button>};

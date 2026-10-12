@@ -1,5 +1,5 @@
 import {editReason} from './edit-reason';
-import {activityAcknowledgementInput,assertActivityAcknowledgement,recordActivityAcknowledgement} from './activity-acknowledgement';
+import {activityAcknowledgementInput} from './activity-acknowledgement';
 import { recordCancellation } from './cancellations';
 import { signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
@@ -32,7 +32,6 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
     switch (command.action) {
         case 'courtRegister': {
             const p = command.payload;
-            assertActivityAcknowledgement(p);
             if (!player.enabled)
                 fail('成员已停用');
             if (!manager && e.status !== 'open')
@@ -80,7 +79,6 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
             promoteBooking(s, e, b, now);
             syncRegistration(r);
             promoteLegacy(s, e, now);
-            recordActivityAcknowledgement(r,a,now,b.id);
             break;
         }
         case 'courtCancel': {

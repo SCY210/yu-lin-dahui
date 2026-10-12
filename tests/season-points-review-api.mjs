@@ -18,7 +18,7 @@ try{
  s.settings={...s.settings,initialized:true,ownerAccountId:'owner',realmVersion:'elo-v1',progressionVersion:'weekly-v2',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'};
  for(let i=0;i<4;i++){const id=i?'member'+i:'owner';s.accounts.push({id,email:'',role:i?'member':'admin',playerId:'p'+i});s.players.push({id:'p'+i,ownerId:id,name:id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''})}
  const oldEvent={id:'old',creatorId:'owner',title:'Old fixture',start:at-3600000,end:at+60000,venue:'Fixture',address:'',capacity:4,signupDeadline:at,cancelDeadline:at-86400000,note:'',status:'ended',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
- const current={...oldEvent,id:'current',title:'Current fixture',start:now-60000,end:now+3600000,status:'open'};s.events=[oldEvent,current];
+ const current={...oldEvent,id:'current',title:'Current fixture',schedulingMode:'planned',pointsSession:{startedAt:now-60000,attendance:[],waiting:[]},start:now-60000,end:now+3600000,status:'open'};s.events=[oldEvent,current];
  for(const e of s.events)s.bookings.push({id:e.id+'-court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:0});
  s.rounds.push({id:'old-round',eventId:oldEvent.id,start:at-60000,duration:1,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});
  s.matches.push({id:'old-match',eventId:oldEvent.id,roundId:'old-round',courtId:'old-court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:at-60000,end:at,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'owner'});

@@ -1,5 +1,6 @@
+import {applyParticipation} from './participation-commands';
 import {applyFriendSignup} from './friend-signup';
-import {activityAcknowledgementInput,assertActivityAcknowledgement,recordActivityAcknowledgement} from './activity-acknowledgement';
+import {activityAcknowledgementInput} from './activity-acknowledgement';
 import {applyTreasure,isTreasureAction} from './treasure-shop';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
@@ -81,6 +82,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
     if(applyTreasure(s,a,action,input,now)) return null;
+    if(applyParticipation(s,a,action,input,now)) return null;
     if(await applyPointsSession(s,a,action,input,now,apply)) return null;
     if (await applyTournament(s, a, action, input, now)) return null;
     if (await applyScheduling(s, a, action, input, now))
@@ -257,7 +259,6 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'register': {
             const p = command.payload;
-            assertActivityAcknowledgement(p);
             const e = event(p.eventId), manager = canManageEvent(a, e);
             if(player(p.playerId).guestEventId&&player(p.playerId).guestEventId!==e.id)fail('临时来宾只能参加原活动');
             if (!manager)
@@ -290,7 +291,6 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                     s.registrations.push(r);
                 promote(s, e, now);
             }
-            recordActivityAcknowledgement(s.registrations.find(r=>r.eventId===e.id&&r.playerId===p.playerId)!,a,now);
             break;
         }
         case 'cancel': {

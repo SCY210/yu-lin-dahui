@@ -15,5 +15,6 @@ export default function ActivityNotice({checked,onCheckedChange,proxy=false}:{ch
 type Acknowledgement={id:string;eventId:string;version:string;at:number;bookingId?:string;kind:'self'|'proxy';actorName?:string;actorIsMe?:boolean};
 export function ActivityNoticeConfirmation({records,eventId,bookingId}:{records:Acknowledgement[];eventId:string;bookingId:string}){
  const rows=records.filter(record=>record.eventId===eventId&&(!record.bookingId||record.bookingId===bookingId));
- return <details className="activity-notice-record"><summary>须知确认记录</summary>{rows.length?rows.slice().reverse().map(record=><p key={record.id}>{record.kind==='proxy'?'代报名人确认':'本人确认'}{record.actorName?' · '+record.actorName+(record.actorIsMe?'（我）':''):''}<br/>{fmt(record.at,{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}<small>版本 {record.version===activityNoticeVersion?activityNoticeVersionLabel:record.version}</small></p>):<p>此接龙暂无须知确认记录；不代表此前已同意。</p>}</details>;
+ if(!rows.length)return null;
+ return <details className="activity-notice-record"><summary>须知确认记录</summary>{rows.slice().reverse().map(record=><p key={record.id}>{record.kind==='proxy'?'代报名人确认':'本人确认'}{record.actorName?' · '+record.actorName+(record.actorIsMe?'（我）':''):''}<br/>{fmt(record.at,{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}<small>版本 {record.version===activityNoticeVersion?activityNoticeVersionLabel:record.version}</small></p>)}</details>;
 }

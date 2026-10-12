@@ -43,6 +43,19 @@ test('header court selection uses that court default interval, not another court
  const form=friendSignupForm(e,data,now)!;assert.ok(form.fields.some(f=>f.key==='bookingId'));const payload=form.convert({...form.values,name:'Fictional later guest',bookingId:'later'});assert.equal(payload.arrival,start+3600000);assert.equal(payload.departure,end+3600000);
 });
 
+test('friend signup forms omit repeated notice consent for both new and existing participants',()=>{
+ const {s,e,member}=fixture();s.players.push({...s.players[0],id:'owned-friend',name:'Fictional existing friend'});
+ const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ for(const existing of [false,true]){
+  const form=friendSignupForm(e,data,now,data.bookings[0],existing)!;
+  assert.ok(form.fields.every(f=>f.type!=='activity-notice'&&f.key!=='noticeAccepted'));
+  assert.ok(!('noticeAccepted' in form.values));assert.ok(!('noticeVersion' in form.values));
+  const stale={...form.values,name:'Fictional new friend',noticeAccepted:true,noticeVersion:'old-signup-receipt'};
+  const payload=form.convert(stale);assert.ok(!('noticeAccepted' in payload));assert.ok(!('noticeVersion' in payload));
+  assert.equal(payload.mode,existing?'existing':'new');
+ }
+});
+
 test('all combined friend form entries close at the member signup deadline while managers retain access',()=>{
  const {s,e,member}=fixture();e.signupDeadline=e.start-7200000;
  const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;

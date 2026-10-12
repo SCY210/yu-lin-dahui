@@ -1,4 +1,5 @@
 'use client';
+import {matchingStopped} from '../lib/domain/matching-participation';
 import {eventFormat,courtPlayers} from '../lib/domain/match-format';
 import {useEffect,useState} from 'react';
 import {Play,Pause,RefreshCw} from 'lucide-react';
@@ -27,33 +28,35 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const courts=data.bookings.filter((b:any)=>b.eventId===e.id&&b.start<=now&&b.end>now)
   .filter((b:any,i:number,all:any[])=>all.findIndex(c=>c.name===b.name&&(c.venue??e.venue)===(b.venue??e.venue))===i);
  const waitingCourts:State['bookings']=playerId?[]:courts.filter((booking:State['bookings'][number])=>!current.some(match=>{const court=data.bookings.find((item:State['bookings'][number])=>item.id===match.courtId);return court?.name===booking.name&&(court.venue??e.venue)===(booking.venue??e.venue)}));
- const history=eventMatches.filter(m=>['complete','forfeit','cancelled'].includes(m.status)&&m.start!==null&&matchIncludesPlayer(m,playerId)).slice().reverse();
+ const history=eventMatches.filter(m=>['complete','forfeit'].includes(m.status)&&m.start!==null&&matchIncludesPlayer(m,playerId)).slice().reverse();
+ const cancelled=eventMatches.filter(m=>m.status==='cancelled'&&matchIncludesPlayer(m,playerId));
  const playingIds=new Set(current.flatMap(m=>[...m.a,...m.b]));
  const playerRow=(r:Registration)=>{
     const player=data.players.find((p:Player)=>p.id===r.playerId),own=manager||r.playerId===data.me.playerId||player?.ownerId===data.me.id;
-    const resting=liveResting(e,r.playerId),preference=config?.preferences.find(p=>p.playerId===r.playerId)?.avoidConsecutive??false;
-    return <div className="live-player-row" key={r.playerId}><div><strong>{name(r.playerId)}</strong><span>{liveAppearances(data,e.id,r.playerId)} 次上场 · {playingIds.has(r.playerId)?'场上对局':!present.includes(r.playerId)?'尚未到参加时段':resting?'轮休中':'等待上场'}</span></div><div className="live-player-controls"><label><input type="checkbox" checked={preference} disabled={!own||busy||!active} onChange={ev=>send('livePreference',{eventId:e.id,playerId:r.playerId,avoidConsecutive:ev.target.checked})}/>不连续上场</label>{resting&&own&&!playingIds.has(r.playerId)&&active&&<button className="secondary" type="button" disabled={busy} onClick={()=>send('liveReady',{eventId:e.id,playerId:r.playerId})}>休息好了</button>}</div></div>; };
+    const stopped=matchingStopped(e,r.playerId),resting=liveResting(e,r.playerId),preference=config?.preferences.find(p=>p.playerId===r.playerId)?.avoidConsecutive??false;
+    return <div className="live-player-row" key={r.playerId}><div><strong>{name(r.playerId)}</strong><span>{liveAppearances(data,e.id,r.playerId)} 次上场 · {playingIds.has(r.playerId)?(stopped?'本局后不再上场':'场上对局'):stopped?'本次不再上场':!present.includes(r.playerId)?'尚未到参加时段':resting?'轮休中':'等待上场'}</span></div><div className="live-player-controls">{own&&active&&<button className="secondary" type="button" disabled={busy} onClick={()=>send('pointsParticipation',{eventId:e.id,playerId:r.playerId,playing:stopped})}>{stopped?'恢复排场':'不再上场'}</button>}<label><input type="checkbox" checked={preference} disabled={!own||busy||!active} onChange={ev=>send('livePreference',{eventId:e.id,playerId:r.playerId,avoidConsecutive:ev.target.checked})}/>不连续上场</label>{!stopped&&resting&&own&&!playingIds.has(r.playerId)&&active&&<button className="secondary" type="button" disabled={busy} onClick={()=>send('liveReady',{eventId:e.id,playerId:r.playerId})}>休息好了</button>}</div></div>; };
  return <div className="live-play">
   <section className="card live-play-header"><div className="row"><h2>当前对局</h2><span className="badge">{config?.paused?'排场暂停':config?.enabled?'自动同步':'尚未开始排场'}</span></div>
-   <p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先让场下可上场的球友替换刚打完的人，再按上场次数和等待时间均衡安排。每场{courtPlayers(e)}人。</p>
+   <details className="live-play-options"><summary>排场管理与说明</summary><p className="hint">每片场地独立推进，录入比分即结束本局并安排下一局。优先让场下可上场的球友替换刚打完的人，再按上场次数和等待时间均衡安排。每场{courtPlayers(e)}人。</p>
    {manager&&active&&<div className="actions">
-    {!config?.enabled?<button type="button" className="primary" disabled={busy||!inWindow} onClick={()=>send('liveStart',{eventId:e.id})}><Play size={17}/>开始实时排场</button>:<>
+    {config?.enabled&&<>
      <button type="button" className="secondary" disabled={busy} onClick={()=>send('livePause',{eventId:e.id,paused:!config.paused})}>{config.paused?<Play size={17}/>:<Pause size={17}/>} {config.paused?'恢复自动排场':'暂停自动排场'}</button>
      {!config.paused&&<button type="button" className="ghost" disabled={busy||!inWindow} onClick={()=>send('liveStart',{eventId:e.id})}><RefreshCw size={16}/>安排空闲场地</button>}
     </>}
    </div>}
-   {!config?.enabled&&<p className="hint">由创建者或管理员开始排场。已有正在打的比赛会继续；尚未开打的预排改为实时轮换。</p>}
-   {!inWindow&&active&&<p className="hint">请在活动进行时开始排场。已开始的对局仍可正常录入结果。</p>}
+   {!config?.enabled&&<p className="hint">到活动开始时间自动排场。已有正在打的比赛会继续，人数不足时等待可上场球友。</p>}
+   {!inWindow&&active&&<p className="hint">到活动开始时间自动排场。已开始的对局仍可正常录入结果。</p>}</details>
   </section>
   {playerId&&!current.some(m=>matchIncludesPlayer(m,playerId))&&!history.length&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
   <div className="courts-grid live-current-courts">{current.filter(m=>matchIncludesPlayer(m,playerId)).map(m=>{
    const round=data.rounds.find((r:any)=>r.id===m.roundId);
-   return <section key={m.id} className="live-court"><div className="live-court-heading"><h3>{data.bookings.find((b:State['bookings'][number])=>b.id===m.courtId)?.name??'场地'} · 第 {round?.liveSequence??1} 轮</h3>{manager&&config?.enabled&&active&&inWindow&&<button type="button" className="secondary" disabled={busy} onClick={()=>openLiveLineup(e,m,ctx,now)}>调整上场人员</button>}</div><MatchCard m={m} ctx={ctx}/><LiveCourtBench e={e} m={m} ctx={ctx} now={now}/></section>;
-  })}{waitingCourts.map(b=><section className="card live-court-waiting" key={b.id}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{config?.enabled?'可上场人数或完整固定搭档不足时保持等待，尊重轮休选择。球友准备好后可点击“休息好了”。':'开始实时排场后显示对局。'}</p></section>)}</div>
+   return <section key={m.id} className="live-court"><div className="live-court-heading"><h3>{data.bookings.find((b:State['bookings'][number])=>b.id===m.courtId)?.name??'场地'} · 第 {round?.liveSequence??1} 轮</h3>{manager&&config?.enabled&&active&&inWindow&&<button type="button" className="secondary" disabled={busy} onClick={()=>openLiveLineup(e,m,ctx,now)}>调整上场人员</button>}</div><MatchCard m={m} ctx={ctx}/><details className="live-bench-disclosure"><summary>场下球友 / 换人</summary><LiveCourtBench e={e} m={m} ctx={ctx} now={now}/></details></section>;
+  })}{waitingCourts.map(b=><section className="card live-court-waiting" key={b.id}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{config?.enabled?'可上场人数或完整固定搭档不足时保持等待，尊重轮休选择。球友准备好后可点击“休息好了”。':'到活动开始时间自动显示对局。'}</p></section>)}</div>
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}
   <Disclosure label={'其他球友上场与轮休 · '+roster.filter(r=>r.playerId!==data.me.playerId).length+'人'}><section className="card live-rotation-roster"><p className="hint">不连续上场的球友先轮休一局，休息好后可以恢复。</p>{roster.filter(r=>r.playerId!==data.me.playerId).map(playerRow)}</section></Disclosure>
-  <Disclosure label={`已完成对局 · ${history.length} 局`} defaultOpen={!!playerId}><div>{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>
+  <Disclosure label={`已完成积分赛 · ${history.length} 局`} defaultOpen={!!playerId||!active}><div className="courts-grid completed-points-matches">{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>{!history.length&&<p className="hint">暂无已完成对局。</p>}</Disclosure>
+  {!!cancelled.length&&<Disclosure label={`已撤销对局 · ${cancelled.length} 局`}><div className="courts-grid">{cancelled.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>}
   <Disclosure label={eventFormat(e)==='singles'?'单打轮转':'搭档方式与投票'}><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
  </div>;
 }

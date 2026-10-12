@@ -5,7 +5,8 @@ import type {SchedulingContext} from './event-scheduling';
 import {canManageEvent} from '../lib/domain/permissions';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
-import {pendingSchedulingIds,schedulingMode} from '../lib/domain/scheduling';
+import {pointsWindow} from '../lib/domain/points-window';
+import PointsParticipation from './points-participation';
 import {choice} from './form-fields';
 import './points-attendance.css';
 
@@ -27,11 +28,14 @@ export default function PointsAttendance({e,ctx}:{e:Event;ctx:SchedulingContext}
  const own=(id:string)=>id===ctx.data.me.playerId||ctx.data.players.find(p=>p.id===id)?.ownerId===ctx.data.me.id;
  const guest=(id:string)=>{const p=ctx.data.players.find(p=>p.id===id);return !!(p?.guest||p?.guestEventId)};
  const late=session?.attendance.filter(row=>row.late)??[];
- return <section className="card points-attendance">
-  <div className="row"><h2>积分赛</h2><span className="badge">{session?.startedAt?'已开始':'待开始'}</span></div>
-  {manager&&!session?.startedAt&&<button type="button" className="primary" disabled={ctx.busy||!active} onClick={()=>ctx.open('开始积分赛','pointsStart',{eventId:e.id,expectedMode:schedulingMode(ctx.data,e),expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,'按当前排场方式开始：预排赛程直接发布并开始首轮；逐轮模式生成或开始当前轮；实时模式开始自动排场。时间自动记录，已有当前对局会保留。')}>开始积分赛</button>}
+ const lifecycle=eventStatusAt(e,now),window=pointsWindow(e),due=now>=Math.max(e.start,window.start);
+ const status=lifecycle==='cancelled'?'已取消':lifecycle==='draft'?'未开放':lifecycle==='ended'?'已结束':session?.startedAt||due?'进行中':'未到开赛时间';
+ return <details className="card points-attendance">
+  <summary className="points-attendance-summary"><strong>积分赛</strong><span className="badge">{status}</span><span>上场意愿 / 到场管理</span></summary>
+  <p className="hint">到积分赛时段自动开始；预排草稿确认发布后，到时自动开赛。</p>
+  <PointsParticipation e={e} ctx={ctx}/>
   <p className="hint">正式报名的球友默认都已到场，不用逐个确认。有人迟到（会来）或不来了，同场球友或组织者在对应对局上报告：迟到先换人打，正式成员本活动扣 1 积分；不来了判本局负。临时来宾不计积分或修为。</p>
   {late.length>0&&<div className="points-late-list">{late.map(row=><div className="row" key={row.playerId}><strong>{ctx.name(row.playerId)} · {guest(row.playerId)?'来宾迟到（不计积分）':'迟到 −1 分'}</strong><span>{row.available?'已到场':'暂不排场'}</span>{active&&(manager||own(row.playerId))&&<div className="actions">{!row.available&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.send('pointsPresence',{eventId:e.id,playerId:row.playerId,status:'arrived'})}>已到场，恢复排场</button>}{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>ctx.open('撤销误标迟到','pointsPresence',{eventId:e.id,playerId:row.playerId,status:'clear-late'},[],undefined,'撤销迟到标记并恢复可排场状态；正式成员返还本次扣除的 1 积分，来宾不计积分。已完成比分保持不变。')}>撤销误标</button>}</div>}</div>)}</div>}
   {(session?.waiting??[]).map(row=><div className="points-waiting" key={row.matchId}><strong>{ctx.data.bookings.find(b=>b.id===ctx.data.matches.find(m=>m.id===row.matchId)?.courtId)?.name??'场地'} · 等待补位</strong><p className="hint">场下可上场人数不足，原对局已撤销且不计胜负。人员准备好后可重新补排。</p>{manager&&active&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open('重新补排','pointsReplace',{eventId:e.id,matchId:row.matchId,replacement:row.replacement},[choice('replacement','补排方式',[['group','重新安排整组'],['player','只替换迟到者']])],undefined,'重新检查同球馆可上场的成员及其他场地占用。不会再次扣分。')}>重新补排</button>}</div>)}
- </section>;
+ </details>;
 }

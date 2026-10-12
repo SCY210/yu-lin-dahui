@@ -5,3 +5,10 @@
 .match-filter-shortcuts{display:flex;gap:6px;flex-wrap:wrap}.match-filter-shortcuts button{min-height:44px;font-size:13px;padding:9px 13px}
 .match-filter-empty{padding:20px 14px;border:1px dashed var(--border);border-radius:14px;color:var(--muted-foreground);text-align:center;font-size:14px}
 @media(max-width:420px){.match-player-filter{gap:8px}.match-player-filter label{max-width:none;flex-basis:100%}.match-filter-shortcuts{width:100%}}
+.event-scheduling .match-player-filter{flex-wrap:nowrap;align-items:center;gap:5px;margin:6px 0}
+.event-scheduling .match-player-filter label{flex:1 1 0;display:flex;flex-direction:row;align-items:center;gap:5px;max-width:none}
+.event-scheduling .match-player-filter label>span{flex:none;font-size:11px;gap:3px;white-space:nowrap}
+.event-scheduling .match-player-filter label>span svg{display:none}
+.event-scheduling .match-player-filter select{flex:1;min-height:44px;padding:5px 3px;font-size:12px;border-radius:8px}
+.event-scheduling .match-filter-shortcuts{width:auto;flex:none;flex-wrap:nowrap}
+.event-scheduling .match-filter-shortcuts button{font-size:11px;padding:5px;white-space:nowrap}

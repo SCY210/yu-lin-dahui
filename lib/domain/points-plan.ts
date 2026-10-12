@@ -42,24 +42,34 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
             if(['draft','ended','cancelled'].includes(eventStatusAt(e,now))||now<e.start)fail('活动已结束或未开始，不能添加下一场');
             const rounds=s.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled'),matches=s.matches.filter(m=>m.eventId===e.id);
             if(JSON.stringify(rounds.map(r=>r.id).sort())!==JSON.stringify([...command.payload.expectedRoundIds].sort()))fail('409: 赛程已更新，请刷新后再添加');
-            if(!rounds.some(r=>r.pointsSlot!==undefined&&r.status==='complete'))fail('请先完成已有预排积分赛');
-            if(rounds.some(r=>['draft','published','playing'].includes(r.status))||matches.some(m=>['draft','published','playing'].includes(m.status)))fail('请先录完当前对局并完成或取消剩余赛程');
-            const at=Math.max(now,e.start,...matches.filter(m=>['complete','forfeit'].includes(m.status)).map(m=>m.end??m.start??e.start));
-            if(at>now)fail('上一轮记录的结束时间尚未到，请稍后添加');
+            if(!rounds.some(r=>r.pointsSlot!==undefined))fail('请先预排积分赛，再追加一轮');
+            const recordedEnd=Math.max(e.start,...matches.filter(m=>['complete','forfeit'].includes(m.status)).map(m=>m.end??m.start??e.start));
+            if(recordedEnd>now)fail('上一轮记录的结束时间尚未到，请稍后添加');
+            const at=Math.max(now,e.start,recordedEnd,...rounds.map(r=>r.start+r.duration*minute));
             const duration=Math.min(e.pointsPlan?.roundMinutes??15,60,Math.floor((e.end-at)/minute));
             if(duration<5)fail('剩余活动时间不足5分钟，不能添加下一场');
             const work=structuredClone(s),event=work.events.find(x=>x.id===e.id)!;
-            const previous=rounds.at(-1),seed=((previous?.seed??1)+7919)%2147483647||1;
-            const proposal=event.pointsChoice?.selectedMode==='fixed'?proposeFixed(work,event,at,duration,seed,event.pointsChoice.teams??fixedPartnerTeams(work,event)):propose(work,event,at,duration,seed);
+            // A future appended slot may reuse players/courts currently playing;
+            // the real start will revalidate their actual availability. Only this
+            // proposal copy treats earlier slots as released and published.
+            const proposalState=structuredClone(work);
+            proposalState.matches.filter(m=>m.eventId===e.id&&['draft','playing'].includes(m.status)).forEach(m=>m.status='published');
+            proposalState.rounds.filter(r=>r.eventId===e.id&&r.status==='draft').forEach(r=>r.status='published');
+            const previous=rounds.slice().sort((a,b)=>(a.pointsSlot??0)-(b.pointsSlot??0)||a.start-b.start).at(-1),seed=((previous?.seed??1)+7919)%2147483647||1;
+            const proposal=event.pointsChoice?.selectedMode==='fixed'?proposeFixed(proposalState,event,at,duration,seed,event.pointsChoice.teams??fixedPartnerTeams(proposalState,event)):propose(proposalState,event,at,duration,seed);
             if(!proposal.courts.length)fail('当前人数或可用场地不足，无法添加下一场');
             event.pointsPlan={start:event.pointsPlan?.start??e.start,end:Math.max(event.pointsPlan?.end??e.start,at+duration*minute),roundMinutes:event.pointsPlan?.roundMinutes??duration,seed:event.pointsPlan?.seed??seed,generatedAt:now};
             const round:Round={id:crypto.randomUUID(),eventId:e.id,start:at,duration,status:'draft',eligible:proposal.eligible,rest:proposal.rest,seed,pointsSlot:Math.max(0,...s.rounds.filter(r=>r.eventId===e.id).map(r=>r.pointsSlot??0))+1};
             const added:Match[]=proposal.courts.map(court=>{const m:Match={...court,id:crypto.randomUUID(),eventId:e.id,roundId:round.id,status:'draft',start:null,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};decorateMatch(work,event,m);return m});
-            validateRound(work,e.id,at,duration,added);
+            validateRound(proposalState,e.id,at,duration,added);
             event.schedulingMode='planned';work.rounds.push(round);work.matches.push(...added);
-            await run(work,a,'publish',{roundId:round.id},now);
-            await run(work,a,'start',{roundId:round.id,at:now,monthly:true,elo:true},now);
-            if(!work.events.find(x=>x.id===e.id)?.pointsSession?.startedAt)await run(work,a,'pointsStart',{eventId:e.id,expectedMode:'planned',expectedPendingIds:[]},now);
+            // The explicit append action confirms only the new lineup. Existing
+            // drafts are not published and no older round/result is changed.
+            round.status='published';added.forEach(m=>m.status='published');
+            if(at<=now&&!matches.some(m=>m.status==='playing')){
+                await run(work,a,'start',{roundId:round.id,at:now,monthly:true,elo:true},now);
+                if(!work.events.find(x=>x.id===e.id)?.pointsSession?.startedAt)await run(work,a,'pointsStart',{eventId:e.id,expectedMode:'planned',expectedPendingIds:[]},now);
+            }
             Object.assign(s,work);
             break;
         }

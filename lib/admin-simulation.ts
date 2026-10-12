@@ -7,7 +7,7 @@ import {realmSnapshot,realmPolicy} from './domain/realm-rating';
 export const simulationKey='admin-simulation-v1';
 export type SimulationDocument={version:1|2;revision:number;state:State;requests:string[]};
 export type SimulationView={revision:number;data:ClubData};
-const commands=new Set(['noShow','noShowArrived','pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','schedulingMode','pointsNext','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','lock','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
+const commands=new Set(['pointsParticipation','noShow','noShowArrived','pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','schedulingMode','pointsNext','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','lock','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
 /** Copy member display/strength snapshots into a closed graph with sandbox-only IDs. */
 export function createSimulation(now:number,club?:State):SimulationDocument{
  const s=emptyState(),start=Math.floor(now/1800000)*1800000,end=start+6*3600000;

@@ -1,3 +1,31 @@
 .scheduling-selector h2,.scheduling-controls h2{margin:0 0 10px;font-size:19px}.scheduling-options{display:flex;gap:8px;flex-wrap:wrap}.scheduling-options button{min-height:44px;white-space:normal}.scheduling-selector .hint{margin:12px 0 0}.scheduling-controls .row{flex-wrap:wrap}.scheduling-controls .actions{margin:8px 0}@media(max-width:600px){.scheduling-options{display:grid;grid-template-columns:1fr;width:100%}.scheduling-options button{width:100%}.scheduling-controls .actions>button{flex:1 1 160px}}
 
 .scheduling-options button[aria-pressed=true]{opacity:1}
+.scheduling-mode-select{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px}
+.scheduling-mode-select select{flex:1;min-width:0;max-width:260px;min-height:44px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit;font:inherit}
+.scheduling-selector.card,.scheduling-controls.card{padding:14px;margin:10px 0}
+.scheduling-selector h2,.scheduling-controls h2{font-size:16px;margin:0 0 7px}
+.scheduling-selector .hint,.scheduling-controls .hint{font-size:12px;line-height:1.5;margin:7px 0 0}
+.points-participation{padding:10px 0;min-width:0}
+.points-participation h3{font-size:15px;margin:0 0 5px}
+.points-participation>.hint{font-size:12px;line-height:1.5;margin:5px 0}
+.points-participation-row{padding:7px 0;gap:6px;border-bottom:1px solid var(--border);font-size:12px}
+.points-participation-row>strong{min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.points-participation-row>.badge{font-size:11px;padding:2px 5px}
+.points-participation-row>button{min-height:44px;font-size:12px;padding:5px 9px}
+.points-participation-warning{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--accent);font-size:12px}
+.completed-points-matches{margin-top:8px}
+@media(max-width:600px){.event-scheduling>.app-disclosure>.app-disclosure-content{padding:8px}.event-scheduling .scheduling-selector.card,.event-scheduling .scheduling-controls.card{padding:11px}.points-participation-row>strong{flex:1 1 80px}.scheduling-controls .actions{gap:6px}.scheduling-controls .actions>button{flex:1 1 110px;font-size:12px;padding:6px;min-height:44px}}
+.event-scheduling .scheduling-selector.card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:4px 8px;margin:6px 0}
+.scheduling-mode-select{gap:7px;white-space:nowrap;min-width:0}
+.scheduling-mode-select select{max-width:none;padding:5px 6px;font-size:12px}
+.scheduling-mode-info>summary{display:flex;align-items:center;min-height:44px;padding:3px;font-size:12px;white-space:nowrap}
+.scheduling-mode-info[open]{grid-column:1/-1}
+.scheduling-control-info>summary,.round-lineup-help>summary{min-height:32px;padding:4px 0;font-size:11px}
+.event-scheduling>.points-attendance.card{margin:0 0 6px;padding:4px 8px}
+.event-scheduling>.points-attendance .points-attendance-summary{gap:5px;font-size:13px}
+.event-scheduling>.points-attendance .points-attendance-summary>.badge{font-size:11px;padding:2px 5px}
+.event-scheduling .scheduling-controls.card{padding:4px 8px;margin:6px 0}
+.scheduling-controls-summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:3px 0;font-size:13px}
+.scheduling-controls-summary>.badge{font-size:11px;padding:2px 5px}
+.scheduling-controls-summary>span:last-child{margin-left:auto;font-size:12px;color:var(--muted-foreground)}

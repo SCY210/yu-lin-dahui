@@ -7,7 +7,7 @@ import {bookingCapacity,bookingRows} from '../lib/domain/booking-signups';
 import {bookingCents} from '../lib/domain/money';
 import {findVenue,googleMapsUrl} from '../lib/venues';
 import {plannedEpoch,plannedInterval} from '../lib/time-planning';
-import {dt,fmt,hm,euro,text,halfTimed,choice,money,number,why,activityNoticeField} from './ui';
+import {dt,fmt,hm,euro,text,halfTimed,choice,money,number,why} from './ui';
 import {Avatar} from './avatar';
 import CancelRegistration from './cancel-registration';
 import FeatureGuide from './feature-guide';
@@ -15,11 +15,10 @@ import EventShare from './event-share';
 import Disclosure from './disclosure';
 import {friendSignupForm} from './friend-signup-form';
 import {useActivityClock} from '../lib/client/use-activity-clock';
-import {activityNoticeVersion} from '../lib/activity-notice';
 import {ActivityNoticeDetails,ActivityNoticeConfirmation} from './activity-notice';
 import type {ClubData} from '../lib/contracts/club';
 type CourtView=ClubData['bookings'][number];
-type SignupForm={bookingId:string;playerId:string;arrival:string;departure:string;note:string;noticeAccepted:boolean;noticeVersion:string};
+type SignupForm={bookingId:string;playerId:string;arrival:string;departure:string;note:string};
 import './event-court-signup.css';
 
 export default function EventCourtSignup({e,ctx,rules}:any){
@@ -39,7 +38,7 @@ export default function EventCourtSignup({e,ctx,rules}:any){
  const register=(b:CourtView,playerId=data.me.playerId)=>{
   const r=data.registrations.find((r:any)=>r.eventId===e.id&&r.playerId===playerId),row=r?.bookingSignups?.find((x:any)=>x.bookingId===b.id&&x.status!=='cancelled'),plan=plannedInterval(b.start,b.end);
   const arrival=row?.arrival??plan.start,departure=row?.departure??plan.end;
-  open(row?'修改本场接龙':'接龙 · '+b.name,'courtRegister',{bookingId:b.id,playerId,arrival:dt(arrival),departure:dt(departure),note:row?.note??'',noticeAccepted:false,noticeVersion:activityNoticeVersion},[choice('playerId','球友 / 代报名',owned.map((p:{id:string;name:string})=>[p.id,p.name])),halfTimed('arrival','参加开始'),halfTimed('departure','参加结束'),text('note','备注'),activityNoticeField(data.me.playerId)],(v:SignupForm)=>({...v,arrival:plannedEpoch(v.arrival,arrival),departure:plannedEpoch(v.departure,departure)}),`${b.venue??e.venue} · ${b.name} · ${hm(b.start)}–${hm(b.end)}。可报名多个不重叠时段，满员自动候补。`);
+  open(row?'修改本场接龙':'接龙 · '+b.name,'courtRegister',{bookingId:b.id,playerId,arrival:dt(arrival),departure:dt(departure),note:row?.note??''},[choice('playerId','球友 / 代报名',owned.map((p:{id:string;name:string})=>[p.id,p.name])),halfTimed('arrival','参加开始'),halfTimed('departure','参加结束'),text('note','备注')],(v:SignupForm)=>({...v,arrival:plannedEpoch(v.arrival,arrival),departure:plannedEpoch(v.departure,departure)}),`${b.venue??e.venue} · ${b.name} · ${hm(b.start)}–${hm(b.end)}。可报名多个不重叠时段，满员自动候补。`);
  };
  const proxyRegister=(b:CourtView)=>addFriend(b,true);
  const member=(r:ReturnType<typeof bookingRows>[number],i:number,b:CourtView)=>{const player=data.players.find((p:{id:string;guestEventId?:string})=>p.id===r.playerId),registration=(data.registrations as ClubData['registrations']).find(row=>row.eventId===e.id&&row.playerId===r.playerId);return <div className="signup-line signup-member-line" key={r.playerId}><button type="button" disabled={!!player?.guestEventId} className="signup-identity signup-avatar-link" aria-label={'查看'+name(r.playerId)+'的球员档案'} onClick={()=>openProfile(r.playerId)}><Avatar p={player??{name:name(r.playerId)}} size="signup-avatar"/><span className="signup-position">{i+1}</span></button><div className="grow"><strong><button type="button" disabled={!!player?.guestEventId} className="signup-name-link" onClick={()=>openProfile(r.playerId)}>{name(r.playerId)}</button>{player?.guestEventId&&<small className="badge">临时来宾</small>}</strong><p>{hm(r.arrival)}–{hm(r.departure)}{r.note?' · '+r.note:''}</p>{r.cancelRequested&&<small className="warning">已申请取消，等待处理</small>}{own(r.playerId)&&<ActivityNoticeConfirmation records={registration?.noticeAcknowledgements??[]} eventId={e.id} bookingId={b.id}/>}</div>{own(r.playerId)&&<div className="actions compact"><button className="ghost" onClick={()=>register(b,r.playerId)}>修改</button><CancelRegistration e={b?{...e,start:b.start}:e} registration={r} bookingId={b?.id} ctx={ctx}/></div>}</div>};
