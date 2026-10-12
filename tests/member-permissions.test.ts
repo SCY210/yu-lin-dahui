@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -52,7 +54,7 @@ test('社群命令直接调用也校验活动创建者',async()=>{
 test('普通创建者完整管理报名、出勤、排场、比赛结果和费用，无需管理员角色',async()=>{
  const s=fixture();s.events=s.events.slice(0,1);s.rounds=[];s.matches=[];s.attendance=[];
  for(const playerId of ['self','friend','other','fourth']){
-  await apply(s,member,'register',{eventId:'own',playerId,arrival:start,departure:end,note:''},start+60000);
+  await apply(s,member,'register',{...acceptedActivityNotice,eventId:'own',playerId,arrival:start,departure:end,note:''},start+60000);
   await apply(s,member,'attendance',{eventId:'own',playerId,at:start,state:'ready'},start);
  }
  await apply(s,member,'generate',{eventId:'own',at:start,duration:20,seed:12},start);

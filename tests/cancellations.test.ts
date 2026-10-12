@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -17,7 +19,7 @@ function fixture(courts=false){
 }
 const account=(s:State,id:string)=>s.accounts.find(a=>a.id===id)!;
 const reg=(s:State,playerId:string)=>s.registrations.find(r=>r.playerId===playerId)!;
-const join=(s:State,id:string,playerId:string,at=start-3*day)=>apply(s,account(s,id),'register',{eventId:'e',playerId,arrival:start,departure:end,note:''},at);
+const join=(s:State,id:string,playerId:string,at=start-3*day)=>apply(s,account(s,id),'register',{...acceptedActivityNotice,eventId:'e',playerId,arrival:start,departure:end,note:''},at);
 
 test('a member cancelling in time is recorded with the time and a typed reason; the automatic text is not a reason',async()=>{
  const s=fixture();await join(s,'m2','p2');await join(s,'m3','p3');
@@ -40,7 +42,7 @@ test('after the free-cancellation time only the organiser can cancel; the regist
 test('signing up again removes the cancellation; court signups record it only once every court is cancelled',async()=>{
  const s=fixture();await join(s,'m2','p2');await apply(s,account(s,'m2'),'cancel',{eventId:'e',playerId:'p2',reason:'取消报名'},start-2*day);
  await join(s,'m2','p2',start-2*day+1);assert.notEqual(reg(s,'p2').status,'cancelled');assert.equal(reg(s,'p2').cancelledAt,undefined);
- const c=fixture(true),court=(bookingId:string)=>({bookingId,playerId:'p3',arrival:c.bookings.find(b=>b.id===bookingId)!.start,departure:c.bookings.find(b=>b.id===bookingId)!.end,note:''});
+ const c=fixture(true),court=(bookingId:string)=>({...acceptedActivityNotice,bookingId,playerId:'p3',arrival:c.bookings.find(b=>b.id===bookingId)!.start,departure:c.bookings.find(b=>b.id===bookingId)!.end,note:''});
  await apply(c,account(c,'m3'),'courtRegister',court('c1'),start-3*day);await apply(c,account(c,'m3'),'courtRegister',court('c2'),start-3*day);
  await apply(c,account(c,'m3'),'courtCancel',{bookingId:'c1',playerId:'p3',reason:'只打后半场'},start-2*day);
  assert.equal(cancellationView(c,reg(c,'p3')),undefined,'still signed up for the second court');
@@ -55,7 +57,7 @@ test('older cancellations are recovered from the audit log, and everyone sees th
  assert.deepEqual(cancellationView(s,r),{at:start-2*day,by:'self',byName:'球友p2',reason:'家里有事'});
  const unknown=fixture();await join(unknown,'m3','p3');const u=reg(unknown,'p3');u.status='cancelled';
  assert.deepEqual(cancellationView(unknown,u),{by:'unknown'});
- await apply(s,account(s,'m3'),'register',{eventId:'e',playerId:'p3',arrival:start,departure:end,note:''},start-3*day);
+ await apply(s,account(s,'m3'),'register',{...acceptedActivityNotice,eventId:'e',playerId:'p3',arrival:start,departure:end,note:''},start-3*day);
  const view=projectClubState(s,account(s,'m3'),'2027-03',2027,start-day),row=view.registrations.find(r=>r.playerId==='p2')!;
  assert.ok('cancellation' in row&&row.cancellation?.reason==='家里有事');
  for(const field of ['cancelledAt','cancelledBy','cancelledAs','cancelReason'])assert.ok(!(field in row),'raw cancellation metadata is not sent to members');

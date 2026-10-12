@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -66,7 +68,7 @@ test('only the registrant, an administrator or the activity organiser can change
 
 test('adding a friend with a level stores it for all of the friend\'s games',async()=>{
  const s=fixture();s.bookings.push({id:'court',eventId:'e',name:'1 号场',start,end:start+3*3600000,pricing:'total',cents:1200});
- await apply(s,s.accounts[1],'friendSignup',{mode:'new',name:'新朋友',guestLevel:1150,bookingId:'court',arrival:start,departure:start+3*3600000,note:''},start-86400000);
+ await apply(s,s.accounts[1],'friendSignup',{...acceptedActivityNotice,mode:'new',name:'新朋友',guestLevel:1150,bookingId:'court',arrival:start,departure:start+3*3600000,note:''},start-86400000);
  const friend=s.players.at(-1)!;assert.deepEqual(friend.guestLevels,[{at:0,level:1150}]);assert.ok(guestIds(s).has(friend.id));
 });
 

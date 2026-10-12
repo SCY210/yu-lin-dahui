@@ -1,4 +1,5 @@
 import {applyFriendSignup} from './friend-signup';
+import {activityAcknowledgementInput,assertActivityAcknowledgement,recordActivityAcknowledgement} from './activity-acknowledgement';
 import {applyTreasure,isTreasureAction} from './treasure-shop';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
@@ -57,7 +58,7 @@ const schemas = {
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
     eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).optional(), practiceShuttleCents:cents.optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
     booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }),
-    register: z.object({ eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
+    register: z.object({ ...activityAcknowledgementInput, eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
     moveQueue: z.object({ eventId: pid, playerId: pid, beforePlayerId: pid, reason }),
     attendance: z.object({ eventId: pid, playerId: pid, at: time, state: z.enum(['ready', 'paused', 'left']) }),
     attendanceEdit: z.object({ attendanceId: pid, start: time, end: time.nullable(), reason }),
@@ -256,6 +257,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'register': {
             const p = command.payload;
+            assertActivityAcknowledgement(p);
             const e = event(p.eventId), manager = canManageEvent(a, e);
             if(player(p.playerId).guestEventId&&player(p.playerId).guestEventId!==e.id)fail('临时来宾只能参加原活动');
             if (!manager)
@@ -281,13 +283,14 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 old.note = p.note;
             }
             else {
-                const r = { ...p, id: old?.id ?? id(), sequence: Math.max(0, ...s.registrations.filter(r => r.eventId === e.id).map(r => r.sequence)) + 1, status: 'waitlist' as const, registeredAt: now, joinedAsWaitlist: s.registrations.filter(r => r.eventId === e.id && r.status === 'confirmed' && !r.bookingSignups).length >= e.capacity, cancelRequested: false, courtExempt: { mode: 'none' as const, reason: '' }, ballExempt: { mode: 'none' as const, reason: '' } };
+                const r = { eventId:p.eventId,playerId:p.playerId,arrival:p.arrival,departure:p.departure,note:p.note,noticeAcknowledgements:old?.noticeAcknowledgements, id: old?.id ?? id(), sequence: Math.max(0, ...s.registrations.filter(r => r.eventId === e.id).map(r => r.sequence)) + 1, status: 'waitlist' as const, registeredAt: now, joinedAsWaitlist: s.registrations.filter(r => r.eventId === e.id && r.status === 'confirmed' && !r.bookingSignups).length >= e.capacity, cancelRequested: false, courtExempt: { mode: 'none' as const, reason: '' }, ballExempt: { mode: 'none' as const, reason: '' } };
                 if (old)
                     s.registrations.splice(s.registrations.indexOf(old), 1, r);
                 else
                     s.registrations.push(r);
                 promote(s, e, now);
             }
+            recordActivityAcknowledgement(s.registrations.find(r=>r.eventId===e.id&&r.playerId===p.playerId)!,a,now);
             break;
         }
         case 'cancel': {

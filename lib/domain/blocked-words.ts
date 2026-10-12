@@ -26,7 +26,7 @@ export function blockedWordMasker(words:readonly string[]=[]){
  };
 }
 
-const contentKeys=new Set(['name','title','note','caption','style','motto','equipment','racket','strings','tension','reason','ratingReason','venue','address','description','productName']);
+const contentKeys=new Set(['name','actorName','title','note','caption','style','motto','equipment','racket','strings','tension','reason','ratingReason','venue','address','description','productName']);
 const structuralKeys=new Set(['auth','loginAccounts','accounts','me','blockedWords','words']);
 /** Presentation only: keep identity, credentials, navigation links and historical facts intact. */
 export function maskClubContent<T>(value:T,words:readonly string[]=[]):T{

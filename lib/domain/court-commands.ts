@@ -1,4 +1,5 @@
 import {editReason} from './edit-reason';
+import {activityAcknowledgementInput,assertActivityAcknowledgement,recordActivityAcknowledgement} from './activity-acknowledgement';
 import { recordCancellation } from './cancellations';
 import { signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
@@ -11,7 +12,7 @@ import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
 const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
-    courtRegister: z.object({ bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
+    courtRegister: z.object({ ...activityAcknowledgementInput, bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
     courtCancel: z.object({ bookingId: id, playerId: id, reason }),
     courtMoveQueue: z.object({ bookingId: id, playerId: id, beforePlayerId: id, reason }),
 };
@@ -31,6 +32,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
     switch (command.action) {
         case 'courtRegister': {
             const p = command.payload;
+            assertActivityAcknowledgement(p);
             if (!player.enabled)
                 fail('成员已停用');
             if (!manager && e.status !== 'open')
@@ -78,6 +80,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
             promoteBooking(s, e, b, now);
             syncRegistration(r);
             promoteLegacy(s, e, now);
+            recordActivityAcknowledgement(r,a,now,b.id);
             break;
         }
         case 'courtCancel': {

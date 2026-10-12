@@ -1,3 +1,4 @@
+import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Real API/store against isolated in-memory SQLite: a resent write never saves twice
 // and never runs as a different account. No production data.
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ try{
  const start=Math.ceil((Date.now()+86400000)/1800000)*1800000,end=start+7200000;
  s.events=[{id:'event',creatorId:'owner',title:'Fictional retry activity',start,end,venue:'Fictional venue',address:'',capacity:8,signupDeadline:start-7200000,cancelDeadline:start-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:8}];
- const guest=name=>({mode:'new',bookingId:'court',arrival:start,departure:end,note:'',name});
+ const guest=name=>({...acceptedActivityNotice,mode:'new',bookingId:'court',arrival:start,departure:end,note:'',name});
  await api.save(s,'seed',initial);
  const origin='https://club.example';
  const signIn=id=>fixture.user={userId:id,email:'',username:id,displayName:id,fullName:null,method:'password'};

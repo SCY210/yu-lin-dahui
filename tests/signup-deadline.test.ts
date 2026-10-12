@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState} from '../lib/domain/types';
@@ -31,5 +33,5 @@ test('an earlier added court brings the deadline forward and later stored deadli
 });
 
 test('the organiser override ends with the actual activity even if its stored status remains open',async()=>{
- const s=emptyState(),a={id:'host',playerId:'p',role:'admin' as const,email:''};s.accounts=[a];s.players=[{id:'p',name:'Fixture host',ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}];await apply(s,a,'event',{start,end,venue:'Fixture',address:'',capacity:8,cancelDeadline:start,note:'',status:'open',bookings:[{name:'Court',start,end,pricing:'total',cents:1000}]},start-24*hour);const e=s.events[0],b=s.bookings[0],before=structuredClone(s);await assert.rejects(()=>apply(s,a,'courtRegister',{bookingId:b.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);await assert.rejects(()=>apply(s,a,'register',{eventId:e.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);
+ const s=emptyState(),a={id:'host',playerId:'p',role:'admin' as const,email:''};s.accounts=[a];s.players=[{id:'p',name:'Fixture host',ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}];await apply(s,a,'event',{start,end,venue:'Fixture',address:'',capacity:8,cancelDeadline:start,note:'',status:'open',bookings:[{name:'Court',start,end,pricing:'total',cents:1000}]},start-24*hour);const e=s.events[0],b=s.bookings[0],before=structuredClone(s);await assert.rejects(()=>apply(s,a,'courtRegister',{...acceptedActivityNotice,bookingId:b.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);await assert.rejects(()=>apply(s,a,'register',{...acceptedActivityNotice,eventId:e.id,playerId:'p',arrival:start,departure:end,note:''},end),/结束/);assert.deepEqual(s,before);
 });

@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -58,7 +60,7 @@ test('进行中的比赛阻止删除，不会修改任何状态；比赛结束�
 });
 test('删除活动后禁止开赛、报名、取消报名、投票和嵌套记录修改，包括管理员',async()=>{
  const s=fixture();s.events[0].deletedAt=0;
- const requests:[string,unknown][]=[['register',{eventId:'own',playerId:'a',arrival:at,departure:at+3600000,note:''}],['cancel',{eventId:'own',playerId:'a',reason:'取消'}],['eventStatus',{eventId:'own',status:'open'}],['start',{roundId:'own-round',eventId:'other',at,monthly:true,elo:true}],['bookingBearer',{bookingId:'own-court',eventId:'other',bearer:'subsidy',reason:'修改'}],['awardVote',{eventId:'own',playerId:'a',category:'mvp'}]];
+ const requests:[string,unknown][]=[['register',{...acceptedActivityNotice,eventId:'own',playerId:'a',arrival:at,departure:at+3600000,note:''}],['cancel',{eventId:'own',playerId:'a',reason:'取消'}],['eventStatus',{eventId:'own',status:'open'}],['start',{roundId:'own-round',eventId:'other',at,monthly:true,elo:true}],['bookingBearer',{bookingId:'own-court',eventId:'other',bearer:'subsidy',reason:'修改'}],['awardVote',{eventId:'own',playerId:'a',category:'mvp'}]];
  for(const account of [owner,admin])for(const [action,payload] of requests){const before=structuredClone(s);await assert.rejects(()=>apply(s,account,action,payload,at),/已删除/);assert.deepEqual(s,before);}
 });
 test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者及管理员开放，历史榜单和档案战绩保留',async()=>{

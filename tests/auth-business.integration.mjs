@@ -1,3 +1,4 @@
+import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -69,7 +70,7 @@ try {
   let snapshot = await api.load();
   assert.equal((await command('event', { title: 'Fictional concurrency test', start, end, venue: 'fixture', address: '', capacity: 1, cancelDeadline: start, note: '', status: 'open', bookings: [{ name: 'one', start, end, pricing: 'total', cents: 1200 }] }, ownerCookie, snapshot.revision)).status, 200);
   snapshot = await api.load(); const event = snapshot.events[0];
-  const payload = playerId => ({ eventId: event.id, playerId, arrival: start, departure: end, note: '' });
+  const payload = playerId => ({ ...acceptedActivityNotice, eventId: event.id, playerId, arrival: start, departure: end, note: '' });
   const race = await Promise.all([command('register', payload('player-a'), aCookie), command('register', payload('player-b'), bCookie)]);
   assert.deepEqual(race.map(response => response.status), [200, 200]);
   snapshot = await api.load();

@@ -7,6 +7,7 @@ import {attendanceForEvent} from '../lib/domain/attendance';
 import {calculateSettlement} from '../lib/domain/money';
 import {apply} from '../lib/domain/commands';
 import {projectClubState} from '../lib/club-view';
+import {activityNoticeVersion} from '../lib/activity-notice';
 const hour=3600000,start=Date.parse('2030-10-12T13:00:00Z'),now=start-3*86400000;
 function fixture(){
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.accounts.push({id:'owner',playerId:'p0',role:'admin',email:''},{id:'other-admin',playerId:'p9',role:'admin',email:''});
@@ -37,4 +38,17 @@ test('merging activity guests creates a target-scoped identity and preserves the
  const targetGuest=s.players.find(p=>p.guestEventId===target.id)!;assert.ok(targetGuest);assert.notEqual(targetGuest.id,oldId);
  assert.ok(s.registrations.some(r=>r.eventId===target.id&&r.playerId===targetGuest.id));
  assert.ok(s.registrations.some(r=>r.eventId===source.id&&r.playerId===oldId));assert.equal(sourcePlayer.guestEventId,source.id);
+});
+
+test('merging retains original confirmation history without attesting to a new event or rewriting identities',()=>{
+ const {s,target,source}=fixture();source.start=start+4*hour;source.end=start+6*hour;s.bookings[1].start=source.start;s.bookings[1].end=source.end;
+ for(const r of s.registrations.filter(r=>r.eventId===source.id)){r.arrival=source.start;r.departure=source.end}
+ const targetRow=s.registrations[0],sourceRow=s.registrations[5];sourceRow.playerId=targetRow.playerId;
+ const targetRecord={id:'target-receipt',eventId:target.id,playerId:targetRow.playerId,at:now-1000,actorId:'owner',version:activityNoticeVersion,kind:'self' as const};
+ const sourceRecord={id:'source-receipt',eventId:source.id,bookingId:'b1',playerId:sourceRow.playerId,at:now-500,actorId:'owner',version:activityNoticeVersion,kind:'proxy' as const};
+ targetRow.noticeAcknowledgements=[targetRecord];sourceRow.noticeAcknowledgements=[sourceRecord];
+ mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'Fictional merge');
+ assert.deepEqual(s.registrations.find(r=>r.eventId===target.id&&r.playerId===targetRow.playerId)!.noticeAcknowledgements,[targetRecord,sourceRecord]);
+ assert.deepEqual(s.registrations.find(r=>r.id===sourceRow.id)!.noticeAcknowledgements,[sourceRecord]);
+ assert.equal(s.registrations.filter(r=>r.eventId===target.id).flatMap(r=>r.noticeAcknowledgements??[]).filter(r=>r.eventId===target.id).length,1);
 });

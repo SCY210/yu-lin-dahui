@@ -55,6 +55,8 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
     if(JSON.stringify(r.courtExempt)!==JSON.stringify(original.courtExempt)||JSON.stringify(r.ballExempt)!==JSON.stringify(original.ballExempt))fail('同一球友的费用豁免不同，请先核对');
     if(slots.some(x=>x.status!=='cancelled'&&(r!.bookingSignups??[]).some(y=>y.status!=='cancelled'&&x.arrival<y.departure&&x.departure>y.arrival)))fail('同一球友在两个活动报名时间重叠，请先核对');
     r.bookingSignups!.push(...slots);
+    // Carry original receipts without claiming a new agreement to the merged activity.
+    if(original.noticeAcknowledgements?.length){const known=new Set((r.noticeAcknowledgements??[]).map(record=>record.id));(r.noticeAcknowledgements??=[]).push(...original.noticeAcknowledgements.filter(record=>!known.has(record.id)))}
    }else{r={...original,id:crypto.randomUUID(),eventId:target.id,sequence:Math.max(0,...work.registrations.filter(x=>x.eventId===target.id).map(x=>x.sequence))+1,bookingSignups:slots};work.registrations.push(r)}
    syncRegistration(r);
   }

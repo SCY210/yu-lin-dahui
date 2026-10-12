@@ -1,3 +1,4 @@
+import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Actual club handler and store, using isolated transactional SQLite only.
 import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync} from 'node:fs';
@@ -26,7 +27,7 @@ try{
  await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
  const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:options.revision??(await api.load()).revision})}));
- const fresh=name=>({mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});
+ const fresh=name=>({...acceptedActivityNotice,mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});
  signIn(null);assert.equal((await post(fresh('No login'))).status,401);
  signIn('member');assert.equal((await post(fresh('Wrong origin'),crypto.randomUUID(),{origin:'https://attacker.example'})).status,403);
  assert.equal((await post(fresh('Wrong actor'),crypto.randomUUID(),{actor:'other'})).status,409);
@@ -45,10 +46,10 @@ try{
  assert.equal((await post(fresh('Fictional guest'),requestId)).status,200);assert.equal((await api.load()).players.length,4);assert.equal((await api.load()).registrations.length,1);
  const quotaId=await api.rateLimitId('creation-daily:friend:member:'+api.uploadDayWindow().day);
  assert.equal(database.sql.prepare('SELECT count FROM auth_rate_limits WHERE id=?').get(quotaId).count,1);
- assert.equal((await post({mode:'existing',playerId:friend.id,bookingId:'court',arrival:start,departure:end,note:'Reuse'})).status,200);
+ assert.equal((await post({...acceptedActivityNotice,mode:'existing',playerId:friend.id,bookingId:'court',arrival:start,departure:end,note:'Reuse'})).status,200);
  assert.equal((await api.load()).players.length,4);assert.equal(database.sql.prepare('SELECT count FROM auth_rate_limits WHERE id=?').get(quotaId).count,1,'existing friend does not debit creation quota');
  assert.equal((await post(fresh('Fictional waiting guest'))).status,200);let loaded=await api.load();const waiting=loaded.players.find(p=>p.name==='Fictional waiting guest');assert.equal(loaded.registrations.find(r=>r.playerId===waiting.id).bookingSignups[0].status,'waitlist');
- const before=await api.load();assert.equal((await post({...fresh('Invalid interval'),arrival:start-1800000})).status,400);assert.equal((await post({mode:'existing',playerId:'p2',bookingId:'court',arrival:start,departure:end,note:''})).status,403);
+ const before=await api.load();assert.equal((await post({...fresh('Invalid interval'),arrival:start-1800000})).status,400);assert.equal((await post({...acceptedActivityNotice,mode:'existing',playerId:'p2',bookingId:'court',arrival:start,departure:end,note:''})).status,403);
  assert.deepEqual((await api.load()).players,before.players);assert.deepEqual((await api.load()).registrations,before.registrations);
  database.injectFailure(query=>/INSERT INTO registrations\(/i.test(query));
  const rollback=await post(fresh('Rollback guest'));assert.equal(rollback.status,503);database.injectFailure(null);

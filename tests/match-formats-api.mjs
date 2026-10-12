@@ -1,3 +1,4 @@
+import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Actual handlers and storage, isolated in memory; never production data.
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -21,7 +22,7 @@ try{
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
  const send=async(action,payload)=>{const r=await post(await command(action,payload));assert.equal(r.status,200,await r.clone().text());return r};
  const base={start:now-60000,end:now+3600000,venue:'Fictional court',address:'',capacity:8,cancelDeadline:now-86400000,note:'',status:'open',bookings:[{name:'Court 1',start:now-60000,end:now+3600000,pricing:'hourly',cents:690}]};
- const register=async e=>{for(let i=0;i<4;i++)await send('register',{eventId:e.id,playerId:'p'+i,arrival:e.start,departure:e.end,note:''})};
+ const register=async e=>{for(let i=0;i<4;i++)await send('register',{...acceptedActivityNotice,eventId:e.id,playerId:'p'+i,arrival:e.start,departure:e.end,note:''})};
  const view=async()=>{const r=await api.GET(new Request(origin+'/api/club?month='+api.month(now)+'&year='+new Date(now).getUTCFullYear()));assert.equal(r.status,200);return r.json()};
  user('owner');await send('event',{...base,matchFormat:'singles'});let stored=await api.load(),single=stored.events[0];assert.match(single.title,/单打/);assert.equal(single.creatorId,'owner');await register(single);
  for(let i=0;i<2;i++)await send('livePreference',{eventId:single.id,playerId:'p'+i,avoidConsecutive:true});
@@ -38,7 +39,7 @@ try{
  const boards=await view();assert.equal(boards.quarterlyLeaderboard.filter(r=>r.games).length,4);assert.ok(boards.quarterlyLeaderboard.filter(r=>r.games).every(r=>r.games===1));assert.equal(boards.singlesQuarterlyLeaderboard.length,4);assert.ok(boards.singlesQuarterlyLeaderboard.every(r=>r.games===1));
  await send('eventEdit',{eventId:double.id,venue:double.venue,address:'',capacity:8,cancelDeadline:double.cancelDeadline,note:''});stored=await api.load();assert.equal(stored.events.find(e=>e.id===double.id).title,double.title);assert.equal(stored.audits.at(-1).actor,'owner');assert.equal(stored.audits.at(-1).reason,'常规修改');
  const beforePractice=await api.load();const later=now+3*3600000;await send('event',{...base,start:later,end:later+3600000,bookings:[{...base.bookings[0],start:later,end:later+3600000}],matchFormat:'practice',capacity:2,note:'Fixture footwork and net drills',practiceShuttleCents:150,practiceBallCount:2});stored=await api.load();const practice=stored.events.find(e=>e.matchFormat==='practice');assert.match(practice.title,/练球/);assert.equal(practice.practiceShuttleCents,150);assert.equal(practice.pointsPlan,undefined);assert.equal(stored.costs.find(c=>c.eventId===practice.id).used,2);const court=stored.bookings.find(b=>b.eventId===practice.id);assert.equal(court.signupCapacity,2);
- for(let i=0;i<3;i++){user(i?'member'+i:'owner');await send('courtRegister',{bookingId:court.id,playerId:'p'+i,arrival:court.start,departure:court.end,note:''})}stored=await api.load();assert.deepEqual(stored.registrations.filter(r=>r.eventId===practice.id).map(r=>r.status).sort(),['confirmed','confirmed','waitlist']);
+ for(let i=0;i<3;i++){user(i?'member'+i:'owner');await send('courtRegister',{...acceptedActivityNotice,bookingId:court.id,playerId:'p'+i,arrival:court.start,departure:court.end,note:''})}stored=await api.load();assert.deepEqual(stored.registrations.filter(r=>r.eventId===practice.id).map(r=>r.status).sort(),['confirmed','confirmed','waitlist']);
  user('owner');assert.equal((await post(await command('liveStart',{eventId:practice.id}))).status,400);assert.equal((await post(await command('pointsModeSelect',{eventId:practice.id,mode:'fixed'}))).status,400);assert.equal((await post(await command('event',{...base,matchFormat:'practice',note:''}))).status,400);
  const practiceView=await view();assert.deepEqual(practiceView.quarterlyLeaderboard,boards.quarterlyLeaderboard);assert.deepEqual(practiceView.singlesQuarterlyLeaderboard,boards.singlesQuarterlyLeaderboard);assert.equal((await api.load()).matches.length,beforePractice.matches.length);assert.equal(practiceView.drafts.find(d=>d.eventId===practice.id).bills.length,2);assert.match(practiceView.events.find(e=>e.id===practice.id).note,/footwork/);
  console.log('PASS practice API: persisted third type/content/ball costs, capacity and waitlist, competitive rejection, no ranking change and projected fee estimates');

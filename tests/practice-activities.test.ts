@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -25,7 +27,7 @@ test('practice needs content and validates nonnegative integer ball costs atomic
  const s=seed();await apply(s,s.accounts[0],'event',{...input,practiceBallCount:0},start-hour);assert.equal(s.costs.length,0);
 });
 test('signup capacity, waitlist and time-based practice fees use the ordinary server workflow',async()=>{
- const {s,e}=await fixture();for(let i=0;i<4;i++)await apply(s,s.accounts[i],'courtRegister',{bookingId:s.bookings[0].id,playerId:'p'+i,arrival:start,departure:e.end,note:''},start-hour/2);
+ const {s,e}=await fixture();for(let i=0;i<4;i++)await apply(s,s.accounts[i],'courtRegister',{...acceptedActivityNotice,bookingId:s.bookings[0].id,playerId:'p'+i,arrival:start,departure:e.end,note:''},start-hour/2);
  assert.deepEqual(s.registrations.map(r=>r.status),['confirmed','confirmed','confirmed','waitlist']);
  const preview=calculateSettlementPreview(s,e,start+hour);assert.equal(preview.bills.length,3);assert.ok(preview.bills.every(b=>b.court===460&&b.ball===100&&b.total===560));assert.equal(preview.unallocated,0);assert.deepEqual(preview,calculateSettlement(s,e,e.end));
  const view=projectClubState(s,s.accounts[0],'2030-10',2030,start+hour);assert.equal(view.events[0].note,input.note);assert.equal(view.rotationPlans[e.id].usedCourts,0);assert.equal(s.matches.length,0);
