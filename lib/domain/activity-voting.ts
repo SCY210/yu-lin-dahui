@@ -1,7 +1,12 @@
 import {canManageEvent} from './permissions';
-import {isPractice} from './match-format';
+import {isPractice,eventFormat} from './match-format';
 import {eventStatusAt} from './event-lifecycle';
-import type {Account,Event,State} from './types';
+import {month,type Account,type Event,type State} from './types';
+
+/** MVP voting closes this long after the scheduled end; the most-voted players then receive `mvpPoints`. */
+export const awardVotingHours=24;
+export const mvpPoints=5;
+export const awardVotingClosesAt=(e:Pick<Event,'end'>)=>e.end+awardVotingHours*3600000;
 
 type VotingState={players:Pick<State['players'][number],'id'|'enabled'>[];registrations:State['registrations'];attendance:State['attendance'];matches?:State['matches']};
 
@@ -17,6 +22,7 @@ export function awardCandidateIds(s:VotingState,eventId:string,now=Date.now()):s
 
 export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()):boolean{
  if(isPractice(e)||e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start)return false;
+ if(now>=awardVotingClosesAt(e))return false;
  // Missing score entry must not hold a finished activity's voting hostage.
  if(now>=e.end)return true;
  return eventStatusAt(e,now)==='ended'&&!s.matches.some(m=>m.eventId===e.id&&m.status==='playing');
@@ -24,4 +30,18 @@ export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()
 
 export function canCastAwardVote(s:VotingState&Pick<State,'matches'>,e:Event,a:Account,now=Date.now()):boolean{
  return isAwardVotingOpen(s,e,now)&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
+}
+
+/** The final MVP of an activity once voting has closed: everyone tied for the most votes (at least one). */
+export function mvpWinners(s:Pick<State,'awardVotes'>,e:Pick<Event,'id'|'end'>,now:number){
+ if(now<awardVotingClosesAt(e))return [];
+ const counts=new Map<string,number>();
+ for(const v of s.awardVotes)if(v.eventId===e.id&&v.category==='mvp')counts.set(v.playerId,(counts.get(v.playerId)??0)+1);
+ const max=Math.max(0,...counts.values());
+ return max?[...counts].filter(([,n])=>n===max).map(([id])=>id).sort():[];
+}
+/** Season points for MVPs, on the activity's singles or doubles board in the month it started. */
+export function mvpPointAdjustments(s:Pick<State,'events'|'awardVotes'>,now:number){
+ return s.events.filter(e=>e.deletedAt===undefined&&!isPractice(e)&&!e.tournament&&!['draft','cancelled'].includes(e.status)).flatMap(e=>
+  mvpWinners(s,e,now).map(playerId=>({playerId,eventId:e.id,period:month(e.start),format:eventFormat(e) as 'singles'|'doubles',delta:mvpPoints})));
 }

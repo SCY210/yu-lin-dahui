@@ -31,3 +31,7 @@ Ended and cancelled activities are collapsed under a **history** disclosure, new
 ## Toasts in the ink-wash theme
 
 `app/wuxia-toast.css` restyles Sonner toasts under `html.wuxia-theme`: a rice-paper background, square corners, serif type, and a thick left edge in the theme's pigments (green for success, cinnabar for errors and plain toasts, ochre for warnings). The classic theme keeps its existing colours.
+
+## Header and home shortcuts
+
+The treasure shop card on home and on the member page is replaced by a gift icon to the left of the reminders button in the header, on every page. Its accessible name and tooltip carry the balance. Home no longer shows the create-activity, create-tournament and activity-guide buttons; they remain on the activities page. The member page no longer lists the account-notice receipts; the receipts themselves are still stored, as the privacy notice describes.
