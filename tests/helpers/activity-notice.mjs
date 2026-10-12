@@ -6,3 +6,5 @@ const source=readFileSync(new URL('../../lib/activity-notice.ts',import.meta.url
 const version=source.match(/activityNoticeVersion\s*=\s*['"]([^'"]+)['"]/)?.[1];
 if(!version)throw new Error('Cannot read canonical activity notice version');
 export const acceptedActivityNotice={noticeAccepted:true,noticeVersion:version};
+export const activityNoticeVersionLabel=source.match(/activityNoticeVersionLabel\s*=\s*['"]([^'"]+)['"]/)?.[1];
+if(!activityNoticeVersionLabel)throw new Error('Cannot read canonical activity notice label');

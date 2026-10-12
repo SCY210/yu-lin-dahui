@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Real club handlers and transactions against isolated SQLite; never production.
 import assert from 'node:assert/strict';
 import {AsyncLocalStorage} from 'node:async_hooks';
@@ -41,7 +42,7 @@ try{
  s.accounts=['owner','admin','member','other','disabled'].map((id,i)=>({id,email:'',playerId:'p'+i,role:i<2?'admin':'member'}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:a.id!=='disabled',ratingReason:''}));
  s.players.push({id:'p5',name:'Fictional guest',ownerId:'member',guestEventId:'fictional-event',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
- await api.save(s,'seed',api.emptyState());
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());
  await rejectUnchanged(null,'treasureProduct',productInput,401);
  await rejectUnchanged('owner','treasureProduct',productInput,403,{headers:{Origin:'https://attacker.invalid'}});
  for(const actor of ['member','admin']){

@@ -1,3 +1,4 @@
+import {noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../lib/domain/notice-gate';
 import {z} from 'zod';
 import {getAppUser} from '../../../lib/auth';
 import {raw,load} from '../../../lib/store';
@@ -17,6 +18,8 @@ export async function GET(){try{await administrator();const doc=await readDocume
 export async function POST(req:Request){
  try{
   assertWriteRequest(req);const accountId=await administrator(),p=requestSchema.parse(await readJsonBody(req));
+  const state=await load(),account=state.accounts.find(a=>a.id===accountId);if(!account)return response({error:'账号不可用'},403);
+  const notice=await noticeContent();if(requiresAccountNotice(state,account,notice))return noticeGateResponse(state,account,notice);
   if(p.action==='initialize'){
    const existing=await readDocument();if(existing?.version===2)return response(simulationView(existing,Date.now()));
    const doc=createSimulation(Date.now(),await load());

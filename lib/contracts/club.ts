@@ -1,4 +1,5 @@
 import type { projectClubState } from '../club-view';
+import type { accountNoticeView } from '../domain/notice-gate';
 import type { AppUser } from '../auth';
 
 /** Derived from the server projection: private State fields never enter this contract. */
@@ -8,5 +9,5 @@ export type ClubAuth = {
   method: AppUser['method']; username: string | null; passwordEnabled: boolean;
   isOwner: boolean; canChangeUsername: boolean; usernameChangedAt: number | null;
 };
-export type ClubData = ClubView & { loginAccounts: LoginAccount[]; auth: ClubAuth };
+export type ClubData = ClubView & { accountNotice:ReturnType<typeof accountNoticeView>; loginAccounts: LoginAccount[]; auth: ClubAuth };
 export type ClubEntry = { setup: true; user: { name: string; email: string } } | { join: true; user: { name: string } };

@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import React,{act} from 'react';
 import {create} from 'react-test-renderer';
-import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
+import {acceptedActivityNotice,activityNoticeVersionLabel} from './helpers/activity-notice.mjs';
 
 const shell="import{createElement as h}from'react';const box=({children})=>h('section',null,children);";
 await build({entryPoints:['tests/fixtures/activity-notice-harness.tsx'],outfile:'.test-output/activity-notice-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*'],loader:{'.css':'empty'},banner:{js:"import{createRequire}from'node:module';const require=createRequire(import.meta.url);"},plugins:[{name:'notice-dialog-shell',setup(b){
@@ -20,7 +20,7 @@ const submit=()=>ui.root.findAllByType('button').find(n=>n.props.type==='submit'
 const save=async()=>act(async()=>ui.root.findByType('form').props.onSubmit({preventDefault(){}}));
 try{
  await mount();assert.equal(checkbox().props.checked,false);assert.ok(submit().props.disabled);await save();assert.equal(calls.length,0,'programmatic submit also requires explicit confirmation');
- let content=text(ui.toJSON());for(const phrase of ['活动参与须知与风险提示','自愿参加与运动风险','现场安全','费用','个人资料由本人自愿填写','照片对外公开授权','2026年10月12日 · 第1版'])assert.ok(content.includes(phrase),phrase);
+ let content=text(ui.toJSON());for(const phrase of ['活动参与须知与风险提示','自愿参加与运动风险','现场安全','费用','个人资料由本人自愿填写','照片对外公开授权',activityNoticeVersionLabel])assert.ok(content.includes(phrase),phrase);
  assert.ok(ui.root.findAllByType('details').length>0,'full readable notice remains available inside disclosure');
  await act(()=>checkbox().props.onCheckedChange('indeterminate'));assert.ok(submit().props.disabled);
  await act(()=>checkbox().props.onCheckedChange(true));assert.equal(submit().props.disabled,false);await save();assert.equal(calls.length,1);assert.equal(calls[0].payload.noticeAccepted,true);assert.equal(calls[0].payload.noticeVersion,acceptedActivityNotice.noticeVersion);

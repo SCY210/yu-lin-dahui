@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Actual handlers and storage, isolated in memory; never production data.
 import assert from 'node:assert/strict';
@@ -16,7 +17,7 @@ fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const 
 const api=await import(pathToFileURL(resolve('.test-output/formats-api.mjs')).href);
 try{
  const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.progressionVersion='weekly-v2';s.settings.scoringPolicy='all-ranked-v1';s.settings.strengthVersion='realm-elo-v2';
- s.accounts=Array.from({length:6},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await api.save(s,'seed',empty);
+ s.accounts=Array.from({length:6},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'};
  const command=async(action,payload)=>({action,payload,requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision});
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));

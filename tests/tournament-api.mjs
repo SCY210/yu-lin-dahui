@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Actual handlers and storage, isolated in memory; never production data.
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -17,7 +18,7 @@ try{
  const s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=Array.from({length:8},(_,i)=>({id:i?'member'+i:'owner',email:'',playerId:'p'+i,role:i?'member':'admin'}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  const e={id:'t',creatorId:'owner',title:'Fictional competition',matchFormat:'doubles',tournament:{phase:'setup',teams:[],groups:[],advance:2,fixtures:[]},start:now-3600000,end:now+3600000,venue:'Fictional venue',address:'',capacity:8,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',courtMode:'interval',ballMode:'interval',attendanceMode:'automatic'};
- s.events=[e];s.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1000}];s.registrations=s.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await api.save(s,'seed',api.emptyState());
+ s.events=[e];s.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1000}];s.registrations=s.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());
  const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'};
  const request=async(action,payload)=>({action,payload,requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision});
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));

@@ -3,7 +3,7 @@ import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
 import {profileRestrictionsFromConfig} from './profile-policy-config';
-const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger'] as const;
+const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger', 'accountNoticeReceipts'] as const;
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
 /** Indexed metadata reads verify freshness and current permissions on every poll. */
@@ -82,6 +82,9 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
                 if(n === 'treasureOrders'){columns.push('product_id','account_id','request_id');values.push(r.productId,r.accountId,r.requestId)}
                 else {columns.push('actor','request_id');values.push(r.actor,r.requestId)}
             }
+            else if (n === 'accountNoticeReceipts') {
+                columns.push('account_id','notice_version','content_hash'); values.push(r.accountId,r.version,r.contentHash);
+            }
             else if (n === 'treasureProducts') {
                 // Catalog records have no activity foreign key.
             }
@@ -103,6 +106,7 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
             }
             columns.push('payload');
             values.push(JSON.stringify(r));
+            if(n==='accountNoticeReceipts'){qs.push(db.prepare(`INSERT INTO ${n}(${columns.join(',')}) VALUES(${columns.map(()=>'?').join(',')})`).bind(...values));continue}
             qs.push(db.prepare(`INSERT INTO ${n}(${columns.join(',')}) VALUES(${columns.map(() => '?').join(',')}) ON CONFLICT(id) DO UPDATE SET ${columns.slice(1).map(c => c + '=excluded.' + c).join(',')}`).bind(...values));
         }
     }

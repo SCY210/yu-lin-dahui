@@ -4,8 +4,8 @@ import {activityNoticeTitle,activityNoticeVersion,activityNoticeVersionLabel,act
 import {fmt} from './form-fields';
 import './activity-notice.css';
 
-export function ActivityNoticeDetails(){
- return <details className="activity-notice"><summary>{activityNoticeTitle}<span>展开阅读</span></summary><div className="activity-notice-body"><p>{activityNoticeSummary}</p>{activityNoticeSections.map(section=><section key={section.title}><h4>{section.title}</h4><p>{section.body}</p></section>)}<small>须知版本：{activityNoticeVersionLabel}</small></div></details>;
+export function ActivityNoticeDetails({defaultOpen=false}:{defaultOpen?:boolean}){
+ return <details className="activity-notice" open={defaultOpen||undefined}><summary>{activityNoticeTitle}<span>展开阅读</span></summary><div className="activity-notice-body"><p>{activityNoticeSummary}</p>{activityNoticeSections.map(section=><section key={section.title}><h4>{section.title}</h4><p>{section.body}</p></section>)}<small>须知版本：{activityNoticeVersionLabel}</small></div></details>;
 }
 
 export default function ActivityNotice({checked,onCheckedChange,proxy=false}:{checked:boolean;onCheckedChange:(checked:boolean)=>void;proxy?:boolean}){

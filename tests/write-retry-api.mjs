@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Real API/store against isolated in-memory SQLite: a resent write never saves twice
 // and never runs as a different account. No production data.
@@ -23,7 +24,7 @@ try{
  s.events=[{id:'event',creatorId:'owner',title:'Fictional retry activity',start,end,venue:'Fictional venue',address:'',capacity:8,signupDeadline:start-7200000,cancelDeadline:start-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:8}];
  const guest=name=>({...acceptedActivityNotice,mode:'new',bookingId:'court',arrival:start,departure:end,note:'',name});
- await api.save(s,'seed',initial);
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',initial);
  const origin='https://club.example';
  const signIn=id=>fixture.user={userId:id,email:'',username:id,displayName:id,fullName:null,method:'password'};
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));

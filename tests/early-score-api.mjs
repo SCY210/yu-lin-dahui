@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Published results may be entered before their activity; no production requests.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -28,7 +29,7 @@ try{
  s.registrations=s.players.slice(0,4).map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,status:'confirmed',sequence:i,arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
  s.rounds=[0,1,2].map(i=>({id:'round'+i,eventId:e.id,start:e.start+i*900000,duration:15,status:i===2?'draft':'published',eligible:['p0','p1','p2','p3'],rest:[],seed:i+1,pointsSlot:i+1}));
  s.matches=s.rounds.map((r,i)=>({id:'match'+i,eventId:e.id,roundId:r.id,courtId:'court',a:['p0','p1'],b:['p2','p3'],status:r.status,start:null,end:null,scoreA:null,scoreB:null,games:[],locked:false,enteredBy:null,monthly:true,elo:true}));
- await api.save(s,'seed',api.emptyState());await api.loadClubState();
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());await api.loadClubState();
  const payload={matchId:'match0',a:21,b:19,games:[{a:21,b:19}],reason:'Published result entered early'};
  user(null);assert.equal((await post(payload)).status,401);user('outsider');assert.equal((await post({...payload,eventId:e.id,earlyScoreAt:0})).status,403);
  user('member');let before=await api.load();assert.equal((await post({...payload,a:21,b:20,games:[{a:21,b:20}]})).status,400);assert.deepEqual(await api.load(),before);

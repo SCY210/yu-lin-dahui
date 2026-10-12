@@ -85,6 +85,13 @@
       "when": 1791755559918,
       "tag": "0011_treasure_shop",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1791838800000,
+      "tag": "0012_account_notice_receipts",
+      "breakpoints": true
     }
   ]
 }

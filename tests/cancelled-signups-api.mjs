@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Actual cancellation handlers and projection, backed by isolated SQLite only.
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ try{
  const event=(id,at)=>({id,creatorId:'host',title:'Fictional '+id,start:at,end:at+2*hour,venue:'Fictional venue',address:'',capacity:4,signupDeadline:at-2*hour,cancelDeadline:at-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'});
  const lateStart=Math.ceil((now+12*hour)/1800000)*1800000;s.events=[event('e',start),event('late',lateStart)];
  s.bookings=[{id:'c1',eventId:'e',name:'First',start,end:start+hour,pricing:'total',cents:1200},{id:'c2',eventId:'e',name:'Second',start:start+hour,end:start+2*hour,pricing:'total',cents:1200},{id:'late-court',eventId:'late',name:'Late',start:lateStart,end:lateStart+2*hour,pricing:'total',cents:1200}];
- await api.save(s,'seed',api.emptyState());const origin='https://club.example',signIn=id=>fixture.user={userId:id,method:'password',displayName:'Fictional '+id};
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());const origin='https://club.example',signIn=id=>fixture.user={userId:id,method:'password',displayName:'Fictional '+id};
  const post=async(action,payload,requestId=crypto.randomUUID())=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action,payload,requestId,actor:fixture.user.userId,revision:(await api.load()).revision})}));
  const view=async()=>{const r=await api.GET(new Request(origin+'/api/club'));assert.equal(r.status,200);return r.json()};
  const join=(bookingId,playerId)=>{const b=s.bookings.find(b=>b.id===bookingId);return post('courtRegister',{...acceptedActivityNotice,bookingId,playerId,arrival:b.start,departure:b.end,note:''})};

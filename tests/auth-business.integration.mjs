@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
@@ -55,7 +56,7 @@ try {
     const credential = api.makePassword(password);
     return database.db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(id, id, credential.salt, credential.hash, Date.now());
   });
-  await api.save(state, 'fixture-seed', previous, extra);
+  await seedAccountNoticeFixture(state);await api.save(state, 'fixture-seed', previous, extra);
 
   for (const input of [null, [], 'invalid', { action: 'unknown' }]) assert.equal((await auth(input)).status, 400);
   assert.equal((await auth({ action: 'login', username: 'a', password: credentials.a }, '', 'https://attacker.example')).status, 403);

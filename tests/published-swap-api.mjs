@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Real API/store transactions with future published rounds; never production.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -31,7 +32,7 @@ try{
  s.rounds=[{id:'round',eventId:e.id,start,duration:15,status:'published',eligible:s.players.slice(0,9).map(p=>p.id),rest:['p8'],seed:1,pointsSlot:1},{id:'later-round',eventId:e.id,start:start+900000,duration:15,status:'published',eligible:['p0','p1','p2','p3'],rest:[],seed:2,pointsSlot:2}];
  const match=(id,roundId,courtId,a,b)=>({id,eventId:e.id,roundId,courtId,a,b,status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[],locked:false,enteredBy:null,monthly:true,elo:true});
  s.matches=[match('m0','round','court0',['p0','p1'],['p2','p3']),match('m1','round','court1',['p4','p5'],['p6','p7']),match('later','later-round','court0',['p0','p1'],['p2','p3'])];
- await api.save(s,'seed',api.emptyState());await api.loadClubState();let stored=await api.load();const later=structuredClone(stored.matches.find(m=>m.id==='later'));
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());await api.loadClubState();let stored=await api.load();const later=structuredClone(stored.matches.find(m=>m.id==='later'));
  const ctx={data:{...stored,me:stored.accounts[0],social:{matchLevels:{}}},name:id=>stored.players.find(p=>p.id===id)?.name??id,admin:true,busy:false,open(){},send(){},setDanger(){}};
  const html=renderToStaticMarkup(createElement(Scheduling,{e,ctx}));assert.ok(html.includes('选择交换：Player 0'));assert.ok(html.includes('选择交换：Player 9'),'later signup visible on bench');assert.ok(html.includes('选择交换：Fictional guest'));assert.ok(!html.includes('选择交换：Player 10'));assert.ok(!html.includes('选择交换：Player 11'));
  user(null);await reject('swap',swap(stored,'p0','p9'),401);user('member2');await reject('swap',{...swap(stored,'p0','p9'),eventId:e.id},403);

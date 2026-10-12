@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Real API/store against isolated in-memory SQLite; no production grants.
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -23,7 +24,7 @@ try{
  const e={id:plan.eventId,creatorId:'owner',title:'Fictional Thursday',start:plan.fromStart,end:plan.fromEnd,venue:'Fictional',address:'',capacity:6,signupDeadline:plan.fromEnd,cancelDeadline:plan.fromStart-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
  s.events=[e,{...e,id:'foreign',status:'draft'}];s.bookings.push({id:'court',eventId:e.id,name:'Fictional',start:e.start,end:e.end,pricing:'total',cents:0});
  s.registrations=s.players.map((p,i)=>({id:'r'+i,eventId:e.id,playerId:p.id,sequence:i+1,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
- s.rounds.push({id:'round',eventId:e.id,start:e.start,duration:15,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});s.matches.push({id:'match',eventId:e.id,roundId:'round',courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:e.start,end:e.start+900000,scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:'owner',games:[{a:21,b:19}]});await api.save(s,'seed',empty);
+ s.rounds.push({id:'round',eventId:e.id,start:e.start,duration:15,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});s.matches.push({id:'match',eventId:e.id,roundId:'round',courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:e.start,end:e.start+900000,scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:'owner',games:[{a:21,b:19}]});await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  await Promise.all(Array.from({length:4},()=>api.runRequestedEventDateRepair()));let fixed=await api.load();assert.equal(fixed.events[0].start,plan.toStart);assert.equal(fixed.bookings[0].end,plan.toEnd);assert.equal(fixed.rounds[0].start,plan.toStart);assert.equal(fixed.matches[0].start,plan.toStart);assert.equal(fixed.matches[0].scoreA,21);assert.equal(fixed.registrations[0].arrival,plan.toStart);assert.equal(fixed.events[1].start,plan.fromStart);assert.equal(fixed.audits.filter(a=>a.action==='repairEventDate').length,1);assert.equal(fixed.revision,2);assert.ok(await api.committed(plan.key));
  const snapshot=structuredClone(fixed);await api.runRequestedEventDateRepair({eventId:'foreign',toStart:0});assert.deepEqual(await api.load(),snapshot);
  const rollback=structuredClone(fixed);rollback.matches[0].scoreA=30;await assert.rejects(()=>api.save(rollback,plan.key,fixed),/UNIQUE/);assert.deepEqual(await api.load(),snapshot);

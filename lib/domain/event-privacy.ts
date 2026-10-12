@@ -9,6 +9,8 @@ export function canRecoverEvent(s:State,a:Pick<Account,'id'>,e:Pick<Event,'creat
  * Persisted records and the historical scoring ledger are never changed. */
 export function privateEventState(s:State,a:Account):State{
  if(!isClubOwner(s,a)){
+  const receipts=s.accountNoticeReceipts??[],ownReceipts=receipts.filter(r=>r.accountId===a.id);
+  if(ownReceipts.length!==receipts.length)s={...s,accountNoticeReceipts:ownReceipts};
   const treasureLedger=s.treasureLedger.filter(r=>r.playerId===a.playerId),treasureOrders=s.treasureOrders.filter(o=>o.playerId===a.playerId),treasureProducts=s.treasureProducts.filter(p=>p.active),audits=s.audits.filter(row=>{
    if(!row.action.startsWith('treasure'))return true;
    const changes=row.changes;return !!changes&&typeof changes==='object'&&'playerId' in changes&&changes.playerId===a.playerId;

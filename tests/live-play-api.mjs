@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Actual handlers and storage, isolated in memory; never production data.
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -17,7 +18,7 @@ try{
  const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.strengthVersion='realm-elo-v2';
  s.accounts=Array.from({length:9},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const event={id:'live-event',creatorId:'owner',title:'Fictional live play',start:now-3600000,end:now+3600000,venue:'Fictional venue',address:'',capacity:8,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};s.events.push(event);s.bookings.push({id:'court',eventId:event.id,name:'Court 1',start:event.start,end:event.end,pricing:'total',cents:1000});
- s.registrations=s.players.slice(0,8).map((p,i)=>({id:'reg'+i,eventId:event.id,playerId:p.id,sequence:i,status:'confirmed',arrival:event.start,departure:event.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await api.save(s,'seed',empty);
+ s.registrations=s.players.slice(0,8).map((p,i)=>({id:'reg'+i,eventId:event.id,playerId:p.id,sequence:i,status:'confirmed',arrival:event.start,departure:event.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'};
  const request=async(action,payload,requestId=crypto.randomUUID())=>({action,payload,requestId,revision:(await api.loadClubState()).revision});
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));

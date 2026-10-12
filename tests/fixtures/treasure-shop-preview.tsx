@@ -27,7 +27,7 @@ function initialState(){
  return s;
 }
 const actorFor=(s:ReturnType<typeof initialState>,mode:Mode)=>s.accounts[mode==='owner'?0:mode==='member'?1:2];
-function projection(s:ReturnType<typeof initialState>,mode:Mode):ClubData{const a=actorFor(s,mode),isOwner=mode==='owner';return {...projectClubState(s,a,'2026-10',2026,now+120000),loginAccounts:[],auth:{method:'password',username:mode,passwordEnabled:true,isOwner,canChangeUsername:true,usernameChangedAt:null}}}
+function projection(s:ReturnType<typeof initialState>,mode:Mode):ClubData{const a=actorFor(s,mode),isOwner=mode==='owner';return {...projectClubState(s,a,'2026-10',2026,now+120000),accountNotice:{required:false,currentVersion:'local-preview',contentHash:'',acceptedAt:null,receipts:[]},loginAccounts:[],auth:{method:'password',username:mode,passwordEnabled:true,isOwner,canChangeUsername:true,usernameChangedAt:null}}}
 export function fixtureData(mode:Mode='owner'){return projection(initialState(),mode)}
 
 /** Synthetic local fixture only: no fetch, credentials, or live persistence. */

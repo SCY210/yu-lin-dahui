@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Actual maintenance/handlers against isolated SQLite; no production requests.
 import assert from 'node:assert/strict';
 import {mkdirSync} from 'node:fs';
@@ -22,7 +23,7 @@ try{
  s.rounds.push({id:'old-round',eventId:oldEvent.id,start:at-60000,duration:1,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});
  s.matches.push({id:'old-match',eventId:oldEvent.id,roundId:'old-round',courtId:'old-court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:at-60000,end:at,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'owner'});
  for(const [i,p]of s.players.entries())s.registrations.push({id:'r'+i,eventId:current.id,playerId:p.id,sequence:i,status:'confirmed',arrival:current.start,departure:current.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
- api.replayRating(s,at+1);assert.equal(s.players[0].rating,1016);await api.save(s,'seed',empty);
+ api.replayRating(s,at+1);assert.equal(s.players[0].rating,1016);await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const raw=await api.load(),fresh=await api.loadClubState();assert.equal(fresh.revision,raw.revision);assert.ok(fresh.players.every(p=>p.rating===1000&&p.ratedGames===0));assert.deepEqual(fresh.matches,raw.matches);assert.equal((await api.load()).players[0].rating,1016,'Read-only catch-up must not manufacture a maintenance write');
  assert.equal((await api.loadClubState()).revision,raw.revision);assert.deepEqual((await api.load()).audits,raw.audits);
  const origin='https://club.example',read=await api.GET(new Request(origin+'/api/club?month='+api.month(at)+'&year='+new Date(at).getUTCFullYear()));assert.equal(read.status,200);const view=await read.json();assert.ok(Array.isArray(view.leaderboard));assert.ok(view.players.every(p=>p.rating===1000));assert.equal(view.quarterlyLeaderboard.find(p=>p.playerId==='p0').points,3);

@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 // Actual club handler and store, using isolated transactional SQLite only.
 import assert from 'node:assert/strict';
@@ -24,7 +25,7 @@ try{
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  s.events=[{id:'event',creatorId:'owner',title:'Fictional guest signup',start,end,venue:'Fictional venue',address:'',capacity:1,signupDeadline:end,cancelDeadline:start-86400000,status:'open',note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:1}];
- await api.save(s,'seed',empty);
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
  const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:options.revision??(await api.load()).revision})}));
  const fresh=name=>({...acceptedActivityNotice,mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});

@@ -97,3 +97,13 @@ test('weak and list GET validators reuse an account-scoped entry with one canoni
  assert.equal(cache.matches('W/'+token,{...version,revision:version.revision+1},identity,'2026-10',2026,now+1),false);
  assert.equal(cache.matches('W/'+token,version,identity,'2026-10',2026,now+60000),false);
 });
+
+
+test('notice version and exact text hash invalidate unchanged business revision validators',()=>{
+ const {version,identity}=fixture(),cache=createClubReadCache();
+ const initial={...version,noticeScope:{version:'notice-v1',contentHash:'hash-a'}};
+ const token=cache.remember(initial,identity,'2026-10',2026,now+60000,now)!;
+ assert.equal(cache.matches(token,initial,identity,'2026-10',2026,now+1),true);
+ assert.equal(cache.matches(token,{...version,noticeScope:{version:'notice-v2',contentHash:'hash-a'}},identity,'2026-10',2026,now+1),false);
+ assert.equal(cache.matches(token,{...version,noticeScope:{version:'notice-v1',contentHash:'hash-b'}},identity,'2026-10',2026,now+1),false);
+});

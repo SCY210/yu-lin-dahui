@@ -4,10 +4,10 @@ import {inactivityDeadline,isRatedMatch} from './domain/realm-rating';
 
 const roundDuration=20*60000;
 const maxAge=5*60000;
-export type ClubReadVersion={revision:number;settings:Settings;account:Account|null;profileRestrictions?:State['profileRestrictions']};
+export type ClubReadVersion={revision:number;settings:Settings;account:Account|null;profileRestrictions?:State['profileRestrictions'];noticeScope?:{version:string;contentHash:string}};
 export type ClubReadIdentity={userId:string;method:string;username:string|null};
 const scope=(version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number)=>JSON.stringify([
- version.profileRestrictions??null,version.revision,version.settings.initialized,version.settings.ownerAccountId??null,version.account,
+ version.noticeScope??null,version.profileRestrictions??null,version.revision,version.settings.initialized,version.settings.ownerAccountId??null,version.account,
  identity.userId,identity.method,identity.username,period,year,
 ]);
 

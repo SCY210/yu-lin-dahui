@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Real handlers, transactional SQLite, fictional accounts only. No remote data.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -26,7 +27,7 @@ try{
  s.events=[event('e'),event('legacy'),event('closed',now+hour),event('ended',now-3*hour)];
  s.bookings=[{id:'c',eventId:'e',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:1},...s.events.filter(e=>['closed','ended'].includes(e.id)).map(e=>({id:e.id+'-court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200,signupCapacity:4}))];
  s.registrations=[{id:'legacy-row',eventId:'legacy',playerId:'p4',sequence:1,status:'confirmed',arrival:start,departure:end,note:'Old signup without a confirmation',cancelRequested:false,registeredAt:now-1000,joinedAsWaitlist:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}];
- await api.save(s,'seed',api.emptyState());
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());
  const origin='https://club.example',signIn=id=>fixture.user={userId:id,method:'password',displayName:'Fictional '+id};
  const post=async(action,payload,key=crypto.randomUUID(),revision)=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action,payload,requestId:key,actor:fixture.user.userId,revision:revision??(await api.load()).revision})}));
  const view=async()=>{const response=await api.GET(new Request(origin+'/api/club'));assert.equal(response.status,200);return response.json()};

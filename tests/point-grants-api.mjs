@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 // Real API/store against isolated in-memory SQLite; no production grants.
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -15,7 +16,7 @@ fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const 
 const api=await import(pathToFileURL(resolve('.test-output/grants-api-bundle.mjs')).href);
 try{
  const initial=api.emptyState(),s=api.emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.strengthVersion='realm-elo-v2';
- s.accounts=['owner','admin','member'].map((id,i)=>({id,email:'',role:i<2?'admin':'member',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await api.save(s,'seed',initial);
+ s.accounts=['owner','admin','member'].map((id,i)=>({id,email:'',role:i<2?'admin':'member',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await seedAccountNoticeFixture(s);await api.save(s,'seed',initial);
  const origin='https://club.example',payload={playerId:'p2',period:'2026-10',points:25,reason:"组织奖励 '); DROP TABLE players; --"};
  const user=id=>fixture.user=id?{userId:id,displayName:id,method:'password'}:null;
  const post=(body,extra={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...extra},body:JSON.stringify(body)}));

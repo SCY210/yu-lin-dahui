@@ -1,0 +1,13 @@
+# Account activity-notice gate
+
+Authenticated accounts must actively confirm the current activity notice before entering the application interface or performing business mutations. This includes the owner. The unchecked confirmation is separate from browser notification permission and from each activity signup acknowledgement. Logout and credential recovery remain available.
+
+The server owns identity, time, text and SHA-256 digest. Clients submit only explicit acceptance plus the displayed version and digest. Old bundles cannot accept unseen updated text. A successful POST alone does not unlock the UI: a refreshed server projection must report acceptance. Failed saves retain the dialog. There is no local-storage acceptance flag or historical-registration backfill.
+
+`accountNoticeReceipts` stores account/player IDs, server time, version, complete canonical JSON text snapshot, digest and confirmation method. Its account/version/hash unique index deduplicates retries. Application persistence only appends; database triggers reject updates/deletes. Evidence survives account retirement. Receipts are technical records, not verified electronic signatures, notarization or guaranteed exemption from liability. The operator must handle retention, correction and erasure requests through a controlled process.
+
+`GET /api/club?noticeExport=1` exports only the authenticated account's evidence. `noticeExport=all` requires the owner. Ordinary administrator business exports exclude other accounts' receipts. The My page offers the corresponding evidence downloads. Authenticated business GET data continues to use its existing access controls; the gate is not a replacement for data authorization.
+
+Before changing any displayed agreement text, update `lib/activity-notice.ts` and bump its version. Preserve old persisted receipts and never rewrite them to a new version. Migration `0012_account_notice_receipts.sql` only adds the receipt table/index/triggers; existing event acknowledgements remain intact.
+
+Regression coverage uses fictional isolated SQLite accounts, including owner/non-owner enforcement, alternate account login, version changes, exact hashes, repeat/concurrent confirmation, rollback, export boundaries and immutable history. The React gate fixture exercises explicit checking, save errors, stale bundles and parent-controlled unlock. Tests must never accept a legal notice on a production member's behalf.

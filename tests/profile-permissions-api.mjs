@@ -1,3 +1,4 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 import assert from 'node:assert/strict';
 import {mkdirSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -23,7 +24,7 @@ try{
  const s=api.emptyState(),previous=structuredClone(s);s.settings={...s.settings,initialized:true,ownerAccountId:'owner',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',progressionVersion:'weekly-v2'};
  for(const id of ['owner','restricted','other','administrator']){s.accounts.push({id,email:'',role:id==='owner'||id==='administrator'?'admin':'member',playerId:id+'-player'});s.players.push({id:id+'-player',ownerId:id,name:'Fictional '+id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'',profile:{gender:'undisclosed',years:5,hand:'left',preference:'mixed',style:'existing',equipment:'existing',racket:'existing'}})}
  for(const kind of ['avatar','racket'])s.photos.push({id:kind,key:'fixture/'+kind,kind,eventId:null,matchId:null,playerIds:['restricted-player'],ownerId:'restricted',caption:'existing',created:1,type:'image/png',size:1});s.players[1].avatarId='avatar';
- await api.save(s,'fixture-seed',previous);
+ await seedAccountNoticeFixture(s);await api.save(s,'fixture-seed',previous);
  const first=await read();assert.equal(first.status,200);const token=first.headers.get('ETag'),view=await first.json();assert.equal(view.players.find(p=>p.id==='restricted-player').profileEditMode,'gender-only');assert.ok(view.photos.every(p=>!p.canDelete));assert.equal((await read(token)).status,304);
  delete fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS;const changed=await read(token);assert.equal(changed.status,200);assert.equal((await changed.json()).players.find(p=>p.id==='restricted-player').profileEditMode,'full');fixture.env.PROFILE_GENDER_ONLY_PLAYER_IDS='["restricted-player"]';
  const before=await api.load();assert.equal((await command('profileGender',{playerId:'restricted-player',gender:'other',reason:'Routine form audit metadata'})).status,200);let after=await api.load();assert.deepEqual(after.players[1].profile,{...before.players[1].profile,gender:'other'});assert.equal(after.players[1].avatarId,'avatar');

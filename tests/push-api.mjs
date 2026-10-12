@@ -5,6 +5,7 @@ import {readFileSync,readdirSync,writeFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 mkdirSync('.test-output',{recursive:true});
 globalThis.__pushTest={env:{},user:null};
 const fixture=globalThis.__pushTest;
@@ -36,6 +37,7 @@ async function decrypt(request){
  const key=await crypto.subtle.importKey('raw',cek,'AES-GCM',false,['decrypt']),plaintext=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:nonce},key,bytes.slice(21+bytes[20])));let end=plaintext.length-1;while(plaintext[end]===0)end--;assert.equal(plaintext[end],2);return JSON.parse(new TextDecoder().decode(plaintext.slice(0,end)));
 }
 try{
+ const fictionalAcceptance=await api.load(),beforeAcceptance=structuredClone(fictionalAcceptance);await seedAccountNoticeFixture(fictionalAcceptance);await api.save(fictionalAcceptance,'fictional-notice-fixture',beforeAcceptance);
  user(null);assert.equal((await api.GET()).status,401);user('outside');assert.equal((await api.GET()).status,403);user('a');
  const publicResponse=await api.GET(),publicData=await publicResponse.json();assert.equal(publicData.configured,true);assert.equal(publicData.publicKey,fixture.env.PUSH_VAPID_PUBLIC_KEY);assert.ok(!JSON.stringify(publicData).includes(fixture.env.PUSH_VAPID_PRIVATE_KEY));assert.equal(publicResponse.headers.get('Cache-Control'),'no-store');
  assert.equal((await post('a','subscribe',{subscription:subscription('a')},'https://evil.example')).status,403);assert.equal((await post('b','subscribe',{subscription:subscription('a')})).status,409);

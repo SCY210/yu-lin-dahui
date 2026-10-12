@@ -34,3 +34,6 @@ export const pushDeliveries=sqliteTable('push_deliveries',{id:text('id').primary
 
 // Private credential archive for the three recoverable trial account removals.
 export const trialCredentialArchive=sqliteTable('trial_credential_archive',{id:text('id').primaryKey(),payload:payload()});
+
+// Immutable acknowledgement evidence deliberately survives account retirement.
+export const accountNoticeReceipts=sqliteTable('accountNoticeReceipts',{id:text('id').primaryKey(),accountId:text('account_id').notNull(),noticeVersion:text('notice_version').notNull(),contentHash:text('content_hash').notNull(),payload:payload()},t=>[uniqueIndex('account_notice_version_hash').on(t.accountId,t.noticeVersion,t.contentHash)]);
