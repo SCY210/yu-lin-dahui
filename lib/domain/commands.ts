@@ -17,6 +17,7 @@ import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
 import {applyNoShow} from './no-show';
 import {applyBonusSeen} from './bonus-notices';
+import {scoreConflict,scoreGames} from './score-conflict';
 import {applyGuestLevel} from './guest-commands';
 import {isGuest} from './guests';
 import { initialSignupDeadline, signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
@@ -66,7 +67,7 @@ const schemas = {
     attendanceEdit: z.object({ attendanceId: pid, start: time, end: time.nullable(), reason }),
     generate: z.object({ eventId: pid, usePointsWindow: z.boolean().optional(), at: time, duration: z.number().int().min(5).max(90), seed: z.number().int().min(1).max(2147483647) }),
     swap: z.object({ roundId: pid, p1: pid, p2: pid, expectedLineup:z.array(z.object({id:pid,a:z.array(pid).min(1).max(2),b:z.array(pid).min(1).max(2)})).max(500).optional() }), moveCourt: z.object({ matchId: pid, courtId: pid }), lock: z.object({ matchId: pid, locked: z.boolean() }), publish: z.object({ roundId: pid }), start: z.object({ roundId: pid, at: time, monthly: z.boolean(), elo: z.boolean(), friendly: z.boolean().optional() }), cancelRound: z.object({ roundId: pid, reason }),
-    score: z.object({ matchId: pid, expectedA:z.array(pid).min(1).max(2).optional(), expectedB:z.array(pid).min(1).max(2).optional(), a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
+    score: z.object({ matchId: pid, expectedA:z.array(pid).min(1).max(2).optional(), expectedB:z.array(pid).min(1).max(2).optional(), expectedGames:scoreGames.max(3).optional(), a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
     cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100).default(1), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), reason }),
     costOverride: z.object({ costId: pid, reason, segments: z.array(z.object({ start: time, end: time, cents })).min(1).max(100) }),
     bookingBearer: z.object({ bookingId: pid, bearer: z.enum(['members', 'subsidy']), reason }), deleteCost: z.object({ costId: pid, reason }), modes: z.object({ eventId: pid, courtMode: mode, ballMode: mode, reason }),
@@ -510,6 +511,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
             const unstarted=canEnterUnstartedScore(m,s),matchEvent=event(m.eventId),r=round(m.roundId);
             if((p.expectedA&&JSON.stringify(p.expectedA)!==JSON.stringify(m.a))||(p.expectedB&&JSON.stringify(p.expectedB)!==JSON.stringify(m.b)))fail('409: 本局人员已更新，请重新打开录分并核对参赛者');
+            if(p.expectedGames&&scoreConflict(s,m,p.expectedGames,p.games ?? [{ a: p.a, b: p.b }])==='same')break;
             if (!unstarted && (!['playing', 'complete'].includes(m.status) || m.start === null))
                 fail('请先确认发布分组，再录入比分');
             const start=scoreEntryStart(m,s);

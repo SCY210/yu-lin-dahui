@@ -11,7 +11,8 @@ const externalDialog=()=>!!document.querySelector('[role="dialog"],[role="alertd
 /** hideBar: the page offers its own score buttons (home live cards and to-dos), so only the form is rendered. */
 export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Context;blocked?:boolean;hideBar?:boolean}){
  const [selection,setSelection]=useState<{id:string;mode:'score'}|null>(null);
- const pending=pendingOwnScores(ctx.data),match=pending.find(m=>m.id===selection?.id);
+ // A game someone else just scored stays open so the form can show their score instead of vanishing.
+ const pending=pendingOwnScores(ctx.data),match=pending.find(m=>m.id===selection?.id)??ctx.data.matches.find(m=>m.id===selection?.id&&m.status==='complete');
  const current=useRef({ctx,blocked,selection});
  useEffect(()=>{current.current={ctx,blocked,selection:match?selection:null}},[ctx,blocked,selection,match]);
  const gate=useRef(createScorePromptGate(ctx.data.me.id)),active=useRef(false);
@@ -42,10 +43,10 @@ export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Con
  },[]);
  const dismiss=()=>{gate.current.suppress();setSelection(null)};
  const manualOpen=()=>{gate.current.suppress();setSelection({id:pending[0].id,mode:'score'})};
- if(!pending.length)return null;
+ if(!pending.length&&!match)return null;
  const chosen=match??pending[0],event=ctx.data.events.find(e=>e.id===chosen.eventId),court=ctx.data.bookings.find(b=>b.id===chosen.courtId);
  return <>
-  {!hideBar&&<section className="score-reminder-bar" aria-label="我的待录比分"><div><strong><ClipboardPen size={18} aria-hidden="true"/>你有 {pending.length} 场对局待录比分</strong><small>{event?.title} · {court?.name??'比赛场地'}</small></div><button type="button" className="primary" disabled={blocked||ctx.busy} onClick={manualOpen}>去录分</button></section>}
+  {!hideBar&&pending.length>0&&<section className="score-reminder-bar" aria-label="我的待录比分"><div><strong><ClipboardPen size={18} aria-hidden="true"/>你有 {pending.length} 场对局待录比分</strong><small>{event?.title} · {court?.name??'比赛场地'}</small></div><button type="button" className="primary" disabled={blocked||ctx.busy} onClick={manualOpen}>去录分</button></section>}
   {selection?.mode==='score'&&match&&<Deferred><ScoreDialog key={match.id} m={match} ctx={ctx} close={dismiss} pendingMatches={pending} choose={(id:string)=>setSelection({id,mode:'score'})}/></Deferred>}
  </>;
 }

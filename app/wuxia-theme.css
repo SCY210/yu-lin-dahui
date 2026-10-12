@@ -11,7 +11,7 @@ html{background:var(--background)}
 .wuxia-theme .topbar .badge{background:#8d34290d;border:1px solid #8d342945;border-radius:2px;color:var(--cinnabar);font-size:12px;letter-spacing:.12em}
 .wuxia-theme .cultivation-ornament img{filter:grayscale(1) sepia(.5);opacity:.8}
 .wuxia-theme .cultivation-ornament-compact{border-color:#bb9a6250;background:transparent;box-shadow:none}
-.wuxia-theme .cultivation-seal-caption,.wuxia-theme .cultivation-ribbon-title,.wuxia-theme .cultivation-ribbon-motto{color:#8b7654}
+.wuxia-theme .cultivation-seal-caption{color:#8b7654}
 .wuxia-theme .eyebrow{color:#8f5b37;font-family:'Songti SC','SimSun',serif;font-size:12px;letter-spacing:.3em;font-weight:500}
 .wuxia-theme .shell .home-heading{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:24px;min-height:210px;margin:24px 0 18px;padding:28px 38px;background:#202c25 url('/wuxia-hero.png') center/cover;border:1px solid #807353;color:var(--paper);border-radius:3px;box-shadow:0 12px 30px #28251312}
 .wuxia-theme .shell .home-heading:after{content:'羽林 · 同修';position:absolute;right:28px;top:27px;writing-mode:vertical-rl;letter-spacing:.45em;font-family:'Songti SC','SimSun',serif;font-size:13px;color:#f4e8c3a3;border-right:1px solid #f4e8c34a;padding-right:9px;pointer-events:none}

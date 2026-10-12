@@ -11,3 +11,11 @@ Score submission uses the original optimistic, idempotent API, so server permiss
 No schema migration, background phone notification or new scoring permission is introduced. The banner is separate from the existing activity notification center.
 
 Tests cover personal participation, proxy/admin separation, permissions, activity/round visibility, future and completed records, ordering, one form per visit, empty initial visits, blocking/postponement, foreground response races and blank drafts. Headless React tests exercise direct initial form entry, exactly two numeric inputs, absence of the reason field, autofocus, postpone/manual access, empty-submit rejection, clearing/editing, successful completion, no immediate next-game popup, foreground return and side-B display/submission mapping. Dialog shells substitute for browser portals; actual mobile layout remains a device verification. The fixture is under tests and never a published route. Original scoring/live-play API tests remain in regression validation.
+
+## Face-off form and simultaneous entry
+
+The form has no explanatory text. The two teams face each other with avatars and names, the viewer's own team on the left, and one score box sits under each team. The court and activity name are the only context line.
+
+Several players often score the same game at once. The form sends the games it opened with (`expectedGames`, empty for an unscored game) together with the lineup snapshot. The server then accepts an unchanged match normally. It accepts the same score arriving from a second phone without changing anything. It refuses a different score with 409, naming who entered which score (`lib/domain/score-conflict.ts`). A score carrying these snapshots is guarded by the match itself, so it no longer fails because another court saved a score first (`lib/lineup-write.ts`). If another player's score arrives while the form is open, the form shows that score instead of the inputs, with a button to accept it (close) and one to correct it (reopen as a correction prefilled with the saved score). The projection adds `enteredByPlayerId` to matches so members can see who saved a score without seeing accounts.
+
+Tests: `tests/score-conflict.test.ts`, `tests/lineup-sync.test.ts`.

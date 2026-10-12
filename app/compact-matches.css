@@ -26,25 +26,30 @@
 .compact-match .hint{font-size:11px;margin:5px 0}
 .compact-match .handicap-note{font-size:11px;overflow-wrap:anywhere}
 .compact-match.is-playing{border-top:3px solid var(--primary)}
-.compact-match.is-complete{border-top:3px solid #26805e}
+.compact-match.is-complete,.wuxia-theme .match-card.compact-match.is-complete{border-color:#a9d6bd;border-top:3px solid #26805e;background:#eef8f2}
 .compact-match.is-complete .match-status{color:#176346;background:#e8f5ee;border-color:#b9dfcb}
 .compact-match.is-complete .versus{font-size:21px;font-weight:800;color:#176346}
 .compact-match .team.is-winner .match-team-label{color:#176346;font-weight:700}
 .compact-match.is-forfeit{border-top:3px solid var(--destructive,#af423b)}
 .compact-match.is-cancelled{border-style:dashed;opacity:.75}
+/* Phones: two courts side by side; in each court the teams face each other left and right, every player
+   with an avatar above the name, so the score reads across like on court. */
 @media(max-width:800px){
- .event-scheduling .courts-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
- .event-scheduling .match-card.compact-match{padding:8px;margin:4px 0;border-radius:10px}
- .event-scheduling .compact-match .match-teams{grid-template-columns:minmax(0,1fr);gap:4px;padding:7px 0}
- .event-scheduling .compact-match .group-player-profile{font-size:12px;gap:3px;padding:3px 4px}
- .event-scheduling .compact-match .group-player-profile .avatar{display:none}
+ .event-scheduling .courts-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:start}
+ .event-scheduling .match-card.compact-match{padding:7px 6px;margin:4px 0;border-radius:10px}
+ .event-scheduling .compact-match .match-teams{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:3px;padding:6px 0;align-items:start}
+ .event-scheduling .compact-match .team{gap:4px;align-items:stretch}
+ .event-scheduling .compact-match .match-team-label{line-height:1.2;text-align:center;font-size:10px}
+ .event-scheduling .compact-match .group-player{flex-direction:column;align-items:stretch;border-radius:8px}
+ .event-scheduling .compact-match .group-player-profile{flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;padding:4px 2px;font-size:12px;text-align:center}
+ .event-scheduling .compact-match .group-player-profile .avatar{display:block;width:26px;height:26px}
+ .event-scheduling .compact-match .group-player-copy{width:100%;text-align:center}
+ .event-scheduling .compact-match .group-player-copy>.guest-note,.event-scheduling .compact-match .group-player-copy>.role-label{display:block;font-size:9px}
+ .event-scheduling .compact-match .group-player-swap{flex:0 0 auto;min-width:0;min-height:30px;padding:3px;border-left:0;border-top:1px solid var(--border);border-radius:0 0 8px 8px}
  .event-scheduling .compact-match .match-team-level{display:none}
  .event-scheduling .compact-match .match-format{display:none}
- .event-scheduling .compact-match .versus{font-size:13px;line-height:1.2;padding:1px 0}
- .event-scheduling .compact-match.is-complete .versus{font-size:21px}
- .event-scheduling .compact-match .team{gap:2px}
- .event-scheduling .compact-match .match-team-label{line-height:1.2}
- .event-scheduling .compact-match .group-player-swap{flex-basis:36px;min-width:36px}
+ .event-scheduling .compact-match .versus{align-self:center;font-size:12px;line-height:1.1;padding:0 1px;white-space:nowrap}
+ .event-scheduling .compact-match.is-complete .versus{font-size:15px;letter-spacing:-.02em}
  .event-scheduling .compact-match .match-card-meta{gap:3px}
  .event-scheduling .compact-match .match-status{font-size:10px;padding:1px 4px}
  .event-scheduling .compact-match .court-tag{font-size:11px}

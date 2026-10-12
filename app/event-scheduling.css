@@ -29,3 +29,7 @@
 .scheduling-controls-summary{display:flex;align-items:center;gap:7px;min-height:44px;padding:3px 0;font-size:13px}
 .scheduling-controls-summary>.badge{font-size:11px;padding:2px 5px}
 .scheduling-controls-summary>span:last-child{margin-left:auto;font-size:12px;color:var(--muted-foreground)}
+/* Round headers show their state while folded: finished rounds are green, the round on court is marked in the theme colour. */
+.app-disclosure.round-disclosure.is-complete,.wuxia-theme .app-disclosure.round-disclosure.is-complete{border-color:#a9d6bd;border-left:5px solid #26805e;background:#eef8f2}
+.app-disclosure.round-disclosure.is-complete>summary,.wuxia-theme .app-disclosure.round-disclosure.is-complete>summary{color:#176346}
+.app-disclosure.round-disclosure.is-playing,.wuxia-theme .app-disclosure.round-disclosure.is-playing{border-left:5px solid var(--primary)}

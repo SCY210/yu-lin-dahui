@@ -1,0 +1,9 @@
+.ios-push-steps{display:grid;gap:8px;margin:4px 0 2px;padding:0;list-style:none;counter-reset:ios-step}
+.ios-push-steps li{counter-increment:ios-step;display:grid;grid-template-columns:24px 18px 1fr;align-items:start;gap:7px;padding:9px 10px;border-radius:12px;background:#f6f4fb;font-size:14px;line-height:1.5;color:#3d3a4a}
+.ios-push-steps li::before{content:counter(ios-step);display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#6656a4;color:#fff;font-size:12px;font-weight:700}
+.ios-push-steps li svg{margin-top:3px;color:#6656a4}
+.ios-push-steps b{font-weight:700;color:#28243a}
+.wuxia-theme .ios-push-steps li{background:#f3ecdc;color:#3b3226;border-radius:5px}
+.wuxia-theme .ios-push-steps li::before{background:#7a5c34;color:#fff9eb}
+.wuxia-theme .ios-push-steps li svg{color:#7a5c34}
+.wuxia-theme .ios-push-steps b{color:#2a2117}

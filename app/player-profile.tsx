@@ -5,16 +5,14 @@ import RealmProgress from './realm-progress';
 import RealmBadge, {PlacementBadge} from './realm-badge';
 import {Avatar} from './avatar';
 import {lazy} from 'react';
-import {Activity, Camera, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
+import {Activity, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
-const PhotoGallery=lazy(()=>import('./photo-gallery'));
 const AvatarEditor=lazy(()=>import('./avatar-editor'));
 import FeatureGuide from './feature-guide';
 const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
 const AchievementCollection=lazy(()=>import('./achievement-collection'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
-import CultivationOrnament from './cultivation-ornament';
 import {genderOptions,genderLabels,type ProfileGender} from '../lib/player-profile-options';
 
 const defaults = {gender:'undisclosed',years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', racket:'', strings:''};
@@ -72,9 +70,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>}
     </header>
     {isOwn&&<p className="profile-privacy-hint">扩展资料由本人自愿填写，已登录的群成员可以看到。请只填写愿意在群内分享的内容；如需减少展示或删除资料，可联系群主或管理员。<a href="/privacy" target="_blank" rel="noreferrer">查看隐私说明</a></p>}
-    <CultivationOrnament variant="ribbon"/>
 
-    <Disclosure label="个人资料与打法"><section className="pp-section" aria-label="个人信息">
+    <Disclosure label="个人资料与打法" defaultOpen><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
         <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]}/>
@@ -87,7 +84,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       <div className="pp-style"><span>{isOwn ? '我的打法' : '这位球友的打法'}</span><p className={profile.style ? '' : 'pp-unfilled'}>{profile.style || '尚未填写'}</p></div>
     </section></Disclosure>
 
-    <Disclosure label="战拍与装备"><section className="pp-section" aria-label="装备信息">
+    <Disclosure label="战拍与装备" defaultOpen><section className="pp-section" aria-label="装备信息">
       <div className="pp-section-heading"><h3 className="pp-section-title">{isOwn ? '我的战拍' : '这位球友的战拍'}</h3><span className="pp-section-note">球拍 · 拍线 · 磅数范围</span></div>
       <dl className="pp-facts pp-equipment-facts">
         <Fact label="战拍品牌 / 型号" value={profile.racket}/>
@@ -108,6 +105,5 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section></Disclosure>
 
     <Disclosure label={'成就 · 已点亮 '+(ctx.data.achievements?.[p.id]?.unlockedCount??0)}><Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred></Disclosure>
-    {canEdit && !genderOnly && <details className="pp-avatar-tools"><summary><Camera size={17} aria-hidden="true"/>更换头像</summary><Deferred><PhotoGallery key={p.id} ctx={ctx} playerId={p.id} avatar/></Deferred></details>}
   </section>;
 }

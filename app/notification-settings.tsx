@@ -6,6 +6,7 @@ import {Bell,BellOff,CheckCheck} from 'lucide-react';
 import {toast} from 'sonner';
 import {pushSupport,notificationConfig,notificationRequest,localPushSubscription,enablePush,syncPushAccount,pushStateChanged,type NotificationConfig} from '../lib/client/push-notifications';
 import {pushFailure} from '../lib/client/push-errors';
+import {IosDeniedSteps,IosInstallSteps,isIphone} from './ios-push-steps';
 
 export default function NotificationSettings({accountId,onOpen}:{accountId:string;onOpen?:(eventId:string,tab:string)=>void}){
  const [config,setConfig]=useState<NotificationConfig|null>(null),[support,setSupport]=useState('checking'),[enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false),[unreadOnly,setUnreadOnly]=useState(false);
@@ -34,8 +35,8 @@ export default function NotificationSettings({accountId,onOpen}:{accountId:strin
   <details className="reminder-options"><summary>提醒偏好与设备设置</summary><p className="hint">选择接收哪些系统通知；站内消息仍保留。临近开场为访问网站时生成的站内提示。</p>
    <div className="reminder-preferences">{reminderKinds.map(kind=><label key={kind}><input type="checkbox" checked={config?.preferences[kind]??true} disabled={!config||busy} onChange={event=>void preference(kind,event.target.checked)}/><span>{reminderLabels[kind]}{kind==='upcoming'&&<small>开场前一小时 · 站内提示</small>}</span></label>)}</div>
    <div className="row"><h3>这台设备的系统通知</h3><span className="badge">{enabled?'已开启':'未开启'}</span></div><p className="hint">开启后，即使网站关闭也能接收活动消息。点击通知进入对应活动、分组或费用。</p>
-   {support==='iphone-install'?<p className="hint">苹果手机：先用 Safari 将网站“添加到主屏幕”，再从桌面图标打开并开启通知（系统 16.4 及以上）。</p>:support==='unsupported'?<p className="hint">当前浏览器暂不支持系统通知，仍可在这里查看站内提醒。</p>:<div className="actions">{enabled?<><button type="button" className="secondary" disabled={busy} onClick={test}>发送测试通知</button><button type="button" className="ghost" disabled={busy} onClick={disable}><BellOff size={16}/>关闭系统通知</button></>:<button type="button" className="primary" disabled={busy||!config?.configured||support==='checking'||denied} onClick={enable}>{busy?'正在连接…':'开启活动提醒'}</button>}</div>}
-   {denied&&<p className="hint">系统已阻止通知，请在浏览器或手机通知设置中允许后重新打开。</p>}{config&&!config.configured&&<p className="hint">系统推送暂不可用；站内提醒仍可查看。</p>}<p className="hint">每台设备单独开启；退出登录会停止这台设备的推送。提醒中心保留最近30天，最多展示40条。</p>
+   {support==='iphone-install'?<><p className="hint">苹果手机要先把网站“添加到主屏幕”，才能收到系统通知：</p><IosInstallSteps/></>:support==='unsupported'?<p className="hint">当前浏览器暂不支持系统通知，仍可在这里查看站内提醒。</p>:<div className="actions">{enabled?<><button type="button" className="secondary" disabled={busy} onClick={test}>发送测试通知</button><button type="button" className="ghost" disabled={busy} onClick={disable}><BellOff size={16}/>关闭系统通知</button></>:<button type="button" className="primary" disabled={busy||!config?.configured||support==='checking'||denied} onClick={enable}>{busy?'正在连接…':'开启活动提醒'}</button>}</div>}
+   {denied&&(isIphone()?<><p className="hint">系统已阻止通知。在 iPhone 设置里允许后重新打开：</p><IosDeniedSteps/></>:<p className="hint">系统已阻止通知，请在浏览器或手机通知设置中允许后重新打开。</p>)}{config&&!config.configured&&<p className="hint">系统推送暂不可用；站内提醒仍可查看。</p>}<p className="hint">每台设备单独开启；退出登录会停止这台设备的推送。提醒中心保留最近30天，最多展示40条。</p>
   </details>{error&&<p className="connection-note" role="status">{error}</p>}
  </section>;
 }
