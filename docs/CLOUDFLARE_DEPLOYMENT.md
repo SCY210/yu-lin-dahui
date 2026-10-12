@@ -8,17 +8,31 @@ API token, password, session or production data to this file.
 
 ## Workers Builds
 
-Keep the existing build and deploy commands:
+Set the production Workers Builds commands to:
 
 ```sh
 npm run build
-npx wrangler deploy
+npm run deploy:cloudflare
 ```
 
 Cloudflare injects `WORKERS_CI=1` into Workers Builds. Production builds with
 that marker select the standalone configuration automatically. The Vite plugin
 generates `dist/server/wrangler.json` and Wrangler's deployment redirect, so the
 deploy command uses the actual D1 ID rather than the local placeholder.
+
+`deploy:cloudflare` first validates that the built Worker uses the standalone
+provider and configured D1 ID. It validates migration history, applies only
+unapplied journaled migrations to the remote database, and then publishes the
+generated Worker. Any validation or migration failure stops publication. The
+published version records a migration-first deployment message for verification.
+Keep preview deployments separate from this production command.
+The build API token needs D1 write access to the configured database as well as
+Worker deployment access; insufficient database access stops publication.
+
+This production deploy setting is stored in Cloudflare; adding the npm script to
+Git alone does not update an existing build trigger. Verify the production trigger
+actually uses `npm run deploy:cloudflare`. Do not publish schema-dependent code
+using a bare `wrangler deploy` command.
 
 For a manual standalone build, set `YULIN_DEPLOY_TARGET=cloudflare` in the build
 process environment and run the same commands. An explicit value of `sites`
@@ -40,7 +54,8 @@ npx wrangler d1 migrations apply DB --remote --config wrangler.cloudflare.json
 
 For a database that already contains real data, first audit its schema and
 migration history and preserve a recovery point. Do not replay all migrations
-over an imported database. A complete migration also requires the account and
+over an imported database. Subsequent releases use the existing migration ledger
+and apply only pending files. A complete migration also requires the account and
 credential records and the corresponding R2 objects; the club JSON export is
 not a complete database backup. See [Operations and recovery](OPERATIONS.md).
 
