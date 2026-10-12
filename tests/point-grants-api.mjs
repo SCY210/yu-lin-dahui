@@ -40,7 +40,6 @@ try{
  const deducted=await api.load();assert.equal(deducted.audits.length,3);assert.equal(deducted.audits.at(-1).changes.points,-75);assert.equal(deducted.audits.at(-1).actor,'owner');const deductionView=await (await get()).json();for(const rows of [deductionView.quarterlyLeaderboard,deductionView.annualLeaderboard])assert.equal(rows.find(r=>r.playerId==='p2').points,-25);assert.equal(deductionView.pointGrants.length,3);
  const rollbackDeduction=structuredClone(deducted);rollbackDeduction.audits.push({...deducted.audits.at(-1),id:crypto.randomUUID()});await assert.rejects(()=>api.save(rollbackDeduction,'owner:'+deduction.requestId,deducted),/UNIQUE/);assert.equal((await api.load()).audits.length,3);
 
- user('member');const ownBonuses=(await (await get()).json()).me.bonusNotices;assert.equal(ownBonuses.length,2);const beforeBonus=await api.load(),ack={action:'bonusSeen',payload:{ids:ownBonuses.map(n=>n.id)},revision:beforeBonus.revision,requestId:crypto.randomUUID()};assert.equal((await post(ack)).status,200);assert.equal((await post(ack)).status,200);const afterBonus=await api.load();assert.deepEqual(afterBonus.accounts.find(a=>a.id==='member').bonusSeen,ownBonuses.map(n=>n.id));assert.deepEqual(afterBonus.accounts.find(a=>a.id==='owner'),beforeBonus.accounts.find(a=>a.id==='owner'));assert.deepEqual(afterBonus.audits,beforeBonus.audits);assert.deepEqual((await (await get()).json()).me.bonusNotices,[]);
 
  const ratingBody=command(deducted.revision,undefined,{playerId:'p2',period:'2026-10',points:0,rating:125,reason:'Owner manual rating increase'});
  assert.equal((await post(ratingBody)).status,200);assert.equal((await post(ratingBody)).status,200);
@@ -52,6 +51,8 @@ try{
  user('owner');const rollbackRating=command(raised.revision,undefined,{...ratingBody.payload,rating:50}),batch=fixture.env.DB.batch;fixture.env.DB.batch=async()=>{throw new Error('Injected rating failure')};
  assert.equal((await post(rollbackRating)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),raised);assert.equal((await post(rollbackRating)).status,200);
  assert.equal((await api.load()).players.find(p=>p.id==='p2').rating,1175);
+ user('member');const ownBonuses=(await (await get()).json()).me.bonusNotices;assert.equal(ownBonuses.length,2);const beforeBonus=await api.load(),ack={action:'bonusSeen',payload:{ids:ownBonuses.map(n=>n.id)},revision:beforeBonus.revision,requestId:crypto.randomUUID()};assert.equal((await post(ack)).status,200);assert.equal((await post(ack)).status,200);const afterBonus=await api.load();assert.deepEqual(afterBonus.accounts.find(a=>a.id==='member').bonusSeen,ownBonuses.map(n=>n.id));assert.deepEqual(afterBonus.accounts.find(a=>a.id==='owner'),beforeBonus.accounts.find(a=>a.id==='owner'));assert.deepEqual(afterBonus.audits,beforeBonus.audits);assert.deepEqual((await (await get()).json()).me.bonusNotices,[]);
+
  console.log('PASS grants API: stored-owner authorization, rating-only persistence and visible score, unchanged points/games, deduplication, rollback, SQL binding and private ledger');
 
 }finally{sql.close();delete globalThis.__grantsTest}
