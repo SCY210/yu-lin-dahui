@@ -1,0 +1,5 @@
+.bonus-popup{text-align:center}.bonus-popup-icon{display:flex;justify-content:center;margin:4px auto 6px;color:#d4a017}
+.wuxia-theme .bonus-popup-icon{color:#b7985f}
+.bonus-popup-list{list-style:none;margin:12px 0 16px;padding:0;display:grid;gap:8px;text-align:left}
+.bonus-popup-list li{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--primary) 8%,var(--card))}.bonus-popup-list li span{flex:1;min-width:0}.bonus-popup-list li b{color:var(--primary);font-size:17px}
+.bonus-popup-confirm{font-size:17px;min-height:48px}

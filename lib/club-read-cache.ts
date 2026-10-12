@@ -1,4 +1,5 @@
 import type {Account,Settings,State} from './domain/types';
+import {awardVotingClosesAt} from './domain/activity-voting';
 import {attendanceForEvent} from './domain/attendance';
 import {inactivityDeadline,isRatedMatch} from './domain/realm-rating';
 
@@ -70,5 +71,8 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
  // Derived realm/placement and grouping strength can restart without a write.
  for(const m of s.matches)if(isRatedMatch(m,now))boundary(inactivityDeadline(m.end!));
+ // MVP voting closes on the clock: the result, its points and the winner's notice appear without a write.
+ const voted=new Set(s.awardVotes.map(v=>v.eventId));
+ for(const e of s.events)if(voted.has(e.id))boundary(awardVotingClosesAt(e));
  return expires;
 }

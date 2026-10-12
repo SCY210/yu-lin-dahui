@@ -13,6 +13,8 @@ import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating
 import {cancellationView} from './domain/cancellations';
 import {visibleActivityAcknowledgements} from './domain/activity-acknowledgement';
 import {treasureShopView} from './domain/treasure-shop';
+import {canManageEvent} from './domain/permissions';
+import {bonusNotices} from './domain/bonus-notices';
 import {guestIds,guestHostName,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlementPreview} from './domain/money';
@@ -49,7 +51,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const social={...fullSocial,funny:fullSocial.funny.filter(st=>permanent.has(st.playerId)),personality:fullSocial.personality.filter(st=>permanent.has(st.playerId)),annual:fullSocial.annual.filter(st=>permanent.has(st.playerId)),stats:fullSocial.stats.filter(st=>permanent.has(st.playerId)).map(st=>({...st,tier:realmView(st.realmScore),realmScore:visibleRealm(st.realmScore)}))};
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
-  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy})=>({id,name,phone,mine:createdBy===a.id})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
+  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy})=>({id,name,phone,mine:createdBy===a.id})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
   players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations.map(({cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason,noticeAcknowledgements:_notice,...r})=>{const notice=visibleActivityAcknowledgements(history,a,{...r,noticeAcknowledgements:_notice}),cancellation=cancellationView(history,{...r,cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason});return {...r,...(notice?.length?{noticeAcknowledgements:notice}:{}),...(cancellation?{cancellation}:{})}}),attendance:s.attendance,rounds:s.rounds,matches:s.matches,costs:s.costs,seasons:s.seasons,
   // Compatibility for tabs opened before deployment; no monthly board is shown.
@@ -60,7 +62,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   treasureShop:treasureShopView(s,a),
   achievements,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
-  tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>({...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:''})),
+  tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>{const event=s.events.find(e=>e.id===v.eventId),voter=event&&canManageEvent(a,event)?s.accounts.find(x=>x.id===v.voterId):undefined;return {...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:'',...(voter?{voterPlayerId:voter.playerId}:{})}}),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
   // Only what paid status needs: who, for which activity, how much.
