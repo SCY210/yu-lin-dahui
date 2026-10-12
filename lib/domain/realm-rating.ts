@@ -3,6 +3,7 @@ import {guestRatings} from './guests';
 import {isPractice} from './match-format';
 import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
+import {scoreRecordedBy} from './score-entry';
 import {ratingAdjustments,type RatingAdjustment} from './point-grants';
 
 /** 修为 (FIDE-style Elo): everyone starts at 1000 and each rated game moves it. */
@@ -64,7 +65,7 @@ export function realmProgress(score:number,held=rawRealmIndex(score)){
 export function noShowPlayers(m:Pick<Match,'status'|'noShow'|'a'|'b'>){return m.status==='forfeit'&&m.noShow?.length?m.noShow.filter(id=>m.a.includes(id)||m.b.includes(id)):[]}
 export function isRatedMatch(m:Match,now=Date.now()){
  if(noShowPlayers(m).length)return !!m.monthly&&!!m.elo&&!m.handicap?.applied&&m.start!==null&&m.end!==null&&Number.isFinite(m.end)&&m.end<=now&&!!m.a.length&&!!m.b.length&&new Set([...m.a,...m.b]).size===m.a.length+m.b.length;
- if(m.status!=='complete'||!m.monthly||!m.elo||m.handicap?.applied||m.end===null||!Number.isFinite(m.end)||m.end>now)return false;
+ if(m.status!=='complete'||!m.monthly||!m.elo||m.handicap?.applied||!scoreRecordedBy(m,now))return false;
  if(!m.a.length||!m.b.length||new Set([...m.a,...m.b]).size!==m.a.length+m.b.length)return false;
  return gameFacts(m).length>0;
 }

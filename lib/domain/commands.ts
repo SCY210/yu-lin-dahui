@@ -38,6 +38,7 @@ import { applyPointsPlan, defaultPointsMinutes } from './points-plan';
 import { applyPointsChoice } from './points-choice';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
 import { decorateMatch } from './play';
+import {canEnterUnstartedScore,scoreEntryStart} from './score-entry';
 import { findVenue } from '../venues';
 import { authorizeEventAction, isEventAction, canManageEvent } from './permissions';
 import { businessTimestamp as time } from './timestamp';
@@ -511,9 +512,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'score': {
             const p = command.payload;
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
-            if (!['playing', 'complete'].includes(m.status) || m.start === null)
-                fail('比赛尚未开始');
-            const rules = s.seasons.find(x => x.id === month(m.start!))?.rules ?? s.settings.rules;
+            const unstarted=canEnterUnstartedScore(m,s),matchEvent=event(m.eventId),r=round(m.roundId);
+            if (!unstarted && (!['playing', 'complete'].includes(m.status) || m.start === null))
+                fail('请先确认发布分组，再录入比分');
+            const start=scoreEntryStart(m,s);
+            if(unstarted)validateRound(s,m.eventId,start,0,[m]);
+            const rules = s.seasons.find(x => x.id === month(start))?.rules ?? s.settings.rules;
             const games = p.games ?? [{ a: p.a, b: p.b }];
             if (round(m.roundId).live && games.length !== 1)
                 fail('实时排场按一局结束，请每局录入一次比分');
@@ -532,11 +536,16 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                     fail('三局两胜须有一方赢两局');
             }
             assertTournamentScore(s,event(m.eventId),m,games.length>1?games.filter(g=>g.a>g.b).length:games[0].a,games.length>1?games.filter(g=>g.b>g.a).length:games[0].b);
-            const firstCompletion = m.status === 'playing', matchEvent = event(m.eventId);
+            const firstCompletion = m.status !== 'complete';
             if (p.end === undefined || (matchEvent.livePlay?.enabled && firstCompletion))
-                p.end = m.end ?? Math.min(matchEvent.end, Math.max(now, m.start + 1));
-            if (p.end <= m.start || p.end > matchEvent.end)
+                p.end = m.end ?? Math.min(matchEvent.end, Math.max(now, start + 1));
+            if (p.end <= start || p.end > matchEvent.end)
                 fail('结束时间必须晚于开赛且在活动时间内');
+            if(unstarted){
+                m.start=start;
+                if(!s.seasons.some(season=>season.id===month(start)))s.seasons.push({id:month(start),rules:{...rules},version:1});
+            }
+            if(firstCompletion&&now<start)m.earlyScoreAt=now;
             m.games = games;
             m.scoreA = games.length > 1 ? games.filter(g => g.a > g.b).length : games[0].a;
             m.scoreB = games.length > 1 ? games.filter(g => g.b > g.a).length : games[0].b;
@@ -544,11 +553,10 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             m.status = 'complete';
             m.enteredBy = a.id;
             markRanked(m);
-            const r = round(m.roundId);
             if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
                 r.status = 'complete';
             replayRating(s, now);
-            if (firstCompletion)
+            if (firstCompletion && !unstarted && m.earlyScoreAt===undefined)
                 finishLiveMatch(s, matchEvent, m, now);
             break;
         }
