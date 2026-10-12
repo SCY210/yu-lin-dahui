@@ -1,6 +1,6 @@
 # Activity status badges
 
-The club owner reported an activity that showed "报名中" (open) after its two-hour sign-up deadline had passed. The badge used the stored `status`, which stays `open` until an organiser changes it.
+The club owner reported an activity that still showed as open after its two-hour sign-up deadline had passed. The badge used the stored `status`, which stays `open` until an organiser changes it.
 
 ## Derived status (`lib/client/event-display-status.ts`)
 
