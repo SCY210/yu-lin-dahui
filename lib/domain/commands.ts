@@ -39,6 +39,7 @@ import { applyPointsChoice } from './points-choice';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
 import { decorateMatch } from './play';
 import {canEnterUnstartedScore,scoreEntryStart} from './score-entry';
+import {pendingMatchLineup,swapRoundPlayers} from './round-lineup';
 import { findVenue } from '../venues';
 import { authorizeEventAction, isEventAction, canManageEvent } from './permissions';
 import { businessTimestamp as time } from './timestamp';
@@ -61,8 +62,8 @@ const schemas = {
     attendance: z.object({ eventId: pid, playerId: pid, at: time, state: z.enum(['ready', 'paused', 'left']) }),
     attendanceEdit: z.object({ attendanceId: pid, start: time, end: time.nullable(), reason }),
     generate: z.object({ eventId: pid, usePointsWindow: z.boolean().optional(), at: time, duration: z.number().int().min(5).max(90), seed: z.number().int().min(1).max(2147483647) }),
-    swap: z.object({ roundId: pid, p1: pid, p2: pid }), moveCourt: z.object({ matchId: pid, courtId: pid }), lock: z.object({ matchId: pid, locked: z.boolean() }), publish: z.object({ roundId: pid }), start: z.object({ roundId: pid, at: time, monthly: z.boolean(), elo: z.boolean(), friendly: z.boolean().optional() }), cancelRound: z.object({ roundId: pid, reason }),
-    score: z.object({ matchId: pid, a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
+    swap: z.object({ roundId: pid, p1: pid, p2: pid, expectedLineup:z.array(z.object({id:pid,a:z.array(pid).min(1).max(2),b:z.array(pid).min(1).max(2)})).max(500).optional() }), moveCourt: z.object({ matchId: pid, courtId: pid }), lock: z.object({ matchId: pid, locked: z.boolean() }), publish: z.object({ roundId: pid }), start: z.object({ roundId: pid, at: time, monthly: z.boolean(), elo: z.boolean(), friendly: z.boolean().optional() }), cancelRound: z.object({ roundId: pid, reason }),
+    score: z.object({ matchId: pid, expectedA:z.array(pid).min(1).max(2).optional(), expectedB:z.array(pid).min(1).max(2).optional(), a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
     cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100).default(1), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), reason }),
     costOverride: z.object({ costId: pid, reason, segments: z.array(z.object({ start: time, end: time, cents })).min(1).max(100) }),
     bookingBearer: z.object({ bookingId: pid, bearer: z.enum(['members', 'subsidy']), reason }), deleteCost: z.object({ costId: pid, reason }), modes: z.object({ eventId: pid, courtMode: mode, ballMode: mode, reason }),
@@ -428,31 +429,14 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'swap': {
             const p = command.payload;
             const r = round(p.roundId);
-            if (event(r.eventId).pointsChoice?.selectedMode === 'fixed')
-                fail('固定搭档不能单轮交换成员，请在开打前重新分配搭档');
-            if (r.status !== 'draft')
-                fail('仅可交换草稿');
-            const ms = s.matches.filter(m => m.roundId === r.id && m.status !== 'cancelled');
-            const has = (m: State['matches'][number], p: string) => [...m.a, ...m.b].includes(p);
-            if (ms.some(m => m.locked && (has(m, p.p1) || has(m, p.p2))))
-                fail('请先解除锁定');
-            if (!r.eligible.includes(p.p1) || !r.eligible.includes(p.p2))
-                fail('选手不在本轮可用名单');
-            for (const m of ms) {
-                m.a = m.a.map(x => x === p.p1 ? p.p2 : x === p.p2 ? p.p1 : x);
-                m.b = m.b.map(x => x === p.p1 ? p.p2 : x === p.p2 ? p.p1 : x);
-            }
-            r.rest = r.rest.map(x => x === p.p1 ? p.p2 : x === p.p2 ? p.p1 : x);
-            validateRound(s, r.eventId, r.start, r.duration, ms);
-            for (const m of ms)
-                decorateMatch(s, event(r.eventId), m);
+            swapRoundPlayers(s,r,p.p1,p.p2,now,p.expectedLineup);
             break;
         }
         case 'lock': {
             const p = command.payload;
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
-            if (round(m.roundId).status !== 'draft')
-                fail('仅可锁定草稿');
+            if (!['draft','published'].includes(round(m.roundId).status)||!pendingMatchLineup(m))
+                fail('只可锁定或解锁尚未开始、未录分的分组');
             m.locked = p.locked;
             break;
         }
@@ -513,6 +497,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
             const unstarted=canEnterUnstartedScore(m,s),matchEvent=event(m.eventId),r=round(m.roundId);
+            if((p.expectedA&&JSON.stringify(p.expectedA)!==JSON.stringify(m.a))||(p.expectedB&&JSON.stringify(p.expectedB)!==JSON.stringify(m.b)))fail('409: 本局人员已更新，请重新打开录分并核对参赛者');
             if (!unstarted && (!['playing', 'complete'].includes(m.status) || m.start === null))
                 fail('请先确认发布分组，再录入比分');
             const start=scoreEntryStart(m,s);

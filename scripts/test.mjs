@@ -24,6 +24,7 @@ if (!unitOnly) {
   // These suites run handlers locally with isolated persistence. Legacy scripts
   // requiring a running Worker are separate and must never target production.
   const suites = [
+    'published-swap-api', 'published-swap-ui',
     'early-score-api',
     'match-player-filter-ui',
     'treasure-shop-api', 'treasure-shop-ui', 'cancelled-signups-api', 'guest-levels-ui', 'friend-signup-api', 'no-show-api', 'admin-simulation-api', 'admin-simulation-ui', 'notification-prompt-ui', 'push-enable-client',
