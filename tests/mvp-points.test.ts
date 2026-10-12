@@ -6,6 +6,7 @@ import {bonusNotices} from '../lib/domain/bonus-notices';
 import {doublesLeaderboard,singlesLeaderboard} from '../lib/domain/ranking';
 import {projectClubState} from '../lib/club-view';
 import {emptyState,type Account,type Event,type State} from '../lib/domain/types';
+import {clubViewValidUntil} from '../lib/club-read-cache';
 
 const hour=3600000,start=Date.parse('2027-05-08T15:00:00Z'),end=start+3*hour,closes=end+24*hour;
 function fixture(format:'doubles'|'singles'='doubles'){
@@ -60,4 +61,18 @@ test('the MVP is told once on opening the app and a positive owner grant too; ac
  await apply(s,s.accounts.find(x=>x.id==='owner')!,'grantPoints',{playerId:'p-a',period:'2027-05',points:-2,reason:'扣分'},closes+4);
  assert.deepEqual(bonusNotices(s,a(),closes+5).map(n=>[n.kind,n.points,n.title]),[['grant',3,'帮忙订场']]);
  const view=projectClubState(s,a(),'2027-05',2027,closes+5);assert.equal(view.me.bonusNotices.length,1);
+});
+
+test('legacy votes outside the allowed time window cannot change the MVP or earn points',async()=>{
+ const {s,e,vote}=fixture();await vote('b','a');
+ for(const [i,at] of [start-1,closes,closes+hour].entries())s.awardVotes.push({id:'legacy-'+i,eventId:e.id,voterId:'legacy-'+i,playerId:'p-b',category:'mvp',at});
+ const before=structuredClone(s);assert.deepEqual(mvpWinners(s,e,closes+2*hour),['p-a']);assert.equal(points(s,'a',closes+2*hour)?.mvpPoints,5);assert.equal(points(s,'b',closes+2*hour)?.mvpPoints,0);assert.deepEqual(s,before,'historical votes are retained unchanged');
+});
+
+test('practice, tournament, cancelled, draft and deleted activities never produce MVP points or notices',async()=>{
+ for(const kind of ['practice','tournament','cancelled','draft','deleted']){const {s,e,vote}=fixture();await vote('b','a');if(kind==='practice')e.matchFormat='practice';if(kind==='tournament')e.tournament={status:'draft'} as never;if(kind==='cancelled'||kind==='draft')e.status=kind;if(kind==='deleted')e.deletedAt=end;assert.equal(points(s,'a',closes)?.mvpPoints,0,kind);assert.deepEqual(bonusNotices(s,s.accounts.find(a=>a.id==='a')!,closes),[],kind)}
+});
+
+test('club response validators expire at the MVP closing boundary without any write',async()=>{
+ const {s,vote}=fixture();await vote('b','a');assert.equal(clubViewValidUntil(s,s.accounts[0],closes-60000),closes);
 });

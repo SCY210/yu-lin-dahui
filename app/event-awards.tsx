@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {Trophy,CheckCircle2,Undo2} from 'lucide-react';
 import {Avatar} from './avatar';
-import {awardCandidateIds,awardVotingClosesAt,canCastAwardVote,isAwardVotingOpen,mvpPoints,mvpWinners} from '../lib/domain/activity-voting';
+import {awardCandidateIds,awardVotingClosesAt,canCastAwardVote,isAwardVotingOpen,mvpPoints,mvpWinners,mvpVotes,canAwardMvpPoints} from '../lib/domain/activity-voting';
 import {canManageEvent} from '../lib/domain/permissions';
 import {fmt,hm} from './form-fields';
 import {awardSummary} from '../lib/client/award-ballot';
@@ -14,16 +14,17 @@ type Match=ClubData['matches'][number];
 export default function EventAwards({e,ctx,now}:any){
  const {data}=ctx,[pending,setPending]=useState(''),[notice,setNotice]=useState('');
  const candidates=awardCandidateIds(data,e.id,now),open=isAwardVotingOpen(data,e,now),canVote=canCastAwardVote(data,e,data.me,now),locked=!!pending||ctx.busy;
- const mine=data.awardVotes.find((v:Vote)=>v.eventId===e.id&&v.category==='mvp'&&v.voterId===data.me.id),summary=awardSummary(data.awardVotes,e.id,'mvp');
+ const counted=mvpVotes(data,e),earnsPoints=canAwardMvpPoints(e);
+ const mine=counted.find((v:Vote)=>v.eventId===e.id&&v.category==='mvp'&&v.voterId===data.me.id),summary=awardSummary(counted,e.id,'mvp');
  const person=(id:string)=>data.players.find((p:Player)=>p.id===id)??{id,name:'已移除球友'};
  const playing=data.matches.some((m:Match)=>m.eventId===e.id&&m.status==='playing'),cancelled=e.status==='cancelled';
  const closesAt=awardVotingClosesAt(e),closed=!cancelled&&now>=closesAt,winners=closed?mvpWinners(data,e,now):[],organiser=canManageEvent(data.me,e);
- const named=organiser?(data.awardVotes as (Vote&{voterPlayerId?:string})[]).filter(v=>v.eventId===e.id&&v.category==='mvp'&&v.voterPlayerId):[];
+ const named=organiser?(counted as (Vote&{voterPlayerId?:string})[]).filter(v=>v.eventId===e.id&&v.category==='mvp'&&v.voterPlayerId):[];
  async function vote(playerId:string,active=true){if(locked||!canVote)return;setPending(playerId);setNotice('');try{await ctx.action('awardVote',{eventId:e.id,playerId,category:'mvp',active},false);setNotice(active?`已将 MVP 投给${person(playerId).name}`:'已撤回 MVP 选票')}catch{/* The shared action displays the server error. */}finally{setPending('')}}
  return <section className="card award-card" aria-label="本场MVP投票">
   <div className="award-header"><div><p className="award-eyebrow">把掌声留给球友</p><h3>本场 MVP 投票</h3></div><span className="badge">{cancelled?'已关闭':closed?'投票已截止':open?'投票进行中':now<e.start?'尚未开始':'等待收官'}</span></div>
-  {open&&<p className="hint award-deadline">投票截止：{fmt(closesAt)}。截止后票数最多的球友获得 {mvpPoints} 积分，并列第一都得分。</p>}
-  {closed&&<div className="award-final" role="status"><Trophy size={20} aria-hidden="true"/>{winners.length?<span>本场 MVP：<strong>{winners.map(id=>person(id).name).join('、')}</strong> · 获得 {mvpPoints} 积分</span>:<span>投票已截止，本场没有人获得 MVP 票。</span>}</div>}
+  {open&&<p className="hint award-deadline">投票截止：{fmt(closesAt)}。{earnsPoints&&<>截止后票数最多的球友获得 {mvpPoints} 积分，并列第一都得分。</>}</p>}
+  {closed&&<div className="award-final" role="status"><Trophy size={20} aria-hidden="true"/>{winners.length?<span>本场 MVP：<strong>{winners.map(id=>person(id).name).join('、')}</strong>{earnsPoints&&<> · 获得 {mvpPoints} 积分</>}</span>:<span>投票已截止，本场没有人获得 MVP 票。</span>}</div>}
   <div className="award-progress"><span>你的选票</span><strong>{mine?'已投票':'尚未投票'}</strong></div>
   {!open&&!closed&&<div className="award-status" role="status"><p>{cancelled?'活动已取消，已有票数仍可查看。':e.status==='draft'?'活动尚未开放。':`本活动将在 ${hm(e.end)} 自动结束并开放 MVP 投票。`}</p></div>}
   {open&&playing&&<p className="hint">活动时间已结束，MVP 投票已开放。还有比分待录入，可在「分组 / 比赛」中补录，照常计分。</p>}

@@ -24,5 +24,6 @@ try{
  await act(async()=>{buttons().find(b=>text(b)==='撤回 MVP').props.onClick();});assert.equal(data.awardVotes.length,0);assert.equal(sent[2].payload.active,false);
  await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'cancelled'},ctx,now})));
  assert.ok(buttons().filter(b=>b.props.className?.includes('award-person')).every(b=>b.props.disabled));
+ data.awardVotes=[{id:'valid',eventId:event.id,voterId:'member',playerId:'alice',category:'mvp',at:now},{id:'late',eventId:event.id,voterId:'other',playerId:'bob',category:'mvp',at:event.end+25*3600000}];await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'ended',tournament:{status:'draft'}},ctx,now:event.end+24*3600000})));assert.ok(text(ui.root).includes('本场 MVP：'));assert.ok(!/获得.*5.*积分/.test(text(ui.root)),'tournament MVP does not promise season points');
  console.log('PASS MVP-only ballot: no other awards/tags/progress, self vote disabled, one-vote replacement and withdrawal, cancelled activity disabled.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}

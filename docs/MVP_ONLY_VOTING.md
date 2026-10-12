@@ -16,3 +16,5 @@ At the club owner's request:
 - **Notice.** When a member opens the app with unacknowledged extra points (an MVP award or a positive owner grant from the last 14 days), a dialog congratulates them. Its confirmation button (the owner chose a playful "I am the best!") stores the acknowledgement on their account (`bonusSeen`, `lib/domain/bonus-notices.ts`).
 
 Tests: `tests/mvp-points.test.ts`.
+
+Historical votes outside the activity start / closing-time window are preserved in storage but excluded from MVP results and points. Reward, score-reminder and notification dialogs are shown in sequence. A dismissed reward releases other prompts for the current visit even if acknowledgement saving fails; it may return next visit. Reward batches contain at most 50 notices.
