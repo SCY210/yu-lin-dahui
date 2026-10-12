@@ -7,6 +7,7 @@ import "./wuxia-theme.css";
 import "./wuxia-toast.css";
 import AppRuntime from './app-runtime';
 import './legal.css';
+import {siteNatureStatement} from '../lib/site-notice';
 import {VisualThemeProvider,ThemeSwitcher} from './visual-theme';
 
 export const viewport: Viewport = {
@@ -38,7 +39,7 @@ export default async function RootLayout({
  const brand=themeBrand((await cookies()).get(BRAND_COOKIE)?.value);
  return (
     <html lang="zh-CN" className={brand.theme+'-theme'} suppressHydrationWarning>
-      <body className="antialiased"><VisualThemeProvider initialTheme={brand.theme}><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}<footer className="legal-footer" aria-label="Legal information"><a href="/privacy">Privacy / 隐私说明</a><a href="/terms">Club rules / 使用规则</a></footer></VisualThemeProvider></body>
+      <body className="antialiased"><VisualThemeProvider initialTheme={brand.theme}><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}<footer className="legal-footer" aria-label="网站说明与隐私"><p>{siteNatureStatement}</p><a href="/terms">网站说明与使用规则</a><a href="/privacy">隐私说明</a></footer></VisualThemeProvider></body>
     </html>
   );
 }

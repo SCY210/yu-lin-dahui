@@ -1,14 +1,18 @@
 import LegalLayout from '../legal-layout';
+import {siteNatureStatement,siteServiceStatement} from '../../lib/site-notice';
 
-export const metadata={title:'Club use and image rules | Yu Lin Da Hui'};
+export const metadata={title:'网站说明与使用规则 · 羽林大会'};
 
 export default function TermsPage(){
- return <LegalLayout title="Club use and image rules">
-  <h2>Private club use</h2><p>Use your own administrator-issued account. Do not share credentials, bypass permissions, access another person’s records without authorization, or conduct security testing outside an expressly authorized scope.</p>
-  <h2>Respect people and their information</h2><p>Keep names, registrations, results, cost shares and photographs within the intended club audience. Do not publish, scrape or redistribute personal information without an appropriate basis. Do not use profile notes or votes for harassment, discrimination or sensitive personal accusations.</p>
-  <h2>Images and permissions</h2><p>Upload only images you are entitled to share. Obtain permission from identifiable people for sharing within this club, and do not upload photographs of minors until the operator establishes an appropriate process. Avoid location metadata, documents, health information or other unnecessary private information. The upload confirmation is your statement; it does not replace the operator’s duties.</p>
-  <h2>Reporting and removal</h2><p>Report unwanted images, incorrect personal information or misuse to the privacy contact in the <a href="/privacy">privacy notice</a>, or directly to the administrator through the invitation channel while that contact is being configured. Authorized photo controls can remove photos. Administrator access does not remove the duty to consider affected people’s rights.</p>
-  <h2>Sports and cost calculations</h2><p>Activity listings do not confirm reservations, venue opening hours or participant fitness. Organizers must verify the venue, permissions and any applicable insurance or safety arrangements. Cost shares are calculations; the app does not collect payments, confirm debts, provide tax advice, or process refunds.</p>
-  <h2>Licenses and rights</h2><p>Third-party code and assets retain their applicable licenses. Uploading an image does not assign its ownership to the club or authorize unrelated public use. No blanket waiver of statutory rights is imposed by these rules.</p>
+ return <LegalLayout title="网站说明与使用规则">
+  <h2>球友共建 · 非营利</h2><p>{siteNatureStatement}</p>
+  <p>活动费用用于对应活动的分摊，具体金额和收款安排以活动页面及组织者核对为准。网站的非营利性质不替代每场活动的实际费用说明，也不代表相关场馆或其他第三方为非营利主体。</p>
+  <h2>维护与使用边界</h2><p>{siteServiceStatement}</p>
+  <p>网站信息不构成场馆预订、保险保障或个人身体条件适合运动的确认。参加活动前，请核对场地、时间及个人情况；发现错误或安全问题，请及时反馈并停止可能造成危险的行为。</p>
+  <h2>账号与群内协作</h2><p>请使用管理员为你开通的本人账号，妥善保管密码。不要共享账号、绕过权限、擅自访问他人记录，或在未经明确授权的情况下测试网站安全。请尊重球友，避免骚扰、歧视或传播敏感个人指控。</p>
+  <h2>个人资料与隐私</h2><p>扩展球员资料由本人自愿填写，请只提供愿意在群内分享的内容。接龙、比赛和费用等必要协作记录，按相应功能及权限处理。提供资料不表示放弃隐私权利，也不等于允许他人任意复制、对外公开或用于其他目的。用途、展示范围和请求途径请查看<a href="/privacy">隐私说明</a>。</p>
+  <h2>照片、文字与第三方内容</h2><p>请仅上传有权分享的内容，并事先取得可识别人物在群内分享所需的许可。不要上传未经允许的人像、未成年人的照片、证件或其他不必要的敏感信息。上传确认是上传者的声明，不能替代有关人员的真实许可或维护者依法应履行的义务。上传内容不转移原有权利，也不授权无关的公开使用。</p>
+  <h2>错误、异议与移除请求</h2><p>如发现信息错误、照片不希望展示、侵犯权益或使用异常，请通过群内现有联系渠道联系群主或管理员，并说明具体内容。相关处理会结合实际情况、适用法律、必要记录及其他参与者的权益进行；不同类型的资料可能需要不同的核实或处理方式。</p>
+  <h2>规则更新与依法享有的权利</h2><p>网站功能和说明可随实际维护情况更新，涉及须知确认的内容更新会要求重新阅读确认，旧确认记录保留原版本。更新不能追溯改变既有记录的确认内容，也不表示可以单方面排除依法享有的权利。志愿维护、非营利性质及本说明均不构成无条件免责，具体责任依实际行为、事实和适用法律确定。</p>
  </LegalLayout>;
 }
