@@ -99,7 +99,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         return null;
     if (await applyPointsChoice(s, a, action, input, now))
         return null;
-    if (await applyPointsPlan(s, a, action, input, now))
+    if (await applyPointsPlan(s, a, action, input, now,apply))
         return null;
     if (await applyShuttles(s, a, action, input, now))
         return null;
