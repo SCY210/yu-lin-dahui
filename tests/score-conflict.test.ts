@@ -25,7 +25,9 @@ test('two players scoring the same game: the same score is accepted once, a diff
  const {s,score}=fixture();
  await score('a',21,17);
  const m=s.matches[0];assert.equal(m.status,'complete');assert.deepEqual(m.games,[{a:21,b:17}]);assert.equal(m.enteredBy,'a');
+ const beforeDuplicate=structuredClone(s);
  await score('c',21,17);
+ assert.deepEqual(s,beforeDuplicate,'an identical second score must not append another score audit');
  assert.equal(m.enteredBy,'a','an identical second entry changes nothing');
  await assert.rejects(()=>score('d',17,21),(e:Error)=>/409/.test(e.message)&&e.message.includes('球友a')&&e.message.includes('21 : 17'));
  assert.deepEqual(m.games,[{a:21,b:17}],'the first score is kept');

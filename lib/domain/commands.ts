@@ -511,7 +511,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
             const unstarted=canEnterUnstartedScore(m,s),matchEvent=event(m.eventId),r=round(m.roundId);
             if((p.expectedA&&JSON.stringify(p.expectedA)!==JSON.stringify(m.a))||(p.expectedB&&JSON.stringify(p.expectedB)!==JSON.stringify(m.b)))fail('409: 本局人员已更新，请重新打开录分并核对参赛者');
-            if(p.expectedGames&&scoreConflict(s,m,p.expectedGames,p.games ?? [{ a: p.a, b: p.b }])==='same')break;
+            if(p.expectedGames&&scoreConflict(s,m,p.expectedGames,p.games ?? [{ a: p.a, b: p.b }])==='same')return null;
             if (!unstarted && (!['playing', 'complete'].includes(m.status) || m.start === null))
                 fail('请先确认发布分组，再录入比分');
             const start=scoreEntryStart(m,s);
