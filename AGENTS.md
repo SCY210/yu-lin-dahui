@@ -34,3 +34,4 @@
 - Production may contain deployment-only presentation and permission configuration absent from this public repository. A live private release channel must only be updated from its controlled private checkout.
 - Do not publish a shared-only build over a private production channel or remove the release-channel check to bypass a refusal. Merge shared updates into the private branch, retain its private files and access checks, and use its validated release workflow.
 - Keep public-repository automatic production builds disabled for a controlled private deployment. Shared CI must not receive private source, assets or access configuration.
+- Never run deployment commands from a shared or PR-review checkout, including as a negative probe. A feature branch may predate the deployment guard. Verify refusals with read-only active-version metadata and pure validation or injected no-write test runners; only the controlled private workflow publishes.

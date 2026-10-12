@@ -21,6 +21,12 @@ private version with a build lacking that channel. Metadata errors stop publicat
 they are never treated as an unrestricted deployment. The channel is a deployment
 safeguard, not a secret or a replacement for account permissions.
 
+Do not invoke a deployment command from a shared or PR-review checkout to test
+that it refuses publication: a feature branch can predate the guard even when
+its PR targets a guarded main branch. Use read-only active-version metadata and
+`validateReleaseChannel`, or the injected no-write runners in the test suite.
+Only the controlled private workflow is allowed to publish to production.
+
 Keep automatic Cloudflare builds from the public repository disabled. This
 provider setting is essential because a bare Wrangler command would bypass the
 project's deploy wrapper. Do not re-enable it against a public-only checkout.
