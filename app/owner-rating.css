@@ -1,0 +1,3 @@
+.owner-rating .section-title{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.owner-rating .section-title>h2{margin:0;min-width:0}
+.owner-rating .section-title>.primary{min-height:44px;flex-shrink:0}

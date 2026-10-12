@@ -25,6 +25,7 @@ if (!unitOnly) {
   // requiring a running Worker are separate and must never target production.
   const suites = [
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
+    'owner-rating-ui',
     'account-notice-api', 'activity-notice-gate-ui', 'activity-notice-api', 'activity-notice-ui',
     'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
     'published-swap-api', 'published-swap-ui',

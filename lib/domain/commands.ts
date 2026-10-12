@@ -135,7 +135,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             if(isGuest(s,p.playerId))fail('临时来宾不累计积分或修为');
             if (!isClubOwner(s, a))
-                fail('403: 只有群主可以调整积分');
+                fail('403: 只有群主可以调整积分或修为');
             if (!player(p.playerId).enabled)
                 fail('该球友已停用，不能调整积分或修为');
             break;
