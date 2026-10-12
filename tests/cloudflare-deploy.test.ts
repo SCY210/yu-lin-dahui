@@ -7,7 +7,7 @@ const source={name:'fixture',d1_databases:[{binding:'DB',database_id:database}]}
 const built={...source,vars:{YULIN_HOSTING_PROVIDER:'cloudflare'}};
 test('remote migrations finish before the Worker publish command',async()=>{
  const commands:string[][]=[];
- await deployCloudflare({root:'/fixture',source,built,run:async(args:string[])=>{commands.push(args)}});
+ await deployCloudflare({root:'/fixture',source,built,readChannels:async()=>[],run:async(args:string[])=>{commands.push(args)}});
  assert.equal(commands.length,3);
  assert.ok(commands[0][0].endsWith('check-migrations.mjs'));
  assert.ok(commands[1].includes('migrations')&&commands[1].includes('apply')&&commands[1].includes('--remote'));
@@ -18,14 +18,14 @@ test('remote migrations finish before the Worker publish command',async()=>{
 });
 test('the actual Node preload works with platform paths and the project runtime',async()=>{
  const commands:string[][]=[];
- await deployCloudflare({root:process.cwd(),source,built,run:async(args:string[])=>{commands.push(args)}});
+ await deployCloudflare({root:process.cwd(),source,built,readChannels:async()=>[],run:async(args:string[])=>{commands.push(args)}});
  const cwd=execFileSync(process.execPath,['--import',commands[1][1],'--eval','process.stdout.write(process.cwd())'],{encoding:'utf8',windowsHide:true});
  assert.equal(cwd,process.cwd());
 });
 test('migration or history failure prevents all later remote operations',async()=>{
  for(const failure of [0,1]){
   let calls=0;
-  await assert.rejects(deployCloudflare({root:'/fixture',source,built,run:async()=>{if(calls++===failure)throw new Error('injected failure')}}),/injected failure/);
+  await assert.rejects(deployCloudflare({root:'/fixture',source,built,readChannels:async()=>[],run:async()=>{if(calls++===failure)throw new Error('injected failure')}}),/injected failure/);
   assert.equal(calls,failure+1);
  }
 });
@@ -36,6 +36,6 @@ test('wrong target, placeholder D1 and binding drift are rejected before remote 
   {source,built:{...built,d1_databases:[{binding:'DB',database_id:'another-database'}]}},
   {source:{...source,d1_databases:[{binding:'DB',database_id:'00000000-0000-4000-8000-000000000000'}]},built},
  ];
- for(const config of invalid){let calls=0;await assert.rejects(deployCloudflare({root:'/fixture',...config,run:async()=>{calls++}}));assert.equal(calls,0)}
+ for(const config of invalid){let calls=0;await assert.rejects(deployCloudflare({root:'/fixture',...config,readChannels:async()=>[],run:async()=>{calls++}}));assert.equal(calls,0)}
  assert.doesNotThrow(()=>validateCloudflareBuild(source,built));
 });

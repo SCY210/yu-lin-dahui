@@ -28,3 +28,9 @@
 - GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the Sites deployment repository. Do not upload them to GitHub.
 - Do not merge deployment repository history or copy its complete source over the shared version. Port shared functionality separately and inspect each change.
 - Before pushing, run node scripts/check-shared-source.mjs --check. Preserve that check and the local push hook.
+
+## Controlled production releases
+
+- Production may contain deployment-only presentation and permission configuration absent from this public repository. A live private release channel must only be updated from its controlled private checkout.
+- Do not publish a shared-only build over a private production channel or remove the release-channel check to bypass a refusal. Merge shared updates into the private branch, retain its private files and access checks, and use its validated release workflow.
+- Keep public-repository automatic production builds disabled for a controlled private deployment. Shared CI must not receive private source, assets or access configuration.

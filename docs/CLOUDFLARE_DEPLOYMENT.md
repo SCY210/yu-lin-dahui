@@ -8,7 +8,7 @@ API token, password, session or production data to this file.
 
 ## Workers Builds
 
-Set the production Workers Builds commands to:
+For a deployment built entirely from shared source, set the Workers Builds commands to:
 
 ```sh
 npm run build
@@ -28,6 +28,12 @@ published version records a migration-first deployment message for verification.
 Keep preview deployments separate from this production command.
 The build API token needs D1 write access to the configured database as well as
 Worker deployment access; insufficient database access stops publication.
+
+Production using a controlled private source tree must keep public-repository
+automatic builds disabled. Publish through the private release workflow instead.
+The deployment guard reads every active traffic version and refuses a shared-only
+build when production has `YULIN_RELEASE_CHANNEL=private`. Read failures stop
+publication before migrations or code uploads. See [Controlled private releases](PRIVATE_RELEASES.md).
 
 This production deploy setting is stored in Cloudflare; adding the npm script to
 Git alone does not update an existing build trigger. Verify the production trigger

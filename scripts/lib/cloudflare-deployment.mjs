@@ -1,6 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {readActiveReleaseChannels,validateReleaseChannel} from './release-channel.mjs';
 
 export const schemaDeploymentMessage='D1 migrations applied before Worker publish';
 export function validateCloudflareBuild(source,built){
@@ -17,8 +18,9 @@ function runNode(args,root){
 }
 
 /** Publish is unreachable until migration history validation and remote migrations succeed. */
-export async function deployCloudflare({root,source,built,run=args=>runNode(args,root)}){
+export async function deployCloudflare({root,source,built,run=args=>runNode(args,root),readChannels=()=>readActiveReleaseChannels({root,source})}){
  validateCloudflareBuild(source,built);
+ validateReleaseChannel(source,built,await readChannels());
  const wrangler=path.join(root,'node_modules','wrangler','bin','wrangler.js');
  const prefix=['--import',pathToFileURL(path.join(root,'scripts','sites-env.mjs')).href,wrangler];
  await run([path.join(root,'scripts','check-migrations.mjs')]);
