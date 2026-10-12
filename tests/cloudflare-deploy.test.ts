@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 import {deployCloudflare,schemaDeploymentMessage,validateCloudflareBuild} from '../scripts/lib/cloudflare-deployment.mjs';
 const database='11111111-1111-4111-8111-111111111111';
 const source={name:'fixture',d1_databases:[{binding:'DB',database_id:database}]};
@@ -11,8 +12,15 @@ test('remote migrations finish before the Worker publish command',async()=>{
  assert.ok(commands[0][0].endsWith('check-migrations.mjs'));
  assert.ok(commands[1].includes('migrations')&&commands[1].includes('apply')&&commands[1].includes('--remote'));
  assert.ok(commands[1].at(-1)!.endsWith('wrangler.cloudflare.json'));
+ assert.equal(new URL(commands[1][1]).protocol,'file:');
  assert.ok(commands[2].includes('deploy')&&commands[2].includes(schemaDeploymentMessage));
  assert.ok(commands[2][commands[2].indexOf('--config')+1].endsWith('wrangler.json'));
+});
+test('the actual Node preload works with platform paths and the project runtime',async()=>{
+ const commands:string[][]=[];
+ await deployCloudflare({root:process.cwd(),source,built,run:async(args:string[])=>{commands.push(args)}});
+ const cwd=execFileSync(process.execPath,['--import',commands[1][1],'--eval','process.stdout.write(process.cwd())'],{encoding:'utf8',windowsHide:true});
+ assert.equal(cwd,process.cwd());
 });
 test('migration or history failure prevents all later remote operations',async()=>{
  for(const failure of [0,1]){

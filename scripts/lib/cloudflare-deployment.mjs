@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 export const schemaDeploymentMessage='D1 migrations applied before Worker publish';
 export function validateCloudflareBuild(source,built){
@@ -19,7 +20,7 @@ function runNode(args,root){
 export async function deployCloudflare({root,source,built,run=args=>runNode(args,root)}){
  validateCloudflareBuild(source,built);
  const wrangler=path.join(root,'node_modules','wrangler','bin','wrangler.js');
- const prefix=['--import',path.join(root,'scripts','sites-env.mjs'),wrangler];
+ const prefix=['--import',pathToFileURL(path.join(root,'scripts','sites-env.mjs')).href,wrangler];
  await run([path.join(root,'scripts','check-migrations.mjs')]);
  await run([...prefix,'d1','migrations','apply','DB','--remote','--config',path.join(root,'wrangler.cloudflare.json')]);
  await run([...prefix,'deploy','--config',path.join(root,'dist','server','wrangler.json'),'--message',schemaDeploymentMessage]);
