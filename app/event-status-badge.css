@@ -1,0 +1,23 @@
+/* Activity state badges: each state has its own colour and shape in both themes (the theme .badge rules are overridden
+   by the doubled class). Open is green, full is amber, closed is slate blue, locked is violet, live is a solid red pill
+   with a pulsing dot, ended is solid ink, cancelled is struck through on a dashed outline, draft is a dashed outline. */
+.badge.event-status-badge,.wuxia-theme .badge.event-status-badge{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:700;letter-spacing:.02em;border:1px solid transparent;border-radius:999px;padding:4px 11px;line-height:1.3}
+.badge.event-status-badge[data-status=open]{background:#e3f4e8;color:#1f7a3d;border-color:#9fd3ae}
+.badge.event-status-badge[data-status=full]{background:#fff1d6;color:#8a5a00;border-color:#e9c27a}
+.badge.event-status-badge[data-status=closed]{background:#e6ecf4;color:#34507a;border-color:#a9bad3}
+.badge.event-status-badge[data-status=locked]{background:#efe6f6;color:#6b3d8f;border-color:#c8acdf}
+.badge.event-status-badge[data-status=live]{background:#c0392b;color:#fff;border-color:#c0392b}
+.badge.event-status-badge[data-status=ended]{background:#3a3f45;color:#f1f1f1;border-color:#3a3f45}
+.badge.event-status-badge[data-status=cancelled]{background:#f6eded;color:#9b372b;border:1px dashed #c98a80;text-decoration:line-through}
+.badge.event-status-badge[data-status=draft]{background:transparent;color:#6b6b6b;border:1px dashed #a8a8a8}
+.wuxia-theme .badge.event-status-badge[data-status=open]{background:#e3f4e8;color:#1f6a37;border-color:#9fc9a8}
+.wuxia-theme .badge.event-status-badge[data-status=full]{background:#f7ead0;color:#7d5300;border-color:#d9b26a}
+.wuxia-theme .badge.event-status-badge[data-status=closed]{background:#e4e9ee;color:#30475f;border-color:#a3b2c2}
+.wuxia-theme .badge.event-status-badge[data-status=locked]{background:#ece4ef;color:#5f3b78;border-color:#bea5cf}
+.wuxia-theme .badge.event-status-badge[data-status=live]{background:#8d3429;color:#fff9eb;border-color:#8d3429}
+.wuxia-theme .badge.event-status-badge[data-status=ended]{background:#1e2822;color:#ece6d8;border-color:#1e2822}
+.wuxia-theme .badge.event-status-badge[data-status=cancelled]{background:#f3e7e2;color:#8d3429;border:1px dashed #b98477;text-decoration:line-through}
+.wuxia-theme .badge.event-status-badge[data-status=draft]{background:transparent;color:#746b59;border:1px dashed #a89b80}
+.event-status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:event-status-pulse 1.6s ease-in-out infinite}
+@keyframes event-status-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.event-status-dot{animation:none}}
