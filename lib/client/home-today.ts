@@ -2,7 +2,7 @@ import type {Account,AwardVote,Booking,Event,Match,Registration,Round,State} fro
 import {eventStatusAt,signupClosesAt} from '../domain/event-lifecycle';
 import {canCastAwardVote} from '../domain/activity-voting';
 import {homeLiveMatches} from './home-live-matches';
-import {pendingOwnScores} from './score-reminder';
+import {pendingScores} from './score-reminder';
 
 /** How long a finished activity stays on the home page (and keeps prompting for the MVP vote). */
 export const recentlyEndedHours=5;
@@ -16,12 +16,13 @@ type HomeData=Pick<State,'events'|'matches'|'rounds'|'bookings'|'registrations'|
 const visible=(e:Event)=>e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status);
 const myRegistration=(regs:Registration[],e:Event,playerId:string)=>regs.find(r=>r.eventId===e.id&&r.playerId===playerId&&r.status!=='cancelled');
 
-export type LiveActivity={event:Event;matches:{match:Match;round:Round;court?:Booking}[];myMatch?:{match:Match;court?:Booking;partners:string[];opponents:string[];canScore:boolean};registered:boolean};
-/** One entry per running activity (not per court), with the viewer's own game if they are on court. */
+export type LiveActivity={event:Event;matches:{match:Match;round:Round;court?:Booking;canScore:boolean}[];myMatch?:{match:Match;court?:Booking;partners:string[];opponents:string[];canScore:boolean};registered:boolean};
+/** One entry per running activity (not per court), with the viewer's own game if they are on court.
+ * Every court can be scored by anyone signed up for the activity, its organiser or an administrator. */
 export function liveActivities(data:HomeData,now:number):LiveActivity[]{
- const games=homeLiveMatches(data,now),scorable=new Set(pendingOwnScores(data,now).map(m=>m.id));
+ const games=homeLiveMatches(data,now),scorable=new Set(pendingScores(data,now).map(m=>m.id));
  return data.events.filter(e=>visible(e)&&e.start<=now&&now<e.end&&eventStatusAt(e,now)!=='ended').sort((a,b)=>a.start-b.start||a.id.localeCompare(b.id)).map(event=>{
-  const matches=games.filter(g=>g.event.id===event.id).map(({match,round,court})=>({match,round,court}));
+  const matches=games.filter(g=>g.event.id===event.id).map(({match,round,court})=>({match,round,court,canScore:scorable.has(match.id)}));
   const mine=matches.find(g=>[...g.match.a,...g.match.b].includes(data.me.playerId));
   const side=mine?.match.a.includes(data.me.playerId)?'a':'b';
   return {event,matches,registered:!!myRegistration(data.registrations,event,data.me.playerId),
@@ -40,13 +41,19 @@ export function recentlyEnded(data:HomeData,now:number):EndedActivity[]{
    voted:(data.awardVotes as AwardVote[]).some(v=>v.eventId===event.id&&v.voterId===data.me.id)}));
 }
 
-export type HomeTodo={kind:'score'|'signup'|'promoted';eventId:string;title:string;detail:string;tab:'overview'|'rounds';matchId?:string};
+export type HomeTodo={kind:'score'|'signup'|'promoted';eventId:string;title:string;detail:string;tab:'overview'|'rounds';matchId?:string;count?:number};
 /** Things the viewer should act on now, besides unpaid fees and the MVP vote (shown with their own cards).
- * A game on a live card gets its score button there, so only scores left from activities no longer running appear here. */
+ * A game on a live card gets its score button there, so only scores left from activities no longer running appear here,
+ * one entry per activity, for anyone who may score them (not only the players of that game). */
 export function homeTodos(data:HomeData,now:number):HomeTodo[]{
  const events=new Map(data.events.map(e=>[e.id,e])),todos:HomeTodo[]=[];
  const live=new Set(liveActivities(data,now).map(a=>a.event.id));
- for(const m of pendingOwnScores(data,now)){const e=events.get(m.eventId);if(e&&!live.has(e.id))todos.push({kind:'score',eventId:e.id,title:'比分待录入',detail:e.title,tab:'rounds',matchId:m.id})}
+ const unscored=new Map<string,Match[]>();
+ for(const m of pendingScores(data,now))if(!live.has(m.eventId))unscored.set(m.eventId,[...unscored.get(m.eventId)??[],m]);
+ for(const [eventId,games] of unscored){const e=events.get(eventId);if(!e)continue;
+  // Open the viewer's own game first when there is one.
+  const first=games.find(m=>[...m.a,...m.b].includes(data.me.playerId))??games[0];
+  todos.push({kind:'score',eventId,title:'比分待录入',detail:e.title+(games.length>1?' · '+games.length+' 局':''),tab:'rounds',matchId:first.id,count:games.length})}
  for(const e of data.events){
   if(!visible(e)||e.status!=='open'||e.end<=now)continue;
   const mine=myRegistration(data.registrations,e,data.me.playerId);

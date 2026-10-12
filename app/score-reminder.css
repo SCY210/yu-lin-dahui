@@ -7,7 +7,7 @@
 .score-team.is-my-team{border:2px solid #8f80e0;background:#f0edfd}
 .score-team-label{flex-basis:100%;text-align:center;font-size:13px;font-weight:700;color:#4b4180}
 .score-team-player{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;max-width:100%;font-size:14px;font-weight:600;line-height:1.3}
-.score-team-player>span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-team-player>span{max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;text-align:center}
 .avatar.score-avatar{width:46px;height:46px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px #fff,0 1px 4px #2b244d26}
 .score-team-vs{align-self:center;font-size:13px;font-weight:800;letter-spacing:.06em;color:#9a93b3}
 .simple-score-pair{position:relative;gap:34px}
@@ -26,3 +26,4 @@
 .wuxia-theme .avatar.score-avatar{box-shadow:0 0 0 2px #fff9eb,0 1px 4px #3b2f1d33}
 .wuxia-theme .simple-score-pair label.is-my-team input{border-color:#8d6b3a;box-shadow:0 0 0 1px #8d6b3a}
 .wuxia-theme .score-conflict{background:#f7ead0;border-color:#d9b26a;border-radius:5px}
+.simple-score-pair input::placeholder{font-size:18px;font-weight:500;opacity:.55}

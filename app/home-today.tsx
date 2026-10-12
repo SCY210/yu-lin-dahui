@@ -31,7 +31,7 @@ export default function HomeToday({data,onOpen,onBrowse,hasUnpaid}:{data:ClubDat
    <h2>{event.title}</h2>
    {isPractice(event)?<p className="prewrap">{event.note}</p>:myMatch?<div className="home-live-mine"><Radio size={18} aria-hidden="true"/><span><strong>{courtLine(myMatch.court?.name)}</strong><small>{myMatch.partners.length?'你和 '+team(myMatch.partners):'你'} 对阵 {team(myMatch.opponents)}</small></span>{myMatch.canScore&&<button type="button" className="primary" onClick={()=>requestScoreEntry(myMatch.match.id)}><ClipboardPen size={16} aria-hidden="true"/> 录入比分</button>}</div>
     :registered&&<p className="hint">{matches.length?'你这一轮轮休，留意下一轮安排。':'还没有开始排场，稍后查看分组。'}</p>}
-   {matches.length>0&&<ul className="home-live-courts">{matches.map(({match,court})=><li key={match.id}><strong>{court?.name??'场地'}</strong><span>{team(match.a)} <em>对阵</em> {team(match.b)}</span></li>)}</ul>}
+   {matches.length>0&&<ul className="home-live-courts">{matches.map(({match,court,canScore})=><li key={match.id}><strong>{court?.name??'场地'}</strong><span>{team(match.a)} <em>对阵</em> {team(match.b)}</span>{canScore&&match.id!==myMatch?.match.id&&<button type="button" className="secondary home-live-score" aria-label={'录入'+(court?.name??'这块场地')+'的比分'} onClick={()=>requestScoreEntry(match.id)}><ClipboardPen size={15} aria-hidden="true"/>录比分</button>}</li>)}</ul>}
    <button type="button" className="primary" onClick={()=>onOpen(event.id,isPractice(event)?'overview':'rounds')}>{isPractice(event)?'查看练球安排':'查看本场对局'}</button>
   </section>)}
   {ended.map(({event,canVote,voted})=><section className={'card home-ended'+(canVote&&!voted?' needs-vote':'')} key={event.id}>

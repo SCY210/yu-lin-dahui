@@ -16,7 +16,8 @@
 .home-live-mine span{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
 .home-live-mine small{color:var(--muted-foreground)}
 .home-live-courts{display:grid;gap:6px;margin:0 0 12px;padding:0;list-style:none}
-.home-live-courts li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:14px}
+.home-live-courts li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;font-size:14px}
+.home-live-score{min-height:44px;padding:6px 10px;font-size:13px;white-space:nowrap}.home-live-score svg{margin:0 3px 0 0}
 .home-live-courts span{overflow-wrap:anywhere}
 .home-live-courts em{font-style:normal;color:var(--muted-foreground)}
 .card.home-ended.needs-vote,.wuxia-theme .card.home-ended.needs-vote{border-left:4px solid var(--primary)}

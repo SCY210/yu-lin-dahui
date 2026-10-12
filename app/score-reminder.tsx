@@ -2,7 +2,7 @@
 import {lazy,useCallback,useEffect,useRef,useState} from 'react';
 import {ClipboardPen} from 'lucide-react';
 import Deferred from './deferred';
-import {createScorePromptGate,pendingOwnScores,scoreEntryRequest,type ScoreReminderData} from '../lib/client/score-reminder';
+import {createScorePromptGate,pendingOwnScores,pendingScores,scoreEntryRequest,type ScoreReminderData} from '../lib/client/score-reminder';
 import './score-reminder.css';
 const ScoreDialog=lazy(()=>import('./score-dialog'));
 type Context={data:ScoreReminderData&{bookings:{id:string;name:string}[]};name:(id:string)=>string;refresh:()=>Promise<unknown>;busy:boolean};
@@ -11,8 +11,9 @@ const externalDialog=()=>!!document.querySelector('[role="dialog"],[role="alertd
 /** hideBar: the page offers its own score buttons (home live cards and to-dos), so only the form is rendered. */
 export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Context;blocked?:boolean;hideBar?:boolean}){
  const [selection,setSelection]=useState<{id:string;mode:'score'}|null>(null);
+ // Only own games prompt by themselves; a home score button may open any game this account can score.
  // A game someone else just scored stays open so the form can show their score instead of vanishing.
- const pending=pendingOwnScores(ctx.data),match=pending.find(m=>m.id===selection?.id)??ctx.data.matches.find(m=>m.id===selection?.id&&m.status==='complete');
+ const pending=pendingOwnScores(ctx.data),match=pendingScores(ctx.data).find(m=>m.id===selection?.id)??ctx.data.matches.find(m=>m.id===selection?.id&&m.status==='complete');
  const current=useRef({ctx,blocked,selection});
  useEffect(()=>{current.current={ctx,blocked,selection:match?selection:null}},[ctx,blocked,selection,match]);
  const gate=useRef(createScorePromptGate(ctx.data.me.id)),active=useRef(false);
@@ -38,7 +39,7 @@ export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Con
  },[tryPrompt]);
  useEffect(()=>{queueMicrotask(tryPrompt)},[ctx.data,ctx.busy,blocked,tryPrompt]);
  useEffect(()=>{
-  const open=(e:Event)=>{if(current.current.blocked||current.current.ctx.busy||document.hidden||externalDialog())return;const id=(e as CustomEvent<string>).detail;if(pendingOwnScores(current.current.ctx.data).some(m=>m.id===id)){gate.current.suppress();setSelection({id,mode:'score'})}};
+  const open=(e:Event)=>{if(current.current.blocked||current.current.ctx.busy||document.hidden||externalDialog())return;const id=(e as CustomEvent<string>).detail;if(pendingScores(current.current.ctx.data).some(m=>m.id===id)){gate.current.suppress();setSelection({id,mode:'score'})}};
   window.addEventListener(scoreEntryRequest,open);return()=>window.removeEventListener(scoreEntryRequest,open);
  },[]);
  const dismiss=()=>{gate.current.suppress();setSelection(null)};
