@@ -29,7 +29,7 @@ export async function applyLiveLineup(s:State,a:Account,action:string,input:unkn
  if(p.a.length!==size||p.b.length!==size)fail(size===1?'单打每队须有一人':'双打每队须有两人');
  if(new Set(selected).size!==selected.length)fail('同一球友不能占两个位置');
  const allowed=new Set(liveLineupCandidates(s,e,m,now));
- if(selected.some(id=>!allowed.has(id)))fail('所选球友不在可上场名单：请检查报名、参加时段、轮休和其他场地对局');
+ if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查其他场地的最新阵容、报名时段和轮休状态');
  const before={a:[...m.a],b:[...m.b]};
  m.a=[...p.a];m.b=[...p.b];decorateMatch(s,e,m);
  r.eligible=[...new Set([...r.eligible,...selected])];

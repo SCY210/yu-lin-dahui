@@ -17,6 +17,7 @@ import { month, fail } from '../../../lib/domain/types';
 import { leaderboard, replayRating } from '../../../lib/domain/ranking';
 import { z } from 'zod';
 import { clubReminderStatements } from '../../../lib/reminder-store';
+import { canRebaseLineupWrite } from '../../../lib/lineup-write';
 export const dynamic = 'force-dynamic';
 const response = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 function error(e: unknown) { return writeErrorResponse(e); }
@@ -104,6 +105,7 @@ export async function POST(req: Request) {
         if (body.actor !== undefined && body.actor !== user.userId)
             return response({ error: '登录账号已切换，本次操作未保存。请确认当前账号后再操作', actorMismatch: true }, 409);
         const key = user.userId + ':' + body.requestId;
+        const rebaseLineup = canRebaseLineupWrite(body.action, body.payload);
         const creationAction=body.action==='friendSignup'&&friendSignupCreatesGuest(body.payload)?'friend':body.action;
         for (let attempt = 0; attempt < 5; attempt++) {
             const s = await loadClubState();
@@ -152,7 +154,7 @@ export async function POST(req: Request) {
             await reserveDailyCreation(user.userId, body.requestId, creationAction, account.role === 'admin');
         }
 
-                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action) && body.revision !== s.revision)
+                if (!rebaseLineup && !['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
                 // Domain replay keys come from the authenticated write envelope, never a client-selected payload key.
                 const payload = ['treasureGrant','treasureRedeem'].includes(body.action) && body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
@@ -168,7 +170,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
+                    if (!rebaseLineup && !['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

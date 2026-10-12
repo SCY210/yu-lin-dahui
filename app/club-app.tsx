@@ -33,10 +33,11 @@ import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useVisualTheme} from './visual-theme';
 import {isClubResponse} from '../lib/client/club-response';
 import {createClubRefresh} from '../lib/client/club-refresh';
+import {fastLineupRefresh,liveLineupFormChanged,readBelowRevision} from '../lib/client/lineup-sync';
 import {fetchWithWakeRetry} from '../lib/client/wake-recovery';
 import {listenForSessionChanges,notifySessionChange} from '../lib/client/session-sync';
 import {flushSync} from 'react-dom';
-import {lazy,useEffect,useState,useCallback,useRef} from 'react';
+import {lazy,useEffect,useLayoutEffect,useState,useCallback,useRef} from 'react';
 import {Home,CalendarDays,Trophy,User,Plus,Clock,Users,Settings,Download} from 'lucide-react';
 import {Toaster,toast} from 'sonner';
 import {month,type Event} from '../lib/domain/types';
@@ -95,6 +96,8 @@ export default function ClubApp(){
  const refreshSequence=useRef(0),dataSnapshot=useRef<any>(null),actionInFlight=useRef(false),sessionInvalidated=useRef(false),pageActive=useRef(false);dataSnapshot.current=sessionInvalidated.current?null:data;
  useEffect(()=>{pageActive.current=true;return()=>{pageActive.current=false}},[]);
  const readValidator=useRef<{etag:string;period:string;year:number}|null>(null);
+ const minimumReadRevision=useRef(0),lineupFormSnapshot=useRef<Form|null>(null);
+ useLayoutEffect(()=>{lineupFormSnapshot.current=form},[form]);
  const refresh=useCallback(async()=>{
   if(sessionInvalidated.current)return;
   const request=++refreshSequence.current,snapshot=dataSnapshot.current;
@@ -103,7 +106,7 @@ export default function ClubApp(){
    const r=await fetchWithWakeRetry('/api/club?month='+period+'&year='+year,{cache:'no-store',headers:validator?{'If-None-Match':validator.etag}:{}});
    if(sessionInvalidated.current)return;
    if(request===refreshSequence.current&&[401,403].includes(r.status)){
-    readValidator.current=null;dataSnapshot.current=null;setData(null);setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false);
+    readValidator.current=null;minimumReadRevision.current=0;dataSnapshot.current=null;setData(null);setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false);
    }
    if(r.status===304){
     if(!validator||!snapshot)throw new Error('资料缓存已更新，请重新加载');
@@ -115,6 +118,13 @@ export default function ClubApp(){
    if(!r.ok)throw new Error(d.error||'暂时无法同步数据');
    if(!isClubResponse(d))throw new Error('服务返回的资料暂不可用，请稍后重试');
    if(request===refreshSequence.current){
+    if(readBelowRevision(d,minimumReadRevision.current)){readValidator.current=null;setError('资料仍在同步，请稍候');return dataSnapshot.current}
+    if(typeof d.revision==='number')minimumReadRevision.current=Math.max(minimumReadRevision.current,d.revision);
+    const shownForm=lineupFormSnapshot.current;
+    if(!actionInFlight.current&&d.me?.id===dataSnapshot.current?.me?.id&&shownForm&&liveLineupFormChanged(shownForm,d)){
+     lineupFormSnapshot.current=null;setForm((current:Form|null)=>current===shownForm?null:current);
+     toast.info('阵容已更新，已同步最新阵容，请重新选择。');
+    }
     if(dataSnapshot.current?.me?.id&&dataSnapshot.current.me.id!==d.me?.id){setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false)}
     if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>typeof old.progress[a.id]?.level==='number'&&next.progress[a.id]?.level>old.progress[a.id].level);if(fresh.length)toast.success('成就升级：'+fresh.map(a=>a.name+' Lv.'+next.progress[a.id].level).join('、'))}}
     const etag=r.headers.get('ETag');readValidator.current=etag&&d.me?{etag,period,year}:null;
@@ -124,7 +134,7 @@ export default function ClubApp(){
   }catch(e){if(request===refreshSequence.current){readValidator.current=null;setError((e as Error).message)}}
   finally{if(request===refreshSequence.current)setLoading(false)}
  },[period,year]);
- const liveRefreshing=(page==='home'&&!!data?.matches?.some((match:MatchView)=>match.status==='playing'&&data.events.some((event:Event)=>event.id===match.eventId&&['open','locked','live'].includes(event.status))))||(page==='events'&&!!data?.events?.find((event:Event)=>event.id===eventId)?.livePlay?.enabled);
+ const liveRefreshing=fastLineupRefresh(page,eventId,tab,data);
  useEffect(()=>{const poll=createClubRefresh({refresh,available:()=>!document.hidden&&navigator.onLine,schedule:(callback,delay)=>setTimeout(callback,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)},liveRefreshing?3000:15000);const wake=()=>poll.wake(),events=['online','offline','focus','pageshow'];document.addEventListener('visibilitychange',wake);for(const name of events)window.addEventListener(name,wake);return()=>{poll.stop();document.removeEventListener('visibilitychange',wake);for(const name of events)window.removeEventListener(name,wake)}},[refresh,liveRefreshing]);
  useEffect(()=>{
   const invalidate=()=>{
@@ -136,7 +146,37 @@ export default function ClubApp(){
   window.addEventListener('pageshow',restore);
   return()=>{sync.stop();window.removeEventListener('pageshow',restore)};
  },[]);
- async function action(action:string,payload:Record<string,unknown>,close=true){if(sessionInvalidated.current)throw new Error('登录状态已更新，请重新登录');if(actionInFlight.current)throw new Error('正在保存，请稍候');actionInFlight.current=true;const submittedForm=form,submittedOwner=dataSnapshot.current?.me?.id;setBusy(true);try{const sameAccount=()=>pageActive.current&&!sessionInvalidated.current&&!!submittedOwner&&dataSnapshot.current?.me?.id===submittedOwner;const r=await fetchWithWakeRetry('/api/club',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,payload,requestId:formWriteRequestId(submittedForm,action),revision:data?.revision,actor:submittedOwner})},{canRetry:sameAccount});const d:ActionResponse=await (r.json() as Promise<ActionResponse>).catch(()=>({error:'服务暂时无法响应，请稍后重试'}));if(d.actorMismatch){await refresh();throw new Error(d.error)}if(r.status===428&&d.noticeRequired){await refresh();throw new Error(d.error||'请先确认活动须知')}if(r.status===409){await refresh();throw new Error((action.startsWith('treasure')||['register','courtRegister','friendSignup'].includes(action))?(d.error||'资料已更新，请重新确认'):'资料刚刚有更新，已自动刷新，请确认后再操作一次')}if(!r.ok)throw new Error(d.error);if(submittedOwner!==dataSnapshot.current?.me?.id)return d;if(d.preview){setPreview(d.preview);setForm((current:Form|null)=>current===submittedForm?null:current);toast.success('已生成重算预览，尚未保存');return d}await refresh();if(action==='acknowledgeActivityNotice'&&dataSnapshot.current?.me?.id===submittedOwner&&dataSnapshot.current?.accountNotice?.required!==false)throw new Error('确认状态尚未同步，请重试；已经保存的记录不会重复生成');if(submittedOwner!==dataSnapshot.current?.me?.id)return d;if(action==='deleteEvent'&&navigation?.route.page==='events'&&navigation.route.eventId===payload.eventId)navigation.replaceRoute({page:'events'});if(close)setForm((current:Form|null)=>current===submittedForm?null:current);toast.success(action==='friendSignup'?'朋友已加入场地接龙，满员时自动候补':action==='notifyFees'?'已提醒还没标记付款的球友':action==='feePaid'?(payload.paid?'已标记为已付款':'已撤销付款标记'):action==='settle'?(payload.confirmed?'分摊已确认，球友可以查看每人金额':'分摊草稿已保存'):action==='deleteEvent'?'活动已删除，可在已删除活动中恢复':action==='restoreEvent'?'活动已恢复':'已保存');return d}catch(e){toast.error((e as Error).message);throw e}finally{actionInFlight.current=false;setBusy(false)}}
+ async function action(action:string,payload:Record<string,unknown>,close=true){
+  if(sessionInvalidated.current)throw new Error('登录状态已更新，请重新登录');
+  if(actionInFlight.current)throw new Error('正在保存，请稍候');
+  actionInFlight.current=true;const submittedForm=form,submittedOwner=dataSnapshot.current?.me?.id;setBusy(true);
+  try{
+   const sameAccount=()=>pageActive.current&&!sessionInvalidated.current&&!!submittedOwner&&dataSnapshot.current?.me?.id===submittedOwner;
+   const r=await fetchWithWakeRetry('/api/club',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,payload,requestId:formWriteRequestId(submittedForm,action),revision:dataSnapshot.current?.revision,actor:submittedOwner})},{canRetry:sameAccount});
+   const d:ActionResponse=await (r.json() as Promise<ActionResponse>).catch(()=>({error:'服务暂时无法响应，请稍后重试'}));
+   if(d.actorMismatch){await refresh();throw new Error(d.error)}
+   if(r.status===428&&d.noticeRequired){await refresh();throw new Error(d.error||'请先确认活动须知')}
+   if(r.status===409){
+    readValidator.current=null;await refresh();
+    if(['liveLineup','swap'].includes(action)){
+     setForm((current:Form|null)=>current===submittedForm?null:current);
+     throw new Error(d.error||'阵容已更新，已同步最新阵容，请重新选择。');
+    }
+    throw new Error((action.startsWith('treasure')||['register','courtRegister','friendSignup'].includes(action))?(d.error||'资料已更新，请重新确认'):'资料刚刚有更新，已自动刷新，请确认后再操作一次');
+   }
+   if(!r.ok)throw new Error(d.error);
+   if(submittedOwner!==dataSnapshot.current?.me?.id)return d;
+   if(d.preview){setPreview(d.preview);setForm((current:Form|null)=>current===submittedForm?null:current);toast.success('已生成重算预览，尚未保存');return d}
+   if(typeof d.revision==='number')minimumReadRevision.current=Math.max(minimumReadRevision.current,d.revision);
+   readValidator.current=null;await refresh();
+   if(submittedOwner!==dataSnapshot.current?.me?.id)return d;
+   if(action==='deleteEvent'&&navigation?.route.page==='events'&&navigation.route.eventId===payload.eventId)navigation.replaceRoute({page:'events'});
+   if(close)setForm((current:Form|null)=>current===submittedForm?null:current);
+   toast.success(action==='friendSignup'?'朋友已加入场地接龙，满员时自动候补':action==='notifyFees'?'已提醒还没标记付款的球友':action==='feePaid'?(payload.paid?'已标记为已付款':'已撤销付款标记'):action==='settle'?(payload.confirmed?'分摊已确认，球友可以查看每人金额':'分摊草稿已保存'):action==='deleteEvent'?'活动已删除，可在已删除活动中恢复':action==='restoreEvent'?'活动已恢复':'已保存');
+   return d;
+  }catch(e){toast.error((e as Error).message);throw e}
+  finally{actionInFlight.current=false;setBusy(false)}
+ }
  const live=useRef<any>({});live.current={data,refresh,action};
  function usernameChanged(){setChangingUsername(false);navigation?.reset();location.replace('/')}
  async function signOut(){navigation?.reset();try{const pushEndpoint=await disconnectPushForLogout();const response=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout',...(pushEndpoint?{pushEndpoint}:{})})});if(!response.ok)throw new Error('退出登录未完成，请重试');notifySessionChange();location.replace('/')}catch(e){toast.error(e instanceof Error?e.message:'退出登录未完成，请重试')}}
