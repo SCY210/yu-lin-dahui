@@ -30,3 +30,5 @@ Verification covers all dismissal handlers, mobile-history blocking, foreground 
 ## Detailed iPhone steps
 
 The prompt lists what the notifications cover. On an iPhone that has not installed the site, it shows four numbered steps: check iOS 16.4 or later, open the site in Safari (leaving WeChat first) and tap Share, choose Add to Home Screen, then open the home-screen icon and allow notifications. When an iPhone has blocked notifications, it shows the path in Settings > Notifications. The same steps appear in the reminder center (`app/ios-push-steps.tsx`).
+
+The iPhone guide covers both a visible Share button and the page-menu Share action, plus Edit Actions when Add to Home Screen is missing, following [Apple's installation guide](https://support.apple.com/guide/iphone/iphea86e5236/ios). The minimum Web Push requirement remains iOS/iPadOS 16.4 with a Home Screen web app, as documented by [WebKit](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
