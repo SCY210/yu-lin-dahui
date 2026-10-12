@@ -9,8 +9,9 @@
 ## Commits and review
 
 - The owner and Codex/assistants performing authorized work through the owner's SCY210 account may update main directly, without a separate PR or additional approval. Significant updates still require validation and GitHub synchronization.
-- Other invited collaborators must submit changes through a PR approved by SCY210 before merging into main. New commits require renewed review; collaborators must not push directly to main.
-- GitHub enforces protection by account and permissions. Preserve the owner's administrator exemption. Do not grant administrator exemptions to other collaborators or disable their PR and Code Owners review requirements.
+- Except for the named exception below, invited collaborators must submit changes through a PR approved by SCY210 before merging into main. New commits require renewed review; collaborators must not push directly to main.
+- The owner explicitly authorized zehang0228 to merge PRs into main without SCY210 approval. This user-specific ruleset bypass applies only through pull requests; it does not grant repository Admin, direct pushes to main, force pushes, branch deletion, or exemptions for other collaborators.
+- GitHub enforces protection by account and permissions. Preserve the owner's existing exemption and the zehang0228 PR-only exception. Keep PR approval, Code Owners review, and stale-review dismissal for everyone else. Any additional collaborator exemption requires a new explicit owner instruction. See docs/GITHUB_REVIEW_POLICY.md for the verified configuration.
 - PR submission permissions remain restricted to invited collaborators. The user must explicitly identify any new collaborator.
 
 ## Shared documentation and local state
