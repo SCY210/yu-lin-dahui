@@ -27,4 +27,3 @@ try{
  user('owner');const manager=await request({...stopped,playerId:'p2'});assert.equal((await post(manager)).status,200);stored=await api.load();assert.deepEqual(stored.events[0].matchingStopped,['p2']);
  console.log('PASS matching participation API: member self opt-out, server reload projection, no signup/attendance mutation, outsider refusal, transaction rollback, request idempotence, resume and manager control');
 }finally{sql.close();delete globalThis.__pointsParticipationApiTest}
-
