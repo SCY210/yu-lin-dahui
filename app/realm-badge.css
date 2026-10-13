@@ -634,6 +634,7 @@
 /* Keep scrolled-away badges and background pages from running animations.
    Server-rendered badges start paused until visibility is known. */
 .realm-badge[data-motion='paused']::before,
+.realm-badge[data-motion='paused']::after,
 .realm-badge[data-motion='paused'] *,
 .realm-badge[data-motion='paused'] *::before,
 .realm-badge[data-motion='paused'] *::after {
@@ -643,6 +644,7 @@
 /* ── Reduced motion: the full static insignia, no decoration moving ── */
 @media (prefers-reduced-motion: reduce) {
   .realm-badge::before,
+  .realm-badge::after,
   .realm-badge *,
   .realm-badge *::before,
   .realm-badge *::after {
