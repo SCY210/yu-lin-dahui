@@ -50,7 +50,7 @@ const RankingView=lazy(()=>import('./ranking-view'));
 const BindAccount=lazy(()=>import('./bind-account'));
 const Forms=lazy(()=>import('./forms-dialog'));
 const ChangePassword=lazy(()=>import('./change-password'));
-import {AccountControlsContext} from './account-controls';
+import {AccountControlsContext} from '../lib/client/account-controls-context';
 const ChangeUsername=lazy(()=>import('./change-username'));
 const OwnerPoints=lazy(()=>import('./owner-points'));
 const TreasureShop=lazy(()=>import('./treasure-shop'));

@@ -31,3 +31,15 @@ ALTER TABLE `__new_treasureLedger` RENAME TO `treasureLedger`;--> statement-brea
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE UNIQUE INDEX `treasure_ledger_actor_request` ON `treasureLedger` (`actor`,`request_id`);--> statement-breakpoint
 CREATE INDEX `treasure_ledger_player` ON `treasureLedger` (`player_id`);
+--> statement-breakpoint
+-- Evidence stays append-only during normal use. The only deletion exception is
+-- an expired, server-recorded account-erasure request for the same account.
+DROP TRIGGER `account_notice_no_delete`;
+--> statement-breakpoint
+CREATE TRIGGER `account_notice_no_delete` BEFORE DELETE ON `accountNoticeReceipts`
+WHEN NOT EXISTS (
+ SELECT 1 FROM `account_deletions`
+ WHERE `account_id`=OLD.`account_id`
+ AND `delete_after` <= CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)
+)
+BEGIN SELECT RAISE(ABORT, 'Acknowledgement evidence is append-only'); END;

@@ -40,7 +40,7 @@ if (!unitOnly) {
 
     'event-date-repair-api', 'settlement-api', 'requested-thursday-split-api',
     'write-retry-api', 'club-read-api', 'requested-event-merge-api',
-    'trial-cleanup-api', 'push-api', 'auth-business.integration', 'account-lifecycle-api',
+    'trial-cleanup-api', 'push-api', 'auth-business.integration', 'account-lifecycle-api', 'account-lifecycle-ui',
   ];
   for (const suite of suites) run([`tests/${suite}.mjs`]);
 }

@@ -1,13 +1,12 @@
 'use client';
-import {createContext,useState} from 'react';
+import {useState} from 'react';
+import type {AccountControlsProps} from '../lib/client/account-controls-context';
 import {toast} from 'sonner';
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription} from '@/components/ui/dialog';
 import {notifySessionChange} from '../lib/client/session-sync';
 import {readActionResponse} from '../lib/client/api-response';
 
-type Props = {isOwner: boolean; role: string; method: string; refresh: () => Promise<unknown>};
-export const AccountControlsContext = createContext<Props|null>(null);
-export default function AccountControls({isOwner, role, method, refresh}: Props) {
+export default function AccountControls({isOwner, role, method, refresh}: AccountControlsProps) {
   const [action, setAction] = useState<'requestDeletion'|'relinquishAdmin'|null>(null);
   const [password, setPassword] = useState(''), [confirmed, setConfirmed] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const deleting = action === 'requestDeletion';

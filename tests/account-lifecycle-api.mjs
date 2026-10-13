@@ -36,6 +36,10 @@ try {
   s.rounds.push({id: 'round', eventId: 'past', start: now - 7200000, duration: 20, status: 'complete', eligible: ['p-member','p-owner'], rest: [], seed: 1});
   s.matches.push({id: 'match', eventId: 'past', roundId: 'round', courtId: 'court', a: ['p-member'], b: ['p-owner'], status: 'complete', start: now - 7200000, end: now - 3600000, scoreA: 21, scoreB: 10, monthly: true, elo: true, locked: true, enteredBy: 'member', games: [{a:21,b:10}]});
   s.registrations.push({id: 'signup', eventId: 'past', playerId: 'p-member', status: 'confirmed', sequence: 1, arrival: now - 7200000, departure: now - 3600000, note: 'private note', cancelRequested: false, courtExempt: {mode:'none',reason:''}, ballExempt: {mode:'none',reason:''}});
+  for(const id of ['future','unrelated'])s.events.push({...s.events[0],id,title:id,status:'open',start:now+7200000,end:now+10800000,capacity:1});
+  s.registrations.push({...s.registrations[0],id:'future-own',eventId:'future',arrival:now+7200000,departure:now+10800000});
+  s.registrations.push({...s.registrations[0],id:'future-waiter',eventId:'future',playerId:'p-owner',status:'waitlist',sequence:2,arrival:now+7200000,departure:now+10800000});
+  s.registrations.push({...s.registrations[0],id:'unrelated-waiter',eventId:'unrelated',playerId:'p-admin',status:'waitlist',sequence:2,arrival:now+7200000,departure:now+10800000});
   s.attendance.push({id: 'attendance', eventId:'past', playerId:'p-member', start:now-7200000,end:now-3600000,state:'left'});
   s.payments.push({id:'payment',eventId:'past',playerId:'p-member',cents:1000,method:'cash',at:now-3600000,reason:'private payment note',actor:'member'});
   s.settlements.push({id:'settlement',eventId:'past',version:1,created:now-3600000,reason:'shared',confirmed:true,total:1000,subsidy:0,unallocated:0,bills:[{playerId:'p-member',court:1000,ball:0,other:0,total:1000,minutes:60}],detail:[{name:'court',start:now-7200000,end:now-3600000,cents:1000,shares:{'p-member':1000},subsidy:0,unallocated:0,estimated:false}]});
@@ -85,7 +89,7 @@ try {
   await assert.rejects(()=>api.purgeExpiredAccounts()); database.injectFailure(null);
   assert.deepEqual(await api.load(),beforeErase,'Failed deletion must roll back shared facts');
   assert.ok(database.sql.prepare('SELECT * FROM password_credentials WHERE id=?').get('member'));
-  fixture.storageFails=true; await assert.rejects(()=>api.purgeExpiredAccounts());
+  fixture.storageFails=true; await assert.rejects(()=>api.purgeExpiredAccounts(), /Storage unavailable/);
   const erased=await api.load(); assert.ok(!erased.accounts.some(a=>a.id==='member'));
   assert.equal(database.sql.prepare('SELECT * FROM password_credentials WHERE id=?').get('member'),undefined);
   assert.equal(database.sql.prepare('SELECT count(*) AS n FROM account_erasure_objects').get().n,1);
@@ -95,6 +99,8 @@ try {
   assert.deepEqual(erased.matches[0].a,[replacement.id]); assert.equal(erased.matches[0].scoreA,21);
   assert.equal(erased.settlements[0].detail[0].shares[replacement.id],1000);
   assert.equal(erased.registrations[0].note,''); assert.equal(erased.payments[0].reason,'');
+  assert.ok(!erased.registrations.some(r=>r.id==='future-own'));assert.equal(erased.registrations.find(r=>r.id==='future-waiter').status,'confirmed');
+  assert.equal(erased.registrations.find(r=>r.id==='unrelated-waiter').status,'waitlist','Unrelated events must not be changed by erasure');
   assert.equal(erased.players.find(p=>p.id==='friend').ownerId,'');
   assert.equal(erased.photos.length,0); assert.ok(!erased.audits.some(a=>a.id==='private-audit'));
   assert.ok(!JSON.stringify(erased).includes('p-member')); assert.ok(!JSON.stringify(erased).includes('member@example.test'));

@@ -68,7 +68,10 @@ export async function POST(req: Request) {
             const sessionId = await hashToken(token), now = Date.now();
             const insert = raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=?').bind(sessionId, c.id, now + age * 1000, c.id, c.username, c.salt, c.hash);
             if (await deletionRequest(c.id)) {
-                if (await cancelAccountDeletion(c.id, [insert])) return result({ok: true, deletionCancelled: true}, req, token);
+                if (await cancelAccountDeletion(c.id, [insert])) {
+                    await raw().prepare('DELETE FROM auth_rate_limits WHERE id=?').bind(pairId).run();
+                    return result({ok: true, deletionCancelled: true}, req, token);
+                }
             }
             const saved = await raw().batch([
                 // A simultaneous reset must not issue a session based on a stale password hash.

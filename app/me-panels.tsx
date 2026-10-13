@@ -1,6 +1,7 @@
 'use client';
 import {useContext,useId,useState,type ReactNode} from 'react';
-import AccountControls,{AccountControlsContext} from './account-controls';
+import AccountControls from './account-controls';
+import {AccountControlsContext} from '../lib/client/account-controls-context';
 import {Bell,KeyRound,Medal} from 'lucide-react';
 import './me-panels.css';
 

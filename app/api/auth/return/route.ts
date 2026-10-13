@@ -1,5 +1,5 @@
 import {getChatGPTUser} from '../../../chatgpt-auth';
-import {blockedLegacyIdentity, cancelAccountDeletion} from '../../../../lib/account-lifecycle';
+import {blockedLegacyIdentity, cancelAccountDeletion, deletionRequest} from '../../../../lib/account-lifecycle';
 import {writeErrorResponse} from '../../../../lib/write-security';
 
 export async function GET(req: Request) {
@@ -9,7 +9,6 @@ export async function GET(req: Request) {
     const user = await getChatGPTUser();
     if (!user || await blockedLegacyIdentity(user.userId)) return Response.json({error: '账号不可用'}, {status: 401, headers: {'Cache-Control': 'no-store'}});
     // Normal legacy initialization may have no club account yet.
-    const {deletionRequest} = await import('../../../../lib/account-lifecycle');
     if (await deletionRequest(user.userId)) await cancelAccountDeletion(user.userId);
     const h = new Headers({Location: '/', 'Cache-Control': 'no-store'});
     for (const name of ['yulin_signed_out','yulin_session']) h.append('Set-Cookie', `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${new URL(req.url).protocol === 'https:' ? '; Secure' : ''}`);

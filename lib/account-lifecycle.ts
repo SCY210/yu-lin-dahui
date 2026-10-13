@@ -77,7 +77,6 @@ export async function purgeExpiredAccounts(now = Date.now()) {
       const before = [
         raw().prepare('DELETE FROM auth_sessions WHERE user_id=?').bind(id),
         raw().prepare('DELETE FROM password_credentials WHERE id=?').bind(id),
-        raw().prepare('DELETE FROM account_deletions WHERE account_id=?').bind(id),
         raw().prepare('DELETE FROM trial_credential_archive WHERE id=? OR instr(payload,?)>0').bind(id, id),
         raw().prepare("UPDATE commits SET key='erased:'||revision WHERE instr(key,?)>0").bind(id),
       ];

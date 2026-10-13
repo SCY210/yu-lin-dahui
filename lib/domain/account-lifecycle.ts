@@ -6,6 +6,7 @@ export const deletionGraceMs = 30 * 24 * 60 * 60 * 1000;
 
 export function assertCanDeleteAccount(s: State, account: Account) {
   if (isClubOwner(s, account)) fail('403: 群主账号受保护，请先安排群组所有权交接');
+  if (account.role === 'admin' && !s.accounts.some(a => a.id !== account.id && a.role === 'admin')) fail('409: 至少保留一位管理员');
 }
 
 export function relinquishAdmin(s: State, account: Account) {
@@ -43,6 +44,7 @@ export function eraseAccount(s: State, accountId: string, now: number) {
   for (const row of s.treasureLedger) if (row.actor === accountId) {row.actor = null; row.reason = ''; row.requestId = crypto.randomUUID();}
   for (const row of s.treasureOrders) if (row.handledBy === accountId) delete row.handledBy;
   if (s.settings.feePayees) s.settings.feePayees = s.settings.feePayees.filter(p => p.createdBy !== accountId);
+  for (const event of s.events) if (event.creatorId === accountId) {delete event.feeRecipient; event.note = '';}
   s.tagVotes = s.tagVotes.filter(v => v.voterId !== accountId && v.playerId !== oldPlayerId);
   s.awardVotes = s.awardVotes.filter(v => v.voterId !== accountId && v.playerId !== oldPlayerId);
   s.challenges = s.challenges.filter(v => v.challengerId !== oldPlayerId && v.targetId !== oldPlayerId);
@@ -50,9 +52,10 @@ export function eraseAccount(s: State, accountId: string, now: number) {
   // Drop entire related snapshots rather than retaining a reversible mapping.
   s.audits = s.audits.filter(a => ![...identityIds].some(id => JSON.stringify(a).includes(id)) && !photos.some(p => JSON.stringify(a).includes(p.id) || JSON.stringify(a).includes(p.key)));
   const futureEvents = new Set(s.events.filter(e => e.start > now).map(e => e.id));
+  const affectedFutureEvents = new Set(s.registrations.filter(r => r.playerId === oldPlayerId && futureEvents.has(r.eventId)).map(r => r.eventId));
   s.registrations = s.registrations.filter(r => !(r.playerId === oldPlayerId && futureEvents.has(r.eventId)));
   s.attendance = s.attendance.filter(r => !(r.playerId === oldPlayerId && futureEvents.has(r.eventId)));
-  for (const eventId of futureEvents) {
+  for (const eventId of affectedFutureEvents) {
     const event = s.events.find(e => e.id === eventId)!;
     if (event.deletedAt !== undefined) continue;
     promoteLegacy(s, event, now);
@@ -68,6 +71,7 @@ export function eraseAccount(s: State, accountId: string, now: number) {
   };
   for (const key of ['events', 'registrations', 'attendance', 'rounds', 'matches', 'settlements', 'payments', 'ratingChanges'] as const) {
     for (const row of s[key]) {
+      if ('actor' in row && row.actor === accountId && 'reason' in row) row.reason = '';
       if ('playerId' in row && row.playerId === oldPlayerId) {
         if ('note' in row) row.note = '';
         if ('reason' in row) row.reason = '';
