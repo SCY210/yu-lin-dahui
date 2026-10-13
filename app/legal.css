@@ -5,5 +5,5 @@
 .legal-draft{padding:16px;border:1px solid #d7c386;border-radius:12px;background:#fff9e8}.legal-draft p{margin-bottom:0}
 .legal-footer{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;padding:12px 18px 96px;font-size:14px}.legal-footer a{display:inline-flex;align-items:center;min-height:44px}
 .legal-footer>p{flex-basis:100%;max-width:680px;margin:0;text-align:center;font-size:12px;line-height:1.8;color:var(--muted-foreground,#65657a);overflow-wrap:anywhere}
-.profile-privacy-hint{font-size:12px;line-height:1.8;color:var(--muted-foreground,#65657a);margin:12px 0}.profile-privacy-hint a{text-decoration:underline;text-underline-offset:3px}
+
 .image-rights label{display:flex!important;align-items:flex-start;gap:10px;font-size:14px!important;line-height:1.6}.image-rights input[type=checkbox]{flex:0 0 20px;width:20px;height:20px;min-height:20px;padding:0;margin-top:3px;accent-color:#4f46e5}.image-rights p{font-size:13px;line-height:1.6;color:#65657a;margin:8px 0}

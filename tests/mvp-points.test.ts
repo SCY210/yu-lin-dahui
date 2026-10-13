@@ -43,11 +43,12 @@ test('a tie gives every leader the points; no votes gives none; singles activiti
  assert.equal(points(single.s,'a',closes,singlesLeaderboard)?.mvpPoints,5);assert.equal(points(single.s,'a',closes)?.mvpPoints??0,0);
 });
 
-test('votes are named for the organiser and administrators only',async()=>{
+test('votes are named for administrators and the owner only, not for an organiser who is a member',async()=>{
  const {s,vote}=fixture();await vote('b','a');
  const member=projectClubState(s,s.accounts.find(a=>a.id==='c')!,'2027-05',2027,end+2*hour).awardVotes[0];
  assert.ok(!('voterPlayerId' in member)&&member.voterId==='','members see counts only');
- for(const id of ['host','owner']){const v=projectClubState(s,s.accounts.find(a=>a.id===id)!,'2027-05',2027,end+2*hour).awardVotes[0] as {voterPlayerId?:string};assert.equal(v.voterPlayerId,'p-b')}
+ const host=projectClubState(s,s.accounts.find(a=>a.id==='host')!,'2027-05',2027,end+2*hour).awardVotes[0];assert.ok(!('voterPlayerId' in host),'a member organiser sees counts only');
+ for(const id of ['owner']){const v=projectClubState(s,s.accounts.find(a=>a.id===id)!,'2027-05',2027,end+2*hour).awardVotes[0] as {voterPlayerId?:string};assert.equal(v.voterPlayerId,'p-b')}
 });
 
 test('the MVP is told once on opening the app and a positive owner grant too; acknowledging hides them',async()=>{
