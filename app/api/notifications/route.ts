@@ -60,11 +60,13 @@ export async function POST(req:Request){try{
   if(existing&&existing.accountId!==account.id)throw new RequestError('此设备需要重新连接通知，请关闭后再开启',409);
   if(p.subscription.expirationTime!=null&&p.subscription.expirationTime<=Date.now())throw new RequestError('通知订阅已过期，请重新开启',400);
   try{await verifySubscriptionKeys(p.subscription)}catch{throw new RequestError('通知加密信息无效，请重新开启',400)}
-  if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status==='available'){
-   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'首次开启奖励10分；领过奖励后关闭任意设备通知扣30分。在系统中关闭后，下次进入检测到权限关闭也扣分，均只执行一次。'},config);
-   if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放积分，请稍后重试',503);
+  let verified=false;
+  if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status!=='earned'){
+   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'首次开启奖励10分；关闭任意设备通知扣30分，重新开启并验证成功退回这30分。首次奖励只领一次，每笔扣分只退一次。系统关闭在下次进入检测后结算。'},config);
+   if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放或退还积分，请稍后重试',503);
+   verified=true;
   }
-  const token=newNotificationDeviceToken(),result=await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy,{receiptId:await pushSubscriptionId(token)}),response=reply(result);response.headers.append('Set-Cookie',notificationDeviceCookie(token,req));return response;
+  const token=newNotificationDeviceToken(),result=await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy,{receiptId:await pushSubscriptionId(token),verified}),response=reply(result);response.headers.append('Set-Cookie',notificationDeviceCookie(token,req));return response;
  }
  if(!existing||existing.accountId!==account.id)throw new RequestError('请先在这台设备开启活动提醒',409);
  await consumeRateLimit('push-test:'+account.id,3,60000,{message:'测试通知发送较频繁，请一分钟后重试'});

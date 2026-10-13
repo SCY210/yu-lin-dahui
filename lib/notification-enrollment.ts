@@ -12,7 +12,7 @@ export async function notificationIncentiveFor(account:Pick<Account,'id'|'player
 
 /** Device changes and their score entries share the club revision transaction.
  * Provider expiry and logout deliberately use the cleanup-only helper instead. */
-export async function changeNotificationEnrollment(accountId:string,id:string,subscription:StoredPushSubscription|null,acceptPoints=false,device?:{receiptId?:string;source?:'system-permission'}){
+export async function changeNotificationEnrollment(accountId:string,id:string,subscription:StoredPushSubscription|null,acceptPoints=false,device?:{receiptId?:string;source?:'system-permission';verified?:boolean}){
  for(let attempt=0;attempt<5;attempt++){
   const before=await load(),next=structuredClone(before),account=next.accounts.find(a=>a.id===accountId);
   if(!account||!next.players.some(p=>p.id===account.playerId&&p.enabled))throw new RequestError('账号当前不可使用通知',403);
@@ -20,7 +20,8 @@ export async function changeNotificationEnrollment(accountId:string,id:string,su
   const owned=rows.results.filter(r=>r.accountId===accountId),existing=rows.results.find(r=>r.id===id);
   if(subscription&&existing&&existing.accountId!==accountId)throw new RequestError('此设备需要重新连接通知，请关闭后再开启',409);
   if(subscription&&!existing&&owned.length>=5)throw new RequestError('每个账号最多开启5台设备，请先在旧设备关闭通知',409);
-  const kind=subscription?'enable':'disable';
+  const incentive=notificationPointsStatus(next,account),kind=subscription?(incentive.status==='disabled'?'refund':'enable'):'disable';
+  if(subscription&&acceptPoints&&incentive.status!=='earned'&&!device?.verified)throw new RequestError('通知积分状态已更新，请重新开启并验证',409);
   const eligible=subscription?acceptPoints:existing?.accountId===accountId;
   const pointsDelta=eligible?recordNotificationPoints(next,account,kind,Date.now()):0;
   // Cleanup writers can remove expired devices without a revision. Conditional

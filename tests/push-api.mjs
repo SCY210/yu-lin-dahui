@@ -9,7 +9,7 @@ import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 mkdirSync('.test-output',{recursive:true});
 globalThis.__pushTest={env:{},user:null};
 const fixture=globalThis.__pushTest;
-writeFileSync('.test-output/push-entry.ts',`export {GET,POST} from '../app/api/notifications/route';export {POST as clubPost} from '../app/api/club/route';export {POST as logout} from '../app/api/auth/route';export {signupPushStatements,flushPushOutbox} from '../lib/push-outbox';export {load,save} from '../lib/store';export {loadClubState} from '../lib/club-maintenance';export {clubReminderStatements} from '../lib/reminder-store';export {pushSubscriptionId} from '../lib/push-subscriptions';`);
+writeFileSync('.test-output/push-entry.ts',`export {GET,POST} from '../app/api/notifications/route';export {POST as clubPost} from '../app/api/club/route';export {POST as logout} from '../app/api/auth/route';export {signupPushStatements,flushPushOutbox} from '../lib/push-outbox';export {load,save} from '../lib/store';export {loadClubState} from '../lib/club-maintenance';export {clubReminderStatements} from '../lib/reminder-store';export {pushSubscriptionId} from '../lib/push-subscriptions';export {changeNotificationEnrollment} from '../lib/notification-enrollment';`);
 await build({entryPoints:['.test-output/push-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/push-api-bundle.mjs',plugins:[{name:'isolated-push',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'push-fixture'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'push-fixture'}));b.onLoad({filter:/.*/,namespace:'push-fixture'},a=>({contents:a.path==='env'?'export const env=globalThis.__pushTest.env;':"export const getAppUser=async()=>globalThis.__pushTest.user;export const hashToken=async()=> 'fixture-hash';export const passwordEnabled=async()=>false;export const sessionCookie='fixture_session';",loader:'js'}))}}]});
 const api=await import(pathToFileURL(resolve('.test-output/push-api-bundle.mjs')).href);
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const name of readdirSync('drizzle').filter(n=>n.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+name,'utf8'));
@@ -145,8 +145,8 @@ try{
  assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('old-client').endpoint})).json()).pointsDelta,-30,'closing any device deducts even while another remains enabled');
  assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,0);
  assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,0);
- assert.equal((await (await enroll('incentive','re-enabled')).json()).pointsDelta,0);
- assert.equal(entries().filter(row=>row.actor==='incentive').reduce((sum,row)=>sum+row.changes.points,0),-20);
+ assert.equal((await (await enroll('incentive','re-enabled')).json()).pointsDelta,30);
+ assert.equal(entries().filter(row=>row.actor==='incentive').reduce((sum,row)=>sum+row.changes.points,0),10);
  user('cleanup');assert.equal((await (await enroll('cleanup','expires')).json()).pointsDelta,10);
  deliveryStatus=410;assert.equal((await post('cleanup','test',{endpoint:subscription('expires').endpoint})).status,409);
  assert.equal((await (await api.GET()).json()).incentive.status,'earned','provider cleanup is not a user disable');
@@ -188,4 +188,17 @@ try{
  assert.equal(entries().filter(row=>row.actor==='rollback-permission').length,1,'failed transaction must roll back points');assert.equal(sql.prepare('SELECT active FROM notification_devices WHERE account_id=?').get('rollback-permission').active,1);assert.equal((await (await report('rollback-permission','denied',rollbackCookie)).json()).pointsDelta,-30);
  user('concurrent-permission');const concurrentCookie=cookieOf(await enroll('concurrent-permission','concurrent-permission'));const concurrent=await Promise.all([report('concurrent-permission','denied',concurrentCookie),report('concurrent-permission','default',concurrentCookie)]);for(const r of concurrent)assert.equal(r.status,200);assert.deepEqual((await Promise.all(concurrent.map(r=>r.json()))).map(row=>row.pointsDelta).sort((a,b)=>a-b),[-30,0]);
  console.log('PASS system notification permission: browser/account receipts, denied/default, fresh and forged devices, once-only concurrent deductions, rollback, legacy upgrade, provider expiry and logout');
+
+ // Refund exactly one outstanding penalty after verified re-enrollment.
+ user('concurrent-permission');deliveryStatus=503;assert.equal((await enroll('concurrent-permission','refund-provider-failure')).status,503);assert.equal(entries().filter(row=>row.actor==='concurrent-permission'&&row.changes.kind==='refund').length,0);deliveryStatus=201;
+ await assert.rejects(()=>api.changeNotificationEnrollment('concurrent-permission','unverified-refund',subscription('unverified-refund'),true),/通知积分状态已更新/);
+ const refundBatch=db.batch;let failRefund=true;db.batch=list=>{if(failRefund&&list.some(row=>row.query.startsWith('INSERT INTO audits')&&String(row.parameters[1]).includes('"kind":"refund"'))){failRefund=false;return refundBatch([...list,db.prepare('INSERT INTO fictional_missing_refund_table VALUES(1)')])}return refundBatch(list)};
+ assert.equal((await enroll('concurrent-permission','refund-rollback')).status,503);db.batch=refundBatch;assert.equal(entries().filter(row=>row.actor==='concurrent-permission'&&row.changes.kind==='refund').length,0,'failed refund transaction restores original penalty and device state');
+ const refunded=await Promise.all([enroll('concurrent-permission','refund-one'),enroll('concurrent-permission','refund-two')]);for(const r of refunded)assert.equal(r.status,200);assert.deepEqual((await Promise.all(refunded.map(r=>r.json()))).map(row=>row.pointsDelta).sort((a,b)=>a-b),[0,30]);
+ assert.equal((await (await enroll('concurrent-permission','refund-one')).json()).pointsDelta,0,'no repeated refund or initial reward');
+ assert.equal((await (await post('concurrent-permission','unsubscribe',{endpoint:subscription('refund-one').endpoint})).json()).pointsDelta,-30,'another disable after refund starts a new pending penalty');
+ assert.equal((await (await post('concurrent-permission','unsubscribe',{endpoint:subscription('refund-one').endpoint})).json()).pointsDelta,0);
+ assert.equal((await (await enroll('concurrent-permission','refund-two')).json()).pointsDelta,30,'an already enabled device can explicitly verify and restore the pending points');
+ const cycles=entries().filter(row=>row.actor==='concurrent-permission');assert.equal(cycles.filter(row=>row.changes.kind==='enable').length,1);assert.equal(cycles.reduce((n,row)=>n+row.changes.points,0),10);const penalties=cycles.filter(row=>row.changes.kind==='disable');assert.deepEqual(cycles.filter(row=>row.changes.kind==='refund').map(row=>row.changes.refundOf).sort(),penalties.map(row=>row.id).sort());
+ console.log('PASS notification refunds: exact original audit pairing, provider verification, concurrent dedupe, transaction rollback, repeated cycles and no repeated initial reward');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__pushTest}

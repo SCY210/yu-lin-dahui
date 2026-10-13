@@ -15,7 +15,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
  const [offer,setOffer]=useState<Offer|null>(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false);
  const [visit,setVisit]=useState(0),handled=useRef(false),enabling=useRef(false);
  useEffect(()=>{
-  const changed=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.accountId===accountId&&detail.pointsDelta===-30)toast.error('检测到这台设备的通知权限已关闭，双打赛季积分 −30；本账号只扣一次。')};
+  const changed=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.accountId===accountId&&detail.pointsDelta===-30)toast.error('检测到这台设备的通知权限已关闭，双打赛季积分 −30；重新开启并验证成功可退还这 30 分。')};
   window.addEventListener('yulin:push-changed',changed);return()=>window.removeEventListener('yulin:push-changed',changed);
  },[accountId]);
  useEffect(()=>{
@@ -47,7 +47,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['role']});document.addEventListener('visibilitychange',check);
   return()=>{clearTimeout(timer);observer.disconnect();document.removeEventListener('visibilitychange',check)};
  },[offer,blocked]);
- function confirmed(points=0){setOpen(false);setOffer(null);toast.success(points===10?'通知已开启，双打赛季积分 +10':'已开启这台设备的活动提醒')}
+ function confirmed(points=0){setOpen(false);setOffer(null);toast.success(points===30?'通知已恢复，已退还原扣除的 30 积分':points===10?'通知已开启，双打赛季积分 +10':'已开启这台设备的活动提醒')}
  function dismiss(){
   // Dismissing never enables notifications or persists a permission/snooze choice.
   handled.current=true;setOpen(false);setError('');
