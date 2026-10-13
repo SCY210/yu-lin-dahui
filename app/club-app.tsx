@@ -136,7 +136,7 @@ export default function ClubApp(){
   finally{if(request===refreshSequence.current)setLoading(false)}
  },[period,year]);
  const liveRefreshing=fastLineupRefresh(page,eventId,tab,data);
- useEffect(()=>{const poll=createClubRefresh({refresh,available:()=>!document.hidden&&navigator.onLine,schedule:(callback,delay)=>setTimeout(callback,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)},liveRefreshing?3000:15000);const wake=()=>poll.wake(),events=['online','offline','focus','pageshow'];document.addEventListener('visibilitychange',wake);for(const name of events)window.addEventListener(name,wake);return()=>{poll.stop();document.removeEventListener('visibilitychange',wake);for(const name of events)window.removeEventListener(name,wake)}},[refresh,liveRefreshing]);
+ useEffect(()=>{const poll=createClubRefresh({refresh,available:()=>!document.hidden&&navigator.onLine,schedule:(callback,delay)=>setTimeout(callback,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)},liveRefreshing?3000:15000);const wake=()=>poll.wake(),events=['online','offline','focus','pageshow','yulin:push-changed'];document.addEventListener('visibilitychange',wake);for(const name of events)window.addEventListener(name,wake);return()=>{poll.stop();document.removeEventListener('visibilitychange',wake);for(const name of events)window.removeEventListener(name,wake)}},[refresh,liveRefreshing]);
  useEffect(()=>{
   const invalidate=()=>{
    if(sessionInvalidated.current)return;sessionInvalidated.current=true;readValidator.current=null;refreshSequence.current++;dataSnapshot.current=null;

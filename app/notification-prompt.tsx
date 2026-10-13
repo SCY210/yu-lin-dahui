@@ -8,6 +8,8 @@ import {pushFailure} from '../lib/client/push-errors';
 import {IosDeniedSteps,IosInstallSteps,isIphone} from './ios-push-steps';
 import './notification-prompt.css';
 
+import {NotificationIncentiveNotice} from './notification-incentive';
+
 type Offer={support:string;publicKey:string|null};
 export default function NotificationPrompt({accountId,blocked=false}:{accountId:string;blocked?:boolean}){
  const [offer,setOffer]=useState<Offer|null>(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false);
@@ -41,14 +43,14 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['role']});document.addEventListener('visibilitychange',check);
   return()=>{clearTimeout(timer);observer.disconnect();document.removeEventListener('visibilitychange',check)};
  },[offer,blocked]);
- function confirmed(){setOpen(false);setOffer(null);toast.success('已开启这台设备的活动提醒')}
+ function confirmed(points=0){setOpen(false);setOffer(null);toast.success(points===10?'通知已开启，双打赛季积分 +10':'已开启这台设备的活动提醒')}
  function dismiss(){
   // Dismissing never enables notifications or persists a permission/snooze choice.
   handled.current=true;setOpen(false);setError('');
  }
  async function enable(){
   if(!offer?.publicKey||enabling.current)return;enabling.current=true;setBusy(true);setError('');
-  try{await enablePush(accountId,offer.publicKey);confirmed()}
+  try{const result=await enablePush(accountId,offer.publicKey,true);confirmed(result?.pointsDelta)}
   catch(e){const failure=pushFailure(e);setDenied('Notification' in window&&Notification.permission==='denied');setError(failure.message)}
   finally{enabling.current=false;setBusy(false)}
  }
@@ -62,7 +64,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
    const config=support==='supported'&&!isDenied?await notificationConfig(accountId):null;
    setOffer({support,publicKey:config?.publicKey??null});
    if(config&&(!config.configured||!config.publicKey)){setError('通知服务暂不可用，请稍后重新检测。');return}
-   if(support==='supported'&&!isDenied&&Notification.permission==='granted'&&config?.publicKey){await enablePush(accountId,config.publicKey);confirmed()}
+   if(support==='supported'&&!isDenied&&Notification.permission==='granted'&&config?.publicKey){const result=await enablePush(accountId,config.publicKey,true);confirmed(result?.pointsDelta)}
    else if(support==='iphone-install')setError('请先添加到主屏幕，再从桌面图标打开网站并开启通知。');
    else if(isDenied)setError('系统仍在阻止通知，请先在浏览器或手机设置中允许本网站。');
   }catch(e){const failure=pushFailure(e,'无法检测通知状态，请重试');setError(failure.message)}
@@ -73,6 +75,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
  const canEnable=!install&&!denied&&!!offer.publicKey;
  return <Dialog open={open} onOpenChange={next=>{if(!next)dismiss()}}><DialogContent className="app-dialog notification-optin" showCloseButton>
   <DialogHeader><DialogTitle><Bell size={22} aria-hidden="true"/>开启活动通知（可选）</DialogTitle><DialogDescription>开启后，即使没打开网站，手机也会像收到微信消息一样弹出提醒。不开启也能正常使用网站和查看站内提醒。</DialogDescription></DialogHeader>
+  <NotificationIncentiveNotice/>
   <ul className="notification-optin-kinds"><li>新活动开放报名</li><li>报名成功、候补转正</li><li>分组和上场安排</li><li>活动改时间或取消</li><li>费用确认</li><li>赛后评选</li></ul>
   {install?<><p className="notification-optin-lead">苹果手机要先把网站“添加到主屏幕”，才能收到通知。按下面 4 步操作，大约 1 分钟：</p><IosInstallSteps/></>:denied?isIphone()?<><p className="notification-optin-lead">系统已阻止通知。按下面步骤在 iPhone 设置里允许：</p><IosDeniedSteps/></>:<p className="hint">系统已阻止通知。请在浏览器或手机的通知设置中允许本网站，然后点击下方按钮重新检测。</p>:<p className="hint">点击开启后，请在系统提示中选择“允许”。每台设备需要单独开启。</p>}
   {error&&<p className="connection-note" role="alert">{error}</p>}

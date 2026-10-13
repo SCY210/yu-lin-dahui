@@ -11,13 +11,15 @@ import {pushSubscriptionId,removePushSubscription} from '../../../lib/push-subsc
 import {reminderPreferences} from '../../../lib/reminder-contract';
 import {reminderCenter} from '../../../lib/reminder-store';
 import type {Player} from '../../../lib/domain/types';
+import {notificationPointsPolicy} from '../../../lib/domain/notification-points';
+import {changeNotificationEnrollment,notificationIncentiveFor} from '../../../lib/notification-enrollment';
 export const dynamic='force-dynamic';
 const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const accountId=z.string().min(1).max(150);
 const input=z.discriminatedUnion('action',[
  z.object({action:z.literal('preferences'),accountId,preferences:reminderPreferences}).strict(),
  z.object({action:z.literal('read'),accountId,id:z.string().min(1).max(600).optional()}).strict(),
- z.object({action:z.literal('subscribe'),accountId,subscription:pushSubscriptionInput}).strict(),
+ z.object({action:z.literal('subscribe'),accountId,subscription:pushSubscriptionInput,pointsPolicy:z.literal(notificationPointsPolicy).optional()}).strict(),
  z.object({action:z.enum(['status','unsubscribe','test']),accountId,endpoint:pushEndpoint}).strict(),
 ]);
 async function member(){
@@ -27,7 +29,7 @@ async function member(){
  if(!row||!(JSON.parse(row.payload) as Player).enabled)throw new RequestError('账号当前不可开启通知',403);
  return version.account;
 }
-export async function GET(){try{const account=await member(),config=pushConfiguration(env);await consumeRateLimit('reminder-read:'+account.id,60,60000);return reply({accountId:account.id,configured:!!config,publicKey:config?.publicKey??null,...await reminderCenter(account.id)})}catch(e){return writeErrorResponse(e)}}
+export async function GET(){try{const account=await member(),config=pushConfiguration(env);await consumeRateLimit('reminder-read:'+account.id,60,60000);return reply({accountId:account.id,configured:!!config,publicKey:config?.publicKey??null,incentive:await notificationIncentiveFor(account),...await reminderCenter(account.id)})}catch(e){return writeErrorResponse(e)}}
 export async function POST(req:Request){try{
  assertWriteRequest(req);const account=await member();await consumeRateLimit('push-ip:'+trustedClientIP(req),90,5*60000);await consumeRateLimit('push-account:'+account.id,45,5*60000);
  const p=input.parse(await readJsonBody(req,8192));if(p.accountId!==account.id)throw new RequestError('登录账号已更新，请刷新后操作',409);
@@ -37,17 +39,17 @@ export async function POST(req:Request){try{
  const endpoint=p.action==='subscribe'?p.subscription.endpoint:p.endpoint,id=await pushSubscriptionId(endpoint);
  const existing=await db.prepare('SELECT account_id AS accountId,payload FROM push_subscriptions WHERE id=?').bind(id).first<{accountId:string;payload:string}>();
  if(p.action==='status')return reply({enabled:existing?.accountId===account.id,resetDevice:!!existing&&existing.accountId!==account.id});
- if(p.action==='unsubscribe'){await removePushSubscription(account.id,endpoint);return reply({ok:true,enabled:false})}
+ if(p.action==='unsubscribe'){return reply(await changeNotificationEnrollment(account.id,id,null))}
  const config=pushConfiguration(env);if(!config)throw new RequestError('通知服务暂不可用，请稍后再试',503);
  if(p.action==='subscribe'){
   if(existing&&existing.accountId!==account.id)throw new RequestError('此设备需要重新连接通知，请关闭后再开启',409);
   if(p.subscription.expirationTime!=null&&p.subscription.expirationTime<=Date.now())throw new RequestError('通知订阅已过期，请重新开启',400);
   try{await verifySubscriptionKeys(p.subscription)}catch{throw new RequestError('通知加密信息无效，请重新开启',400)}
-  const result=await db.prepare(`INSERT INTO push_subscriptions(id,account_id,payload,created_at)
-   SELECT ?,?,?,? WHERE (SELECT COUNT(*) FROM push_subscriptions WHERE account_id=?)<5 OR EXISTS(SELECT 1 FROM push_subscriptions WHERE id=? AND account_id=?)
-   ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE push_subscriptions.account_id=excluded.account_id`).bind(id,account.id,JSON.stringify(p.subscription),Date.now(),account.id,id,account.id).run();
-  if(!result.meta.changes)throw new RequestError('每个账号最多开启5台设备，请先在旧设备关闭通知',409);
-  return reply({ok:true,enabled:true});
+  if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status==='available'){
+   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'通知连接验证成功。首次开启奖励10分；领过奖励后在站内主动关闭全部通知设备扣30分，均只执行一次。'},config);
+   if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放积分，请稍后重试',503);
+  }
+  return reply(await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy));
  }
  if(!existing||existing.accountId!==account.id)throw new RequestError('请先在这台设备开启活动提醒',409);
  await consumeRateLimit('push-test:'+account.id,3,60000,{message:'测试通知发送较频繁，请一分钟后重试'});

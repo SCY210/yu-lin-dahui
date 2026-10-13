@@ -128,4 +128,39 @@ try{
  captures=[];await api.flushPushOutbox(fixture.env);assert.equal(captures.length,0,'rebinding cancels an obsolete proxy notice');
  console.log('PASS fee payment API: authorization, stale-version refusal, delayed paid cancellation, partial proxy notice refresh and changed proxy contact');
  console.log('PASS Web Push: authenticated opt-in, device ownership/limits, CSRF/SSRF, real aes128gcm decryption and VAPID signature, atomic recipient snapshot/rollback, concurrent claims, no reopening duplicates, disabled members and expired-device cleanup');
+
+ // Notification incentives use synthetic members and a local push transport.
+ const policy='2026-10-13-v1';
+ for(const id of ['incentive','cleanup']){insert('players','p'+id,{id:'p'+id,name:id,enabled:true,ownerId:id,initialRating:0,rating:0,ratedGames:0,ratingReason:''},{owner_id:id});insert('accounts',id,{id,email:'',role:'member',playerId:'p'+id},{email:'',role:'member',player_id:'p'+id})}
+ const entries=()=>sql.prepare("SELECT payload FROM audits WHERE json_extract(payload,'$.action')='notificationPoints'").all().map(row=>JSON.parse(row.payload));
+ const enroll=(id,token,pointsPolicy=policy)=>post(id,'subscribe',{subscription:subscription(token),...(pointsPolicy?{pointsPolicy}:{})});
+ user('incentive');deliveryStatus=503;
+ assert.equal((await enroll('incentive','reward-failure')).status,503);assert.equal(entries().length,0);
+ deliveryStatus=201;
+ assert.equal((await enroll('incentive','old-client',null)).status,200);assert.equal(entries().length,0,'legacy enrollment cannot enroll in point penalties silently');
+ let response=await enroll('incentive','old-client');assert.equal(response.status,200);assert.equal((await response.json()).pointsDelta,10);
+ assert.equal((await (await api.GET()).json()).incentive.status,'earned');
+ assert.equal((await (await enroll('incentive','old-client')).json()).pointsDelta,0);
+ assert.equal((await (await enroll('incentive','second-device')).json()).pointsDelta,0);
+ assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('old-client').endpoint})).json()).pointsDelta,0,'another device remains enabled');
+ assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,-30);
+ assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,0);
+ assert.equal((await (await enroll('incentive','re-enabled')).json()).pointsDelta,0);
+ assert.equal(entries().filter(row=>row.actor==='incentive').reduce((sum,row)=>sum+row.changes.points,0),-20);
+ user('cleanup');assert.equal((await (await enroll('cleanup','expires')).json()).pointsDelta,10);
+ deliveryStatus=410;assert.equal((await post('cleanup','test',{endpoint:subscription('expires').endpoint})).status,409);
+ assert.equal((await (await api.GET()).json()).incentive.status,'earned','provider cleanup is not a user disable');
+ deliveryStatus=201;assert.equal((await (await enroll('cleanup','logout-device')).json()).pointsDelta,0);
+ const cleanupLogout=await api.logout(new Request('https://club.example/api/auth',{method:'POST',headers:{origin:'https://club.example','content-type':'application/json',cookie:'fixture_session='+'x'.repeat(43)},body:JSON.stringify({action:'logout',pushEndpoint:subscription('logout-device').endpoint})}));assert.equal(cleanupLogout.status,200);assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM push_subscriptions WHERE account_id='cleanup'").get().n,0);
+ assert.equal(entries().filter(row=>row.actor==='cleanup'&&row.changes.kind==='disable').length,0,'logout never deducts notification points');
+
+ // Serialize SQLite transactions like D1 while allowing concurrent request reads.
+ const batch=db.batch.bind(db);let batchQueue=Promise.resolve();db.batch=list=>{const pending=batchQueue.then(()=>batch(list));batchQueue=pending.catch(()=>{});return pending};
+ insert('players','prace',{id:'prace',name:'Synthetic race',enabled:true,ownerId:'race',initialRating:0,rating:0,ratedGames:0,ratingReason:''},{owner_id:'race'});insert('accounts','race',{id:'race',email:'',role:'member',playerId:'prace'},{email:'',role:'member',player_id:'prace'});
+ user('race');const raceReplies=await Promise.all([enroll('race','race-one'),enroll('race','race-two')]);for(const r of raceReplies)assert.equal(r.status,200);
+ assert.deepEqual((await Promise.all(raceReplies.map(r=>r.json()))).map(r=>r.pointsDelta).sort((a,b)=>a-b),[0,10]);
+ const disables=await Promise.all(['race-one','race-two'].map(token=>post('race','unsubscribe',{endpoint:subscription(token).endpoint})));for(const r of disables)assert.equal(r.status,200);
+ assert.deepEqual((await Promise.all(disables.map(r=>r.json()))).map(r=>r.pointsDelta).sort((a,b)=>a-b),[-30,0]);
+ assert.equal(entries().filter(row=>row.actor==='race').length,2);
+ console.log('PASS notification incentives: verified opt-in, legacy claim, once-only award/penalty, two devices, provider failure/expiry and logout');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__pushTest}
