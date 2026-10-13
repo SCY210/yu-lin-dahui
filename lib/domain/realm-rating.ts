@@ -20,11 +20,12 @@ export const realms=[
  {name:'筑基',minimum:850,range:'850–999 分'},
  {name:'金丹',minimum:1000,range:'1000–1149 分'},
  {name:'元婴',minimum:1150,range:'1150–1299 分'},
- {name:'化神',minimum:1300,range:'1300 分及以上'},
+ {name:'化神',minimum:1300,range:'1300–1449 分'},
+ {name:'炼虚',minimum:1450,range:'1450 分及以上'},
 ] as const;
 export type RealmName=typeof realms[number]['name'];
-/** 化神 keeps 初期/中期/后期 across 1300–1449; from 1450 it shows 圆满. */
-export const perfectionScore=1450;
+/** The highest realm, 炼虚, keeps 初期/中期/后期 across 1450–1599; from 1600 it shows 圆满. */
+export const perfectionScore=1600;
 const finite=(n:number,fallback:number)=>Number.isFinite(n)?n:fallback;
 /** Half-away-from-zero, so a win and the mirrored loss always round to the same size. */
 export const roundDelta=(x:number)=>Math.sign(x)*Math.round(Math.abs(x));

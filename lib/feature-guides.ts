@@ -85,7 +85,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         {title:'境界门槛与保级',items:[
           `每人从 ${realmPolicy.start} 分起步，定级期间不显示境界；完成 ${realmPolicy.placementGames} 个计分小局后按当时的修为显示境界，之后达到门槛立即晋升。`,
           `降级有 ${realmPolicy.demotionBuffer} 分缓冲：跌到门槛减 ${realmPolicy.demotionBuffer} 分以下才降境界，例如元婴要低于 ${realms[3].minimum-realmPolicy.demotionBuffer} 分才降为金丹。每次活动结算后判断一次。`,
-          `每个境界 ${realmPolicy.band} 分，分为初期（0–33%）、中期（34–66%）、后期（67–99%）；化神 ${realms[4].minimum}–${perfectionScore-1} 分同样分三期，${perfectionScore} 分及以上为化神圆满。`,
+          `每个境界 ${realmPolicy.band} 分，分为初期（0–33%）、中期（34–66%）、后期（67–99%）；最高境界${realms[realms.length-1].name} ${realms[realms.length-1].minimum}–${perfectionScore-1} 分同样分三期，${perfectionScore} 分及以上为${realms[realms.length-1].name}圆满。`,
           `计分小局少于 ${realmPolicy.placementGames} 局时只显示“定级中 · N/${realmPolicy.placementGames} 局”，不显示境界、阶段和境界进度，修为照常加减。只计活动结束后已结算的计分小局，进行中活动的小局显示为待结算。第 ${realmPolicy.placementGames} 局结算后直接显示当时修为对应的境界，此后才使用保级缓冲。`,
           `修为是长期分，不随季度或年度重置。连续 ${realmPolicy.inactivityMonths} 个月没有计分小局（从最后一局结束算起）时，修为回到 ${realmPolicy.start} 分，重新定级并重新进入新手期；${realmPolicy.inactivityMonths} 个月内回来打球则一直保留。`,
         ]},

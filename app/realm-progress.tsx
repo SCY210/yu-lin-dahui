@@ -1,5 +1,6 @@
 import './realm-progress.css';
-import {realmPolicy} from '@/lib/domain/realm-rating';
+import {perfectionScore,realmPolicy,realms} from '@/lib/domain/realm-rating';
+const topRealm=realms[realms.length-1].name;
 /** 修为 progress inside the current realm band (100 points per realm). During placement no realm,
  * stage or bar is shown, only the 修为 and how many settled rated games remain. */
 type Progress={realm?:string|null;stage?:string|null;progressPercent?:number;nextRealm?:string|null;score?:number;remaining?:number;nextAt?:number|null;pendingGames?:number;pendingChange?:number;placement?:boolean;placementGames?:number;ratedGames?:number;guarded?:boolean;demotionAt?:number|null};
@@ -22,6 +23,6 @@ export default function RealmProgress({value,compact=false}:{value?:Progress;com
   {!compact&&value.nextRealm&&value.remaining!==undefined&&<small>距{value.nextRealm}还需 {value.remaining} 分</small>}
   {value.guarded&&value.demotionAt!=null&&<small>保级缓冲：低于 {value.demotionAt} 分才会降境界</small>}
   {pending}
-  {!compact&&<small>{value.nextRealm?'下一境界 · '+value.nextRealm+(value.nextAt?'（'+value.nextAt+' 分）':''):value.stage==='圆满'?'化神圆满 · 修为随胜负继续变化':'化神 · 1300 分为圆满'}</small>}
+  {!compact&&<small>{value.nextRealm?'下一境界 · '+value.nextRealm+(value.nextAt?'（'+value.nextAt+' 分）':''):value.stage==='圆满'?topRealm+'圆满 · 修为随胜负继续变化':topRealm+' · '+perfectionScore+' 分为圆满'}</small>}
  </div>;
 }
