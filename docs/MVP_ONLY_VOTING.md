@@ -12,7 +12,7 @@ At the club owner's request:
 
 - **Deadline.** Voting closes 24 hours after the activity's scheduled end (`awardVotingClosesAt`). An activity ended early by its organiser opens voting at once and still closes 24 hours after the scheduled end. Late votes are rejected.
 - **Points.** When voting closes, the player or players with the most MVP votes (at least one) each receive 5 season points (`mvpPoints`). Tied leaders all receive them. The points count on the activity's singles or doubles board, in the month the activity started (`mvpPointAdjustments`), and the leaderboard lists them as MVP points. There are no MVP points for practice, tournament, cancelled or draft activities. The cached club view expires at the closing time, so the result appears without a write.
-- **Named votes.** Only administrators and the owner see who voted for whom; the projection adds `voterPlayerId` for them only. Everyone else, including an organiser who is a regular member, sees only the counts and their own vote.
+- **Named votes.** Only administrators and the owner see who voted for whom; the projection adds `voterPlayerId` for them only. Everyone else, including an organiser who is a regular member, sees only the counts and their own vote. The voting hint does not mention this.
 - **Notice.** When a member opens the app with unacknowledged extra points (an MVP award or a positive owner grant from the last 14 days), a dialog congratulates them. Its confirmation button (the owner chose a playful "I am the best!") stores the acknowledgement on their account (`bonusSeen`, `lib/domain/bonus-notices.ts`).
 
 Tests: `tests/mvp-points.test.ts`.

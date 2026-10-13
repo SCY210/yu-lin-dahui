@@ -35,6 +35,6 @@ export default function EventAwards({e,ctx,now}:any){
   {mine&&<div className="award-my-vote"><span>MVP 已投给 <strong>{person(mine.playerId).name}</strong></span><button type="button" className="ghost" disabled={!canVote||locked} onClick={()=>void vote(mine.playerId,false)}><Undo2 size={15} aria-hidden="true"/>撤回 MVP</button></div>}
   <p className="award-notice" role="status" aria-live="polite">{notice}</p>
   {canViewNamedVotes&&<details className="award-named"><summary>投票明细 · {named.length} 票（仅管理员和群主可见）</summary>{named.length?named.map(v=><p key={v.id}><strong>{person(v.voterPlayerId!).name}</strong> → {person(v.playerId).name}</p>):<p className="muted">还没有人投票。</p>}</details>}
-  <p className="hint">每个账号一票，不能投给自己，截止前可以改投或撤回。投票为实名，仅管理员和群主能看到每一票；其他球友只看到票数和自己的选票。</p>
+  <p className="hint">每个账号一票，不能投给自己，截止前可以改投或撤回。</p>
  </section>;
 }
