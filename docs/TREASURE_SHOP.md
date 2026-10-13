@@ -27,6 +27,12 @@ catalog shows the current price and available stock. Confirmation uses that
 displayed price; if it changes before saving, the member must review the updated
 price. The server resolves the account, price, total, balance, and stock itself.
 
+The shop opens directly on the catalog. The coin balance sits on the right of
+the compact title row. Products use a simple list with names, descriptions,
+prices, quantity controls and redemption buttons, without decorative placeholder
+art or a large banner. Category filters remain available as text tabs. History,
+transactions and owner management remain collapsed, compact links below the goods.
+
 ## Persistence and concurrency
 
 Products, coin transactions, and orders are stored in D1 using an additive
