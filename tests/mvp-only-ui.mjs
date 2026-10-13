@@ -30,7 +30,7 @@ try{
   data.me=me;await act(()=>ui.update(React.createElement(Ballot,{e:event,ctx,now})));
   const details=ui.root.findAllByType('details');assert.equal(details.length,allowed?1:0,'named ballot visibility follows admin/owner authority, not event ownership');
   if(allowed)assert.ok(text(details[0]).includes('alice → bob'));
-  assert.ok(text(ui.root).includes('仅管理员和群主能看到每一票'),'the public hint agrees with the access policy');
+  assert.ok(!text(ui.root).includes('投票为实名'),'the voting hint no longer explains who can see each vote');
  }
  console.log('PASS MVP-only ballot: self-vote/replace/withdraw/cancelled guards and named details restricted to admins and owner, including member organisers.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
