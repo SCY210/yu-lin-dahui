@@ -1,3 +1,4 @@
+import {markRanked} from './all-ranked';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
 import {isGuest} from './guests';
@@ -159,8 +160,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             if (!m.handicap)
                 fail('此场暂无让分建议');
             m.handicap.applied = p.applied;
-            m.monthly = true;
-            m.elo = !p.applied;
+            markRanked(m,s.events.find(e=>e.id===m.eventId));
             break;
         }
     }

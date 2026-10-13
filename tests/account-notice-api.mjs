@@ -34,7 +34,7 @@ const payload=content=>({noticeAccepted:true,noticeVersion:content.version,notic
 const count=()=>database.sql.prepare('SELECT COUNT(*) AS n FROM accountNoticeReceipts').get().n;
 async function rejectUnchanged(cookie,input,status,options){const before=await api.load(),r=await post(cookie,'acknowledgeActivityNotice',input,options);assert.equal(r.status,status,await r.clone().text());assert.deepEqual(await api.load(),before)}
 try{
- const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=['owner','admin','member','other','rollback'].map((id,i)=>({id,email:'',role:i<2?'admin':'member',playerId:'p'+i}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const start=Math.ceil((Date.now()+3*86400000)/1800000)*1800000,end=start+7200000;

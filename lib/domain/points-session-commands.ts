@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {eventRankingEnabled} from './event-ranking';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction,canManageEvent} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
@@ -78,7 +79,7 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
    if(JSON.stringify(m.a)!==JSON.stringify(p.expectedA)||JSON.stringify(m.b)!==JSON.stringify(p.expectedB))fail('409: 上场人员已更新，请刷新');
    if(![...m.a,...m.b].includes(p.playerId))fail('只能标记这场已排上场的球友');
    if(!canManageEvent(a,e)&&!livePresentIds(work,e,now).includes(a.playerId))fail('403: 只有当前参加时段内的到场球友可以报告迟到');
-   const row=session.attendance.find(row=>row.playerId===p.playerId),delta=row?.late?0:-1;
+   const row=session.attendance.find(row=>row.playerId===p.playerId),delta=!eventRankingEnabled(e)||row?.late?0:-1;
    session.attendance=session.attendance.filter(row=>row.playerId!==p.playerId);session.attendance.push({playerId:p.playerId,late:true,available:false,at:now});
    changes={...changes,...replace(work,e,m,p.playerId,p.replacement,now),playerId:p.playerId,matchId:m.id,period:month(e.start),format:eventFormat(e),delta,replacement:p.replacement};break;
   }
@@ -90,7 +91,7 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
    const p=c.payload;if(!work.registrations.some(r=>r.eventId===e.id&&r.playerId===p.playerId&&r.status==='confirmed'))fail('仅可确认本活动正式报名球友');
    const row=session.attendance.find(row=>row.playerId===p.playerId);
    if(p.status==='on-time'&&row?.late)fail('已标记迟到，请使用已到场或撤销误标');
-   const delta=p.status==='clear-late'&&row?.late?1:0;
+   const delta=eventRankingEnabled(e)&&p.status==='clear-late'&&row?.late?1:0;
    if(e.noShowHold){e.noShowHold=e.noShowHold.filter(id=>id!==p.playerId);if(!e.noShowHold.length)delete e.noShowHold}
    session.attendance=session.attendance.filter(row=>row.playerId!==p.playerId);session.attendance.push({playerId:p.playerId,late:p.status==='clear-late'?false:row?.late??false,available:true,at:now});
    changes={...changes,playerId:p.playerId,period:month(e.start),format:eventFormat(e),delta,status:p.status};break;

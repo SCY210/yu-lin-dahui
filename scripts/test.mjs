@@ -26,7 +26,7 @@ if (!unitOnly) {
   const suites = [
     'score-conflict-api', 'score-conflict-ui',
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
-    'owner-rating-ui',
+    'owner-rating-ui', 'event-ranking-ui',
     'account-notice-api', 'activity-notice-api',
     'bonus-popup-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
     'published-swap-api', 'published-swap-ui',

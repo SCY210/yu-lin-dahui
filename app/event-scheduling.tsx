@@ -1,4 +1,5 @@
 'use client';
+import EventRanking from './event-ranking';
 import PointsAttendance from './points-attendance';
 import EventTournament from './event-tournament';
 import {useState} from 'react';
@@ -11,7 +12,7 @@ import {dt,epoch,hm,labels,halfTimed,number,choice} from './form-fields';
 import {ceilHalfHour} from '../lib/time-planning';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
-import {canManageEvent} from '../lib/domain/permissions';
+import {canScheduleEvent} from '../lib/domain/permissions';
 import {isPractice,eventFormat} from '../lib/domain/match-format';
 import {pointsWindow} from '../lib/domain/points-window';
 import {pendingSchedulingIds,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
@@ -28,17 +29,17 @@ type FormOpen=(title:string,action:string,values:Record<string,unknown>,fields:F
 export type SchedulingContext={matchPlayerId?:string;data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
 const compareRounds=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefined?a.pointsSlot-b.pointsSlot:0)||a.start-b.start||a.id.localeCompare(b.id);
 export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
- const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canManageEvent(ctx.data.me,e);
+ const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canScheduleEvent(ctx.data.me,e);
  const [selection,setSelection]=useState({eventId:e.id,playerId:''});
  const ids=eventMatchPlayerIds(ctx.data,e),playerId=selection.eventId===e.id&&ids.includes(selection.playerId)?selection.playerId:'';
  const filteredContext={...ctx,matchPlayerId:playerId};
  const filter=<MatchPlayerFilter ids={ids} value={playerId} myId={ctx.data.me.playerId} name={ctx.name} onChange={id=>setSelection({eventId:e.id,playerId:id})}/>;
  const cancelled=ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled'&&(!playerId||ctx.data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId))));
  if(isPractice(e))return null;
- if(e.tournament)return <>{filter}<EventTournament key={e.id} e={e} ctx={filteredContext}/></>;
+ if(e.tournament)return <><EventRanking e={e} ctx={ctx}/>{filter}<EventTournament key={e.id} e={e} ctx={filteredContext}/></>;
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
- return <div className="event-scheduling"><PointsAttendance e={e} ctx={ctx}/><section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||!active} onChange={event=>change(event.target.value as SchedulingMode)}>{(['planned','round','live'] as const).map(value=><option key={value} value={value}>{value==='round'?'逐轮安排':schedulingLabels[value]}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮，检查草稿后发布，到时自动开赛、逐轮录分。':mode==='round'?'当前轮全部打完并录分后，再手动生成下一轮。':'每片场地录分后立即安排下一局，其他场地继续比赛。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></details></section>
+ return <div className="event-scheduling"><EventRanking e={e} ctx={ctx}/><PointsAttendance e={e} ctx={ctx}/><section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||!active} onChange={event=>change(event.target.value as SchedulingMode)}>{(['planned','round','live'] as const).map(value=><option key={value} value={value}>{value==='round'?'逐轮安排':schedulingLabels[value]}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮，检查草稿后发布，到时自动开赛、逐轮录分。':mode==='round'?'当前轮全部打完并录分后，再手动生成下一轮。':'每片场地录分后立即安排下一局，其他场地继续比赛。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></details></section>
   {filter}
   {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now}/>}
   {cancelled.length>0&&<Disclosure key={playerId} label={'已撤销轮次 · '+cancelled.length}>{cancelled.slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}
@@ -48,7 +49,7 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
  const {data,name,send,busy,open,setDanger}=ctx,[selected,setSelected]=useState<{roundId:string;playerId:string;lineup:RoundLineup}|null>(null);
  const currentSelected=currentRoundSelection(selected,data);
  const playerId=ctx.matchPlayerId??'';
- const manager=!ctx.readOnly&&canManageEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),editable=manager&&active;
+ const manager=!ctx.readOnly&&canScheduleEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),editable=manager&&active;
  const rounds=data.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled').slice().sort(compareRounds),pending=rounds.filter(r=>['draft','published'].includes(r.status)),next=pending[0];
  const playing=data.matches.some(m=>m.eventId===e.id&&m.status==='playing'),fixed=e.pointsChoice?.selectedMode==='fixed';
  const hasStarted=data.matches.some(m=>m.eventId===e.id&&['playing','complete','forfeit'].includes(m.status));

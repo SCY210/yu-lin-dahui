@@ -8,7 +8,7 @@ import './match-no-show.css';
 type Danger={action:string;payload:Record<string,unknown>;title:string;description:string;reason:string};
 type Ctx={data:ClubData;name:(id:string)=>string;readOnly?:boolean;busy?:boolean;setDanger:(value:Danger)=>void};
 type ClubEvent=ClubData['events'][number];
-const penalty='用于人不来了或联系不上：正式成员判 TA 本局负，按输一局扣修为和赛季积分；临时来宾不计修为或积分，只暂停排场。同场其他人不加不减，也不算上场次数。TA 之后到了点“我到了”才会继续排场。只是会晚点到的话，请改用“有人迟到？”换人。';
+const penalty='用于人不来了或联系不上：积分赛中的正式成员判 TA 本局负，按输一局扣修为和赛季积分；普通活动只暂停排场，不扣修为或积分；临时来宾不计修为或积分，只暂停排场。同场其他人不加不减，也不算上场次数。TA 之后到了点“我到了”才会继续排场。只是会晚点到的话，请改用“有人迟到？”换人。';
 
 /** On a started match (before any score): who did not show up. Absent players of a no-show are listed. */
 export function MatchNoShow({m,ctx}:{m:Match;ctx:Ctx}){

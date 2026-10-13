@@ -1,6 +1,6 @@
 import type {Match,State} from './types';
 import {guestRatings} from './guests';
-import {isPractice} from './match-format';
+import {eventRankingEnabled} from './event-ranking';
 import {gameFacts} from './game-facts';
 import {settledMatchFilter} from './event-lifecycle';
 import {scoreRecordedBy} from './score-entry';
@@ -92,7 +92,7 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick
  // Friends brought by members keep their fixed level: members are rated against it, the friend never changes.
  const guests=guestRatings(s);
  const rows=new Map<string,Row>(s.players.map(p=>[p.id,guests.has(p.id)?{...fresh(),score:guests.get(p.id)!(now),held:rawRealmIndex(guests.get(p.id)!(now))}:fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
- const practice=new Set(s.events?.filter(isPractice).map(e=>e.id)??[]);
+ const practice=new Set(s.events?.filter(e=>!eventRankingEnabled(e)).map(e=>e.id)??[]);
  const ordered=[...s.matches].sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id)).filter(m=>{if(practice.has(m.eventId)||seen.has(m.id)||!include(m))return false;if(![...m.a,...m.b].every(id=>rows.has(id)))return false;seen.add(m.id);return true});
  // Realms settle once per activity: the last included match of an activity is its checkpoint.
  const last=new Map<string,number>();ordered.forEach((m,i)=>last.set(m.eventId,i));

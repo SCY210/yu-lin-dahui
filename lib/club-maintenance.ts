@@ -1,6 +1,7 @@
 import {apply} from './domain/commands';
 import {startDuePointsSessions} from './domain/points-auto-start';
 import {enableAllRanked} from './domain/all-ranked';
+import {enableRoleRankedEvents} from './domain/event-ranking';
 import {enableEloRealms} from './domain/realm-rating';
 import {enableSignedRanking} from './domain/signed-ranking';
 import {mergeStrengthRating} from './domain/ranking';
@@ -20,9 +21,9 @@ export async function loadClubState(){
  if(!done.has(requestedThursdaySplit.key))await runRequestedThursdaySplit();
  for(let attempt=0;attempt<4;attempt++){
   const state=await load(),previous=structuredClone(state),now=Date.now();
-  const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now),realmMigration=enableEloRealms(state,now),strengthMerge=mergeStrengthRating(state,now);
+  const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now),rankedEventsChanged=enableRoleRankedEvents(state,now),realmMigration=enableEloRealms(state,now),strengthMerge=mergeStrengthRating(state,now);
   const pointsStarted=await startDuePointsSessions(state,now,apply);
-  if(!pointsStarted&&!ownershipChanged&&!attendanceChanged&&!realmMigration&&!rankingChanged&&!allRankedChanged&&!strengthMerge)return state;
+  if(!pointsStarted&&!ownershipChanged&&!attendanceChanged&&!realmMigration&&!rankingChanged&&!allRankedChanged&&!rankedEventsChanged&&!strengthMerge)return state;
   if(ownershipChanged)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:club-owner',action:'protectClubOwner',reason:'为已验证的网站所有者启用群主最高权限保护',changes:{accountId:clubOwnerId(state)}});
   if(attendanceChanged)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:default-attendance',action:'enableDefaultAttendance',reason:'正式报名默认参加，移除签到操作'});
   if(realmMigration)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:elo-realms',action:'enableEloRealms',reason:'累计成长规则停用，境界改由修为（Elo，每人从1000起）决定；按全部已有比赛记录从头回算，季度与年度榜积分改为修为变化之和',changes:realmMigration});

@@ -1,9 +1,10 @@
 'use client';
+import {eventRankingEnabled} from '../lib/domain/event-ranking';
 import {matchingStopped} from '../lib/domain/matching-participation';
 import {eventFormat,courtPlayers} from '../lib/domain/match-format';
 import {useEffect,useState} from 'react';
 import {Play,Pause,RefreshCw} from 'lucide-react';
-import {canManageEvent} from '../lib/domain/permissions';
+import {canScheduleEvent} from '../lib/domain/permissions';
 import {liveAppearances,livePresentIds,liveResting} from '../lib/domain/live-play';
 import type {Event,State,Match,Registration,Player} from '../lib/domain/types';
 import MatchCard from './match-card';
@@ -18,7 +19,7 @@ import {matchIncludesPlayer} from '../lib/client/match-player-filter';
 export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const {data,name,send,busy}=ctx,[now,setNow]=useState(Date.now);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),3000);return()=>clearInterval(timer)},[]);
- const manager=canManageEvent(data.me,e),config=e.livePlay;
+ const manager=canScheduleEvent(data.me,e),config=e.livePlay;
  const eventMatches:Match[]=data.matches.filter((m:Match)=>m.eventId===e.id);
  const playerId:string=ctx.matchPlayerId??'';
  const current=eventMatches.filter(m=>m.status==='playing');
@@ -55,7 +56,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}
   <Disclosure label={'其他球友上场与轮休 · '+roster.filter(r=>r.playerId!==data.me.playerId).length+'人'}><section className="card live-rotation-roster"><p className="hint">不连续上场的球友先轮休一局，休息好后可以恢复。</p>{roster.filter(r=>r.playerId!==data.me.playerId).map(playerRow)}</section></Disclosure>
-  <Disclosure label={`已完成积分赛 · ${history.length} 局`} defaultOpen={!!playerId||!active}><div className="courts-grid completed-points-matches">{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>{!history.length&&<p className="hint">暂无已完成对局。</p>}</Disclosure>
+  <Disclosure label={`已完成${eventRankingEnabled(e)?'积分赛':'普通对局'} · ${history.length} 局`} defaultOpen={!!playerId||!active}><div className="courts-grid completed-points-matches">{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>{!history.length&&<p className="hint">暂无已完成对局。</p>}</Disclosure>
   {!!cancelled.length&&<Disclosure label={`已撤销对局 · ${cancelled.length} 局`}><div className="courts-grid">{cancelled.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>}
   <Disclosure label={eventFormat(e)==='singles'?'单打轮转':'搭档方式与投票'}><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
  </div>;

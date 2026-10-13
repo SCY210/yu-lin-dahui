@@ -22,7 +22,7 @@ const post=(id,action,payload,revision,requestId=crypto.randomUUID())=>as(id,()=
 const edit=m=>({matchId:m.id,expectedA:[...m.a],expectedB:[...m.b],a:[...m.b],b:[...m.a]});
 const teams=state=>state.matches.map(m=>({id:m.id,a:m.a,b:m.b})).sort((a,b)=>a.id.localeCompare(b.id));
 try{
- const s=api.emptyState(),now=Date.now();Object.assign(s.settings,{initialized:true,ownerAccountId:'admin-a',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ const s=api.emptyState(),now=Date.now();Object.assign(s.settings,{initialized:true,ownerAccountId:'admin-a',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=Array.from({length:12},(_,i)=>({id:i===0?'admin-a':i===1?'admin-b':'member'+i,email:'',role:i<2?'admin':'member',playerId:'p'+i}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  const e={id:'event',creatorId:'admin-a',title:'Fictional two-court activity',start:now-3600000,end:now+3600000,venue:'Venue',address:'',capacity:12,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};

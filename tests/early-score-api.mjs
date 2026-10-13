@@ -21,7 +21,7 @@ const user=id=>fixture.user=id?{userId:id,method:'password',displayName:id}:null
 const post=async(payload,requestId=crypto.randomUUID(),revision)=>(api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'score',payload,requestId,revision:revision??(await api.load()).revision})})));
 const view=async()=>{const r=await api.GET(new Request(origin+'/api/club?month='+period+'&year='+period.slice(0,4)));assert.equal(r.status,200);return r.json()};
 try{
- const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=[{id:'owner',playerId:'p4',role:'admin',email:''},{id:'member',playerId:'p0',role:'member',email:''},{id:'outsider',playerId:'p5',role:'member',email:''}];
  s.players=Array.from({length:6},(_,i)=>({id:'p'+i,name:'Fictional '+i,ownerId:i===0?'member':i===4?'owner':i===5?'outsider':'unused',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  const e={id:'future-event',creatorId:'owner',title:'Fictional future activity',start:future,end:future+7200000,status:'open',venue:'Fictional venue',address:'',capacity:6,signupDeadline:future,cancelDeadline:future-86400000,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval',schedulingMode:'planned'};

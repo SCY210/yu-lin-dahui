@@ -11,7 +11,7 @@ import {leaderboard} from '../lib/domain/ranking';
 const start=Date.parse('2026-10-06T16:00:00Z'),minute=60000,now=start-3600000;
 function fixture(n=12){
  const s=emptyState(),e:Event={id:'points',creatorId:'creator',title:'预排验收',start,end:start+120*minute,venue:'测试',address:'',capacity:30,signupDeadline:start,cancelDeadline:start,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
- s.events.push(e);s.accounts.push({id:'creator',role:'member',email:'',playerId:'p0'},{id:'admin',role:'admin',email:'',playerId:'admin-player'},{id:'outsider',role:'member',email:'',playerId:'outsider-player'});
+ s.events.push(e);s.accounts.push({id:'creator',role:'admin',email:'',playerId:'p0'},{id:'admin',role:'admin',email:'',playerId:'admin-player'},{id:'outsider',role:'member',email:'',playerId:'outsider-player'});
  for(let i=0;i<n;i++){const id='p'+String(i).padStart(2,'0');s.players.push({id,ownerId:i===0?'creator':'actor'+i,name:id,initialRating:1000+i*8,rating:1000+i*8,ratedGames:0,enabled:true,ratingReason:''});s.registrations.push({id:'reg'+i,eventId:e.id,playerId:id,sequence:i,status:'confirmed',arrival:start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});s.accounts.push({id:'actor'+i,role:'member',email:'',playerId:id})}
  s.accounts[0].playerId='p00';
  for(let i=0;i<2;i++)s.bookings.push({id:'court'+i,eventId:e.id,name:(i+1)+'号场',start,end:e.end,pricing:'hourly',cents:690});

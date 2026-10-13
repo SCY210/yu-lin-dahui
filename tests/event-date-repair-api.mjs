@@ -19,7 +19,7 @@ const api=await import(pathToFileURL(resolve('.test-output/date-repair-api-bundl
 const realNow=Date.now;Date.now=()=>Date.parse('2026-10-08T21:00:00Z');
 try{
  const empty=api.emptyState(),s=api.emptyState(),plan=api.requestedEventDateRepair;
- s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.strengthVersion='realm-elo-v2';
+ s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.rankedEventsVersion='admins-v1';s.settings.strengthVersion='realm-elo-v2';
  s.accounts=['owner','alice','bob','carol'].map((id,i)=>({id,email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.playerId,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const e={id:plan.eventId,creatorId:'owner',title:'Fictional Thursday',start:plan.fromStart,end:plan.fromEnd,venue:'Fictional',address:'',capacity:6,signupDeadline:plan.fromEnd,cancelDeadline:plan.fromStart-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
  s.events=[e,{...e,id:'foreign',status:'draft'}];s.bookings.push({id:'court',eventId:e.id,name:'Fictional',start:e.start,end:e.end,pricing:'total',cents:0});

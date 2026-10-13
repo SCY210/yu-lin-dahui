@@ -12,6 +12,7 @@ import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
+import {canEnableEventRanking,eventRankingEnabled,changeEventRanking} from './event-ranking';
 import { applyLivePlay, finishLiveMatch } from './live-play';
 import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
@@ -56,9 +57,10 @@ export function authorized(a: Account, action: string) { if (!['bonusSeen', 'gue
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
-    event: z.object({ tournament:z.boolean().optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
+    event: z.object({ ranked:z.boolean().optional(), tournament:z.boolean().optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
     eventStatus: z.object({ eventId: pid, status: z.enum(['draft', 'open', 'locked', 'live', 'ended', 'cancelled']) }),
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
+    eventRanking: z.object({eventId:pid,ranked:z.boolean(),expectedRanked:z.boolean()}),
     eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).optional(), practiceShuttleCents:cents.optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
     booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }),
     register: z.object({ ...activityAcknowledgementInput, eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
@@ -159,10 +161,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请检查活动起止时间');
             for (const b of p.bookings)
                 checkBooking(p, b);
+            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有群主和管理员可以开启积分赛');
+            if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
             const { bookings, practiceShuttleCents, practiceBallCount, tournament, ...details } = p;
-            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
+            const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             if(tournament){e.tournament=emptyTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
@@ -204,6 +208,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             delete e.deletedAt;
             delete e.deletedBy;
             break;
+        }
+        case 'eventRanking': {
+            const p=command.payload;changeEventRanking(s,a,event(p.eventId),p.ranked,p.expectedRanked,now);break;
         }
         case 'eventEdit': {
             const p = command.payload;
@@ -492,7 +499,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const season = month(p.at);
             if (!s.seasons.some(x => x.id === season))
                 s.seasons.push({ id: season, rules: { ...s.settings.rules }, version: 1 });
-            ms.forEach(m => { m.start = p.at; m.status = 'playing'; markRanked(m); });
+            ms.forEach(m => { m.start = p.at; m.status = 'playing'; markRanked(m,e); });
             clearFilledPointsWaiting(s,e);
             break;
         }
@@ -551,7 +558,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             m.end = p.end;
             m.status = 'complete';
             m.enteredBy = a.id;
-            markRanked(m);
+            markRanked(m,matchEvent);
             if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
                 r.status = 'complete';
             replayRating(s, now);
@@ -564,9 +571,9 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
             if (!['playing', 'complete'].includes(m.status))
                 fail('只可修正已开赛对局的计分方式');
-            if (!p.monthly)
-                fail('网站对局统一计入积分赛，不能关闭积分');
-            markRanked(m);
+            const enabled=eventRankingEnabled(event(m.eventId));
+            if(p.monthly!==enabled)fail((enabled?'':'403: ')+'不能单独改变对局计分，请由群主或管理员在活动开打前设置积分赛');
+            markRanked(m,event(m.eventId));
             replayRating(s, now);
             break;
         }

@@ -20,7 +20,7 @@ const database=sqliteD1();fixture.env.DB=database.db;
 const api=await import(pathToFileURL(resolve('.test-output/friend-signup-api.mjs')).href);
 try{
  const empty=api.emptyState(),s=api.emptyState(),now=Date.now(),start=Math.ceil((now+86400000)/1800000)*1800000,end=start+7200000;
- Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=['owner','member','other'].map((id,i)=>({id,email:'',role:i?'member':'admin',playerId:'p'+i}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  s.events=[{id:'event',creatorId:'owner',title:'Fictional guest signup',start,end,venue:'Fictional venue',address:'',capacity:1,signupDeadline:end,cancelDeadline:start-86400000,status:'open',note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
