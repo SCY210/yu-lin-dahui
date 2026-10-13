@@ -296,17 +296,27 @@ function Storm() {
   );
 }
 
-/** 炼虚's sky: twinkling stars, specks drawn into the seal, shooting stars, and a shockwave from the void
- * that sweeps the tag and lights it up on its own rhythm. Grander than 化神's storm by design. */
+/** 炼虚's sky, grander than 化神's storm by design: aurora clouds in violet, cyan and rose, cosmic dust swirling
+ * outside the edges, rifts that tear the void open and light the sky, a shockwave from the seal, shooting stars
+ * and twinkling stars, with light running round the border. */
 function VoidSky() {
   return (
-    <span className="rb-galaxy" aria-hidden="true">
+    <>
+      <span className="rb-galaxy" aria-hidden="true">
+      <span className="rb-aurora">{dots(4)}</span>
       {dots(7)}
       <s className="rb-star rb-star-a" /><s className="rb-star rb-star-b" /><s className="rb-star rb-star-c" /><s className="rb-star rb-star-d" /><s className="rb-star rb-star-e" />
       <b className="rb-meteor rb-meteor-a" /><b className="rb-meteor rb-meteor-b" />
       <u className="rb-shock" /><u className="rb-shock rb-shock-late" />
       <em className="rb-void-flash" />
-    </span>
+      <em className="rb-rift-flash" />
+      <svg className="rb-rifts" viewBox="0 0 100 30" preserveAspectRatio="none">
+        <path className="rb-rift rb-rift-a" d="M70 -2 L66 7 L71 11 L64 18 L69 22 L62 32 M71 11 L78 9 M64 18 L58 21" />
+        <path className="rb-rift rb-rift-b" d="M40 -2 L44 6 L39 12 L45 19 L41 32" />
+      </svg>
+      </span>
+      <span className="rb-cosmos" aria-hidden="true">{dots(6)}</span>
+    </>
   );
 }
 
