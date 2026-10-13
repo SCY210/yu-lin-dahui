@@ -1,5 +1,6 @@
 'use client';
-import {useId,useState,type ReactNode} from 'react';
+import {useContext,useId,useState,type ReactNode} from 'react';
+import AccountControls,{AccountControlsContext} from './account-controls';
 import {Bell,KeyRound,Medal} from 'lucide-react';
 import './me-panels.css';
 
@@ -13,12 +14,13 @@ export function MyAchievements({children}:{children:ReactNode}) {
 
 export function MySettings({account,notifications}:{account:ReactNode;notifications:ReactNode}) {
  const [active,setActive]=useState<'account'|'notifications'|null>(null),id=useId();
+ const controls=useContext(AccountControlsContext);
  return <section className="card me-settings-entry">
   <h3>账号与设备</h3>
   <div className="actions">
    <button className="secondary" aria-expanded={active==='account'} aria-controls={active==='account'?id:undefined} onClick={()=>setActive(value=>value==='account'?null:'account')}><KeyRound size={17} aria-hidden="true"/> 账号与密码</button>
    <button className="secondary" aria-expanded={active==='notifications'} aria-controls={active==='notifications'?id:undefined} onClick={()=>setActive(value=>value==='notifications'?null:'notifications')}><Bell size={17} aria-hidden="true"/> 通知与安装</button>
   </div>
-  {active&&<div id={id} className="me-panel-content">{active==='account'?account:notifications}</div>}
+  {active&&<div id={id} className="me-panel-content">{active==='account'?<>{account}{controls&&<AccountControls {...controls}/>}</>:notifications}</div>}
  </section>;
 }

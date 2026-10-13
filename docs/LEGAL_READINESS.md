@@ -19,7 +19,7 @@ Complete every config/legal.ts field with verified, public information. The soft
 1. Identify the actual controller/operator and a monitored rights-request contact. A GitHub collaborator is not automatically the data controller.
 2. Confirm countries, applicable rules, whether the group is an organization/commercial service, and whether minors participate. A private login is not by itself evidence of the GDPR household exception.
 3. Describe purposes and the applicable basis separately for accounts, activity records, results/rankings, cost allocation, optional profiles, images, and security logs. Assess indirect profiles created for friends as well.
-4. Establish retention periods and a workable access/correction/erasure/restriction/objection/portability process. Current event deletion is reversible and does not erase personal data; no automated account erasure or retention scheduler exists. Consider credentials, photographs, audit payloads, exports, and backups.
+4. Establish retention periods and a workable access/correction/erasure/restriction/objection/portability process. Current event deletion is reversible and does not erase personal data. [Self-service account deletion](ACCOUNT_LIFECYCLE.md) now provides a 30-day grace period and automatic cleanup; verify its scheduled trigger in the deployed host. Consider the remaining shared historical facts, free-text mentions, exports, backups and infrastructure logs.
 5. Review the actual Sites/Cloudflare/identity-provider processing arrangements, locations, contractual terms, and transfer safeguards. No data-region or processor-contract claim has been verified here.
 6. Assess cookies actually set by the deployed host. Source cookies manage authentication; that does not exempt future analytics/advertising. Add appropriate choices before introducing nonessential tracking.
 7. Establish image-permission evidence, moderation/removal handling, and any guardian process. The uploader's acknowledgement is not verified consent. The app does not verify age. Do not upload minors' photographs until an appropriate process exists.
@@ -32,7 +32,7 @@ The PR does not deploy these notices, reset real accounts, change hosting audien
 
 Uploaded bytes may retain EXIF, GPS, or other metadata. Structural validation does not remove it; sanitize photos before sharing. Existing profile/attendance/result data is shared with club members. Administrators can export complete business records, so exports require access/retention handling outside Git.
 
-Erasure may require preserving or pseudonymizing historical records involving other people rather than deleting all matches indiscriminately. A dedicated erasure workflow needs its own design and verification. Security/incident handling and vendor arrangements also require operational ownership.
+Self-service deletion replaces historical participation with a fresh, unowned deleted-member record, while removing the login and profile. This does not erase all shared facts, exported records or operator backups. Security/incident handling, remaining erasure requests and vendor arrangements still require operational ownership.
 
 ## Primary references reviewed on 2026-10-05
 

@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {flushSync} from 'react-dom';
 import {toast} from 'sonner';
 import InstallApp from './install-app';
@@ -9,6 +9,7 @@ import {readActionResponse} from '../lib/client/api-response';
 export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBound?:()=>void}){
  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const sessionInvalidated=useRef(false);
+ const deletionDate=useSyncExternalStore(()=>()=>{},()=>binding?'':sessionStorage.getItem('account-deletion-notice')??'',()=>'');
  useEffect(()=>{
   if(binding)return; // The authenticated parent invalidates and unmounts binding forms.
   const invalidate=()=>{if(sessionInvalidated.current)return;sessionInvalidated.current=true;flushSync(()=>{setUsername('');setPassword('');setConfirmation('');setError('');setBusy(true)});location.replace('/')};
@@ -17,7 +18,8 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
   return()=>{sync.stop();window.removeEventListener('pageshow',restore)};
  },[binding]);
  async function submit(e:React.FormEvent){e.preventDefault();if(busy||sessionInvalidated.current)return;if(binding&&!/^[A-Za-z0-9]{2,32}$/.test(username.trim())){setError('新账号须为2–32位英文字母或数字');return}if(binding&&password!==confirmation){setError('两次密码不一致');return}setBusy(true);setError('');try{
-  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})});await readActionResponse(r);
+  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})});const result=await readActionResponse(r);
+  sessionStorage.removeItem('account-deletion-notice');if(result.deletionCancelled)toast.success('已重新登录，注销申请已取消');
   if(sessionInvalidated.current)return;setPassword('');setConfirmation('');notifySessionChange();
   if(binding){toast.success('账号登录已开通，原权限和记录已保留');onBound?.()}else location.reload();
  }catch(e){if(!sessionInvalidated.current)setError((e as Error).message)}finally{if(!sessionInvalidated.current)setBusy(false)}}
@@ -25,6 +27,7 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
  {!binding&&<div className="auth-decoration" aria-hidden="true"><img src="/shuttlecock.webp" width={512} height={470} alt=""/></div>}
  <h1>{binding?'开通账号登录':'登录羽林大会'}</h1>
  <p className="muted">{binding?'设置自己的账号和密码，保留现有管理员权限、球友档案和比赛记录。':'使用管理员为你创建的账号和密码。'}</p>
+ {!binding&&<p className="hint" role={deletionDate?'status':undefined}>{deletionDate&&!Number.isNaN(Date.parse(deletionDate))?'已申请注销，期限：'+new Date(deletionDate).toLocaleString('zh-CN',{timeZone:'Europe/Madrid'})+'（马德里时间）。':''}申请注销后，30天内重新登录会取消注销；期限届满后不能恢复，系统会自动清理账号。</p>}
  <form onSubmit={submit}><div className="form-fields">
  <label>账号<input required minLength={binding?2:1} maxLength={binding?32:254} pattern={binding?'[A-Za-z0-9]{2,32}':undefined} title={binding?'2–32位英文字母或数字':undefined} value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false}/>{binding&&<small>2–32位英文字母或数字，英文不区分大小写。</small>}</label>
  <label>{binding?'设置密码':'密码'}<input type="password" required minLength={binding?12:1} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={binding?'new-password':'current-password'}/>{binding&&<small>至少12位，可以使用一段容易记住的密码短语。</small>}</label>

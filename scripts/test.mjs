@@ -28,7 +28,7 @@ if (!unitOnly) {
     'match-scoring-api', 'point-grants-api', 'all-ranked-api', 'award-voting-api',
     'event-date-repair-api', 'settlement-api', 'requested-thursday-split-api',
     'write-retry-api', 'club-read-api', 'requested-event-merge-api',
-    'trial-cleanup-api', 'push-api', 'auth-business.integration',
+    'trial-cleanup-api', 'push-api', 'auth-business.integration', 'account-lifecycle-api',
   ];
   for (const suite of suites) run([`tests/${suite}.mjs`]);
 }

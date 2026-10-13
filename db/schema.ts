@@ -31,3 +31,6 @@ export const pushDeliveries=sqliteTable('push_deliveries',{id:text('id').primary
 
 // Private credential archive for the three recoverable trial account removals.
 export const trialCredentialArchive=sqliteTable('trial_credential_archive',{id:text('id').primaryKey(),payload:payload()});
+export const accountDeletions=sqliteTable('account_deletions',{accountId:text('account_id').primaryKey().references(()=>accounts.id,{onDelete:'cascade'}),requestedAt:integer('requested_at').notNull(),deleteAfter:integer('delete_after').notNull()},t=>[index('account_deletions_due').on(t.deleteAfter)]);
+export const erasedIdentities=sqliteTable('erased_identities',{id:text('id').primaryKey()});
+export const accountErasureObjects=sqliteTable('account_erasure_objects',{storageKey:text('storage_key').primaryKey()});

@@ -5,10 +5,17 @@ import { secureResponse } from "../lib/security-headers";
 import { cancelUnreadWriteBody } from "../lib/write-security";
 import { flushPushOutbox } from "../lib/push-outbox";
 import { requestMetric } from "../lib/observability";
+import {purgeExpiredAccounts} from "../lib/account-lifecycle";
 
 export default {
+  async scheduled(_controller: ScheduledController, _env: Cloudflare.Env, ctx: ExecutionContext) {
+    ctx.waitUntil(purgeExpiredAccounts());
+  },
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     const started = performance.now();
+    if (new URL(request.url).pathname.startsWith('/api/')) {
+      ctx.waitUntil(purgeExpiredAccounts().catch(() => {console.warn('Account erasure deferred');}));
+    }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.

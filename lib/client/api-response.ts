@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const errorBody = z.object({ error: z.string().min(1).max(2000) });
-const successBody = z.object({ ok: z.literal(true), signedOut: z.boolean().optional() });
+const successBody = z.object({ ok: z.literal(true), signedOut: z.boolean().optional(), deleteAfter: z.number().int().positive().optional(), deletionCancelled: z.boolean().optional() });
 
 /** Reject proxy HTML, truncated JSON and unexpected success bodies explicitly. */
 export async function readActionResponse(response: Response) {

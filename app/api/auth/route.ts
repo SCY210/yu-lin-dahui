@@ -10,6 +10,7 @@ import { getAppUser, hashToken, passwordEnabled, sessionCookie } from '../../../
 import { makePassword, checkPassword, sessionToken, normalizeUsername } from '../../../lib/password';
 import { pushEndpoint } from '../../../lib/push-contract';
 import { removePushSubscription } from '../../../lib/push-subscriptions';
+import {cancelAccountDeletion, deletionRequest, ownAccountAction} from '../../../lib/account-lifecycle';
 export const dynamic = 'force-dynamic';
 const password = z.string().min(12).max(128);
 const age = 14 * 86400;
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     try {
         assertWriteRequest(req);
         const ip = trustedClientIP(req);
-        const input = z.object({ action: z.enum(['login', 'bind', 'createAccount', 'resetPassword', 'changePassword', 'changeUsername', 'logout']), pushEndpoint: z.unknown().optional() }).passthrough().parse(await readJsonBody(req, 8192)), action = input.action;
+        const input = z.object({ action: z.enum(['login', 'bind', 'createAccount', 'resetPassword', 'changePassword', 'changeUsername', 'logout', 'requestDeletion', 'relinquishAdmin']), pushEndpoint: z.unknown().optional() }).passthrough().parse(await readJsonBody(req, 8192)), action = input.action;
         if (action === 'logout') {
             if (input.pushEndpoint !== undefined) {
                 const endpoint = pushEndpoint.parse(input.pushEndpoint), owner = await getAppUser();
@@ -64,9 +65,14 @@ export async function POST(req: Request) {
             if (!await raw().prepare('SELECT id FROM accounts WHERE id=?').bind(c.id).first())
                 return denied('账号暂不可用');
             const token = sessionToken();
+            const sessionId = await hashToken(token), now = Date.now();
+            const insert = raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=?').bind(sessionId, c.id, now + age * 1000, c.id, c.username, c.salt, c.hash);
+            if (await deletionRequest(c.id)) {
+                if (await cancelAccountDeletion(c.id, [insert])) return result({ok: true, deletionCancelled: true}, req, token);
+            }
             const saved = await raw().batch([
                 // A simultaneous reset must not issue a session based on a stale password hash.
-                raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=?').bind(await hashToken(token), c.id, Date.now() + age * 1000, c.id, c.username, c.salt, c.hash),
+                raw().prepare('INSERT INTO auth_sessions(id,user_id,expires) SELECT ?,?,? FROM password_credentials WHERE id=? AND username=? AND salt=? AND hash=? AND NOT EXISTS(SELECT 1 FROM account_deletions WHERE account_id=?)').bind(sessionId, c.id, now + age * 1000, c.id, c.username, c.salt, c.hash, c.id),
                 raw().prepare('DELETE FROM auth_rate_limits WHERE id=?').bind(pairId),
                 raw().prepare('DELETE FROM auth_sessions WHERE expires<=?').bind(Date.now())
             ]);
@@ -77,6 +83,17 @@ export async function POST(req: Request) {
         const user = await getAppUser();
         if (!user)
             return denied('请先登录账号', 401);
+        if (action === 'requestDeletion' || action === 'relinquishAdmin') {
+            const p = z.object({action: z.enum(['requestDeletion','relinquishAdmin']), requestId: z.string().uuid(), confirmed: z.literal(true), currentPassword: z.string().min(1).max(128).optional()}).strict().parse(input);
+            await consumeRateLimit('account-lifecycle:' + user.userId, 8, 15 * 60000, {message: '尝试次数较多，请15分钟后重试'});
+            const token = req.headers.get('cookie')?.split(';').map(v => v.trim()).find(v => v.startsWith(sessionCookie + '='))?.slice(sessionCookie.length + 1);
+            const changed = await ownAccountAction(user, action, p.requestId, p.currentPassword, user.method === 'password' && token ? await hashToken(token) : undefined);
+            if (action === 'relinquishAdmin') return result(changed, req);
+            const h = new Headers({'Cache-Control': 'no-store'});
+            h.append('Set-Cookie', cookie(sessionCookie, '', req, 0));
+            h.append('Set-Cookie', cookie('yulin_signed_out', '1', req, 30 * 86400));
+            return Response.json({...changed, signedOut: true}, {headers: h});
+        }
         if (action === 'changeUsername') {
             const p = changeUsernameInput.parse(input), meta = await loginAccountMetadata(user.userId);
             await consumeRateLimit('changeUsername:' + user.userId, meta.isOwner ? 40 : 8, 15 * 60000, { message: '修改账号尝试较多，请15分钟后重试' });

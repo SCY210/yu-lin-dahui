@@ -1,7 +1,7 @@
 import {z} from 'zod';
 
 export const imageRightsVersion='2026-10-05';
-export const legalNoticeVersion='2026-10-05';
+export const legalNoticeVersion='2026-10-13';
 export type LegalConfig={
  operatorName:string;contactEmail:string;operatorAddress:string;jurisdiction:string;
  legalBases:string;retention:string;processorsAndTransfers:string;minorsPolicy:string;complaintAuthority:string;
