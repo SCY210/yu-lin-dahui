@@ -17,8 +17,8 @@ export default function EventAwards({e,ctx,now}:any){
  const mine=counted.find((v:Vote)=>v.eventId===e.id&&v.category==='mvp'&&v.voterId===data.me.id),summary=awardSummary(counted,e.id,'mvp');
  const person=(id:string)=>data.players.find((p:Player)=>p.id===id)??{id,name:'已移除球友'};
  const playing=data.matches.some((m:Match)=>m.eventId===e.id&&m.status==='playing'),cancelled=e.status==='cancelled';
- const closesAt=awardVotingClosesAt(e),closed=!cancelled&&now>=closesAt,winners=closed?mvpWinners(data,e,now):[],organiser=data.me.role==='admin'||!!data.me.isOwner;
- const named=organiser?(counted as (Vote&{voterPlayerId?:string})[]).filter(v=>v.eventId===e.id&&v.category==='mvp'&&v.voterPlayerId):[];
+ const closesAt=awardVotingClosesAt(e),closed=!cancelled&&now>=closesAt,winners=closed?mvpWinners(data,e,now):[],canViewNamedVotes=data.me.role==='admin'||!!data.me.isOwner;
+ const named=canViewNamedVotes?(counted as (Vote&{voterPlayerId?:string})[]).filter(v=>v.eventId===e.id&&v.category==='mvp'&&v.voterPlayerId):[];
  async function vote(playerId:string,active=true){if(locked||!canVote)return;setPending(playerId);setNotice('');try{await ctx.action('awardVote',{eventId:e.id,playerId,category:'mvp',active},false);setNotice(active?`已将 MVP 投给${person(playerId).name}`:'已撤回 MVP 选票')}catch{/* The shared action displays the server error. */}finally{setPending('')}}
  return <section className="card award-card" aria-label="本场MVP投票">
   <div className="award-header"><div><p className="award-eyebrow">把掌声留给球友</p><h3>本场 MVP 投票</h3></div><span className="badge">{cancelled?'已关闭':closed?'投票已截止':open?'投票进行中':now<e.start?'尚未开始':'等待收官'}</span></div>
@@ -34,7 +34,7 @@ export default function EventAwards({e,ctx,now}:any){
   {!candidates.length&&<p className="muted">还没有正式参加或已出场的候选球友。</p>}
   {mine&&<div className="award-my-vote"><span>MVP 已投给 <strong>{person(mine.playerId).name}</strong></span><button type="button" className="ghost" disabled={!canVote||locked} onClick={()=>void vote(mine.playerId,false)}><Undo2 size={15} aria-hidden="true"/>撤回 MVP</button></div>}
   <p className="award-notice" role="status" aria-live="polite">{notice}</p>
-  {organiser&&<details className="award-named"><summary>投票明细 · {named.length} 票（仅管理员和群主可见）</summary>{named.length?named.map(v=><p key={v.id}><strong>{person(v.voterPlayerId!).name}</strong> → {person(v.playerId).name}</p>):<p className="muted">还没有人投票。</p>}</details>}
-  <p className="hint">每个账号一票，不能投给自己，截止前可以改投或撤回。投票为实名，组织者和管理员能看到每一票；其他球友只看到票数。</p>
+  {canViewNamedVotes&&<details className="award-named"><summary>投票明细 · {named.length} 票（仅管理员和群主可见）</summary>{named.length?named.map(v=><p key={v.id}><strong>{person(v.voterPlayerId!).name}</strong> → {person(v.playerId).name}</p>):<p className="muted">还没有人投票。</p>}</details>}
+  <p className="hint">每个账号一票，不能投给自己，截止前可以改投或撤回。投票为实名，仅管理员和群主能看到每一票；其他球友只看到票数和自己的选票。</p>
  </section>;
 }

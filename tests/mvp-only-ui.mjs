@@ -25,5 +25,12 @@ try{
  await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'cancelled'},ctx,now})));
  assert.ok(buttons().filter(b=>b.props.className?.includes('award-person')).every(b=>b.props.disabled));
  data.awardVotes=[{id:'valid',eventId:event.id,voterId:'member',playerId:'alice',category:'mvp',at:now},{id:'late',eventId:event.id,voterId:'other',playerId:'bob',category:'mvp',at:event.end+25*3600000}];await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'ended',tournament:{status:'draft'}},ctx,now:event.end+24*3600000})));assert.ok(text(ui.root).includes('本场 MVP：'));assert.ok(!/获得.*5.*积分/.test(text(ui.root)),'tournament MVP does not promise season points');assert.ok(!text(ui.root).includes('赛后开放投票'),'closed candidate cards consistently show the closed state');
- console.log('PASS MVP-only ballot: no other awards/tags/progress, self vote disabled, one-vote replacement and withdrawal, cancelled activity disabled.');
+ data.awardVotes=[{id:'named',eventId:event.id,voterId:'',voterPlayerId:'alice',playerId:'bob',category:'mvp',at:now}];
+ for(const [me,allowed] of [[{id:'owner',playerId:'self',role:'member'},false],[{id:'member',playerId:'self',role:'member'},false],[{id:'admin',playerId:'self',role:'admin'},true],[{id:'club-owner',playerId:'self',role:'member',isOwner:true},true]]){
+  data.me=me;await act(()=>ui.update(React.createElement(Ballot,{e:event,ctx,now})));
+  const details=ui.root.findAllByType('details');assert.equal(details.length,allowed?1:0,'named ballot visibility follows admin/owner authority, not event ownership');
+  if(allowed)assert.ok(text(details[0]).includes('alice → bob'));
+  assert.ok(text(ui.root).includes('仅管理员和群主能看到每一票'),'the public hint agrees with the access policy');
+ }
+ console.log('PASS MVP-only ballot: self-vote/replace/withdraw/cancelled guards and named details restricted to admins and owner, including member organisers.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
