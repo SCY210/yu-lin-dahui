@@ -69,7 +69,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         {ctx.admin && canEdit && !genderOnly && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
     </header>
-    {isOwn&&<p className="profile-privacy-hint">扩展资料由本人自愿填写，已登录的群成员可以看到。请只填写愿意在群内分享的内容；如需减少展示或删除资料，可联系群主或管理员。<a href="/privacy" target="_blank" rel="noreferrer">查看隐私说明</a></p>}
 
     <Disclosure label="个人资料与打法" defaultOpen><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
@@ -105,5 +104,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section></Disclosure>
 
     <Disclosure label={'成就 · 已点亮 '+(ctx.data.achievements?.[p.id]?.unlockedCount??0)}><Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred></Disclosure>
+    {isOwn&&<p className="profile-privacy-hint">扩展资料由本人自愿填写，已登录的群成员可以看到。请只填写愿意在群内分享的内容；如需减少展示或删除资料，可联系群主或管理员。<a href="/privacy" target="_blank" rel="noreferrer">查看隐私说明</a></p>}
   </section>;
 }
