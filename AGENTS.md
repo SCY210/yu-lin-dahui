@@ -23,9 +23,10 @@
 - Git may remove formerly tracked files when another checkout pulls a deletion. Document a backup procedure before merging such a change; ignoring a path alone does not preserve it during checkout.
 - Legal notices must describe actual processing and real operator details. Do not invent identities, legal bases, consent, retention rules, or compliance guarantees.
 
-## Privately customized material stays outside GitHub
+## Privately customized material stays outside public GitHub
 
-- GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the Sites deployment repository. Do not upload them to GitHub.
+- Public GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the owner-approved private deployment repository. Never upload them to a public repository or public CI.
+- The owner authorized a separate private GitHub deployment repository for cloud publication. Verify its exact identity and private visibility before each source push; preserve the fetch-only shared remote and reject all public or unapproved destinations. Do not add collaborators or change visibility.
 - Do not merge deployment repository history or copy its complete source over the shared version. Port shared functionality separately and inspect each change.
 - Before pushing, run node scripts/check-shared-source.mjs --check. Preserve that check and the local push hook.
 

@@ -7,7 +7,9 @@ material or receive credentials for it.
 
 The controlled local production checkout keeps a private branch above reviewed
 shared commits. Its shared remote is fetch-only: the push URL is disabled and a
-local hook rejects pushes. Updating means fetching and merging shared `main`
+local hook rejects public and unapproved destination pushes. An owner-approved
+private source repository is a separate destination whose private visibility must
+be verified before each synchronization. Updating means fetching and merging shared `main`
 into the private branch, not replacing the private tree. Conflicts stop the update.
 The release workflow verifies protected-file hashes and required integration
 points before and after updating, tests the application and access controls,
@@ -39,29 +41,42 @@ Git history is not rewritten by this workflow, and earlier copies cannot be
 recalled. Preserve the shared-source privacy check and existing account-level
 permission checks in every release.
 
-## Automatic publication after merges
+## Automatic cloud publication after merges
 
-The desktop follow-up checks shared main every 15 minutes. It only publishes
-already-merged shared commits; it does not approve or merge pull requests.
-The separate daytime PR notification task retains its existing schedule.
+The public `private-release.yml` workflow runs after a push to `main`, including a
+merged PR. It has no repository permissions, does not check out application code,
+and receives only `CLOUDFLARE_PRIVATE_DEPLOY_HOOK`, an encrypted Actions secret.
+Set the repository variable `PRIVATE_RELEASE_ENABLED=true` only after that secret
+and the private build connection have been verified. Without this explicit switch
+the job stays disabled. Never put the hook URL in source, logs or job artifacts.
 
-A release runs only from the controlled private checkout, through its existing
-private release command. Fetch shared main, merge it into the private branch,
-verify protected files and permission integration, run the required tests and
-build, then publish. Never enable public-repository production builds or copy
-private material into shared CI. Conflicts, integrity failures, dirty local work,
-failed checks and authentication failures stop publication. An active private
-release is allowed to finish before another attempt starts.
+The hook requests a build from an owner-approved **private** source repository.
+Public CI receives no private repository credential, source archive, production
+API token or account allowlist. Cloudflare checks out that private source,
+prepares `.sites-runtime/cloudflare-private`, and invokes its existing
+`npm run release:private` command. The release fetches and merges current shared
+`main`, verifies protected private files and access integrations, installs locked
+dependencies when needed, tests, builds, applies required migrations and publishes.
+Conflicts, integrity failures, stale main, failed checks or unavailable metadata
+stop publication. Never resolve conflicts by replacing the private tree.
 
-Keep a local receipt containing the successfully published shared commit, private
-source commit and verified active private Worker version. Only update the receipt
-after the private release command succeeds and read-only deployment metadata
-confirms the version and channel. A merge alone is not publication. If main has
-not changed since that receipt, skip the release. Preserve pending failures so
-subsequent checks can resume without re-merging or repeating notifications.
+Keep public-repository production builds disabled or disconnected. Only the
+private source build may use the production deployment token. Disable previews
+for that build and never execute a shared/review checkout deployment command.
+The private destination must remain private and owner-controlled; it is not a
+place to grant ordinary public-repository collaborators additional access.
 
-This is local scheduled publication, not an immediate cloud webhook. The computer
-and desktop application must be running, the private checkout must remain
-available, and GitHub/Cloudflare authentication must still be valid. Reports stay
-in the task conversation; report successful releases and new blockers, while
-unchanged checks stay quiet.
+A successful hook request means a build was queued, not that deployment succeeded.
+The private release must confirm the active Worker version receives production
+traffic, carries `YULIN_RELEASE_CHANNEL=private`, identifies the exact shared SHA,
+and passes anonymous availability/authentication checks. Preserve its receipt
+with shared SHA, private source SHA, Worker version and time. Keep failed builds
+visible for diagnosis and rerun after correction; do not claim they are live.
+
+Cloud publication runs without the owner's computer. Pause the older local
+15-minute publisher only after a real cloud deployment has been verified, avoiding
+competing publishers. The separate daytime PR notification task is unchanged.
+To stop new automatic requests, set `PRIVATE_RELEASE_ENABLED=false`; this does
+not change the live website. Rotate a disclosed hook and update the encrypted
+secret. Cloudflare Builds and GitHub usage remain subject to their free quotas;
+this workflow does not upgrade plans or enable paid overages.
