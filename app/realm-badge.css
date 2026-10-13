@@ -714,16 +714,29 @@
   animation: rb-aura 3.8s ease-in-out infinite;
 }
 
-/* The name shines moon-white and flares when the void pulses. */
+/* The name is iridescent moonlight flowing through ice and violet, glowing and flaring when the void pulses.
+   The glow is a drop shadow so it never covers the gradient letters. */
 .realm-badge-5 .rb-name {
   color: #f4f8ff !important;
-  animation: rb-void-name 4.6s ease-out infinite;
+  background: linear-gradient(100deg, #fff 0%, #d6e5ff 22%, #e9dcff 42%, #fff 58%, #c8f1ff 78%, #fff 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none !important;
+  filter: drop-shadow(0 0 2px rgba(var(--rb-moon), 0.9)) drop-shadow(0 0 6px rgba(var(--rb-nebula), 0.8));
+  animation: rb-void-name 4.6s ease-out infinite, rb-name-flow 5s linear infinite;
 }
 
 @keyframes rb-void-name {
-  0%, 8%, 40%, 100% { text-shadow: 0 0 3px rgba(var(--rb-moon), 0.9), 0 0 9px rgba(var(--rb-nebula), 0.7); }
-  12% { text-shadow: 0 0 3px #fff, 0 0 9px #fff, 0 0 18px rgba(var(--rb-moon), 1), 0 0 30px rgba(var(--rb-nebula), 1); }
-  22% { text-shadow: 0 0 4px #fff, 0 0 12px rgba(var(--rb-moon), 1), 0 0 22px rgba(var(--rb-nebula), 0.9); }
+  0%, 8%, 40%, 100% { filter: drop-shadow(0 0 2px rgba(var(--rb-moon), 0.9)) drop-shadow(0 0 6px rgba(var(--rb-nebula), 0.8)); }
+  12% { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 7px #fff) drop-shadow(0 0 14px rgba(178, 150, 255, 1)); }
+  22% { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 10px rgba(var(--rb-moon), 1)); }
+}
+
+@keyframes rb-name-flow {
+  from { background-position: 0% 50%; }
+  to   { background-position: 220% 50%; }
 }
 
 .realm-badge-5 .rb-stage { color: #c9d6ea !important; }
@@ -751,7 +764,7 @@
   pointer-events: none !important;
 }
 
-.rb-galaxy i {
+.rb-galaxy > i {
   position: absolute;
   top: 50%;
   width: 2px;
@@ -763,13 +776,13 @@
   animation: rb-into-void 4.2s ease-in infinite;
 }
 
-.rb-galaxy i:nth-child(1) { left: 92%; top: 22%; }
-.rb-galaxy i:nth-child(2) { left: 78%; top: 76%; animation-delay: -0.6s; }
-.rb-galaxy i:nth-child(3) { left: 64%; top: 18%; animation-delay: -1.3s; }
-.rb-galaxy i:nth-child(4) { left: 86%; top: 58%; animation-delay: -2s; }
-.rb-galaxy i:nth-child(5) { left: 56%; top: 70%; animation-delay: -2.7s; }
-.rb-galaxy i:nth-child(6) { left: 72%; top: 40%; animation-delay: -3.3s; }
-.rb-galaxy i:nth-child(7) { left: 96%; top: 46%; animation-delay: -3.8s; }
+.rb-galaxy > i:nth-of-type(1) { left: 92%; top: 22%; }
+.rb-galaxy > i:nth-of-type(2) { left: 78%; top: 76%; animation-delay: -0.6s; }
+.rb-galaxy > i:nth-of-type(3) { left: 64%; top: 18%; animation-delay: -1.3s; }
+.rb-galaxy > i:nth-of-type(4) { left: 86%; top: 58%; animation-delay: -2s; }
+.rb-galaxy > i:nth-of-type(5) { left: 56%; top: 70%; animation-delay: -2.7s; }
+.rb-galaxy > i:nth-of-type(6) { left: 72%; top: 40%; animation-delay: -3.3s; }
+.rb-galaxy > i:nth-of-type(7) { left: 96%; top: 46%; animation-delay: -3.8s; }
 
 @keyframes rb-into-void {
   0%   { transform: translateX(0) scale(1); opacity: 0; }
@@ -879,4 +892,107 @@
   0%, 66%   { transform: translate(0, 0) rotate(-23deg); opacity: 0; }
   68%       { opacity: 1; }
   84%, 100% { transform: translate(-130px, 56px) rotate(-23deg); opacity: 0; }
+}
+
+/* ── 炼虚 splendour: aurora, cosmic dust, rifts in the void and light round the border ── */
+/* Aurora clouds in violet, cyan, rose and bright indigo drift through the void, richer than 化神's ink clouds. */
+.rb-aurora { position: absolute; inset: 0; }
+.rb-aurora i {
+  position: absolute;
+  top: -30%;
+  width: 62%;
+  height: 160%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(168, 128, 255, 0.5), rgba(168, 128, 255, 0));
+  animation: rb-drift 10s ease-in-out infinite alternate;
+}
+.rb-aurora i:nth-child(1) { left: -14%; }
+.rb-aurora i:nth-child(2) { left: 30%; top: 0; width: 52%; background: radial-gradient(closest-side, rgba(96, 214, 255, 0.42), rgba(96, 214, 255, 0)); animation: rb-drift-b 13s ease-in-out -4s infinite alternate; }
+.rb-aurora i:nth-child(3) { left: 64%; top: -45%; background: radial-gradient(closest-side, rgba(255, 140, 205, 0.32), rgba(255, 140, 205, 0)); animation-duration: 11.5s; animation-delay: -7s; }
+.rb-aurora i:nth-child(4) { left: 8%; top: 30%; width: 46%; height: 120%; background: radial-gradient(closest-side, rgba(120, 150, 255, 0.45), rgba(120, 150, 255, 0)); animation: rb-drift-b 15s ease-in-out -2s infinite alternate; }
+
+/* Cosmic dust swirls outside the edges, so the void spills beyond its tag. */
+.rb-cosmos {
+  position: absolute !important;
+  inset: -8px -12px !important;
+  z-index: 0;
+  pointer-events: none !important;
+}
+.rb-cosmos i {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(150, 130, 255, 0.3), rgba(150, 130, 255, 0));
+  animation: rb-wisp 10s ease-in-out infinite alternate;
+}
+.rb-cosmos i:nth-child(1) { left: -6%; top: -10%; width: 42%; height: 58%; }
+.rb-cosmos i:nth-child(2) { right: -4%; bottom: -14%; width: 48%; height: 62%; background: radial-gradient(closest-side, rgba(96, 214, 255, 0.28), rgba(96, 214, 255, 0)); animation: rb-wisp-b 12s ease-in-out -5s infinite alternate; }
+.rb-cosmos i:nth-child(3) { left: 32%; bottom: -22%; width: 38%; height: 50%; animation-duration: 8.5s; animation-delay: -3s; }
+.rb-cosmos i:nth-child(4) { right: 14%; top: -24%; width: 36%; height: 50%; background: radial-gradient(closest-side, rgba(255, 150, 210, 0.22), rgba(255, 150, 210, 0)); animation: rb-wisp-b 14s ease-in-out -8s infinite alternate; }
+.rb-cosmos i:nth-child(5) { left: -12%; bottom: -18%; width: 32%; height: 54%; animation-duration: 11s; animation-delay: -6s; }
+.rb-cosmos i:nth-child(6) { right: -12%; top: -6%; width: 30%; height: 50%; background: radial-gradient(closest-side, rgba(200, 220, 255, 0.3), rgba(200, 220, 255, 0)); animation-duration: 9.5s; animation-delay: -1.5s; }
+
+/* Rifts tear the void open: a white-violet crack flickers, holds and seals, lighting the aurora. */
+.rb-rifts {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 4px rgba(178, 150, 255, 1)) drop-shadow(0 0 8px rgba(96, 214, 255, 0.7));
+}
+.rb-rift {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.8px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  animation: rb-tear 5.8s linear infinite;
+}
+.rb-rift-b { stroke-width: 1.3px; animation-duration: 8.2s; animation-delay: -3.4s; }
+
+@keyframes rb-tear {
+  0%, 54%   { opacity: 0; }
+  55%       { opacity: 1; }
+  57%       { opacity: 0.25; }
+  59%       { opacity: 1; }
+  66%       { opacity: 0.85; }
+  72%, 100% { opacity: 0; }
+}
+
+.rb-rift-flash {
+  position: absolute;
+  inset: -20% -10%;
+  opacity: 0;
+  background: radial-gradient(38% 95% at 66% 40%, rgba(214, 200, 255, 0.65), rgba(96, 214, 255, 0.2) 55%, transparent 75%);
+  animation: rb-tear 5.8s linear infinite;
+}
+
+/* Iridescent light runs round the border. */
+@property --rb-edge {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.realm-badge-5::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--rb-edge), transparent 0deg 240deg, rgba(255, 255, 255, 0.95) 285deg, rgba(185, 160, 255, 0.95) 310deg, rgba(110, 220, 255, 0.9) 335deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  animation: rb-edge 3.4s linear infinite;
+}
+@keyframes rb-edge { to { --rb-edge: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-rifts, .rb-rift-flash { display: none !important; }
+  .rb-cosmos i, .rb-aurora i { opacity: 0.7; }
+  .realm-badge-5 .rb-name { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px rgba(178, 150, 255, 0.9)); }
 }
