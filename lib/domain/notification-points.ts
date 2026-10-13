@@ -20,6 +20,6 @@ export function notificationPointsStatus(s:Source,a:Pick<Account,'id'|'playerId'
 export function recordNotificationPoints(s:Source,a:Account,kind:'enable'|'disable',now:number){
  const status=notificationPointsStatus(s,a);
  if(kind==='enable'?status.status!=='available':status.status!=='earned')return 0;
- s.audits.push({id:crypto.randomUUID(),actor:a.id,at:now,action:'notificationPoints',reason:kind==='enable'?'首次开启活动通知奖励':'主动关闭全部通知设备',changes:{policy:notificationPointsPolicy,playerId:a.playerId,period:month(now),kind,points:kind==='enable'?notificationEnablePoints:-notificationDisablePoints}});
+ s.audits.push({id:crypto.randomUUID(),actor:a.id,at:now,action:'notificationPoints',reason:kind==='enable'?'首次开启活动通知奖励':'主动关闭任意一台通知设备',changes:{policy:notificationPointsPolicy,playerId:a.playerId,period:month(now),kind,points:kind==='enable'?notificationEnablePoints:-notificationDisablePoints}});
  return kind==='enable'?notificationEnablePoints:-notificationDisablePoints;
 }

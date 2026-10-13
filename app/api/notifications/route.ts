@@ -46,7 +46,7 @@ export async function POST(req:Request){try{
   if(p.subscription.expirationTime!=null&&p.subscription.expirationTime<=Date.now())throw new RequestError('通知订阅已过期，请重新开启',400);
   try{await verifySubscriptionKeys(p.subscription)}catch{throw new RequestError('通知加密信息无效，请重新开启',400)}
   if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status==='available'){
-   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'通知连接验证成功。首次开启奖励10分；领过奖励后在站内主动关闭全部通知设备扣30分，均只执行一次。'},config);
+   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'通知连接验证成功。首次开启奖励10分；领过奖励后在站内主动关闭任意一台通知设备扣30分，均只执行一次。'},config);
    if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放积分，请稍后重试',503);
   }
   return reply(await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy));

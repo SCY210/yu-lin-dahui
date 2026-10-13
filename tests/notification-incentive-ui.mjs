@@ -23,7 +23,7 @@ try{
  await act(async()=>{ui=create(React.createElement(Settings,{accountId:'synthetic-account'}));await new Promise(r=>setTimeout(r,10))});
  assert.match(text(ui.toJSON()),/双打赛季积分 \+10/);assert.match(text(ui.toJSON()),/双打赛季积分 −30/);
  await click('领取首次开启奖励 +10');assert.deepEqual(fixture.claims,[true]);assert.match(text(ui.toJSON()),/已领取 10 分奖励/);
- await click('关闭系统通知');assert.equal(fixture.requests.filter(a=>a==='unsubscribe').length,0,'opening confirmation never disables');
+ await click('关闭系统通知');assert.match(text(ui.toJSON()),/即使其他设备仍开启，也会扣分/);assert.equal(fixture.requests.filter(a=>a==='unsubscribe').length,0,'opening confirmation never disables');
  await click('保留通知');assert.equal(fixture.requests.filter(a=>a==='unsubscribe').length,0);
  await click('关闭系统通知');await click('确认关闭');assert.equal(fixture.requests.filter(a=>a==='unsubscribe').length,1);assert.ok(fixture.toasts.some(message=>message.includes('−30')));
  console.log('PASS notification incentive UI: explicit rules, existing-member claim, cancelable disable confirmation and deduction feedback');

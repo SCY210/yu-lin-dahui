@@ -20,15 +20,15 @@ export async function changeNotificationEnrollment(accountId:string,id:string,su
   if(subscription&&existing&&existing.accountId!==accountId)throw new RequestError('此设备需要重新连接通知，请关闭后再开启',409);
   if(subscription&&!existing&&owned.length>=5)throw new RequestError('每个账号最多开启5台设备，请先在旧设备关闭通知',409);
   const kind=subscription?'enable':'disable';
-  const eligible=subscription?acceptPoints:existing?.accountId===accountId&&owned.length===1;
+  const eligible=subscription?acceptPoints:existing?.accountId===accountId;
   const pointsDelta=eligible?recordNotificationPoints(next,account,kind,Date.now()):0;
   // Cleanup writers can remove expired devices without a revision. Conditional
-  // penalty insertion checks ownership and the last device again inside the batch.
+  // penalty insertion checks device ownership again inside the batch.
   const audit=pointsDelta?next.audits.pop()!:null;
   const extra:D1PreparedStatement[]=[];
   if(audit){
-   const query=subscription?'INSERT INTO audits(id,payload) VALUES(?,?)':`INSERT INTO audits(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM push_subscriptions WHERE id=? AND account_id=?) AND NOT EXISTS(SELECT 1 FROM push_subscriptions WHERE account_id=? AND id<>?)`;
-   extra.push(raw().prepare(query).bind(audit.id,JSON.stringify(audit),...(subscription?[]:[id,accountId,accountId,id])));
+   const query=subscription?'INSERT INTO audits(id,payload) VALUES(?,?)':`INSERT INTO audits(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM push_subscriptions WHERE id=? AND account_id=?)`;
+   extra.push(raw().prepare(query).bind(audit.id,JSON.stringify(audit),...(subscription?[]:[id,accountId])));
   }
   extra.push(subscription?raw().prepare('INSERT INTO push_subscriptions(id,account_id,payload,created_at) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE push_subscriptions.account_id=excluded.account_id').bind(id,accountId,JSON.stringify(subscription),Date.now()):raw().prepare('DELETE FROM push_subscriptions WHERE id=? AND account_id=?').bind(id,accountId));
   try{

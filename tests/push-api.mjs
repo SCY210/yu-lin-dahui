@@ -142,8 +142,8 @@ try{
  assert.equal((await (await api.GET()).json()).incentive.status,'earned');
  assert.equal((await (await enroll('incentive','old-client')).json()).pointsDelta,0);
  assert.equal((await (await enroll('incentive','second-device')).json()).pointsDelta,0);
- assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('old-client').endpoint})).json()).pointsDelta,0,'another device remains enabled');
- assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,-30);
+ assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('old-client').endpoint})).json()).pointsDelta,-30,'closing any device deducts even while another remains enabled');
+ assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,0);
  assert.equal((await (await post('incentive','unsubscribe',{endpoint:subscription('second-device').endpoint})).json()).pointsDelta,0);
  assert.equal((await (await enroll('incentive','re-enabled')).json()).pointsDelta,0);
  assert.equal(entries().filter(row=>row.actor==='incentive').reduce((sum,row)=>sum+row.changes.points,0),-20);
