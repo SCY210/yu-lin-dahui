@@ -1,5 +1,7 @@
 # Activity participation acknowledgements
 
+> **Retired.** At the members' request the activity participation notice no longer gates anything. No account is asked to confirm it on entry, no route answers 428, the signup page no longer shows the notice text or past confirmation records, and the checkbox field type was removed. Existing receipts and per-signup records stay stored, append-only, and exportable (`/api/club?noticeExport=1`, owner `=all`). An app installed before the removal may still send `acknowledgeActivityNotice`; it is validated and stored as before, and the projection reports `accountNotice.required` as false so such an app never shows its blocking dialog. The terms and privacy pages describe this. The rest of this page records the former behaviour.
+
 The Chinese activity notice is defined in `lib/activity-notice.ts`. Its version
 must change whenever its confirmed text changes. It explains ordinary sports
 risks, safety and conduct, activity rules and costs, personal belongings,

@@ -49,7 +49,5 @@ try{
  const claimed=await Promise.all([post('admin-a','liveLineup',competing[0],after.revision),post('admin-b','liveLineup',competing[1],after.revision)]);
  assert.deepEqual(claimed.map(r=>r.status).sort(),[200,409],'the same bench player cannot be claimed by two courts');
  const final=await api.load();assert.equal(final.matches.filter(m=>m.status==='playing'&&[...m.a,...m.b].includes(replacement)).length,1);
- const gated=structuredClone(final);gated.accounts.push({id:'admin-c',email:'',role:'admin',playerId:'p12'});gated.players.push({...gated.players[0],id:'p12',ownerId:'admin-c',name:'Fictional new admin'});await api.save(gated,'new-admin',final);
- const requiresNotice=await post('admin-c','liveLineup',edit(gated.matches.find(m=>m.status==='playing')),gated.revision);assert.equal(requiresNotice.status,428,'lineup rebasing never bypasses an unconfirmed account notice');assert.deepEqual(teams(await api.load()),teams(gated));
  console.log('PASS concurrent lineup API: distinct authenticated admins, independent courts merge, identical persisted views, same-court conflict, stale teams and permission preservation');
 }finally{db.close();delete globalThis.__concurrentLineup}

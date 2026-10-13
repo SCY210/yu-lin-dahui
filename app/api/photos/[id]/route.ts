@@ -1,4 +1,3 @@
-import {noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../../lib/domain/notice-gate';
 import {env} from 'cloudflare:workers';
 import {getAppUser} from '../../../../lib/auth';
 import {raw,load,save,committed} from '../../../../lib/store';
@@ -48,7 +47,6 @@ export async function POST(req:Request,context:{params:Promise<{id:string}>}){
   const photoId=z.string().min(1).max(100).parse(id);
   const body=z.object({action:z.literal('delete'),requestId:z.string().uuid(),revision:z.number().int().nonnegative()}).parse(await readJsonBody(req));
   const state=await load(),account=state.accounts.find(a=>a.id===user.userId);if(!account)return Response.json({error:'账号不可用'},{status:403});
-  const notice=await noticeContent();if(requiresAccountNotice(state,account,notice))return noticeGateResponse(state,account,notice);
   const result=await deleteStoredPhoto({userId:user.userId,photoId,requestId:body.requestId,revision:body.revision},{load,save,committed,deleteObject:key=>env.BUCKET!.delete(key)});
   return Response.json(result,{headers:{'Cache-Control':'no-store'}});
  }catch(error){return writeErrorResponse(error)}finally{await releaseRejectedWriteBody(req)}

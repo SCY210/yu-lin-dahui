@@ -1,5 +1,7 @@
 # Account activity-notice gate
 
+> **Retired.** At the members' request the activity participation notice no longer gates anything. No account is asked to confirm it on entry, no route answers 428, the signup page no longer shows the notice text or past confirmation records, and the checkbox field type was removed. Existing receipts and per-signup records stay stored, append-only, and exportable (`/api/club?noticeExport=1`, owner `=all`). An app installed before the removal may still send `acknowledgeActivityNotice`; it is validated and stored as before, and the projection reports `accountNotice.required` as false so such an app never shows its blocking dialog. The terms and privacy pages describe this. The rest of this page records the former behaviour.
+
 Authenticated accounts must actively confirm the displayed activity notice once before first entering the application interface or performing business mutations. This includes the owner. The unchecked confirmation is separate from browser notification permission and from each activity signup acknowledgement. Logout and credential recovery remain available.
 
 The server owns identity, time, text and SHA-256 digest. Clients submit only explicit acceptance plus the displayed version and digest. Old bundles cannot accept unseen updated text. A successful POST alone does not unlock the UI: a refreshed server projection must report acceptance. Failed saves retain the dialog. There is no local-storage acceptance flag or historical-registration backfill.

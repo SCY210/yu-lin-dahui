@@ -57,7 +57,6 @@ import {TreasureIcon} from './treasure-entry';
 import BonusPopup from './bonus-popup';
 import {prepareTreasureForm,formWriteRequestId} from '../lib/client/treasure-write';
 import {registerClubWebMcp} from '../lib/client/club-webmcp';
-import ActivityNoticeGate from './activity-notice-gate';
 const AccountManager=lazy(()=>import('./account-manager'));
 const BlockedWordsManager=lazy(()=>import('./blocked-words-manager'));
 import FeatureGuide from './feature-guide';
@@ -157,7 +156,6 @@ export default function ClubApp(){
    const r=await fetchWithWakeRetry('/api/club',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,payload,requestId:formWriteRequestId(submittedForm,action),revision:dataSnapshot.current?.revision,actor:submittedOwner})},{canRetry:sameAccount});
    const d:ActionResponse=await (r.json() as Promise<ActionResponse>).catch(()=>({error:'服务暂时无法响应，请稍后重试'}));
    if(d.actorMismatch){await refresh();throw new Error(d.error)}
-   if(r.status===428&&d.noticeRequired){await refresh();throw new Error(d.error||'请先确认活动须知')}
    if(r.status===409){
     readValidator.current=null;await refresh();
     if(['liveLineup','swap'].includes(action)){
@@ -194,7 +192,7 @@ export default function ClubApp(){
  const selectRankingFormat=(value:string)=>{const format=value==='singles'?'singles':'all';setRankingFormat(format);navigation?.updateRankingSelection({period,year,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection(format)})};
  const openEvent=(id:string,t='overview')=>navigation?.navigate({page:'events',eventId:id,tab:(t==='matches'?'rounds':t) as EventTab});
  useEffect(()=>{
-  if(!navigation||!data?.me||data.accountNotice?.required)return;
+  if(!navigation||!data?.me)return;
   if(route.page==='events'&&route.eventId&&data.mergedEventTargets?.[route.eventId])navigation.replaceRoute({...route,eventId:data.mergedEventTargets[route.eventId]});
   else if(route.page==='events'&&route.eventId&&!data.events.some((e:any)=>e.id===route.eventId))navigation.replaceRoute({page:'events'});
   else if(route.page==='social'&&route.playerId&&!data.players.some((p:PlayerView)=>p.id===route.playerId&&!p.guestEventId&&!p.guest))navigation.replaceRoute({page:'social'});
@@ -210,8 +208,6 @@ export default function ClubApp(){
  const context={data,refresh,admin,name,open,send,action,setDanger,busy,openEvent,openProfile,regs};
  if(loading)return <AppLoading/>;
  if(!data)return <main className="shell"><h1>暂时无法连接群组</h1><p className="error">{error}</p><button className="primary" onClick={()=>refresh()}>重新加载</button><a className="ghost" href="/">重新登录</a></main>;
- if(data.me&&!data.accountNotice)return <main className="shell"><h1>确认资料暂不可用</h1><p>请重新加载，核对活动须知确认状态后继续。</p><button className="primary" onClick={()=>void refresh()}>重新加载</button><button className="ghost" onClick={()=>void signOut()}>退出登录</button></main>;
- if(data.me&&data.accountNotice.required)return <ClubNavigationContext.Provider key={data.me.id} value={navigation}><main className="shell"><Toaster richColors position="top-center"/><ActivityNoticeGate accountId={data.me.id} notice={data.accountNotice} busy={busy} onAccept={()=>action('acknowledgeActivityNotice',{noticeAccepted:true,noticeVersion:data.accountNotice.currentVersion,noticeHash:data.accountNotice.contentHash},false)} onLogout={()=>void signOut()}/></main></ClubNavigationContext.Provider>;
  return <ClubNavigationContext.Provider key={data?.me?.id??data?.user?.id??'loading'} value={navigation}><main className="shell app-compact"><Toaster richColors position="top-center"/><PullToRefresh/><header className="topbar"><div className="brand-lockup"><BrandLogo/><button className="brand" onClick={()=>setPage('home')}>{data.settings?.name??'羽林大会'}<span>{wuxia?'以羽为剑 · 会友江湖':'以球会友 · 一拍一境'}</span></button></div><div className="actions reminder-top-actions"><div className="top-icon-row">{data.me&&<TreasureIcon balance={data.treasureShop?.balance??0} active={page==='treasure'} onOpen={()=>setPage('treasure')}/>}<ReminderButton accountId={data.me?.id} refreshKey={page} onOpen={()=>setPage('reminders')}/></div>{admin&&<span className="badge">{data.me.isOwner?'群主 · 最高权限':'管理员'}</span>}</div></header>
  {data.me&&page!=='simulation'&&<Deferred><ScoreReminder key={data.me.id} ctx={context} hideBar={page==='home'} blocked={busy||visitBonuses.length>0||!!error||!!form||!!danger||!!preview||binding||changingPassword||changingUsername}/><BonusPopup notices={visitBonuses} busy={busy} blocked={busy||!!error||!!form||!!danger||!!preview||binding||changingPassword||changingUsername} onDismiss={ids=>setDeferredBonuses(current=>({accountId:data.me.id,ids:[...(current.accountId===data.me.id?current.ids:[]),...ids]}))} acknowledge={ids=>action('bonusSeen',{ids},false)}/></Deferred>}
  {data.me&&page!=='simulation'&&<Deferred><NotificationPrompt key={data.me.id} accountId={data.me.id} blocked={busy||!!error||!!form||!!danger||!!preview||binding||changingPassword||changingUsername||visitBonuses.length>0||pendingOwnScores(data).length>0}/></Deferred>}

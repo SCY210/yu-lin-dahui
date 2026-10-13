@@ -11,3 +11,5 @@ Activity notice version `2026-10-12-v4` describes one-time account entry confirm
 The actual operator identity, applicable processing bases, retention criteria, processor/transfer details and other incomplete configuration remain explicitly incomplete. A volunteer/nonprofit statement is not a substitute for those facts. Do not invent them or remove the incompleteness indicator without verified configuration.
 
 Wording references: [AEPD layered information guidance](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-de-informacion) and [AEPD erasure guidance](https://www.aepd.es/derechos-y-deberes/conoce-tus-derechos/derecho-de-supresion-al-olvido). These sources inform the wording and do not certify this deployment.
+
+The entry confirmation of the activity notice has since been retired; see [the account notice gate](account-notice-gate.md).
