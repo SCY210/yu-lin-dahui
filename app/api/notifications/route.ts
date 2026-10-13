@@ -62,8 +62,8 @@ export async function POST(req:Request){try{
   try{await verifySubscriptionKeys(p.subscription)}catch{throw new RequestError('通知加密信息无效，请重新开启',400)}
   let verified=false;
   if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status!=='earned'){
-   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'首次开启奖励10分；关闭任意设备通知扣30分，重新开启并验证成功退回这30分。首次奖励只领一次，每笔扣分只退一次。系统关闭在下次进入检测后结算。'},config);
-   if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放或退还积分，请稍后重试',503);
+   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'首次开启奖励10分；关闭任意设备通知扣30分，重新开启并验证成功加10分，不退还扣掉的30分。每次关闭与重新开启配对结算，重复请求不重复加扣。系统关闭在下次进入检测后结算。'},config);
+   if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放积分，请稍后重试',503);
    verified=true;
   }
   const token=newNotificationDeviceToken(),result=await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy,{receiptId:await pushSubscriptionId(token),verified}),response=reply(result);response.headers.append('Set-Cookie',notificationDeviceCookie(token,req));return response;

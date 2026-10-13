@@ -1,7 +1,7 @@
 import {notificationPointsPolicy} from '../domain/notification-points';
 import {reminderPreferences,defaultReminderPreferences,type Reminder,type ReminderPreferences} from '../reminder-contract';
 import {browserPushError} from './push-errors';
-export type NotificationIncentive={policy:string;enablePoints:number;disablePoints:number;refundPoints?:number;status:'available'|'earned'|'disabled'};
+export type NotificationIncentive={policy:string;enablePoints:number;disablePoints:number;reactivationPoints?:number;status:'available'|'earned'|'disabled'};
 export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;incentive?:NotificationIncentive;items:Reminder[];unread:number;preferences:ReminderPreferences};
 type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean;pointsDelta?:number;incentive?:NotificationIncentive};
 function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)}

@@ -20,7 +20,7 @@ export async function changeNotificationEnrollment(accountId:string,id:string,su
   const owned=rows.results.filter(r=>r.accountId===accountId),existing=rows.results.find(r=>r.id===id);
   if(subscription&&existing&&existing.accountId!==accountId)throw new RequestError('此设备需要重新连接通知，请关闭后再开启',409);
   if(subscription&&!existing&&owned.length>=5)throw new RequestError('每个账号最多开启5台设备，请先在旧设备关闭通知',409);
-  const incentive=notificationPointsStatus(next,account),kind=subscription?(incentive.status==='disabled'?'refund':'enable'):'disable';
+  const incentive=notificationPointsStatus(next,account),kind=subscription?(incentive.status==='disabled'?'reactivate':'enable'):'disable';
   if(subscription&&acceptPoints&&incentive.status!=='earned'&&!device?.verified)throw new RequestError('通知积分状态已更新，请重新开启并验证',409);
   const eligible=subscription?acceptPoints:existing?.accountId===accountId;
   const pointsDelta=eligible?recordNotificationPoints(next,account,kind,Date.now()):0;
