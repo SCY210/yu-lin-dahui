@@ -25,7 +25,7 @@
 .compact-match .match-more button{min-height:44px;font-size:12px;padding:5px}
 .compact-match .hint{font-size:11px;margin:5px 0}
 .compact-match .handicap-note{font-size:11px;overflow-wrap:anywhere}
-.compact-match.is-playing{border-top:3px solid var(--primary)}
+.compact-match.is-playing{border-top:3px solid #c0392b}
 .compact-match.is-complete,.wuxia-theme .match-card.compact-match.is-complete{border-color:#a9d6bd;border-top:3px solid #26805e;background:#eef8f2}
 .compact-match.is-complete .match-status{color:#176346;background:#e8f5ee;border-color:#b9dfcb}
 .compact-match.is-complete .versus{font-size:21px;font-weight:800;color:#176346}
@@ -57,3 +57,16 @@
  .event-scheduling .compact-match .match-status{font-size:10px;padding:1px 4px}
  .event-scheduling .compact-match .court-tag{font-size:11px}
 }
+/* Team A is blue and team B is orange, on the label and every player, so the two sides never blur when read across. */
+.compact-match .match-teams>.team:first-child{--team:#2f6fb3;--team-bg:#eef4fb;--team-line:#b9d0ea}
+.compact-match .match-teams>.team:last-child{--team:#c2572b;--team-bg:#fdf1ea;--team-line:#eec3ad}
+.compact-match .match-teams>.team .match-team-label{justify-self:center;align-self:center;width:fit-content;margin:0 auto 2px;padding:1px 8px;border-radius:999px;background:var(--team);color:#fff;font-weight:700}
+.compact-match .match-teams>.team.is-winner .match-team-label{color:#fff;box-shadow:0 0 0 2px #26805e}
+.compact-match .match-teams>.team .group-player{background:var(--team-bg);border-color:var(--team-line)}
+.compact-match .match-teams>.team .group-player-swap{border-color:var(--team-line);color:var(--team)}
+.wuxia-theme .compact-match .match-teams>.team:first-child{--team:#2f5f8f;--team-bg:#edf1f2;--team-line:#b4c3cc}
+.wuxia-theme .compact-match .match-teams>.team:last-child{--team:#a5482a;--team-bg:#f8ebe0;--team-line:#dfb79f}
+.compact-match.is-playing .match-status{color:#a3291d;background:#fdf1ef;border-color:#e7b3ac}
+.compact-match.is-playing .match-status::before{content:'';display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:#c0392b;vertical-align:middle;animation:match-live-dot 1.2s ease-in-out infinite}
+@keyframes match-live-dot{0%,100%{opacity:1}50%{opacity:.3}}
+@media(prefers-reduced-motion:reduce){.compact-match.is-playing .match-status::before{animation:none}}

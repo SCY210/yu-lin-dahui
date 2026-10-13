@@ -43,11 +43,18 @@ test('a tie gives every leader the points; no votes gives none; singles activiti
  assert.equal(points(single.s,'a',closes,singlesLeaderboard)?.mvpPoints,5);assert.equal(points(single.s,'a',closes)?.mvpPoints??0,0);
 });
 
-test('votes are named for the organiser and administrators only',async()=>{
- const {s,vote}=fixture();await vote('b','a');
+test('votes are named for administrators and the owner only, not for an organiser who is a member',async()=>{
+ const {s,vote}=fixture();await vote('b','a');await vote('host','b');
  const member=projectClubState(s,s.accounts.find(a=>a.id==='c')!,'2027-05',2027,end+2*hour).awardVotes[0];
  assert.ok(!('voterPlayerId' in member)&&member.voterId==='','members see counts only');
- for(const id of ['host','owner']){const v=projectClubState(s,s.accounts.find(a=>a.id===id)!,'2027-05',2027,end+2*hour).awardVotes[0] as {voterPlayerId?:string};assert.equal(v.voterPlayerId,'p-b')}
+ const host=projectClubState(s,s.accounts.find(a=>a.id==='host')!,'2027-05',2027,end+2*hour).awardVotes;
+ assert.equal(host.length,2,'a member organiser retains the vote totals');
+ assert.ok(host.every(v=>!('voterPlayerId' in v)),'a member organiser cannot see named votes');
+ assert.equal(host.find(v=>v.voterId==='host')?.playerId,'p-b','the organiser retains their own ballot');
+ assert.equal(host.filter(v=>v.voterId==='').length,1,'other account identities stay hidden');
+ s.accounts.find(a=>a.id==='c')!.role='admin';
+ s.accounts.find(a=>a.id==='owner')!.role='member';
+ for(const id of ['c','owner']){const votes=projectClubState(s,s.accounts.find(a=>a.id===id)!,'2027-05',2027,end+2*hour).awardVotes as {voterPlayerId?:string}[];assert.deepEqual(votes.map(v=>v.voterPlayerId),['p-b','p-host'],'non-owner admins and the owner independently see names')}
 });
 
 test('the MVP is told once on opening the app and a positive owner grant too; acknowledging hides them',async()=>{

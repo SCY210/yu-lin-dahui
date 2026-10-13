@@ -26,3 +26,5 @@ Tests: `tests/event-display-status.test.ts`.
 On activity cards the badge always sits at the top right of the title; a long title wraps beside it instead of pushing the badge onto its own line. The status rules use higher specificity than the card and theme badge rules, so the colours and borders cannot be overridden by stylesheet order.
 
 In planned and round-by-round scheduling, a finished round's folded header is green and the round on court has a coloured edge, so state is visible without expanding. Finished match cards have a green tint. On phones, the two courts stay side by side. In each court the score (or VS) is centred above the two teams, which sit left and right with an avatar above every name, so names use the full card width.
+
+Folded round headers have three looks: a finished round is green, the round on court is red with a pulsing dot and edge, and a round not yet played keeps the default look. In every match card team A is blue and team B is orange (label and player chips), so the two sides are easy to tell apart when read across; the winner's label gets a green ring.

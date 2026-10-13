@@ -40,4 +40,4 @@ The self-assessed level (beginner / intermediate / advanced) is no longer shown,
 
 Profile details and equipment are expanded when a profile opens. The avatar is changed only from the button in the profile header; the duplicate control below achievements and the decorative ribbon were removed.
 
-The note about voluntary extended details and who can see them is shown at the bottom of one's own profile, below achievements.
+The profile no longer shows the note about voluntary extended details; the privacy page still describes it.

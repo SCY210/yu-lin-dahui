@@ -13,7 +13,6 @@ import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating
 import {cancellationView} from './domain/cancellations';
 import {visibleActivityAcknowledgements} from './domain/activity-acknowledgement';
 import {treasureShopView} from './domain/treasure-shop';
-import {canManageEvent} from './domain/permissions';
 import {bonusNotices} from './domain/bonus-notices';
 import {withScorer} from './domain/score-conflict';
 import {guestIds,guestHostName,guestLevelAt} from './domain/guests';
@@ -63,7 +62,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   treasureShop:treasureShopView(s,a),
   achievements,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
-  tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>{const event=s.events.find(e=>e.id===v.eventId),voter=event&&canManageEvent(a,event)?s.accounts.find(x=>x.id===v.voterId):undefined;return {...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:'',...(voter?{voterPlayerId:voter.playerId}:{})}}),
+  tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>{const event=s.events.find(e=>e.id===v.eventId),voter=event&&(a.role==='admin'||isClubOwner(s,a))?s.accounts.find(x=>x.id===v.voterId):undefined;return {...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:'',...(voter?{voterPlayerId:voter.playerId}:{})}}),
   photos:s.photos.filter(p=>(p.kind==='avatar'||p.kind==='racket')||ids.has(p.eventId??'')).map(({key,...p})=>({...p,canDelete:canDeletePhoto(s,a,{key,...p})})),
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
   // Only what paid status needs: who, for which activity, how much.

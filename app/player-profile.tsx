@@ -104,6 +104,5 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     </section></Disclosure>
 
     <Disclosure label={'成就 · 已点亮 '+(ctx.data.achievements?.[p.id]?.unlockedCount??0)}><Deferred><AchievementCollection summary={ctx.data.achievements?.[p.id]} players={ctx.data.players} own={isOwn}/></Deferred></Disclosure>
-    {isOwn&&<p className="profile-privacy-hint">扩展资料由本人自愿填写，已登录的群成员可以看到。请只填写愿意在群内分享的内容；如需减少展示或删除资料，可联系群主或管理员。<a href="/privacy" target="_blank" rel="noreferrer">查看隐私说明</a></p>}
   </section>;
 }

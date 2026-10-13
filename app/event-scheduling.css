@@ -32,4 +32,10 @@
 /* Round headers show their state while folded: finished rounds are green, the round on court is marked in the theme colour. */
 .app-disclosure.round-disclosure.is-complete,.wuxia-theme .app-disclosure.round-disclosure.is-complete{border-color:#a9d6bd;border-left:5px solid #26805e;background:#eef8f2}
 .app-disclosure.round-disclosure.is-complete>summary,.wuxia-theme .app-disclosure.round-disclosure.is-complete>summary{color:#176346}
-.app-disclosure.round-disclosure.is-playing,.wuxia-theme .app-disclosure.round-disclosure.is-playing{border-left:5px solid var(--primary)}
+/* The round on court is red and pulses; rounds not yet played keep the default look. */
+.app-disclosure.round-disclosure.is-playing,.wuxia-theme .app-disclosure.round-disclosure.is-playing{border-color:#e7b3ac;border-left:5px solid #c0392b;background:#fdf1ef;animation:round-live-edge 1.6s ease-in-out infinite}
+.app-disclosure.round-disclosure.is-playing>summary,.wuxia-theme .app-disclosure.round-disclosure.is-playing>summary{color:#a3291d}
+.app-disclosure.round-disclosure.is-playing>summary::after{content:'';display:inline-block;width:9px;height:9px;margin-left:9px;border-radius:50%;background:#c0392b;vertical-align:middle;animation:round-live-dot 1.2s ease-in-out infinite}
+@keyframes round-live-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+@keyframes round-live-edge{0%,100%{border-left-color:#c0392b}50%{border-left-color:#e98b80}}
+@media(prefers-reduced-motion:reduce){.app-disclosure.round-disclosure.is-playing,.app-disclosure.round-disclosure.is-playing>summary::after{animation:none}}
