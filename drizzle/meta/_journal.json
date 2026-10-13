@@ -99,6 +99,13 @@
       "when": 1791920919887,
       "tag": "0013_notification_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1791924246443,
+      "tag": "0014_phone_notification_points",
+      "breakpoints": true
     }
   ]
 }

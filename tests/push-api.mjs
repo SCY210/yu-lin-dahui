@@ -26,7 +26,7 @@ function insert(table,id,payload,extra={}){const values={id,...extra,payload:JSO
 const rules={win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'};
 insert('settings','club',{name:'虚构通知群',initialized:true,inviteHash:'',rules,ownerAccountId:'a'});
 for(const id of ['a','b','c','d']){insert('players','p'+id,{id:'p'+id,name:id,enabled:true,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''},{owner_id:id});insert('accounts',id,{id,email:'',role:id==='a'?'admin':'member',playerId:'p'+id},{email:'',role:id==='a'?'admin':'member',player_id:'p'+id})}
-const post=(owner,action,detail={},origin='https://club.example',cookie='')=>api.POST(new Request('https://club.example/api/notifications',{method:'POST',headers:{origin,'content-type':'application/json',cookie},body:JSON.stringify({accountId:owner,action,...detail})}));
+const post=(owner,action,detail={},origin='https://club.example',cookie='',agent='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148')=>api.POST(new Request('https://club.example/api/notifications',{method:'POST',headers:{origin,'content-type':'application/json',cookie,'user-agent':agent,'cf-connecting-ip':owner==='phone-only'?'192.0.2.50':'192.0.2.1'},body:JSON.stringify({accountId:owner,action,...detail})}));
 let captures=[],deliveryStatus=201;const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,request)=>{captures.push({url,request});return new Response(null,{status:deliveryStatus})};
 async function hkdf(ikm,salt,info,length){const key=await crypto.subtle.importKey('raw',ikm,'HKDF',false,['deriveBits']);return new Uint8Array(await crypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info},key,length*8))}
@@ -191,7 +191,7 @@ try{
 
  // Add 10 once per verified reactivation; never return the 30-point penalty.
  user('concurrent-permission');deliveryStatus=503;assert.equal((await enroll('concurrent-permission','reactivate-provider-failure')).status,503);assert.equal(entries().filter(row=>row.actor==='concurrent-permission'&&row.changes.kind==='reactivate').length,0);deliveryStatus=201;
- await assert.rejects(()=>api.changeNotificationEnrollment('concurrent-permission','unverified-reactivation',subscription('unverified-reactivation'),true),/通知积分状态已更新/);
+ await assert.rejects(()=>api.changeNotificationEnrollment('concurrent-permission','unverified-reactivation',subscription('unverified-reactivation'),true,{phoneEligible:true}),/通知积分状态已更新/);
  const reactivationBatch=db.batch;let failReactivation=true;db.batch=list=>{if(failReactivation&&list.some(row=>row.query.startsWith('INSERT INTO audits')&&String(row.parameters[1]).includes('"kind":"reactivate"'))){failReactivation=false;return reactivationBatch([...list,db.prepare('INSERT INTO fictional_missing_refund_table VALUES(1)')])}return reactivationBatch(list)};
  assert.equal((await enroll('concurrent-permission','reactivate-rollback')).status,503);db.batch=reactivationBatch;assert.equal(entries().filter(row=>row.actor==='concurrent-permission'&&row.changes.kind==='reactivate').length,0,'failed reactivation transaction restores original penalty and device state');
  const reactivated=await Promise.all([enroll('concurrent-permission','reactivate-one'),enroll('concurrent-permission','reactivate-two')]);for(const r of reactivated)assert.equal(r.status,200);assert.deepEqual((await Promise.all(reactivated.map(r=>r.json()))).map(row=>row.pointsDelta).sort((a,b)=>a-b),[0,10]);
@@ -201,4 +201,23 @@ try{
  assert.equal((await (await enroll('concurrent-permission','reactivate-two')).json()).pointsDelta,10,'an already enabled device can explicitly verify and receive the 10-point reactivation reward');
  const cycles=entries().filter(row=>row.actor==='concurrent-permission');assert.equal(cycles.filter(row=>row.changes.kind==='enable').length,1);assert.equal(cycles.reduce((n,row)=>n+row.changes.points,0),-30);const penalties=cycles.filter(row=>row.changes.kind==='disable');assert.deepEqual(cycles.filter(row=>row.changes.kind==='reactivate').map(row=>row.changes.reactivates).sort(),penalties.map(row=>row.id).sort());
  console.log('PASS notification reactivation +10: exact original audit pairing, provider verification, concurrent dedupe, transaction rollback, repeated cycles and no repeated initial reward');
+
+ // Desktop notifications stay usable but never participate in phone points.
+ const desktopAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0';
+ insert('players','pphone-only',{id:'pphone-only',name:'Synthetic phone only',enabled:true,ownerId:'phone-only',initialRating:0,rating:0,ratedGames:0,ratingReason:''},{owner_id:'phone-only'});insert('accounts','phone-only',{id:'phone-only',email:'',role:'member',playerId:'pphone-only'},{email:'',role:'member',player_id:'pphone-only'});user('phone-only');
+ const computer=(action,detail={},cookie='')=>post('phone-only',action,detail,'https://club.example',cookie,desktopAgent);
+ const computerOpen=await computer('subscribe',{subscription:subscription('computer-one'),pointsPolicy:policy});assert.equal(computerOpen.status,200);const computerCookie=cookieOf(computerOpen);assert.equal((await computerOpen.json()).pointsDelta,0);assert.equal(entries().filter(row=>row.actor==='phone-only').length,0);
+ assert.equal((await (await api.GET(new Request('https://club.example/api/notifications',{headers:{'user-agent':desktopAgent}}))).json()).incentive.eligibleOnDevice,false);
+ assert.equal((await (await computer('unsubscribe',{endpoint:subscription('computer-one').endpoint},computerCookie)).json()).pointsDelta,0);
+ const mobileOpen=await enroll('phone-only','phone-one');assert.equal(mobileOpen.status,200);const mobileCookie=cookieOf(mobileOpen);assert.equal((await mobileOpen.json()).pointsDelta,10);
+ assert.equal((await (await computer('permission',{permission:'denied'},mobileCookie)).json()).pointsDelta,0,'desktop cannot report a phone penalty even with a copied receipt');
+ assert.equal((await (await computer('subscribe',{subscription:subscription('computer-two'),pointsPolicy:policy})).json()).pointsDelta,0);assert.equal((await (await post('phone-only','unsubscribe',{endpoint:subscription('computer-two').endpoint})).json()).pointsDelta,0,'mobile request cannot charge a desktop subscription');
+ assert.equal((await (await post('phone-only','unsubscribe',{endpoint:subscription('phone-one').endpoint})).json()).pointsDelta,-30);
+ assert.equal((await (await computer('subscribe',{subscription:subscription('computer-three'),pointsPolicy:policy})).json()).pointsDelta,0,'desktop cannot claim mobile reactivation bonus');assert.equal((await (await api.GET()).json()).incentive.status,'disabled');
+ assert.equal((await (await enroll('phone-only','phone-again')).json()).pointsDelta,10);assert.equal(entries().filter(row=>row.actor==='phone-only').reduce((n,row)=>n+row.changes.points,0),-10);
+ assert.equal((await computer('subscribe',{subscription:subscription('forged-phone'),pointsPolicy:policy,phoneEligible:true})).status,400,'client JSON cannot override server classification');
+ assert.equal((await (await post('phone-only','subscribe',{subscription:subscription('unknown-device'),pointsPolicy:policy},'https://club.example','','')).json()).pointsDelta,0);
+ sql.prepare('UPDATE notification_devices SET phone_eligible=0 WHERE account_id=?').run('phone-only');const upgrade=await post('phone-only','status',{endpoint:subscription('phone-again').endpoint,permission:'granted'});assert.equal(upgrade.status,200);assert.equal(sql.prepare('SELECT phone_eligible AS eligible FROM notification_devices WHERE subscription_id=?').get(await api.pushSubscriptionId(subscription('phone-again').endpoint)).eligible,1);
+ assert.equal((await (await report('phone-only','denied',cookieOf(upgrade))).json()).pointsDelta,-30);
+ console.log('PASS phone-only notification points: desktop enable/close/permission reports, mobile reward/penalty/reactivation, cross-device isolation, forged flags, unknown devices and receipt upgrade');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__pushTest}
