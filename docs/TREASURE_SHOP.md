@@ -28,9 +28,11 @@ displayed price; if it changes before saving, the member must review the updated
 price. The server resolves the account, price, total, balance, and stock itself.
 
 The shop opens directly on the catalog. The coin balance sits on the right of
-the compact title row. Products use a simple list with names, descriptions,
-prices, quantity controls and redemption buttons, without decorative placeholder
-art or a large banner. Category filters remain available as text tabs. History,
+the compact title row. Products use a compact exhibition grid: two columns on phones, three on tablets
+and four on wider screens. Tiles show the product name, price and stock. Opening
+a tile reveals the full description, quantity controls and live total in a
+dialog; redemption still requires the existing confirmation. Category filters
+remain available as text tabs. History,
 transactions and owner management remain collapsed, compact links below the goods.
 
 ## Persistence and concurrency
