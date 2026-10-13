@@ -38,3 +38,30 @@ Application D1 and R2 recovery remain separate from source backup. Existing publ
 Git history is not rewritten by this workflow, and earlier copies cannot be
 recalled. Preserve the shared-source privacy check and existing account-level
 permission checks in every release.
+
+## Automatic publication after merges
+
+The desktop follow-up checks shared main every 15 minutes. It only publishes
+already-merged shared commits; it does not approve or merge pull requests.
+The separate daytime PR notification task retains its existing schedule.
+
+A release runs only from the controlled private checkout, through its existing
+private release command. Fetch shared main, merge it into the private branch,
+verify protected files and permission integration, run the required tests and
+build, then publish. Never enable public-repository production builds or copy
+private material into shared CI. Conflicts, integrity failures, dirty local work,
+failed checks and authentication failures stop publication. An active private
+release is allowed to finish before another attempt starts.
+
+Keep a local receipt containing the successfully published shared commit, private
+source commit and verified active private Worker version. Only update the receipt
+after the private release command succeeds and read-only deployment metadata
+confirms the version and channel. A merge alone is not publication. If main has
+not changed since that receipt, skip the release. Preserve pending failures so
+subsequent checks can resume without re-merging or repeating notifications.
+
+This is local scheduled publication, not an immediate cloud webhook. The computer
+and desktop application must be running, the private checkout must remain
+available, and GitHub/Cloudflare authentication must still be valid. Reports stay
+in the task conversation; report successful releases and new blockers, while
+unchanged checks stay quiet.
