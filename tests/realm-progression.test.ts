@@ -66,8 +66,8 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
 });
 
 test('境界门槛：每境150分，达到即晋升，跌破门槛减30分才降级',()=>{
- assert.deepEqual(realms.map(r=>r.minimum),[-Infinity,850,1000,1150,1300]);assert.equal(realmPolicy.band,150);assert.equal(realmPolicy.demotionBuffer,30);
- for(const [value,realm] of [[849,'炼气'],[850,'筑基'],[999,'筑基'],[1000,'金丹'],[1149,'金丹'],[1150,'元婴'],[1299,'元婴'],[1300,'化神']] as const)assert.equal(realmByScore(value),realm);
+ assert.deepEqual(realms.map(r=>r.minimum),[-Infinity,850,1000,1150,1300,1450]);assert.equal(realmPolicy.band,150);assert.equal(realmPolicy.demotionBuffer,30);
+ for(const [value,realm] of [[849,'炼气'],[850,'筑基'],[999,'筑基'],[1000,'金丹'],[1149,'金丹'],[1150,'元婴'],[1299,'元婴'],[1300,'化神'],[1449,'化神'],[1450,'炼虚']] as const)assert.equal(realmByScore(value),realm);
  assert.equal(settleRealmIndex(2,1150),3,'promotion at the threshold');
  assert.equal(settleRealmIndex(3,1130),3);assert.equal(settleRealmIndex(3,1120),3);assert.equal(settleRealmIndex(3,1119),2);
  assert.equal(settleRealmIndex(4,1130),3,'a fall from 化神 still keeps 元婴 inside its buffer');assert.equal(settleRealmIndex(4,1119),2);
@@ -75,7 +75,8 @@ test('境界门槛：每境150分，达到即晋升，跌破门槛减30分才降
  const guarded=realmProgress(1130,3);assert.deepEqual([guarded.realm,guarded.progressPercent,guarded.guarded,guarded.demotionAt],['元婴',0,true,1120]);
  const mid=realmProgress(1075);assert.deepEqual([mid.realm,mid.stage,mid.progressPercent,mid.nextRealm,mid.remaining],['金丹','中期',50,'元婴',75]);
  assert.deepEqual([realmProgress(775).realm,realmProgress(775).progressPercent,realmProgress(700).progressPercent],['炼气',50,0]);
- assert.deepEqual([realmProgress(1300).stage,realmProgress(1375).stage,realmProgress(1450).stage,realmProgress(1450).progressPercent],['初期','中期','圆满',100]);
+ assert.deepEqual([realmProgress(1300).stage,realmProgress(1375).stage,realmProgress(1449).stage,realmProgress(1449).nextRealm],['初期','中期','后期','炼虚'],'化神 is no longer the top realm');
+ assert.deepEqual([realmProgress(1450).realm,realmProgress(1450).stage,realmProgress(1525).stage,realmProgress(1600).stage,realmProgress(1600).progressPercent],['炼虚','初期','中期','圆满',100]);
  for(const bad of [NaN,Infinity])assert.equal(realmProgress(bad).score,1000);
 });
 

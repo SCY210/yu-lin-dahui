@@ -1,10 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════
-   修行段位徽记 · 炼气至化神
+   修行段位徽记 · 炼气至炼虚
    A pigment seal on a paper tag. The tag takes its paper from the active
-   theme (--card), so it reads as part of every theme; only the five realm
+   theme (--card), so it reads as part of every theme; only the six realm
    pigments stay fixed.
    Every realm moves, and each adds splendour: 金丹 gold leaf, 元婴 a
-   starlit sky, 化神 thunderclouds with drifting mist and lightning.
+   starlit sky, 化神 thunderclouds with drifting mist and lightning, 炼虚 a starry void edged in moonlight.
    During placement no realm is shown: a neutral 定级中 tag takes its place.
    Rules use !important because the badge shares class names with older
    tag styles (.pp-tier, .pc-realm, .rv-realm-badge, .stats span/strong).
@@ -672,4 +672,211 @@
   .realm-badge-3 .rb-name {
     text-shadow: 0 0 4px #fff, 0 0 8px color-mix(in srgb, var(--rb-l) 100%, transparent), 0 0 14px color-mix(in srgb, var(--rb-c) 65%, transparent);
   }
+}
+
+/* ── 炼虚: a starry void edged in moonlight ───────────────────── */
+/* Deep indigo space, a slowly drifting nebula, stars that twinkle and specks of light drawn into the void. */
+.realm-badge-5 {
+  --rb-moon: 227, 236, 247;
+  --rb-nebula: 120, 150, 205;
+  --rb-ink: #eef4fc;
+  background:
+    radial-gradient(1.2px 1.2px at 52% 30%, #fff 55%, transparent 100%),
+    radial-gradient(1px 1px at 66% 74%, #fff 55%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 82% 26%, #dfe9ff 55%, transparent 100%),
+    radial-gradient(1px 1px at 92% 66%, #fff 55%, transparent 100%),
+    radial-gradient(60% 140% at 78% 50%, rgba(var(--rb-nebula), 0.45), transparent 70%),
+    linear-gradient(110deg, #1d2c46 0%, #0e1729 45%, #1a2742 75%, #0b1322 100%) !important;
+  background-size: auto, auto, auto, auto, 200% 100%, auto !important;
+  border: 1px solid rgba(var(--rb-moon), 0.75) !important;
+  box-shadow:
+    inset 0 0 8px rgba(var(--rb-nebula), 0.35),
+    0 2px 8px rgba(10, 18, 34, 0.35) !important;
+  animation: rb-nebula 16s ease-in-out infinite;
+}
+
+@keyframes rb-nebula {
+  0%, 100% { background-position: 0 0, 0 0, 0 0, 0 0, 0% 50%, 0 0; }
+  50%      { background-position: 0 0, 0 0, 0 0, 0 0, 100% 50%, 0 0; }
+}
+
+.realm-badge-5::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow:
+    0 0 6px 1px rgba(var(--rb-moon), 0.55),
+    0 0 18px 4px rgba(var(--rb-nebula), 0.35);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: rb-aura 3.8s ease-in-out infinite;
+}
+
+/* The name shines moon-white and flares when the void pulses. */
+.realm-badge-5 .rb-name {
+  color: #f4f8ff !important;
+  animation: rb-void-name 4.6s ease-out infinite;
+}
+
+@keyframes rb-void-name {
+  0%, 8%, 40%, 100% { text-shadow: 0 0 3px rgba(var(--rb-moon), 0.9), 0 0 9px rgba(var(--rb-nebula), 0.7); }
+  12% { text-shadow: 0 0 3px #fff, 0 0 9px #fff, 0 0 18px rgba(var(--rb-moon), 1), 0 0 30px rgba(var(--rb-nebula), 1); }
+  22% { text-shadow: 0 0 4px #fff, 0 0 12px rgba(var(--rb-moon), 1), 0 0 22px rgba(var(--rb-nebula), 0.9); }
+}
+
+.realm-badge-5 .rb-stage { color: #c9d6ea !important; }
+.realm-badge-5 .rb-orbit { animation-duration: 10s; }
+.realm-badge-5 .rb-txt { position: relative; z-index: 1; }
+.realm-badge-5 .rb-motes i { background: #e3ecf7 !important; box-shadow: 0 0 4px #9fb8d6 !important; }
+
+/* Stars wheel round the ring, a comet sweeps past and specks inside the void twinkle. */
+.rb-void-stars { animation: rb-turn 40s linear infinite; }
+.rb-comet { animation: rb-turn 5s linear infinite; }
+.rb-twinkle { animation: rb-twinkle 2.8s ease-in-out infinite; animation-delay: var(--rb-delay, 0s); }
+
+@keyframes rb-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+
+/* Specks of light inside the tag drift towards the seal and vanish into the void. */
+.rb-galaxy {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0;
+  overflow: hidden !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+}
+
+.rb-galaxy i {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 3px #cfe0ff;
+  opacity: 0;
+  animation: rb-into-void 4.2s ease-in infinite;
+}
+
+.rb-galaxy i:nth-child(1) { left: 92%; top: 22%; }
+.rb-galaxy i:nth-child(2) { left: 78%; top: 76%; animation-delay: -0.6s; }
+.rb-galaxy i:nth-child(3) { left: 64%; top: 18%; animation-delay: -1.3s; }
+.rb-galaxy i:nth-child(4) { left: 86%; top: 58%; animation-delay: -2s; }
+.rb-galaxy i:nth-child(5) { left: 56%; top: 70%; animation-delay: -2.7s; }
+.rb-galaxy i:nth-child(6) { left: 72%; top: 40%; animation-delay: -3.3s; }
+.rb-galaxy i:nth-child(7) { left: 96%; top: 46%; animation-delay: -3.8s; }
+
+@keyframes rb-into-void {
+  0%   { transform: translateX(0) scale(1); opacity: 0; }
+  20%  { opacity: 0.9; }
+  100% { transform: translateX(-60px) scale(0.3); opacity: 0; }
+}
+
+.realm-badge[data-motion='paused'].realm-badge-5 { animation-play-state: paused !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .realm-badge-5 { animation: none !important; }
+  .rb-galaxy { display: none !important; }
+  .realm-badge-5::before { opacity: 0.7; }
+  .realm-badge-5 .rb-name { text-shadow: 0 0 4px #fff, 0 0 10px rgba(227, 236, 247, 1), 0 0 16px rgba(120, 150, 205, 0.8); }
+}
+
+/* ── 炼虚 above 化神: void pulse, shockwave, shooting stars and starlight spikes ── */
+/* One 4.6s heartbeat drives the void: the seal releases a ring, a shockwave sweeps the tag, the sky lights up. */
+.rb-void-spikes { animation: rb-turn 30s linear infinite reverse; }
+.rb-void-pulse { opacity: 0; animation: rb-void-pulse 4.6s ease-out infinite; }
+
+@keyframes rb-void-pulse {
+  0%, 8%    { transform: scale(1); opacity: 0; }
+  10%       { opacity: 1; }
+  42%, 100% { transform: scale(2.7); opacity: 0; }
+}
+
+.rb-shock {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--rb-moon), 0.95);
+  box-shadow: 0 0 6px rgba(var(--rb-nebula), 0.9), inset 0 0 6px rgba(var(--rb-moon), 0.6);
+  opacity: 0;
+  animation: rb-shock 4.6s ease-out infinite;
+}
+
+.rb-shock-late { border-color: rgba(var(--rb-nebula), 0.9); animation-delay: 0.22s; }
+
+@keyframes rb-shock {
+  0%, 9%    { transform: scale(0.6); opacity: 0; }
+  11%       { opacity: 1; }
+  48%, 100% { transform: scale(10); opacity: 0; }
+}
+
+.rb-void-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(75% 170% at 12% 50%, rgba(var(--rb-moon), 0.6), rgba(var(--rb-nebula), 0.25) 45%, transparent 75%);
+  animation: rb-void-flash 4.6s ease-out infinite;
+}
+
+@keyframes rb-void-flash {
+  0%, 9%, 34%, 100% { opacity: 0; }
+  12%               { opacity: 1; }
+  18%               { opacity: 0.55; }
+}
+
+/* Stars twinkle one by one; the brightest carries a four-point glint. */
+.rb-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px #cfe0ff;
+  text-decoration: none;
+  animation: rb-star 2.6s ease-in-out infinite;
+}
+
+.rb-star-a { left: 58%; top: 24%; width: 3px; height: 3px; }
+.rb-star-a::before, .rb-star-a::after { content: ''; position: absolute; left: 50%; top: 50%; background: #fff; transform: translate(-50%, -50%); }
+.rb-star-a::before { width: 11px; height: 1px; }
+.rb-star-a::after { width: 1px; height: 11px; }
+.rb-star-b { left: 74%; top: 70%; animation-delay: -0.7s; }
+.rb-star-c { left: 86%; top: 22%; animation-delay: -1.4s; }
+.rb-star-d { left: 95%; top: 62%; animation-delay: -2s; }
+.rb-star-e { left: 46%; top: 76%; animation-delay: -1.1s; }
+
+@keyframes rb-star {
+  0%, 100% { opacity: 0.2; transform: scale(0.7); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+/* Two shooting stars on unrelated rhythms, bright heads trailing pale tails. */
+.rb-meteor {
+  position: absolute;
+  left: 100%;
+  top: -20%;
+  width: 30px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #fff, rgba(207, 224, 255, 0.7) 30%, rgba(207, 224, 255, 0));
+  box-shadow: 0 0 4px rgba(207, 224, 255, 0.8);
+  opacity: 0;
+  animation: rb-meteor 5.3s linear infinite;
+}
+
+.rb-meteor-b { left: 78%; top: -35%; width: 22px; animation-duration: 7.4s; animation-delay: -3.1s; }
+
+@keyframes rb-meteor {
+  0%, 66%   { transform: translate(0, 0) rotate(-23deg); opacity: 0; }
+  68%       { opacity: 1; }
+  84%, 100% { transform: translate(-130px, 56px) rotate(-23deg); opacity: 0; }
 }
