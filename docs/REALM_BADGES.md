@@ -21,7 +21,7 @@ Each badge is a pigment seal on a paper tag. The tag takes its paper from the ac
 | 金丹 | 赤金 gold | twelve-ray sun | breathing golden core in a turning ring |
 | 元婴 | 紫棠 violet | eight-petal lotus | nascent soul seated in the lotus |
 | 化神 | 墨金 ink and gold | round medallion, gold rim | golden heavenly eye with 24 shimmering rays and crackling arcs |
-| 炼虚 | 虚空靛 void indigo and moon silver | ring around an open void, silver rim | a seed star breathing in a dark void with twinkling dust, nine stars wheeling round the ring and a comet sweeping past |
+| 炼虚 | 虚空靛 void indigo and moon silver | ring around an open void, silver rim | a seed star breathing in a dark void with twinkling dust, nine stars wheeling round the ring, a comet sweeping past, a pulse ring leaving the void and sixteen shimmering starlight spikes |
 
 The orbit around each seal carries one node per realm (1–6; 炼虚's are moon-silver beads), so the tier stays readable even at 22px.
 
@@ -36,7 +36,7 @@ Every realm moves, and each realm adds splendour, so a higher realm is always vi
 | 金丹 | gold-leaf tag; the sun seal turns, the pill ring and core move, the halo pulses with heat; the name glows warm gold; two embers rise; light passes over the tag |
 | 元婴 | starlit violet tag; the name glows and breathes violet; orbit and lotus seat turn; spirit ripples spread and four motes rise beside the seal; light passes more often; violet aura |
 | 化神 | ink thunderclouds lit with gold: pale ink clouds drift irregularly inside the tag and smoke wreathes its edges; two silver-gold bolts strike on unrelated rhythms with a double flicker and light the clouds; the gold name glows and flares with the strike; lightning arcs crackle round the heavenly-eye seal while its rays wheel; gold aura. One set of CSS variables on `.realm-badge-4` holds the whole storm palette |
-| 炼虚 | a starry void edged in moonlight: deep indigo space with a slowly drifting nebula and twinkling stars; specks of light drift towards the seal and vanish into the void; the name shines moon-white with a breathing cold halo; silver-blue aura; four moon-silver motes rise beside the seal |
+| 炼虚 | a starry void edged in moonlight, grander than 化神: deep indigo space with a drifting nebula; stars twinkle one by one, the brightest with a four-point glint; specks of light drift into the seal; two shooting stars cross on unrelated rhythms; every 4.6s the void pulses: a ring leaves the seal, a double shockwave sweeps the tag, the sky lights up and the moon-white name flares; sixteen starlight spikes shimmer and wheel round the seal; silver-blue aura and four moon-silver motes |
 
 Ranking-row progress bars follow the 水墨江湖 progress colours, and narrow progress labels wrap the percentage as a whole.
 

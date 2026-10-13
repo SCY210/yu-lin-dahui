@@ -145,7 +145,15 @@ function Core({level, rank}: {level: number; rank: RankInfo}) {
   if (level === 5) {
     return (
       <>
-        <circle cx="100" cy="100" r="33" fill={rank.d} />
+        <g className="rb-o rb-void-spikes">
+          {Array.from({length: 16}, (_, i) => {
+            const angle = -90 + i * 22.5, long = i % 2 === 0;
+            const [x1, y1] = polar(81, angle), [x2, y2] = polar(long ? 97 : 89, angle);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={rank.l} strokeWidth={long ? 3.5 : 2.5} strokeLinecap="round" className="rb-ray" style={{'--rb-delay': `${(i % 4) * 0.45}s`} as CSSProperties} />;
+          })}
+        </g>
+        <circle cx="100" cy="100" r="33" fill="none" stroke={rank.r} strokeWidth="4" className="rb-o rb-void-pulse" />
+        <circle cx="100" cy="100" r="33" fill={rank.d} className="rb-void-core" />
         <circle cx="100" cy="100" r="33" fill="none" stroke={rank.r} strokeWidth="3" />
         <circle cx="100" cy="100" r="25" fill="none" stroke={rank.l} strokeOpacity="0.5" strokeWidth="1.5" strokeDasharray="2 5" strokeLinecap="round" className="rb-o rb-spinr" />
         {VOID_DUST.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={rank.l} className="rb-twinkle" style={{'--rb-delay': `${i * 0.7}s`} as CSSProperties} />)}
@@ -288,6 +296,20 @@ function Storm() {
   );
 }
 
+/** 炼虚's sky: twinkling stars, specks drawn into the seal, shooting stars, and a shockwave from the void
+ * that sweeps the tag and lights it up on its own rhythm. Grander than 化神's storm by design. */
+function VoidSky() {
+  return (
+    <span className="rb-galaxy" aria-hidden="true">
+      {dots(7)}
+      <s className="rb-star rb-star-a" /><s className="rb-star rb-star-b" /><s className="rb-star rb-star-c" /><s className="rb-star rb-star-d" /><s className="rb-star rb-star-e" />
+      <b className="rb-meteor rb-meteor-a" /><b className="rb-meteor rb-meteor-b" />
+      <u className="rb-shock" /><u className="rb-shock rb-shock-late" />
+      <em className="rb-void-flash" />
+    </span>
+  );
+}
+
 /** Neutral ink for the placement chip: no realm pigment until the realm is known. */
 const PLACEMENT: Pick<RankInfo, 'c' | 'l' | 'd' | 'r'> = {c: '#8a8174', l: '#ddd5c5', d: '#4f4a42', r: '#6d665b'};
 
@@ -356,7 +378,7 @@ export default function RealmBadge({realm, stage, className = ''}: {realm: strin
     >
       {(level === 2 || level === 3) && <span className="rb-sheen" aria-hidden="true" />}
       {level === 4 && <Storm />}
-      {level === 5 && <span className="rb-galaxy" aria-hidden="true">{dots(7)}</span>}
+      {level === 5 && <VoidSky />}
       <span className="rb-insignia-wrap" aria-hidden="true">
         {level === 3 && <span className="rb-ripple" />}
         <RealmInsigniaSvg level={level} rank={rank} />
