@@ -13,6 +13,7 @@ import {reminderCenter} from '../../../lib/reminder-store';
 import type {Player} from '../../../lib/domain/types';
 import {notificationPointsPolicy} from '../../../lib/domain/notification-points';
 import {changeNotificationEnrollment,notificationIncentiveFor} from '../../../lib/notification-enrollment';
+import {newNotificationDeviceToken,notificationDeviceCookie,notificationDeviceFor,notificationDeviceStatement} from '../../../lib/notification-device';
 export const dynamic='force-dynamic';
 const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const accountId=z.string().min(1).max(150);
@@ -20,7 +21,9 @@ const input=z.discriminatedUnion('action',[
  z.object({action:z.literal('preferences'),accountId,preferences:reminderPreferences}).strict(),
  z.object({action:z.literal('read'),accountId,id:z.string().min(1).max(600).optional()}).strict(),
  z.object({action:z.literal('subscribe'),accountId,subscription:pushSubscriptionInput,pointsPolicy:z.literal(notificationPointsPolicy).optional()}).strict(),
- z.object({action:z.enum(['status','unsubscribe','test']),accountId,endpoint:pushEndpoint}).strict(),
+ z.object({action:z.literal('status'),accountId,endpoint:pushEndpoint,permission:z.enum(['granted','default','denied']).optional()}).strict(),
+ z.object({action:z.literal('permission'),accountId,permission:z.enum(['granted','default','denied']),endpoint:pushEndpoint.optional()}).strict(),
+ z.object({action:z.enum(['unsubscribe','test']),accountId,endpoint:pushEndpoint}).strict(),
 ]);
 async function member(){
  const user=await getAppUser();if(!user)throw new RequestError('请先登录',401);
@@ -36,9 +39,21 @@ export async function POST(req:Request){try{
  const db=raw();
  if(p.action==='preferences'){await db.prepare('INSERT INTO reminder_settings(account_id,payload) VALUES(?,?) ON CONFLICT(account_id) DO UPDATE SET payload=excluded.payload').bind(account.id,JSON.stringify(p.preferences)).run();return reply({ok:true,preferences:p.preferences})}
  if(p.action==='read'){if(p.id)await db.prepare('UPDATE reminder_inbox SET read_at=? WHERE id=? AND account_id=? AND read_at IS NULL').bind(Date.now(),p.id,account.id).run();else await db.prepare('UPDATE reminder_inbox SET read_at=? WHERE account_id=? AND read_at IS NULL').bind(Date.now(),account.id).run();return reply({ok:true})}
+ if(p.action==='permission'){
+  if(p.permission==='granted')return reply({ok:true,pointsDelta:0});
+  const device=await notificationDeviceFor(req,account.id,p.endpoint);
+  if(!device)return reply({ok:true,enabled:false,pointsDelta:0});
+  return reply(await changeNotificationEnrollment(account.id,device.id,null,false,{receiptId:device.receiptId,source:'system-permission'}));
+ }
  const endpoint=p.action==='subscribe'?p.subscription.endpoint:p.endpoint,id=await pushSubscriptionId(endpoint);
  const existing=await db.prepare('SELECT account_id AS accountId,payload FROM push_subscriptions WHERE id=?').bind(id).first<{accountId:string;payload:string}>();
- if(p.action==='status')return reply({enabled:existing?.accountId===account.id,resetDevice:!!existing&&existing.accountId!==account.id});
+ if(p.action==='status'){
+  const response=reply({enabled:existing?.accountId===account.id,resetDevice:!!existing&&existing.accountId!==account.id});
+  if(existing?.accountId===account.id&&p.permission==='granted'&&(await notificationDeviceFor(req,account.id))?.id!==id){
+   const token=newNotificationDeviceToken();await notificationDeviceStatement(account.id,id,await pushSubscriptionId(token)).run();response.headers.append('Set-Cookie',notificationDeviceCookie(token,req));
+  }
+  return response;
+ }
  if(p.action==='unsubscribe'){return reply(await changeNotificationEnrollment(account.id,id,null))}
  const config=pushConfiguration(env);if(!config)throw new RequestError('通知服务暂不可用，请稍后再试',503);
  if(p.action==='subscribe'){
@@ -46,10 +61,10 @@ export async function POST(req:Request){try{
   if(p.subscription.expirationTime!=null&&p.subscription.expirationTime<=Date.now())throw new RequestError('通知订阅已过期，请重新开启',400);
   try{await verifySubscriptionKeys(p.subscription)}catch{throw new RequestError('通知加密信息无效，请重新开启',400)}
   if(p.pointsPolicy&&(await notificationIncentiveFor(account)).status==='available'){
-   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'通知连接验证成功。首次开启奖励10分；领过奖励后在站内主动关闭任意一台通知设备扣30分，均只执行一次。'},config);
+   const accepted=await sendWebPush(p.subscription,{...testPushMessage,body:'首次开启奖励10分；领过奖励后关闭任意设备通知扣30分。在系统中关闭后，下次进入检测到权限关闭也扣分，均只执行一次。'},config);
    if(accepted<200||accepted>=300)throw new RequestError('通知连接验证失败，未发放积分，请稍后重试',503);
   }
-  return reply(await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy));
+  const token=newNotificationDeviceToken(),result=await changeNotificationEnrollment(account.id,id,p.subscription,!!p.pointsPolicy,{receiptId:await pushSubscriptionId(token)}),response=reply(result);response.headers.append('Set-Cookie',notificationDeviceCookie(token,req));return response;
  }
  if(!existing||existing.accountId!==account.id)throw new RequestError('请先在这台设备开启活动提醒',409);
  await consumeRateLimit('push-test:'+account.id,3,60000,{message:'测试通知发送较频繁，请一分钟后重试'});

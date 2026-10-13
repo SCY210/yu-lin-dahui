@@ -26,7 +26,7 @@ function insert(table,id,payload,extra={}){const values={id,...extra,payload:JSO
 const rules={win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'};
 insert('settings','club',{name:'虚构通知群',initialized:true,inviteHash:'',rules,ownerAccountId:'a'});
 for(const id of ['a','b','c','d']){insert('players','p'+id,{id:'p'+id,name:id,enabled:true,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''},{owner_id:id});insert('accounts',id,{id,email:'',role:id==='a'?'admin':'member',playerId:'p'+id},{email:'',role:id==='a'?'admin':'member',player_id:'p'+id})}
-const post=(owner,action,detail={},origin='https://club.example')=>api.POST(new Request('https://club.example/api/notifications',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify({accountId:owner,action,...detail})}));
+const post=(owner,action,detail={},origin='https://club.example',cookie='')=>api.POST(new Request('https://club.example/api/notifications',{method:'POST',headers:{origin,'content-type':'application/json',cookie},body:JSON.stringify({accountId:owner,action,...detail})}));
 let captures=[],deliveryStatus=201;const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,request)=>{captures.push({url,request});return new Response(null,{status:deliveryStatus})};
 async function hkdf(ikm,salt,info,length){const key=await crypto.subtle.importKey('raw',ikm,'HKDF',false,['deriveBits']);return new Uint8Array(await crypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info},key,length*8))}
@@ -163,4 +163,29 @@ try{
  assert.deepEqual((await Promise.all(disables.map(r=>r.json()))).map(r=>r.pointsDelta).sort((a,b)=>a-b),[-30,0]);
  assert.equal(entries().filter(row=>row.actor==='race').length,2);
  console.log('PASS notification incentives: verified opt-in, legacy claim, once-only award/penalty, two devices, provider failure/expiry and logout');
+
+ // System permission reports are bound to this authenticated browser receipt.
+ for(const id of ['system','fresh','default','expired-permission','logout-permission','legacy-permission','rollback-permission','concurrent-permission']){insert('players','p'+id,{id:'p'+id,name:'Synthetic '+id,enabled:true,ownerId:id,initialRating:0,rating:0,ratedGames:0,ratingReason:''},{owner_id:id});insert('accounts',id,{id,email:'',role:'member',playerId:'p'+id},{email:'',role:'member',player_id:'p'+id})}
+ const cookieOf=r=>{const header=r.headers.get('set-cookie');assert.match(header,/HttpOnly/);assert.match(header,/Secure/);assert.match(header,/SameSite=Lax/);assert.match(header,/Max-Age=31536000/);return header.split(';')[0]};
+ const report=(id,permission,cookie='',extra={})=>post(id,'permission',{permission,...extra},'https://club.example',cookie);
+ user('system');deliveryStatus=201;const systemEnabled=await enroll('system','system-one');assert.equal(systemEnabled.status,200);const systemCookie=cookieOf(systemEnabled);assert.equal((await systemEnabled.json()).pointsDelta,10);
+ assert.equal((await (await enroll('system','system-two')).json()).pointsDelta,0);
+ assert.equal((await (await report('system','granted',systemCookie)).json()).pointsDelta,0);
+ assert.equal((await (await report('system','denied')).json()).pointsDelta,0,'a new browser cannot penalize another enabled device');
+ assert.equal((await (await report('system','denied','yulin_push_device='+'f'.repeat(64))).json()).pointsDelta,0,'forged receipt rejected');
+ user('fresh');assert.equal((await (await report('fresh','denied',systemCookie)).json()).pointsDelta,0,'receipt is bound to its account');
+ user('system');assert.equal((await (await report('system','denied',systemCookie)).json()).pointsDelta,-30,'known device loss works without a browser subscription');
+ assert.equal((await (await report('system','denied',systemCookie)).json()).pointsDelta,0,'reopening never deducts again');
+ assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE account_id=?').get('system').n,1,'other device remains enabled');
+ const audit=entries().find(row=>row.actor==='system'&&row.changes.kind==='disable');assert.equal(audit.changes.source,'system-permission');assert.ok(!JSON.stringify(audit).includes(systemCookie.split('=')[1]));
+ user('default');const defaultCookie=cookieOf(await enroll('default','default-one'));assert.equal((await (await report('default','default',defaultCookie)).json()).pointsDelta,-30,'previously granted device reset to prompt is a permission loss');
+ user('expired-permission');const expiredCookie=cookieOf(await enroll('expired-permission','expires-permission'));deliveryStatus=410;assert.equal((await post('expired-permission','test',{endpoint:subscription('expires-permission').endpoint})).status,409);assert.equal((await (await report('expired-permission','denied',expiredCookie)).json()).pointsDelta,0,'provider expiry deactivates receipt without a penalty');deliveryStatus=201;
+ user('logout-permission');const logoutCookie=cookieOf(await enroll('logout-permission','logout-permission'));
+ const signedOut=await api.logout(new Request('https://club.example/api/auth',{method:'POST',headers:{origin:'https://club.example','content-type':'application/json',cookie:'fixture_session='+'x'.repeat(43)+'; '+logoutCookie},body:JSON.stringify({action:'logout',pushEndpoint:subscription('logout-permission').endpoint})}));assert.equal(signedOut.status,200);assert.equal((await (await report('logout-permission','default',logoutCookie)).json()).pointsDelta,0);
+ user('legacy-permission');await enroll('legacy-permission','legacy-permission');sql.prepare('DELETE FROM notification_devices WHERE account_id=?').run('legacy-permission');const upgraded=await post('legacy-permission','status',{endpoint:subscription('legacy-permission').endpoint,permission:'granted'});assert.equal(upgraded.status,200);const upgradedCookie=cookieOf(upgraded);assert.equal((await (await report('legacy-permission','denied',upgradedCookie)).json()).pointsDelta,-30);
+ user('rollback-permission');const rollbackCookie=cookieOf(await enroll('rollback-permission','rollback-permission'));const realBatch=db.batch;let failPermission=true;db.batch=list=>{if(failPermission&&list.some(row=>row.query.startsWith('UPDATE notification_devices SET active=0'))){failPermission=false;return realBatch([...list,db.prepare('INSERT INTO fictional_missing_notification_table VALUES(1)')])}return realBatch(list)};
+ assert.equal((await report('rollback-permission','denied',rollbackCookie)).status,503);db.batch=realBatch;
+ assert.equal(entries().filter(row=>row.actor==='rollback-permission').length,1,'failed transaction must roll back points');assert.equal(sql.prepare('SELECT active FROM notification_devices WHERE account_id=?').get('rollback-permission').active,1);assert.equal((await (await report('rollback-permission','denied',rollbackCookie)).json()).pointsDelta,-30);
+ user('concurrent-permission');const concurrentCookie=cookieOf(await enroll('concurrent-permission','concurrent-permission'));const concurrent=await Promise.all([report('concurrent-permission','denied',concurrentCookie),report('concurrent-permission','default',concurrentCookie)]);for(const r of concurrent)assert.equal(r.status,200);assert.deepEqual((await Promise.all(concurrent.map(r=>r.json()))).map(row=>row.pointsDelta).sort((a,b)=>a-b),[-30,0]);
+ console.log('PASS system notification permission: browser/account receipts, denied/default, fresh and forged devices, once-only concurrent deductions, rollback, legacy upgrade, provider expiry and logout');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__pushTest}

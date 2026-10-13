@@ -3,6 +3,7 @@ import {RequestError} from './request-body';
 import {notificationPointsStatus,recordNotificationPoints} from './domain/notification-points';
 import type {StoredPushSubscription} from './push-contract';
 import type {Account,Audit} from './domain/types';
+import {notificationDeviceStatement} from './notification-device';
 
 export async function notificationIncentiveFor(account:Pick<Account,'id'|'playerId'>){
  const rows=await raw().prepare("SELECT payload FROM audits WHERE json_extract(payload,'$.action')='notificationPoints' AND json_extract(payload,'$.actor')=?").bind(account.id).all<{payload:string}>();
@@ -11,7 +12,7 @@ export async function notificationIncentiveFor(account:Pick<Account,'id'|'player
 
 /** Device changes and their score entries share the club revision transaction.
  * Provider expiry and logout deliberately use the cleanup-only helper instead. */
-export async function changeNotificationEnrollment(accountId:string,id:string,subscription:StoredPushSubscription|null,acceptPoints=false){
+export async function changeNotificationEnrollment(accountId:string,id:string,subscription:StoredPushSubscription|null,acceptPoints=false,device?:{receiptId?:string;source?:'system-permission'}){
  for(let attempt=0;attempt<5;attempt++){
   const before=await load(),next=structuredClone(before),account=next.accounts.find(a=>a.id===accountId);
   if(!account||!next.players.some(p=>p.id===account.playerId&&p.enabled))throw new RequestError('账号当前不可使用通知',403);
@@ -25,12 +26,16 @@ export async function changeNotificationEnrollment(accountId:string,id:string,su
   // Cleanup writers can remove expired devices without a revision. Conditional
   // penalty insertion checks device ownership again inside the batch.
   const audit=pointsDelta?next.audits.pop()!:null;
+  if(audit&&device?.source==='system-permission'){audit.reason='下次进入检测到通知权限已关闭';audit.changes={...audit.changes as object,source:device.source}}
   const extra:D1PreparedStatement[]=[];
   if(audit){
-   const query=subscription?'INSERT INTO audits(id,payload) VALUES(?,?)':`INSERT INTO audits(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM push_subscriptions WHERE id=? AND account_id=?)`;
-   extra.push(raw().prepare(query).bind(audit.id,JSON.stringify(audit),...(subscription?[]:[id,accountId])));
+   const receiptGuard=!subscription&&device?.receiptId?' AND EXISTS(SELECT 1 FROM notification_devices WHERE id=? AND account_id=? AND subscription_id=? AND active=1)':'';
+   const query=subscription?'INSERT INTO audits(id,payload) VALUES(?,?)':`INSERT INTO audits(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM push_subscriptions WHERE id=? AND account_id=?)${receiptGuard}`;
+   extra.push(raw().prepare(query).bind(audit.id,JSON.stringify(audit),...(subscription?[]:[id,accountId]),...(receiptGuard?[device!.receiptId,accountId,id]:[])));
   }
   extra.push(subscription?raw().prepare('INSERT INTO push_subscriptions(id,account_id,payload,created_at) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE push_subscriptions.account_id=excluded.account_id').bind(id,accountId,JSON.stringify(subscription),Date.now()):raw().prepare('DELETE FROM push_subscriptions WHERE id=? AND account_id=?').bind(id,accountId));
+  if(subscription&&device?.receiptId)extra.push(notificationDeviceStatement(accountId,id,device.receiptId));
+  if(!subscription)extra.push(raw().prepare('UPDATE notification_devices SET active=0 WHERE account_id=? AND subscription_id=?').bind(accountId,id));
   try{
    await save(next,crypto.randomUUID(),before,extra);
    const after=await load(),status=notificationPointsStatus(after,account);

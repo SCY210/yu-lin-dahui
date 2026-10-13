@@ -15,6 +15,10 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
  const [offer,setOffer]=useState<Offer|null>(null),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false);
  const [visit,setVisit]=useState(0),handled=useRef(false),enabling=useRef(false);
  useEffect(()=>{
+  const changed=(event:Event)=>{const detail=(event as CustomEvent).detail;if(detail?.accountId===accountId&&detail.pointsDelta===-30)toast.error('检测到这台设备的通知权限已关闭，双打赛季积分 −30；本账号只扣一次。')};
+  window.addEventListener('yulin:push-changed',changed);return()=>window.removeEventListener('yulin:push-changed',changed);
+ },[accountId]);
+ useEffect(()=>{
   const enter=()=>{if(document.hidden||enabling.current)return;if(!open)handled.current=false;setVisit(value=>value+1)};
   const show=(event:PageTransitionEvent)=>{if(event.persisted)enter()};
   document.addEventListener('visibilitychange',enter);window.addEventListener('pageshow',show);

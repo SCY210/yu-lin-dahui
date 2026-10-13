@@ -26,7 +26,20 @@ export async function localPushSubscription(){
  return await (await navigator.serviceWorker.getRegistration('/'))?.pushManager?.getSubscription()??null;
 }
 export async function syncPushAccount(accountId:string){
- try{const subscription=await localPushSubscription();if(!subscription)return false;const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice)await subscription.unsubscribe();return !!state.enabled&&!state.resetDevice}catch{return null /* Unknown: retry on a later visit; never auto-enable or request permission. */}
+ try{
+  const permission='Notification' in window?Notification.permission:undefined;
+  const revoked=permission==='denied'||permission==='default';
+  let subscription;
+  try{subscription=await localPushSubscription()}catch(error){if(!revoked)throw error;subscription=null}
+  if(revoked){
+   const result=await notificationRequest(accountId,'permission',{permission,...(subscription?{endpoint:subscription.endpoint}:{})});
+   if(result.pointsDelta===-30)window.dispatchEvent(new CustomEvent(pushStateChanged,{detail:{accountId,pointsDelta:-30}}));
+   return false;
+  }
+  if(!subscription)return false;
+  const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint,...(permission==='granted'?{permission}:{})});
+  if(state.resetDevice)await subscription.unsubscribe();return !!state.enabled&&!state.resetDevice;
+ }catch{return null /* Unknown: retry on a later visit; never auto-enable or request permission. */}
 }
 export const pushStateChanged='yulin:push-changed';
 /** Call directly from a user click so the permission request retains its gesture. */
