@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Event} from '../lib/domain/types';
@@ -51,7 +53,7 @@ test('活动开始前取消不会产生虚构参加记录或费用',async()=>{
 test('取消后重新加入保留过去参加时段，未参加的空档不计费',async()=>{
  const {s,e}=fixture();e.capacity=5;s.registrations[4].status='confirmed';
  await apply(s,s.accounts[0],'cancel',{eventId:e.id,playerId:'A',reason:'离场'},start+hour);
- await apply(s,s.accounts[0],'register',{eventId:e.id,playerId:'A',arrival:start,departure:end,note:'回来'},start+1.5*hour);
+ await apply(s,s.accounts[0],'register',{...acceptedActivityNotice,eventId:e.id,playerId:'A',arrival:start,departure:end,note:'回来'},start+1.5*hour);
  const rows=attendanceForEvent(s,e).filter(a=>a.playerId==='A');assert.equal(rows.length,2);
  assert.equal(calculateSettlement(s,e,end).bills.find(b=>b.playerId==='A')!.minutes,90);
 });

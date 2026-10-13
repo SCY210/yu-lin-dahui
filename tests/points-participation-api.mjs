@@ -1,0 +1,29 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
+// Actual handlers and storage, isolated in memory; never production data.
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+mkdirSync('.test-output',{recursive:true});
+const fixture=globalThis.__pointsParticipationApiTest={env:{},user:null};
+writeFileSync('.test-output/participation-entry.ts',`export {GET,POST} from '../app/api/club/route';export {load,save} from '../lib/store';export {emptyState,month} from '../lib/domain/types';export {loadClubState} from '../lib/club-maintenance';`);
+await build({entryPoints:['.test-output/participation-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/points-participation-api.mjs',plugins:[{name:'isolated-live',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'live-fixture'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'live-fixture'}));b.onLoad({filter:/.*/,namespace:'live-fixture'},a=>({contents:a.path==='env'?'export const env=globalThis.__pointsParticipationApiTest.env;':'export const getAppUser=async()=>globalThis.__pointsParticipationApiTest.user;export const passwordEnabled=async()=>true;',loader:'js'}))}}]});
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
+function statement(query,parameters=[]){return {query,parameters,bind(...args){return statement(query,args)},async first(){return sql.prepare(query).get(...parameters)??null},async all(){return {results:sql.prepare(query).all(...parameters)}},async run(){const r=sql.prepare(query).run(...parameters);return {meta:{changes:Number(r.changes)},results:[]}}}}
+fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
+const api=await import(pathToFileURL(resolve('.test-output/points-participation-api.mjs')).href);
+try{
+ const s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.accounts=Array.from({length:8},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
+ const e={id:'e',creatorId:'owner',title:'Fictional matching participation',start:now+600000,end:now+3600000,venue:'Fictional venue',address:'',capacity:8,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',courtMode:'interval',ballMode:'interval',attendanceMode:'automatic'};s.events=[e];s.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1000}];s.registrations=s.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());
+ const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'},request=async payload=>({action:'pointsParticipation',payload,requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision}),post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
+ user('member1');const stopped={eventId:'e',playerId:'p1',playing:false};await api.loadClubState();const before=await api.load();
+ assert.equal((await post(await request({...stopped,playerId:'p2',isOwner:true}))).status,403);assert.deepEqual(await api.load(),before);
+ const write=await request(stopped),batch=fixture.env.DB.batch;fixture.env.DB.batch=async()=>{throw new Error('participation rollback')};assert.equal((await post(write)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),before);
+ assert.equal((await post(write)).status,200);assert.equal((await post(write)).status,200);let stored=await api.load();assert.deepEqual(stored.events[0].matchingStopped,['p1']);assert.equal(stored.audits.filter(a=>a.action==='pointsParticipation').length,1);assert.deepEqual(stored.registrations,before.registrations);assert.deepEqual(stored.attendance,before.attendance);for(const field of ['bookings','costs','settlements','payments','ratingChanges'])assert.deepEqual(stored[field],before[field],field+' must remain unchanged');assert.equal(stored.matches.length,0);
+ const view=await (await api.GET(new Request(origin+'/api/club?month='+api.month(now)+'&year='+new Date(now).getUTCFullYear()))).json();assert.deepEqual(view.events[0].matchingStopped,['p1'],'server read projects persisted opt-out');
+ const resume=await request({...stopped,playing:true});assert.equal((await post(resume)).status,200);stored=await api.load();assert.equal(stored.events[0].matchingStopped,undefined);
+ user('owner');const manager=await request({...stopped,playerId:'p2'});assert.equal((await post(manager)).status,200);stored=await api.load();assert.deepEqual(stored.events[0].matchingStopped,['p2']);
+ console.log('PASS matching participation API: member self opt-out, server reload projection, no signup/attendance mutation, outsider refusal, transaction rollback, request idempotence, resume and manager control');
+}finally{sql.close();delete globalThis.__pointsParticipationApiTest}

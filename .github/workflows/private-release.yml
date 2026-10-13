@@ -1,0 +1,37 @@
+name: Request private production release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: private-production-release-trigger
+  cancel-in-progress: false
+
+jobs:
+  request:
+    if: github.repository == 'SCY210/yu-lin-dahui' && github.ref == 'refs/heads/main' && vars.PRIVATE_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Request a validated private cloud build
+        env:
+          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_PRIVATE_DEPLOY_HOOK }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          const raw = process.env.DEPLOY_HOOK;
+          if (!raw) throw new Error('The private release trigger secret is not configured.');
+          const hook = new URL(raw);
+          if (hook.origin !== 'https://api.cloudflare.com' || hook.username || hook.password || hook.search || hook.hash || !/^\/client\/v4\/workers\/builds\/deploy_hooks\/[A-Za-z0-9_-]+$/.test(hook.pathname)) {
+            throw new Error('Invalid private release trigger destination.');
+          }
+          const response = await fetch(hook, {method: 'POST', redirect: 'error', signal: AbortSignal.timeout(30000)});
+          if (!response.ok) throw new Error(`Private build request failed with HTTP ${response.status}.`);
+          const data = await response.json();
+          if (data.success !== true || typeof data.result?.build_uuid !== 'string') throw new Error('Cloudflare did not confirm a queued private build.');
+          console.log(`Private build queued: ${data.result.build_uuid}. Deployment success must be verified in the private build.`);
+          NODE

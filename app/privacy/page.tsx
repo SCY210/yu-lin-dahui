@@ -1,41 +1,37 @@
 import LegalLayout from '../legal-layout';
 import {legalConfig} from '../../config/legal';
 import {legalNoticeState} from '../../lib/legal-notice';
+import {siteNatureStatement,profilePrivacyStatement,privacyRequestStatement} from '../../lib/site-notice';
 
-export const metadata={title:'Privacy notice | Yu Lin Da Hui'};
-const pending='To be specified by the club operator before deployment.';
+export const metadata={title:'隐私说明 · 羽林大会'};
+const pending='尚未公布具体信息，请通过群内现有联系渠道联系群主或管理员了解。';
 
 export default function PrivacyPage(){
  const state=legalNoticeState(legalConfig);
- return <LegalLayout title="Privacy notice">
-  <h2>Who is responsible</h2>
-  <p>Operator: {legalConfig.operatorName||pending}</p>
-  <p>Contact address: {legalConfig.operatorAddress||pending}</p>
-  <p>Jurisdiction: {legalConfig.jurisdiction||pending}</p>
-  <p>Privacy contact: {state.contactEmail?<a href={'mailto:'+state.contactEmail}>{state.contactEmail}</a>:pending}</p>
-  <h2>Data and purposes</h2>
-  <p>The club processes display names, usernames, password hashes and session records; player profiles and optional equipment descriptions; event registrations and participation times; match results and derived rankings; shared cost allocations; photographs and their associations; and administrator audit records. Legacy platform accounts can retain their email for identity compatibility.</p>
-  <p>These records support club access, organizing badminton, matching players, calculating results and shared costs, and securing the service. Do not put health information, identification documents, private contact details, or other unnecessary sensitive data in profiles or notes.</p>
-  <p>Profiles can also be supplied by an administrator or another member registering a friend. The operator must inform those people and verify the applicable basis before creating their records.</p>
-  <h2>Legal bases</h2><p>{legalConfig.legalBases||pending}</p>
-  <p>Optional images require the uploader to confirm rights and permission to share identifiable people within the club. That statement does not itself collect consent from each person or establish the legal basis for all other processing.</p>
-  <h2>Who can see records</h2>
-  <p>Authenticated club members can see shared profiles, events, results, photos and participant cost shares. Administrators can manage accounts and export business records. Private drafts have narrower permissions. Club membership does not authorize publishing others’ records on social media.</p>
-  <p>The application uses Sites hosting with Cloudflare D1 and R2. A legacy sign-in flow uses the hosting identity layer. Infrastructure can process network addresses and service logs. Following a Google Maps link sends the venue search to Google.</p>
-  <p>Operator-approved processors, locations and transfer safeguards: {legalConfig.processorsAndTransfers||pending}</p>
-  <h2>Retention and deletion</h2><p>{legalConfig.retention||pending}</p>
-  <p>In My → Account and password, members can request deletion of their own account. Submitting the request signs out all password sessions and blocks account access. A successful sign-in with the same account before 30 days have elapsed cancels the request. Failed login attempts, background requests and existing sessions do not cancel it. At or after the deadline, recovery is unavailable. Expired requests are processed automatically by the hourly server cleanup and retried on API traffic.</p>
-  <p>Cleanup removes the login account, password credentials, sessions, notification records, personal profile fields, related audit snapshots and site photos uploaded by or associated with the member. Future registrations are removed. Historical match results and cost allocations remain under a new, unowned “deleted member” identifier and label so other participants’ records remain usable. Friend profiles created by the member remain but are detached from the deleted account. A hash of the former platform identity is retained to prevent an old platform session from reactivating the deleted account. Image file deletion is retried if storage is temporarily unavailable.</p>
-  <p>This does not erase other members’ free-text mentions, downloaded copies, operator backups or hosting logs. Contact the operator for those records and any other privacy request. Event deletion can be reversible and is not personal-data erasure. The protected principal administrator must arrange ownership handover before account deletion. Other administrators can voluntarily relinquish their own administrator role without principal-administrator approval.</p>
-  <p>注销规则：提交后退出全部设备；30天内使用同一账号成功重新登录会取消注销。期限届满后不能恢复，系统按小时自动清理，失败后重试。登录账号、密码、个人档案、关联操作快照及站内关联照片会被清理，未来报名会取消。历史比赛和费用以“已注销球友”保留。朋友档案保留但与账号解绑。平台身份哈希保留以阻止旧会话恢复已注销账号。其他成员的文字、导出副本、运营者备份及托管日志需联系运营者处理。群主须先安排所有权交接；其他管理员可自行放弃管理员权限。</p>
-  <h2>Your choices and requests</h2>
-  <p>You can edit supported profile fields and ask the operator for access, correction, erasure, restriction, objection, or portability where applicable. You can ask to withdraw consent when that is the processing basis, without affecting prior lawful processing. Contact the operator above; if contact details are still missing, contact the administrator through the channel that invited you.</p>
-  <p>Complaint authority: {legalConfig.complaintAuthority||pending}</p>
-  <h2>Cookies and installed-app storage</h2>
-  <p>The application’s yulin_session cookie manages login and lasts up to fourteen days. The yulin_signed_out cookie suppresses legacy auto-login for fourteen days after logout, or thirty days after a deletion request. A local session-storage notice shows the requested deletion deadline on the same browser tab. HTTPS cookies use Secure, HttpOnly and SameSite=Lax. The service worker caches only the public offline page; it does not cache private club data or queue offline writes.</p>
-  <p>This source does not add advertising or analytics cookies. The operator must separately review cookies or tracking introduced by hosting, identity providers or future integrations. A required login cookie does not justify unrelated tracking.</p>
-  <h2>Children and image metadata</h2>
-  <p>Minors policy: {legalConfig.minorsPolicy||pending}</p>
-  <p>The application does not verify age or guardian authorization. Until the operator has established an appropriate process, do not upload photographs of minors. Uploaded files may retain EXIF/location and other metadata; remove unnecessary metadata before sharing.</p>
+ return <LegalLayout title="隐私说明">
+  <h2>网站性质与联系</h2><p>{siteNatureStatement}</p>
+  <p>实际负责主体：{legalConfig.operatorName||pending}</p>
+  {legalConfig.operatorAddress&&<p>联系地址：{legalConfig.operatorAddress}</p>}
+  {legalConfig.jurisdiction&&<p>适用地区信息：{legalConfig.jurisdiction}</p>}
+  <p>隐私联系：{state.contactEmail?<a href={'mailto:'+state.contactEmail}>{state.contactEmail}</a>:'请通过加入羽林大会时使用的群内联系渠道联系群主或管理员。'}</p>
+  <h2>资料自愿填写与展示范围</h2><p>{profilePrivacyStatement}</p>
+  <p>头像、球友档案和已共享的内容按网站权限向已登录群成员展示；活动、比赛和费用记录按相应功能展示。管理员可为活动协作和账号管理查看必要信息及导出业务记录，部分草稿和个人记录具有更窄的权限。未登录访客可阅读网站说明和登录页面，不能据此查看球友资料。</p>
+  <p>如果由管理员或朋友代为提供资料，应先向本人说明。临时来宾仅记录在相应活动中，不因此创建永久球员档案。群内可见不等于允许截图转发、批量收集、公开发布或用于营销；自愿填写也不表示放弃隐私权利。</p>
+  <h2>实际处理哪些信息</h2><p>网站会处理账号、昵称、密码摘要和会话记录，扩展球员资料及上传图片，活动接龙和参与时段，比赛结果及由此计算的积分、排名、状态和成就，费用分摊和相关收款联系信息，羽币及兑换记录，通知订阅和管理操作记录。兼容原登录方式的账号可能保留原邮箱信息。请不要在档案或备注中提交不必要的敏感信息。</p>
+  <p>这些信息用于账号访问、活动协作、球友交流、比分和费用计算、消息提醒及服务安全。部分信息来自本人操作、代理报名、管理员管理或系统计算。具体处理依据：{legalConfig.legalBases||pending}</p><p>阅读或确认本说明不构成对所有处理用途的一揽子同意；与活动协作无关的用途不能仅凭这次确认获得授权。</p>
+  <h2>确认记录及其用途</h2><p>网站已不再要求账号进入时确认活动参与须知，报名也不要求勾选须知；仍在使用旧版本应用的设备如果提交了确认，会按原方式保存。此前保存的账号确认记录包括实际账号及对应球员、服务器时间、版本、全文快照和内容摘要，保留原文，不视为同意之后更新的内容。历史接龙确认记录保留原有参与者、活动或场地及本人/代理标记；代理记录不表示朋友本人在网站签署，旧接龙也不会自动当作已同意。</p>
+  <p>这些确认记录不再在页面上展示。本人可通过数据导出获取本账号的确认记录，群主可导出全体账号的确认记录，普通管理员不能通过业务导出获取其他账号的确认记录。这些记录用于核对，不是身份认证、公证或保证免责的证明，也不包含照片对外公开授权。</p>
+  <h2>服务提供方与外部链接</h2><p>当前网站使用 Sites 托管及 Cloudflare D1、R2；兼容登录可能使用托管身份服务。基础设施可能处理网络地址和服务日志，通知功能会使用浏览器或设备的推送服务。打开地图链接会将相应场馆查询发送给地图服务；外部服务按其自身说明处理信息。</p>
+  <p>服务提供方、处理地区及跨境安排的具体说明：{legalConfig.processorsAndTransfers||pending}</p>
+  <h2>保留与删除</h2><p>保留期限或确定标准：{legalConfig.retention||pending}</p>
+  <p>你可以在“我的 → 账号与密码 → 账号与权限”申请注销本人账号。提交后立即退出全部设备并暂停账号访问。30天内使用同一账号成功重新登录会自动取消注销；错误密码、后台刷新或原有会话不会取消。期限届满后不能恢复，系统按小时自动清理，临时失败会重试。</p>
+  <p>清理范围包括登录账号、密码、会话、通知记录、个人档案、本人须知确认记录、羽币与兑换记录、相关操作快照及本人上传或关联的站内照片。未来报名会取消。历史比赛和费用分摊使用新的无主身份及“已注销球友”名称保留，维护其他参与者的共同记录。代报朋友的档案保留但与原账号解绑。其他球友已获得的羽币保留，发放记录中的注销者身份会移除。照片文件清理失败会排队重试。</p>
+  <p>为防止平台旧会话恢复已注销账号，保留原平台身份的单向哈希；不保留原登录账号名。其他成员文字中的提及、已下载副本、运营者备份及托管日志不属于自动清理范围，请联系实际负责人处理其他隐私请求。历史活动的可恢复删除不等于删除个人信息。</p>
+  <p>群主账号有固定最高权限，注销前需要先安排所有权交接。其他管理员可以自行放弃自己的管理员权限，无需群主审批，变为普通成员后账号和记录保留。</p>
+  <h2>你的选择与请求</h2><p>{privacyRequestStatement}</p>
+  <p>若涉及停止使用或账号关闭，也可通过上述渠道提出。依法需要保留部分资料的，应说明相应情况；不能承诺不论原因立即删除全部历史记录。如对处理有异议，可向适用的数据保护主管机关反映。主管机关信息：{legalConfig.complaintAuthority||pending}</p>
+  <h2>登录存储、图片与未成年人</h2><p>登录会话标记最长保留十四天；退出标记在普通退出后保留十四天，在注销申请后保留三十天。同一浏览器标签页可暂存注销期限提示。安全会话标记使用 HTTPS、仅服务器读取及同站限制等措施；离线服务只缓存公开离线页面，不缓存私人群组数据或离线排队提交操作。目前未设置广告或分析跟踪功能；托管、身份或将来新增服务的处理仍需另行核实说明。</p>
+  <p>上传文件可能保留拍摄时间、位置等图片元数据，请在上传前移除不必要的信息。网站没有核验年龄或监护授权的流程，在建立适当流程前不要上传未成年人的照片。未成年人安排：{legalConfig.minorsPolicy||pending}</p>
+  <p>本说明描述当前用途和功能边界，不以志愿维护、非营利或资料自愿填写为由排除依法应承担的义务。说明更新不能追溯改变已确认的内容。</p>
  </LegalLayout>;
 }

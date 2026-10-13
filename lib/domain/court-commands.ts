@@ -1,3 +1,7 @@
+import {editReason} from './edit-reason';
+import {activityAcknowledgementInput} from './activity-acknowledgement';
+import { recordCancellation } from './cancellations';
+import { signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { parseDomainCommand } from './command-contract';
 import { z } from 'zod';
 import { fail, type Account, type State } from './types';
@@ -6,9 +10,9 @@ import { canManageEvent } from './permissions';
 import { cancellationNeedsApproval } from './cancellation';
 import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
-const id = z.string().min(1).max(100), reason = z.string().trim().min(1).max(500);
+const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
-    courtRegister: z.object({ bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
+    courtRegister: z.object({ ...activityAcknowledgementInput, bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
     courtCancel: z.object({ bookingId: id, playerId: id, reason }),
     courtMoveQueue: z.object({ bookingId: id, playerId: id, beforePlayerId: id, reason }),
 };
@@ -19,9 +23,10 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
     const p = command.payload;
     const b = s.bookings.find(x => x.id === p.bookingId) ?? fail('场地时段不存在'), e = s.events.find(x => x.id === b.eventId && x.deletedAt === undefined) ?? fail('活动不存在或已删除');
     const manager = canManageEvent(a, e), player = s.players.find(x => x.id === p.playerId) ?? fail('球友不存在');
+    if(player.guestEventId&&player.guestEventId!==e.id)fail('临时来宾只能参加原活动，请在本活动重新添加');
     if (!manager && player.ownerId !== a.id)
         fail('403: 只能管理自己及自己代报的朋友');
-    if (['ended', 'cancelled'].includes(e.status))
+    if (['ended', 'cancelled'].includes(eventStatusAt(e,now)))
         fail('活动已结束');
     let r = s.registrations.find(x => x.eventId === e.id && x.playerId === p.playerId), row = r?.bookingSignups?.find(x => x.bookingId === b.id);
     switch (command.action) {
@@ -33,6 +38,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 fail('当前活动未开放报名');
             if (!manager && now >= b.end)
                 fail('该场地时段已结束');
+            if (!manager && (!r || r.status === 'cancelled') && signupClosed(e, now))
+                fail('报名已截止（活动开始前 ' + signupCloseHours + ' 小时），请联系活动创建者');
             if (p.arrival < b.start || p.departure > b.end || p.departure <= p.arrival)
                 fail('参加时间必须在所选场地时段内');
             if (r?.bookingSignups?.some(x => x.bookingId !== b.id && x.status !== 'cancelled' && x.arrival < p.departure && x.departure > p.arrival))
@@ -90,6 +97,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 row.status = 'cancelled';
                 row.cancelRequested = false;
                 syncRegistration(r);
+                if (r.status === 'cancelled')
+                    recordCancellation(s, r, a, now, 'reason' in p ? p.reason : undefined);
                 promoteBooking(s, e, b, now);
             }
             break;

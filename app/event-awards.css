@@ -10,3 +10,5 @@
 @media(min-width:760px){.award-categories{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:420px){.award-done{display:none}.award-candidates{grid-template-columns:minmax(0,1fr)}.award-person{padding:12px}.award-header h3{font-size:19px}.award-category{padding:10px;gap:7px}.award-category span{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.award-card *{transition:none!important}}
+.award-final{display:flex;align-items:center;gap:8px;margin:10px 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--primary) 10%,transparent);color:var(--foreground)}.award-final svg{color:var(--primary);flex:none}
+.award-named{margin:10px 0}.award-named>summary{cursor:pointer;font-size:14px}.award-named p{margin:6px 0;font-size:14px}

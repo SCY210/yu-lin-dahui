@@ -2,7 +2,8 @@ import { env } from 'cloudflare:workers';
 import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
-const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos'] as const;
+import {profileRestrictionsFromConfig} from './profile-policy-config';
+const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger', 'accountNoticeReceipts'] as const;
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
 /** Indexed metadata reads verify freshness and current permissions on every poll. */
@@ -18,7 +19,7 @@ export async function clubReadVersion(accountId: string): Promise<ClubReadVersio
     } | undefined, account = result[2].results[0] as {
         payload: string;
     } | undefined;
-    return { revision: revisionFrom(result[0].results[0]), settings: settings ? storedSettings(settings.payload) : state.settings, account: account ? storedRecord('accounts', { id: accountId, payload: account.payload }) as Account : null };
+    return { profileRestrictions:profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS), revision: revisionFrom(result[0].results[0]), settings: settings ? storedSettings(settings.payload) : state.settings, account: account ? storedRecord('accounts', { id: accountId, payload: account.payload }) as Account : null };
 }
 type TableName = typeof names[number];
 type PayloadRow = {
@@ -44,6 +45,8 @@ export async function load(): Promise<State> {
     if (settings)
         state.settings = storedSettings(String(settings.payload));
     names.forEach((table, index) => assignRecords(state, table, result[index + 2].results as PayloadRow[]));
+    const policy=profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS);
+    if(policy)state.profileRestrictions=policy;
     return state;
 }
 export async function committed(key: string) { return !!(await raw().prepare('SELECT revision FROM commits WHERE key = ?').bind(key).first()); }
@@ -74,6 +77,17 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
                 columns.push('owner_id');
                 values.push(r.ownerId);
             }
+            else if (n === 'treasureOrders' || n === 'treasureLedger') {
+                columns.push('player_id'); values.push(r.playerId);
+                if(n === 'treasureOrders'){columns.push('product_id','account_id','request_id');values.push(r.productId,r.accountId,r.requestId)}
+                else {columns.push('actor','request_id');values.push(r.actor,r.requestId)}
+            }
+            else if (n === 'accountNoticeReceipts') {
+                columns.push('account_id','notice_version','content_hash'); values.push(r.accountId,r.version,r.contentHash);
+            }
+            else if (n === 'treasureProducts') {
+                // Catalog records have no activity foreign key.
+            }
             else if (!['seasons', 'audits', 'events', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos'].includes(n)) {
                 columns.push('event_id');
                 values.push(r.eventId);
@@ -92,6 +106,7 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
             }
             columns.push('payload');
             values.push(JSON.stringify(r));
+            if(n==='accountNoticeReceipts'){qs.push(db.prepare(`INSERT INTO ${n}(${columns.join(',')}) VALUES(${columns.map(()=>'?').join(',')})`).bind(...values));continue}
             qs.push(db.prepare(`INSERT INTO ${n}(${columns.join(',')}) VALUES(${columns.map(() => '?').join(',')}) ON CONFLICT(id) DO UPDATE SET ${columns.slice(1).map(c => c + '=excluded.' + c).join(',')}`).bind(...values));
         }
     }

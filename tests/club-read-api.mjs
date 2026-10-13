@@ -24,12 +24,14 @@ await build({entryPoints:['./app/api/club/route.ts'],bundle:true,platform:'node'
 const {GET}=await import(pathToFileURL(resolve(output)).href);
 const account={id:'fixture-admin',email:'',role:'admin',playerId:'fixture-player'};
 const user={userId:account.id,email:'',username:'fixture',displayName:'fixture',fullName:null,method:'password'};
-const state={revision:10,settings:{name:'虚构测试群',initialized:true,ownerAccountId:account.id,inviteHash:'',rules:{win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'}},accounts:[account],players:[],events:[],bookings:[],registrations:[],attendance:[],rounds:[],matches:[],costs:[],settlements:[],payments:[],seasons:[],audits:[],ratingChanges:[],challenges:[],tagVotes:[],awardVotes:[],photos:[]};
+const state={revision:10,settings:{name:'虚构测试群',initialized:true,ownerAccountId:account.id,inviteHash:'',rules:{win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'}},accounts:[account],players:[],events:[],bookings:[],registrations:[],attendance:[],rounds:[],matches:[],costs:[],settlements:[],payments:[],seasons:[],audits:[],ratingChanges:[],challenges:[],tagVotes:[],awardVotes:[],photos:[],treasureProducts:[],treasureLedger:[],treasureOrders:[]};
 const fixture=globalThis.__clubReadTest={user,state,loads:0,metadata:0};
 const read=(path='/api/club?month=2026-10&year=2026',etag=null)=>GET(new Request('https://example.invalid'+path,{headers:etag?{'If-None-Match':etag}:{}}));
 try{
  const initial=await read();assert.equal(initial.status,200);const token=initial.headers.get('ETag');assert.ok(token);assert.equal((await initial.json()).me.role,'admin');assert.equal(fixture.loads,1);
  const unchanged=await read(undefined,token);assert.equal(unchanged.status,304);assert.equal(await unchanged.text(),'');assert.equal(fixture.loads,1);assert.equal(fixture.metadata,1);assert.equal(unchanged.headers.get('Cache-Control'),'no-store');
+ const weak=await read(undefined,'W/'+token);assert.equal(weak.status,304);assert.equal(weak.headers.get('ETag'),token);assert.equal(fixture.loads,1);
+ const list=await read(undefined,'\"unrelated\", W/'+token);assert.equal(list.status,304);assert.equal(list.headers.get('ETag'),token);assert.equal(fixture.loads,1);
  const changedMonth=await read('/api/club?month=2026-09&year=2026',token);assert.equal(changedMonth.status,200);assert.equal((await changedMonth.json()).period,'2026-09');
  state.revision++;const changed=await read(undefined,token);assert.equal(changed.status,200);assert.equal((await changed.json()).revision,11);
  state.settings.name='Fixture View';state.settings.blockedWords=['Fixture'];state.revision++;
@@ -42,7 +44,7 @@ try{
  fixture.user={...user,userId:'different-account'};assert.equal((await read(undefined,token)).status,403);
  fixture.user=user;state.accounts=[account];
  const beforeExport=fixture.loads;const exported=await read('/api/club?export=1',token);assert.equal(exported.status,200);assert.match(exported.headers.get('Content-Disposition'),/club-export/);assert.equal(fixture.loads,beforeExport+1);
- state.events=[{id:'hidden-event',creatorId:account.id,title:'Private deleted activity',deletedAt:0,status:'ended',start:1,end:2}];state.bookings=[{id:'hidden-booking',eventId:'hidden-event'}];state.audits=[{id:'hidden-audit',changes:{eventId:'hidden-event'},reason:'removed'}];
+ state.events=[{id:'hidden-event',creatorId:account.id,title:'Private deleted activity',deletedAt:0,status:'ended',start:1,end:2}];state.bookings=[{id:'hidden-booking',eventId:'hidden-event'}];state.audits=[{id:'hidden-audit',action:'fixture',changes:{eventId:'hidden-event'},reason:'removed'}];
  const otherAdmin={...account,id:'other-admin'};state.accounts.push(otherAdmin);fixture.user={...user,userId:otherAdmin.id};
  const filteredExport=await (await read('/api/club?export=1')).json();assert.deepEqual(filteredExport.events,[]);assert.deepEqual(filteredExport.bookings,[]);assert.deepEqual(filteredExport.audits,[]);
  fixture.user=user;const ownerExport=await (await read('/api/club?export=1')).json();assert.equal(ownerExport.events[0].id,'hidden-event');assert.equal(state.events.length,1);state.events=[];state.bookings=[];state.audits=[];

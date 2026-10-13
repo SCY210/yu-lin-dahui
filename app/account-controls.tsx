@@ -19,7 +19,7 @@ export default function AccountControls({isOwner, role, method, refresh}: Props)
       const response = await fetch('/api/auth', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action, requestId: crypto.randomUUID(), confirmed: true, ...(method === 'password' ? {currentPassword: password} : {})})});
       const result = await readActionResponse(response);
       if (deleting) {
-        if (result.deleteAfter) sessionStorage.setItem('account-deletion-notice', new Date(result.deleteAfter).toISOString());
+        try {if (result.deleteAfter) sessionStorage.setItem('account-deletion-notice', new Date(result.deleteAfter).toISOString());} catch { /* The server deadline remains authoritative when browser storage is disabled. */ }
         notifySessionChange(); location.replace('/'); return;
       }
       setAction(null); setPassword(''); setConfirmed(false);
@@ -29,7 +29,7 @@ export default function AccountControls({isOwner, role, method, refresh}: Props)
   }
   return <section className="card"><h3>账号与权限</h3>
     <p className="muted">申请注销后立即退出全部设备。30天内重新登录会自动取消注销；30天届满后不能恢复，系统会自动清理账号。</p>
-    <p className="hint">清理登录账号、密码、个人档案和与你关联的站内照片，取消未来报名。历史比赛与费用以“已注销球友”保留。其他人的文字、已导出的副本及备份需联系运营者处理。<a href="/privacy">查看隐私说明</a></p>
+    <p className="hint">清理登录账号、密码、个人档案、须知确认、羽币与兑换记录和与你关联的站内照片，取消未来报名。历史比赛与费用以“已注销球友”保留。其他人的文字、已导出的副本及备份需联系运营者处理。<a href="/privacy">查看隐私说明</a></p>
     {isOwner ? <p className="hint">群主账号有固定最高权限。注销或放弃权限前需要先安排群组所有权交接。</p> : <div className="actions">
       {role === 'admin' && <button className="secondary" onClick={() => setAction('relinquishAdmin')}>放弃管理员权限</button>}
       <button className="secondary" onClick={() => setAction('requestDeletion')}>注销我的账号</button>

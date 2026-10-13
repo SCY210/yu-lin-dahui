@@ -36,6 +36,13 @@ export function eraseAccount(s: State, accountId: string, now: number) {
       initialRating: player.initialRating, rating: player.rating, ratedGames: player.ratedGames, ratingReason: ''});
   }
   s.accounts = s.accounts.filter(a => a.id !== accountId);
+  s.accountNoticeReceipts = s.accountNoticeReceipts.filter(r => r.accountId !== accountId && r.playerId !== oldPlayerId);
+  const ownOrderIds = new Set(s.treasureOrders.filter(o => o.accountId === accountId || o.playerId === oldPlayerId).map(o => o.id));
+  s.treasureOrders = s.treasureOrders.filter(o => !ownOrderIds.has(o.id));
+  s.treasureLedger = s.treasureLedger.filter(l => l.playerId !== oldPlayerId && (!l.orderId || !ownOrderIds.has(l.orderId)));
+  for (const row of s.treasureLedger) if (row.actor === accountId) {row.actor = null; row.reason = ''; row.requestId = crypto.randomUUID();}
+  for (const row of s.treasureOrders) if (row.handledBy === accountId) delete row.handledBy;
+  if (s.settings.feePayees) s.settings.feePayees = s.settings.feePayees.filter(p => p.createdBy !== accountId);
   s.tagVotes = s.tagVotes.filter(v => v.voterId !== accountId && v.playerId !== oldPlayerId);
   s.awardVotes = s.awardVotes.filter(v => v.voterId !== accountId && v.playerId !== oldPlayerId);
   s.challenges = s.challenges.filter(v => v.challengerId !== oldPlayerId && v.targetId !== oldPlayerId);
@@ -65,6 +72,10 @@ export function eraseAccount(s: State, accountId: string, now: number) {
         if ('note' in row) row.note = '';
         if ('reason' in row) row.reason = '';
         if ('bookingSignups' in row) row.bookingSignups?.forEach(b => {b.note = ''});
+        if ('cancelReason' in row) row.cancelReason = '';
+        if ('courtExempt' in row) row.courtExempt.reason = '';
+        if ('ballExempt' in row) row.ballExempt.reason = '';
+        if ('noticeAcknowledgements' in row) row.noticeAcknowledgements = [];
       }
     }
     (s[key] as unknown[]) = s[key].map(replace);

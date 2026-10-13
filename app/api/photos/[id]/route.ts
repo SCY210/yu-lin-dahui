@@ -46,6 +46,7 @@ export async function POST(req:Request,context:{params:Promise<{id:string}>}){
   const {id}=await context.params;
   const photoId=z.string().min(1).max(100).parse(id);
   const body=z.object({action:z.literal('delete'),requestId:z.string().uuid(),revision:z.number().int().nonnegative()}).parse(await readJsonBody(req));
+  const state=await load(),account=state.accounts.find(a=>a.id===user.userId);if(!account)return Response.json({error:'账号不可用'},{status:403});
   const result=await deleteStoredPhoto({userId:user.userId,photoId,requestId:body.requestId,revision:body.revision},{load,save,committed,deleteObject:key=>env.BUCKET!.delete(key)});
   return Response.json(result,{headers:{'Cache-Control':'no-store'}});
  }catch(error){return writeErrorResponse(error)}finally{await releaseRejectedWriteBody(req)}

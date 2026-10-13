@@ -20,6 +20,9 @@ export const challenges=sqliteTable('challenges',{id:text('id').primaryKey(),pay
 export const tagVotes=sqliteTable('tagVotes',{id:text('id').primaryKey(),payload:payload()});
 export const awardVotes=sqliteTable('awardVotes',{id:text('id').primaryKey(),payload:payload()});
 export const photos=sqliteTable('photos',{id:text('id').primaryKey(),payload:payload()});
+export const treasureProducts=sqliteTable('treasureProducts',{id:text('id').primaryKey(),payload:payload()});
+export const treasureOrders=sqliteTable('treasureOrders',{id:text('id').primaryKey(),playerId:text('player_id').notNull().references(()=>players.id),productId:text('product_id').notNull().references(()=>treasureProducts.id),accountId:text('account_id').notNull().references(()=>accounts.id),requestId:text('request_id').notNull(),payload:payload()},t=>[uniqueIndex('treasure_orders_account_request').on(t.accountId,t.requestId),index('treasure_orders_player').on(t.playerId)]);
+export const treasureLedger=sqliteTable('treasureLedger',{id:text('id').primaryKey(),playerId:text('player_id').notNull().references(()=>players.id),actor:text('actor').references(()=>accounts.id,{onDelete:'set null'}),requestId:text('request_id').notNull(),payload:payload()},t=>[uniqueIndex('treasure_ledger_actor_request').on(t.actor,t.requestId),index('treasure_ledger_player').on(t.playerId)]);
 export const passwordCredentials=sqliteTable('password_credentials',{id:text('id').primaryKey().references(()=>accounts.id),username:text('username').notNull().unique(),salt:text('salt').notNull(),hash:text('hash').notNull(),created:integer('created').notNull(),usernameChangedAt:integer('username_changed_at')});
 export const authSessions=sqliteTable('auth_sessions',{id:text('id').primaryKey(),userId:text('user_id').notNull().references(()=>accounts.id),expires:integer('expires').notNull()});
 export const authRateLimits=sqliteTable('auth_rate_limits',{id:text('id').primaryKey(),count:integer('count').notNull(),expires:integer('expires').notNull()},table=>[index('auth_rate_limits_expires').on(table.expires)]);
@@ -34,3 +37,6 @@ export const trialCredentialArchive=sqliteTable('trial_credential_archive',{id:t
 export const accountDeletions=sqliteTable('account_deletions',{accountId:text('account_id').primaryKey().references(()=>accounts.id,{onDelete:'cascade'}),requestedAt:integer('requested_at').notNull(),deleteAfter:integer('delete_after').notNull()},t=>[index('account_deletions_due').on(t.deleteAfter)]);
 export const erasedIdentities=sqliteTable('erased_identities',{id:text('id').primaryKey()});
 export const accountErasureObjects=sqliteTable('account_erasure_objects',{storageKey:text('storage_key').primaryKey()});
+
+// Append-only acknowledgement evidence; self-service erasure removes own receipts.
+export const accountNoticeReceipts=sqliteTable('accountNoticeReceipts',{id:text('id').primaryKey(),accountId:text('account_id').notNull(),noticeVersion:text('notice_version').notNull(),contentHash:text('content_hash').notNull(),payload:payload()},t=>[uniqueIndex('account_notice_version_hash').on(t.accountId,t.noticeVersion,t.contentHash)]);

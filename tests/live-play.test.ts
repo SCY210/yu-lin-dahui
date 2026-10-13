@@ -123,3 +123,28 @@ test('未来活动不启动且不留下部分配置，既有完成结果保留',
  const {s,e,owner}=fixture();e.start=now+60000;const before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'liveStart',{eventId:e.id},now),/活动进行/);assert.deepEqual(s,before);
 });
+
+const participants=(m:{a:string[];b:string[]})=>new Set([...m.a,...m.b]);
+test('two courts with staggered finishes: the waiting four replace the just-finished four even at equal counts',async()=>{
+ const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const [first,second]=[...active(s)];const waiting=participants(second);
+ await score(s,second.id,now+60000);
+ await score(s,first.id,now+90000);
+ assert.deepEqual(participants(active(s).find(m=>m.courtId===first.courtId)!),waiting);
+});
+for(const fixed of [false,true])test(`bench priority beats smaller game counts; fixed partners: ${fixed}`,async()=>{
+ const {s,e,owner}=fixture(12,2);
+ if(fixed)e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:Array.from({length:6},(_,i)=>['p'+String(i*2).padStart(2,'0'),'p'+String(i*2+1).padStart(2,'0')])};
+ const bench=['p08','p09','p10','p11'];
+ for(let i=0;i<2;i++)s.matches.push({id:'past'+i,eventId:e.id,roundId:'past-round'+i,courtId:'court1',a:bench.slice(0,2),b:bench.slice(2),start:now-(4-i)*60000,end:now-(3-i)*60000,status:'complete',scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:owner.id,games:[{a:21,b:19}]});
+ await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s).find(m=>m.courtId==='court0')!;
+ await score(s,first.id,now+60000);
+ assert.deepEqual(participants(active(s).find(m=>m.courtId==='court0')!),new Set(bench));
+ if(fixed)assert.ok([active(s)[0].a,active(s)[0].b].every(team=>e.pointsChoice!.teams!.some(t=>t.every(id=>team.includes(id)))));
+});
+test('two waiting players get both places before willing just-finished players fill the other two',async()=>{
+ const {s,e,owner}=fixture(10,2);await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0];
+ const playingIds=new Set(active(s).flatMap(m=>[...m.a,...m.b]));const waiting=s.players.filter(p=>!playingIds.has(p.id)).map(p=>p.id);
+ await score(s,first.id,now+60000);const next=active(s).find(m=>m.courtId===first.courtId)!;
+ assert.ok(waiting.every(id=>participants(next).has(id)));assert.equal([...participants(next)].filter(id=>participants(first).has(id)).length,2);
+});

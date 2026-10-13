@@ -1,79 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "25fb6208-340f-49c0-a042-189737842d92",
+  "id": "2be23635-197e-4f35-bd85-784bee151ba9",
   "prevId": "e8625e44-db8c-414f-87b2-240bdb6f5f30",
   "tables": {
-    "account_deletions": {
-      "name": "account_deletions",
-      "columns": {
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "requested_at": {
-          "name": "requested_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "delete_after": {
-          "name": "delete_after",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "account_deletions_due": {
-          "name": "account_deletions_due",
-          "columns": [
-            "delete_after"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "account_deletions_account_id_accounts_id_fk": {
-          "name": "account_deletions_account_id_accounts_id_fk",
-          "tableFrom": "account_deletions",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "account_erasure_objects": {
-      "name": "account_erasure_objects",
-      "columns": {
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "accounts": {
       "name": "accounts",
       "columns": {
@@ -465,23 +395,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "erased_identities": {
-      "name": "erased_identities",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -1381,6 +1294,226 @@
     },
     "tagVotes": {
       "name": "tagVotes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "treasureLedger": {
+      "name": "treasureLedger",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "treasure_ledger_actor_request": {
+          "name": "treasure_ledger_actor_request",
+          "columns": [
+            "actor",
+            "request_id"
+          ],
+          "isUnique": true
+        },
+        "treasure_ledger_player": {
+          "name": "treasure_ledger_player",
+          "columns": [
+            "player_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "treasureLedger_player_id_players_id_fk": {
+          "name": "treasureLedger_player_id_players_id_fk",
+          "tableFrom": "treasureLedger",
+          "tableTo": "players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "treasureLedger_actor_accounts_id_fk": {
+          "name": "treasureLedger_actor_accounts_id_fk",
+          "tableFrom": "treasureLedger",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "actor"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "treasureOrders": {
+      "name": "treasureOrders",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "treasure_orders_account_request": {
+          "name": "treasure_orders_account_request",
+          "columns": [
+            "account_id",
+            "request_id"
+          ],
+          "isUnique": true
+        },
+        "treasure_orders_player": {
+          "name": "treasure_orders_player",
+          "columns": [
+            "player_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "treasureOrders_player_id_players_id_fk": {
+          "name": "treasureOrders_player_id_players_id_fk",
+          "tableFrom": "treasureOrders",
+          "tableTo": "players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "treasureOrders_product_id_treasureProducts_id_fk": {
+          "name": "treasureOrders_product_id_treasureProducts_id_fk",
+          "tableFrom": "treasureOrders",
+          "tableTo": "treasureProducts",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "treasureOrders_account_id_accounts_id_fk": {
+          "name": "treasureOrders_account_id_accounts_id_fk",
+          "tableFrom": "treasureOrders",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "treasureProducts": {
+      "name": "treasureProducts",
       "columns": {
         "id": {
           "name": "id",

@@ -4,6 +4,7 @@ import {readFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 
 mkdirSync('.test-output',{recursive:true});
 const output='.test-output/photo-rights-route.mjs';
@@ -29,6 +30,7 @@ function upload(kind,values){
  return POST(new Request(origin+'/api/photos',{method:'POST',headers:{Origin:origin},body:form}));
 }
 try{
+ await seedAccountNoticeFixture(fixture.state);
  for(const kind of ['avatar','racket','photo']){
   for(const values of [[],['false'],['true','false']]){
    const before=structuredClone(fixture.state),writes=fixture.writes,reserved=fixture.reserved,saved=fixture.saved;

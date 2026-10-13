@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useId,useRef,useState,type CSSProperties,type RefObject,type SVGProps} from 'react';
-import {realms} from '@/lib/domain/realm-rating';
+import {realmPolicy, realms} from '@/lib/domain/realm-rating';
 import './realm-badge.css';
 
 export interface RankInfo {
@@ -16,13 +16,15 @@ export interface RankInfo {
   k: number;
 }
 
-/** Mineral pigments chosen to sit on rice paper, lavender and pink surfaces alike; 化神 is ink and gold. */
+/** Mineral pigments chosen to sit on rice paper, lavender and pink surfaces alike; 化神 is ink and gold,
+ * 炼虚 deep void indigo edged in moonlit silver. */
 export const RANKS: RankInfo[] = [
   {n: '炼气', p: 'LIÀN QÌ', c: '#5b7684', l: '#a9bcc4', d: '#34474f', r: '#34474f', t: '一缕灵气入体', k: 1},
   {n: '筑基', p: 'ZHÙ JĪ', c: '#3c8564', l: '#93ccac', d: '#24563f', r: '#24563f', t: '层层夯实道基', k: 2},
   {n: '金丹', p: 'JĪN DĀN', c: '#b9862c', l: '#f1d28a', d: '#7d5314', r: '#7d5314', t: '灵力凝结成丹', k: 3},
   {n: '元婴', p: 'YUÁN YĪNG', c: '#7558a6', l: '#bfaadf', d: '#4a3473', r: '#4a3473', t: '丹碎婴生，神游', k: 4},
-  {n: '化神', p: 'HUÀ SHÉN', c: '#45423b', l: '#9a9484', d: '#16150f', r: '#d6ae5c', t: '神念通天，睁眼开天', k: 5}
+  {n: '化神', p: 'HUÀ SHÉN', c: '#45423b', l: '#9a9484', d: '#16150f', r: '#d6ae5c', t: '神念通天，睁眼开天', k: 5},
+  {n: '炼虚', p: 'LIÀN XŪ', c: '#2f4a6d', l: '#9fb8d6', d: '#0c1626', r: '#e3ecf7', t: '炼神还虚，万象归空', k: 6}
 ];
 
 export function getRankByRealm(realm: string): {rank: RankInfo; level: number} {
@@ -54,19 +56,27 @@ function Seal({level, scale = 1, ...paint}: {level: number; scale?: number} & Se
   if (level === 1) return <polygon points={polygon(6, 79 * scale, -90)} {...paint} />;
   if (level === 2) return <polygon points={star(12, 80 * scale, 69 * scale)} {...paint} />;
   if (level === 3) return <path d={lotus(scale)} {...paint} />;
-  return <circle cx="100" cy="100" r={f(74 * scale)} {...paint} />;
+  if (level === 4) return <circle cx="100" cy="100" r={f(74 * scale)} {...paint} />;
+  return <path d={voidRing(scale)} fillRule="evenodd" {...paint} />;
+}
+
+/** 炼虚's seal is a ring around an open void: the centre is emptied, not filled. */
+function voidRing(scale: number) {
+  const outer = f(78 * scale), inner = f(34 + (1 - scale) * 40);
+  const circle = (r: number) => `M${100 - r} 100 A${r} ${r} 0 1 0 ${100 + r} 100 A${r} ${r} 0 1 0 ${100 - r} 100Z`;
+  return circle(outer) + ' ' + circle(inner);
 }
 
 /** Orbit ring with one node per realm level: the tier count stays readable at a glance.
- * It rests at 炼气 and turns faster with every realm; 化神 nodes are gold. */
+ * It rests at 炼气 and turns faster with every realm; 化神 nodes are gold, 炼虚 nodes moon-silver beads. */
 function Orbit({level, rank}: {level: number; rank: RankInfo}) {
   return (
     <>
-      <circle cx="100" cy="100" r="93" fill="none" stroke={level === 4 ? rank.r : rank.c} strokeOpacity={level === 4 ? 0.7 : 0.32} strokeWidth="2.5" />
+      <circle cx="100" cy="100" r="93" fill="none" stroke={level === 5 ? rank.l : level === 4 ? rank.r : rank.c} strokeOpacity={level >= 4 ? 0.7 : 0.32} strokeWidth="2.5" />
       <g className="rb-o rb-orbit">
         {Array.from({length: rank.k}, (_, i) => {
           const [cx, cy] = polar(93, -90 + i * 360 / rank.k);
-          return <circle key={i} cx={cx} cy={cy} r="7.5" fill={level === 4 ? rank.r : rank.c} stroke={PAPER} strokeWidth="3" />;
+          return <circle key={i} cx={cx} cy={cy} r="7.5" fill={level >= 4 ? rank.r : rank.c} stroke={level === 5 ? rank.c : PAPER} strokeWidth="3" />;
         })}
       </g>
     </>
@@ -80,6 +90,7 @@ function Orbit({level, rank}: {level: number; rank: RankInfo}) {
  * 2 · 金丹: 缓转丹环 + 呼吸金丹
  * 3 · 元婴: 莲台中的元婴法相
  * 4 · 化神: 万丈神光 + 天眼 + 雷弧
+ * 5 · 炼虚: 虚空之眼里一点道种，星辰绕环流转，彗光扫过
  */
 function Core({level, rank}: {level: number; rank: RankInfo}) {
   if (level === 0) {
@@ -131,6 +142,39 @@ function Core({level, rank}: {level: number; rank: RankInfo}) {
     );
   }
 
+  if (level === 5) {
+    return (
+      <>
+        <g className="rb-o rb-void-spikes">
+          {Array.from({length: 16}, (_, i) => {
+            const angle = -90 + i * 22.5, long = i % 2 === 0;
+            const [x1, y1] = polar(81, angle), [x2, y2] = polar(long ? 97 : 89, angle);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={rank.l} strokeWidth={long ? 3.5 : 2.5} strokeLinecap="round" className="rb-ray" style={{'--rb-delay': `${(i % 4) * 0.45}s`} as CSSProperties} />;
+          })}
+        </g>
+        <circle cx="100" cy="100" r="33" fill="none" stroke={rank.r} strokeWidth="4" className="rb-o rb-void-pulse" />
+        <circle cx="100" cy="100" r="33" fill={rank.d} className="rb-void-core" />
+        <circle cx="100" cy="100" r="33" fill="none" stroke={rank.r} strokeWidth="3" />
+        <circle cx="100" cy="100" r="25" fill="none" stroke={rank.l} strokeOpacity="0.5" strokeWidth="1.5" strokeDasharray="2 5" strokeLinecap="round" className="rb-o rb-spinr" />
+        {VOID_DUST.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={rank.l} className="rb-twinkle" style={{'--rb-delay': `${i * 0.7}s`} as CSSProperties} />)}
+        <g className="rb-breathe">
+          <path d="M100 86 L103 97 L114 100 L103 103 L100 114 L97 103 L86 100 L97 97Z" fill={PAPER} />
+          <circle cx="100" cy="100" r="4" fill={rank.r} className="rb-pl" />
+        </g>
+        <g className="rb-o rb-void-stars">
+          {Array.from({length: 9}, (_, i) => {
+            const [x, y] = polar(56, -90 + i * 40), s = i % 3 === 0 ? 6 : 4;
+            return <path key={i} d={`M${x} ${f(y - s)} L${f(x + s * 0.3)} ${f(y - s * 0.3)} L${f(x + s)} ${y} L${f(x + s * 0.3)} ${f(y + s * 0.3)} L${x} ${f(y + s)} L${f(x - s * 0.3)} ${f(y + s * 0.3)} L${f(x - s)} ${y} L${f(x - s * 0.3)} ${f(y - s * 0.3)}Z`} fill={PAPER} fillOpacity={i % 3 === 0 ? 1 : 0.7} />;
+          })}
+        </g>
+        <g className="rb-o rb-comet">
+          <path d={`M${polar(56, -90).join(' ')} A56 56 0 0 1 ${polar(56, -20).join(' ')}`} fill="none" stroke={PAPER} strokeOpacity="0.85" strokeWidth="5" strokeLinecap="round" pathLength={1} strokeDasharray="0.02 0.06 0.05 0.05 0.82 1" />
+          <circle cx={polar(56, -20)[0]} cy={polar(56, -20)[1]} r="5.5" fill={PAPER} />
+        </g>
+      </>
+    );
+  }
+
   return (
     <>
       <g className="rb-o rb-rays">
@@ -154,6 +198,9 @@ function Core({level, rank}: {level: number; rank: RankInfo}) {
   );
 }
 
+/** Faint specks of starlight inside 炼虚's void. */
+const VOID_DUST = [[88, 84, 1.6], [116, 90, 1.2], [84, 112, 1.2], [112, 116, 1.8], [104, 78, 1]];
+
 /** Short lightning arcs that crackle on the 化神 orbit. */
 const ARCS = ['M34 54 L24 46 L31 43 L19 31', 'M168 106 L182 102 L177 95 L193 89', 'M94 172 L101 183 L94 187 L102 198'];
 /** Duration and delay per arc, so the crackle never falls into a regular beat. */
@@ -172,15 +219,15 @@ export function RealmInsigniaSvg({level, rank}: {level: number; rank: RankInfo})
         </linearGradient>
         {level >= 2 && (
           <radialGradient id={glow}>
-            <stop offset="0.6" stopColor={level === 4 ? rank.r : rank.c} stopOpacity="0.55" />
-            <stop offset="1" stopColor={level === 4 ? rank.r : rank.c} stopOpacity="0" />
+            <stop offset="0.6" stopColor={level >= 4 ? rank.r : rank.c} stopOpacity="0.55" />
+            <stop offset="1" stopColor={level >= 4 ? rank.r : rank.c} stopOpacity="0" />
           </radialGradient>
         )}
       </defs>
       {level >= 2 && <circle cx="100" cy="100" r="100" fill={`url(#${glow})`} className="rb-glow" />}
       <Orbit level={level} rank={rank} />
       <g className={level === 2 ? 'rb-o rb-sun' : level === 3 ? 'rb-o rb-lotus' : undefined}>
-        <Seal level={level} fill={`url(#${gradient})`} stroke={rank.r} strokeWidth={level === 4 ? 5 : 4} strokeLinejoin="round" />
+        <Seal level={level} fill={`url(#${gradient})`} stroke={rank.r} strokeWidth={level >= 4 ? 5 : 4} strokeLinejoin="round" />
         <Seal level={level} fill="none" scale={0.86} stroke={PAPER} strokeOpacity="0.45" strokeWidth="2.5" strokeLinejoin="round" />
       </g>
       <Core level={level} rank={rank} />
@@ -228,7 +275,7 @@ function useOnScreenMotion(ref: RefObject<Element | null>) {
   return moving;
 }
 
-const moteCount = [0, 0, 2, 4, 0];
+const moteCount = [0, 0, 2, 4, 0, 4];
 const dots = (count: number) => Array.from({length: count}, (_, i) => <i key={i} />);
 
 /** 化神's storm: drifting clouds inside the tag, two lightning bolts and the light they cast. */
@@ -249,10 +296,84 @@ function Storm() {
   );
 }
 
+/** 炼虚's sky, grander than 化神's storm by design: aurora clouds in violet, cyan and rose, cosmic dust swirling
+ * outside the edges, rifts that tear the void open and light the sky, a shockwave from the seal, shooting stars
+ * and twinkling stars, with light running round the border. */
+function VoidSky() {
+  return (
+    <>
+      <span className="rb-galaxy" aria-hidden="true">
+      <span className="rb-aurora">{dots(4)}</span>
+      {dots(7)}
+      <s className="rb-star rb-star-a" /><s className="rb-star rb-star-b" /><s className="rb-star rb-star-c" /><s className="rb-star rb-star-d" /><s className="rb-star rb-star-e" />
+      <b className="rb-meteor rb-meteor-a" /><b className="rb-meteor rb-meteor-b" />
+      <u className="rb-shock" /><u className="rb-shock rb-shock-late" />
+      <em className="rb-void-flash" />
+      <em className="rb-rift-flash" />
+      <svg className="rb-rifts" viewBox="0 0 100 30" preserveAspectRatio="none">
+        <path className="rb-rift rb-rift-a" d="M70 -2 L66 7 L71 11 L64 18 L69 22 L62 32 M71 11 L78 9 M64 18 L58 21" />
+        <path className="rb-rift rb-rift-b" d="M40 -2 L44 6 L39 12 L45 19 L41 32" />
+      </svg>
+      </span>
+      <span className="rb-cosmos" aria-hidden="true">{dots(6)}</span>
+    </>
+  );
+}
+
+/** Neutral ink for the placement chip: no realm pigment until the realm is known. */
+const PLACEMENT: Pick<RankInfo, 'c' | 'l' | 'd' | 'r'> = {c: '#8a8174', l: '#ddd5c5', d: '#4f4a42', r: '#6d665b'};
+
+/** An uncarved seal: a dashed outline that slowly turns, one bead per placement game (filled once
+ * settled) and the next bead pulsing; the centre breathes. */
+export function PlacementSealSvg({games, total}: {games: number; total: number}) {
+  return (
+    <svg viewBox="0 0 200 200" className="rb-svg" aria-hidden="true">
+      <circle cx="100" cy="100" r="88" fill={PAPER} stroke={PLACEMENT.c} strokeOpacity="0.18" strokeWidth="5" />
+      <circle cx="100" cy="100" r="88" fill="none" stroke={PLACEMENT.r} strokeWidth="5" strokeDasharray="15 11" strokeLinecap="round" className="rb-o rb-trace" />
+      {Array.from({length: total}, (_, i) => {
+        const [cx, cy] = polar(60, -90 + i * 360 / total), done = i < games;
+        return <circle key={i} cx={cx} cy={cy} r="11" fill={done ? PLACEMENT.r : PAPER} stroke={PLACEMENT.r} strokeOpacity={done ? 1 : 0.5} strokeWidth="4" className={i === games ? 'rb-pl' : undefined} />;
+      })}
+      <g className="rb-breathe">
+        <circle cx="100" cy="100" r="22" fill={PLACEMENT.l} />
+        <circle cx="100" cy="100" r="9" fill={PLACEMENT.c} />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Shown instead of a realm while a player has fewer than placementGames settled rated games:
+ * a plain paper tag with the uncarved seal, "定级中" and the settled count.
+ */
+export function PlacementBadge({games, total = realmPolicy.placementGames, className = ''}: {games?: number; total?: number; className?: string}) {
+  const badge = useRef<HTMLSpanElement>(null);
+  const moving = useOnScreenMotion(badge);
+  const done = Math.max(0, Math.min(total, Math.floor(games ?? 0)));
+  return (
+    <span
+      ref={badge}
+      data-motion={moving ? 'running' : 'paused'}
+      className={`realm-badge realm-badge-placement${className ? ' ' + className : ''}`}
+      style={{'--rb-c': PLACEMENT.c, '--rb-l': PLACEMENT.l, '--rb-d': PLACEMENT.d, '--rb-r': PLACEMENT.r} as CSSProperties}
+      title={`定级中：已结算 ${done}/${total} 个计分小局，满 ${total} 局后显示境界`}
+    >
+      <span className="rb-insignia-wrap" aria-hidden="true">
+        <PlacementSealSvg games={done} total={total} />
+      </span>
+      <span className="rb-txt">
+        <strong className="rb-name">定级中</strong>
+        <span className="rb-stage">· {done}/{total} 局</span>
+      </span>
+    </span>
+  );
+}
+
 /**
  * Animated realm badge: a pigment seal on a paper tag that takes its surface from the active theme.
  * Every realm moves, and each realm adds splendour: 金丹 a gold-leaf tag with embers and a warm glowing
- * name; 元婴 a starlit tag, spirit ripples and motes; 化神 a thundercloud sky with drifting mist and lightning.
+ * name; 元婴 a starlit tag, spirit ripples and motes; 化神 a thundercloud sky with drifting mist and lightning;
+ * 炼虚 a starry void whose specks of light drift into the seal.
  */
 export default function RealmBadge({realm, stage, className = ''}: {realm: string; stage?: string; className?: string}) {
   const {rank, level} = getRankByRealm(realm);
@@ -267,6 +388,7 @@ export default function RealmBadge({realm, stage, className = ''}: {realm: strin
     >
       {(level === 2 || level === 3) && <span className="rb-sheen" aria-hidden="true" />}
       {level === 4 && <Storm />}
+      {level === 5 && <VoidSky />}
       <span className="rb-insignia-wrap" aria-hidden="true">
         {level === 3 && <span className="rb-ripple" />}
         <RealmInsigniaSvg level={level} rank={rank} />

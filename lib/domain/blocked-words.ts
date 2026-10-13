@@ -26,7 +26,7 @@ export function blockedWordMasker(words:readonly string[]=[]){
  };
 }
 
-const contentKeys=new Set(['name','title','note','caption','style','motto','equipment','racket','strings','tension','reason','ratingReason','venue','address']);
+const contentKeys=new Set(['name','actorName','title','note','caption','style','motto','equipment','racket','strings','tension','reason','ratingReason','venue','address','description','productName']);
 const structuralKeys=new Set(['auth','loginAccounts','accounts','me','blockedWords','words']);
 /** Presentation only: keep identity, credentials, navigation links and historical facts intact. */
 export function maskClubContent<T>(value:T,words:readonly string[]=[]):T{
@@ -53,9 +53,10 @@ export function restoreMaskedEdits(s:State,a:Account,action:string,input:unknown
  if(action==='register')original=s.registrations.find(r=>r.eventId===p.eventId&&r.playerId===p.playerId) as unknown as Record<string,unknown>;
  if(action==='courtRegister'){const b=s.bookings.find(b=>b.id===p.bookingId);original=s.registrations.find(r=>r.eventId===b?.eventId&&r.playerId===p.playerId)?.bookingSignups?.find(row=>row.bookingId===b?.id) as unknown as Record<string,unknown>}
  if(action==='settings')original=s.settings as unknown as Record<string,unknown>;
+ if(action==='treasureProduct')original=s.treasureProducts.find(product=>product.id===p.id) as unknown as Record<string,unknown>;
  if(!original)return input;
  const mask=blockedWordMasker(s.settings.blockedWords),next={...p};
- const fields=action==='booking'?['venue','address']:['name','title','note','venue','address','style','motto','equipment','racket','strings','tension'];
+ const fields=action==='booking'?['venue','address']:['name','title','note','venue','address','style','motto','equipment','racket','strings','tension','description'];
  for(const field of fields){const raw=original[field];if(typeof raw==='string'&&next[field]===mask(raw))next[field]=raw}
  return next;
 }

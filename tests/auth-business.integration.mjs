@@ -1,3 +1,5 @@
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
+import {acceptedActivityNotice} from './helpers/activity-notice.mjs';
 import assert from 'node:assert/strict';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -45,7 +47,7 @@ async function login(id) {
 try {
   const state = api.emptyState();
   const previous = structuredClone(state);
-  state.settings = { ...state.settings, initialized: true, ownerAccountId: 'owner', progressionVersion: 'weekly-v2', realmVersion: 'elo-v1', rankingVersion: 'signed-v1', scoringPolicy: 'all-ranked-v1' };
+  state.settings = { ...state.settings, initialized: true, ownerAccountId: 'owner', progressionVersion: 'weekly-v2', realmVersion: 'elo-v1', rankingVersion: 'signed-v1', scoringPolicy: 'all-ranked-v1', strengthVersion: 'realm-elo-v2' };
   for (const id of ['owner', 'a', 'b']) {
     state.accounts.push({ id, email: '', playerId: `player-${id}`, role: id === 'owner' ? 'admin' : 'member' });
     state.players.push({ id: `player-${id}`, ownerId: id, name: id, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '' });
@@ -54,7 +56,7 @@ try {
     const credential = api.makePassword(password);
     return database.db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(id, id, credential.salt, credential.hash, Date.now());
   });
-  await api.save(state, 'fixture-seed', previous, extra);
+  await seedAccountNoticeFixture(state);await api.save(state, 'fixture-seed', previous, extra);
 
   for (const input of [null, [], 'invalid', { action: 'unknown' }]) assert.equal((await auth(input)).status, 400);
   assert.equal((await auth({ action: 'login', username: 'a', password: credentials.a }, '', 'https://attacker.example')).status, 403);
@@ -69,7 +71,7 @@ try {
   let snapshot = await api.load();
   assert.equal((await command('event', { title: 'Fictional concurrency test', start, end, venue: 'fixture', address: '', capacity: 1, cancelDeadline: start, note: '', status: 'open', bookings: [{ name: 'one', start, end, pricing: 'total', cents: 1200 }] }, ownerCookie, snapshot.revision)).status, 200);
   snapshot = await api.load(); const event = snapshot.events[0];
-  const payload = playerId => ({ eventId: event.id, playerId, arrival: start, departure: end, note: '' });
+  const payload = playerId => ({ ...acceptedActivityNotice, eventId: event.id, playerId, arrival: start, departure: end, note: '' });
   const race = await Promise.all([command('register', payload('player-a'), aCookie), command('register', payload('player-b'), bCookie)]);
   assert.deepEqual(race.map(response => response.status), [200, 200]);
   snapshot = await api.load();

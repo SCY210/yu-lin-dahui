@@ -2,6 +2,8 @@ import {raw} from './store';
 import {newlyOpenedSignups,signupPushMessage,pushSubscriptionInput} from './push-contract';
 import {pushConfiguration,sendWebPush,type PushEnvironment} from './push-crypto';
 import {reminderPreferences,defaultReminderPreferences,reminderKinds,type Reminder} from './reminder-contract';
+import {emptyState} from './domain/types';
+import {unpaidFeeReminders} from './reminder-contract';
 import type {State,Event,Account,Player} from './domain/types';
 
 export function signupPushStatements(next:State,previous:State,actorId:string,requestKey:string,action:string,now=Date.now()){
@@ -44,7 +46,22 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     if(notice?.kind==='awards')relevant=relevant&&(event.status==='ended'||event.end<=Date.now());
     if(notice?.kind==='fees'){
      const latest=(await db.prepare('SELECT payload FROM settlements WHERE event_id=? ORDER BY version DESC').bind(event.id).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload)).find(b=>b.confirmed);
-     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id);
+     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id||(notice.proxyPlayerIds??[]).includes(b.playerId));
+     // Recheck paid status and proxy ownership when a delayed/retried reminder is actually sent.
+     if(relevant&&notice.due){
+      const ids=[...new Set([player.id,...(notice.proxyPlayerIds??[])])],slots=ids.map(()=>'?').join(',');
+      const parts=await Promise.all([
+       db.prepare('SELECT payload FROM payments WHERE event_id=?').bind(event.id).all<{payload:string}>(),
+       db.prepare(`SELECT payload FROM players WHERE id IN (${slots})`).bind(...ids).all<{payload:string}>(),
+       db.prepare(`SELECT payload FROM accounts WHERE player_id IN (${slots}) OR id=?`).bind(...ids,account.id).all<{payload:string}>(),
+      ]);
+      const current=emptyState();current.events=[event];current.settlements=[latest];
+      current.payments=parts[0].results.map(r=>JSON.parse(String(r.payload)));
+      current.players=parts[1].results.map(r=>JSON.parse(String(r.payload)));
+      current.accounts=parts[2].results.map(r=>JSON.parse(String(r.payload)));
+      const refreshed=unpaidFeeReminders(current,latest,'delivery',Date.now()).find(n=>n.accountIds.includes(account.id));
+      relevant=!!refreshed;if(refreshed)notice.body=refreshed.body;
+     }
     }
     if(!player.enabled||account.playerId!==player.id||!relevant||(preference.success&&!preference.data[kind])||row.createdAt<Date.now()-86400000){state='cancelled'}
     else{

@@ -1,0 +1,50 @@
+// Real scheduler and match cards with isolated fictional activity data.
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import React from 'react';
+import renderer,{act} from 'react-test-renderer';
+mkdirSync('.test-output',{recursive:true});
+writeFileSync('.test-output/player-filter-entry.ts',"export {default as Scheduling} from '../app/event-scheduling';export {default as MatchCard} from '../app/match-card';export {emptyState} from '../lib/domain/types';");
+await build({entryPoints:['.test-output/player-filter-entry.ts'],outfile:'.test-output/player-filter-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner'],loader:{'.css':'empty'},banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},plugins:[{name:'guide-shell',setup(b){b.onResolve({filter:/(?:^|\/)feature-guide$/},()=>({path:'guide',namespace:'filter-test'}));b.onLoad({filter:/.*/,namespace:'filter-test'},()=>({contents:'export default function Guide(){return null}',loader:'js'}))}}]});
+const {Scheduling,MatchCard,emptyState}=await import(pathToFileURL(resolve('.test-output/player-filter-ui.mjs')).href);
+const original={window:globalThis.window,document:globalThis.document,act:globalThis.IS_REACT_ACT_ENVIRONMENT},listeners=new Set(),surface={addEventListener:(name,fn)=>listeners.add(fn),removeEventListener:(name,fn)=>listeners.delete(fn)};
+globalThis.window=surface;globalThis.document={...surface,hidden:false};globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const now=Date.now(),data=emptyState(),e={id:'event',creatorId:'owner',title:'Fixture',start:now-3600000,end:now+3600000,venue:'Venue',address:'',capacity:12,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval',schedulingMode:'planned'};
+data.events=[e];data.me={id:'owner',playerId:'p0',role:'admin'};data.social={matchLevels:{}};
+data.players=Array.from({length:10},(_,i)=>({id:'p'+i,name:i===8?'虚构临时来宾':'Player '+i,ownerId:i?'other':'owner',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',...(i===8?{guestEventId:e.id}:{})}));
+data.registrations=data.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,status:i===9?'cancelled':'confirmed',sequence:i,arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
+data.bookings=[0,1].map(i=>({id:'court'+i,eventId:e.id,name:'Court '+i,start:e.start,end:e.end,pricing:'total',cents:1200}));
+const round=(id,index,status='published')=>({id,eventId:e.id,start:e.start+index*900000,duration:15,status,eligible:data.players.map(p=>p.id),rest:['p5','p6','p7','p8','p9'],seed:index+1,pointsSlot:index+1});
+const match=(id,r,a,b,status='published',courtId='court0')=>({id,eventId:e.id,roundId:r,courtId,a,b,status,start:['complete','playing','cancelled'].includes(status)?now-1000:null,end:status==='complete'?now:null,scoreA:status==='complete'?21:null,scoreB:status==='complete'?19:null,games:[],locked:false,monthly:true,elo:true,enteredBy:null});
+data.rounds=[round('r0',0),round('r1',1),round('old',2,'cancelled')];
+data.matches=[match('first','r0',['p0','p1'],['p2','p3']),match('second','r1',['p1','p4'],['p5','p8']),match('other-court','r1',['p0','p2'],['p3','p6'],'published','court1'),match('retired','old',['p9','p0'],['p2','p3'],'cancelled')];
+const calls=[],ctx={data,admin:true,busy:false,name:id=>data.players.find(p=>p.id===id)?.name??id,open:(...args)=>calls.push(args),send:(...args)=>calls.push(args),setDanger:value=>calls.push(value)};let ui;
+const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');
+const cards=()=>ui.root.findAllByType(MatchCard).map(n=>n.props.m.id);
+const choose=async id=>{const select=ui.root.findAllByType('select').find(s=>s.findAllByType('option').some(o=>o.props.value===''&&text(o)==='全部球友'));assert.ok(select);await act(()=>select.props.onChange({target:{value:id}}))};
+const click=async label=>{const b=ui.root.findAllByType('button').find(b=>text(b)===label);assert.ok(b,label);await act(()=>b.props.onClick())};
+const mount=async()=>{if(ui)await act(()=>ui.unmount());await act(async()=>{ui=renderer.create(React.createElement(Scheduling,{e,ctx}))})};
+const expand=async prefix=>{const d=ui.root.findAllByType('details').find(d=>text(d.findAllByType('summary')[0]).startsWith(prefix));assert.ok(d,prefix);await act(()=>d.props.onToggle({currentTarget:{open:true}}))};
+try{
+ const before=JSON.stringify(data);await mount();assert.deepEqual(cards(),['first']);
+ const values=ui.root.findAllByType('option').map(o=>o.props.value);assert.ok(values.includes('p8'));assert.ok(values.includes('p9'),'historical cancelled signup stays selectable');
+ await choose('p5');assert.deepEqual(cards(),['second'],'opponent and future round included, rest and other court excluded');assert.ok(text(ui.toJSON()).includes('第 2 轮'));assert.ok(!text(ui.toJSON()).includes('第 1 轮'));
+ assert.ok(!ui.root.findAllByType('button').some(b=>text(b)==='开始本轮'),'clock-managed start offers no filter bypass');
+ await choose('p7');assert.deepEqual(cards(),[]);assert.ok(text(ui.toJSON()).includes('暂时没有对局'));
+ await choose('p9');await expand('已撤销轮次');assert.deepEqual(cards(),['retired']);
+ await click('只看我的');assert.ok(cards().includes('first'));assert.ok(!cards().includes('second'));
+ await click('清除筛选');await expand('第 2 轮');assert.ok(cards().includes('second'));assert.ok(cards().includes('other-court'));assert.equal(JSON.stringify(data),before);assert.equal(calls.length,0,'filter never writes commands');
+ e.schedulingMode='live';e.livePlay={enabled:true,paused:false,preferences:[],completions:[],rest:[]};data.rounds=[round('r0',0,'playing'),round('r1',1,'complete')];
+ data.matches=[match('live-a','r0',['p0','p1'],['p2','p3'],'playing'),match('live-b','r0',['p4','p6'],['p5','p8'],'playing','court1'),match('past-a','r1',['p0','p4'],['p5','p8'],'complete'),match('past-other','r1',['p0','p1'],['p2','p3'],'complete')];
+ await mount();await choose('p5');assert.deepEqual(cards(),['live-b','past-a']);assert.ok(text(ui.toJSON()).includes('已完成积分赛 · 1 局'));
+ await choose('p7');assert.deepEqual(cards(),[]);assert.ok(text(ui.toJSON()).includes('暂时没有对局'));
+ const other={...e,id:'other'};data.events.push(other);await act(()=>ui.update(React.createElement(Scheduling,{e:other,ctx})));assert.equal(ui.root.findByProps({'aria-label':'对局筛选'}).findByType('select').props.value,'','activity switch clears unrelated filter');
+ // Future tournament fixtures filter by their resolved teams even before a Match exists.
+ e.tournament={phase:'groups',teams:[{id:'A',players:['p0','p1']},{id:'B',players:['p2','p3']},{id:'C',players:['p5','p8']},{id:'D',players:['p4','p6']}],groups:[['A','B','C','D']],advance:2,fixtures:[{id:'f0',stage:'group',group:0,round:1,slot:0,a:'A',b:'B'},{id:'f1',stage:'group',group:0,round:2,slot:0,a:'A',b:'C'}]};
+ data.matches=[];data.rounds=[];await mount();await choose('p5');assert.equal(ui.root.findAll(n=>typeof n.props.className==='string'&&n.props.className.startsWith('tournament-match ')).length,1);
+ await choose('p7');assert.ok(text(ui.toJSON()).includes('暂时没有已确定的对局'));
+ console.log('PASS match-player filter: both teams, future/past/live/cancelled matches, guests, retired participants, no-match/rest, original numbering/global start guard, reset and no data writes');
+}finally{if(ui)await act(()=>ui.unmount());assert.equal(listeners.size,0);Object.assign(globalThis,{window:original.window,document:original.document,IS_REACT_ACT_ENVIRONMENT:original.act})}

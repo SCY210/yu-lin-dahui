@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ClubNavigation,clubRouteUrl,homeRoute,normalizeRoute,readClubRoute,type NavigationPort} from '../lib/client/club-navigation';
+test('simulation has a distinct route and never carries real event or player IDs',()=>{const route=readClubRoute('https://club.example/?page=simulation&event=real&player=real');assert.equal(route.page,'simulation');assert.equal(route.eventId,'');assert.equal(route.playerId,'');assert.equal(clubRouteUrl('https://club.example/',route),'/?page=simulation')});
 
 test('malformed route values and browser history markers cannot become trusted navigation state',()=>{
  assert.deepEqual(normalizeRoute({page:42,eventId:{id:'private'},tab:['fees']}),homeRoute);
@@ -19,6 +20,18 @@ function browser(href='https://club.example/',state:unknown=null){
  const back=(controller=navigation)=>{port.go(-1);flush(controller)},forward=(controller=navigation)=>{port.go(1);flush(controller)};
  return {navigation,port,entries,moves,flush,back,forward,setScroll:(y:number)=>{scroll=y},get scroll(){return scroll}};
 }
+
+test('treasure shop deep links and mobile back preserve the originating page and scroll',()=>{
+ const route=readClubRoute('https://club.example/?page=treasure&event=E&player=P');
+ assert.equal(route.page,'treasure');assert.equal(route.eventId,'');assert.equal(route.playerId,'');
+ assert.equal(clubRouteUrl('https://club.example/',route),'/?page=treasure');
+ for(const source of ['home','me'] as const){
+  const b=browser();b.navigation.navigate({page:source});b.setScroll(350);
+  b.navigation.navigate({page:'treasure'});b.navigation.openDialog('exchange',()=>{});
+  b.back();assert.equal(b.navigation.route.page,'treasure');b.back();
+  assert.equal(b.navigation.route.page,source);assert.equal(b.scroll,350);
+ }
+});
 
 test('initial page only replaces the existing entry; repeated navigation does not add duplicates',()=>{
  const b=browser();assert.equal(b.entries.length,1);assert.equal(b.moves.length,0);

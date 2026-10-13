@@ -41,6 +41,7 @@ next-env.d.ts
 /.wrangler/
 # Checkout-local execution profile and tool state; never publish them.
 /.sites-runtime/
+/.private/
 /.agents/
 /.codex/
 /outputs/
@@ -51,10 +52,6 @@ next-env.d.ts
 
 # Private deployment customizations are not part of the shared repository.
 /assets/private-*/
-*aquarium*
-*AQUARIUM*
-*CAPYBARA*
-**/theme-access*
 
 # Personal editor/agent state, caches, databases and local backups.
 .vscode/

@@ -3,6 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync,mkdirSync} from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
 mkdirSync('.test-output',{recursive:true});
 const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');
 for(const file of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sqlite.exec(readFileSync('drizzle/'+file,'utf8'));
@@ -23,6 +24,7 @@ for(const [id,playerId,name,username] of [['owner','owner-player','正式群主'
 insert('INSERT INTO auth_sessions(id,user_id,expires) VALUES(?,?,?)',['trial-session',targets[0][0],Date.now()+100000]);
 insert('INSERT INTO tagVotes(id,payload) VALUES(?,?)',['trial-style-vote',JSON.stringify({id:'trial-style-vote',voterId:targets[0][0],playerId:'owner-player',tag:'网前雨刮器',at:1})]);
 globalThis.__trialUser={userId:'owner'};
+const acceptanceFixture={accounts:sqlite.prepare('SELECT payload FROM accounts').all().map(row=>JSON.parse(row.payload))};await seedAccountNoticeFixture(acceptanceFixture);for(const receipt of acceptanceFixture.accountNoticeReceipts)sqlite.prepare('INSERT INTO accountNoticeReceipts(id,account_id,notice_version,content_hash,payload) VALUES(?,?,?,?,?)').run(receipt.id,receipt.accountId,receipt.version,receipt.contentHash,JSON.stringify(receipt));
 const revision=()=>Number(sqlite.prepare('SELECT COALESCE(MAX(revision),0) AS n FROM commits').get().n);
 const post=(action,requestId=crypto.randomUUID(),revisionValue=revision(),origin='https://fixture.invalid')=>POST(new Request('https://fixture.invalid/api/trial-cleanup',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify({action,requestId,revision:revisionValue})}));
 assert.equal((await GET()).status,200);

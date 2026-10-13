@@ -7,7 +7,7 @@ export function isClubResponse(value:unknown){
  if(!isObject(value.me)||typeof value.me.id!=='string'||typeof value.me.playerId!=='string'||(value.me.role!=='admin'&&value.me.role!=='member'))return false;
  if(!isObject(value.settings)||typeof value.settings.name!=='string'||!isObject(value.settings.rules))return false;
  if(!Number.isInteger(value.revision)||typeof value.period!=='string'||!Number.isInteger(value.rankingYear))return false;
- for(const key of ['players','events','bookings','registrations','attendance','rounds','matches','costs','seasons','leaderboard','annualLeaderboard','challenges','tagVotes','awardVotes','photos','settlements','audits','accounts','drafts'])if(!Array.isArray(value[key]))return false;
+ for(const key of ['players','events','bookings','registrations','attendance','rounds','matches','costs','seasons','quarterlyLeaderboard','annualLeaderboard','challenges','tagVotes','awardVotes','photos','settlements','audits','accounts','drafts'])if(!Array.isArray(value[key]))return false;
  if(!isObject(value.social)||!isObject(value.rotationPlans))return false;
  for(const key of ['stats','funny','personality','annual'])if(!Array.isArray(value.social[key]))return false;
  for(const key of ['arenas','courtBoards','matchLevels'])if(!isObject(value.social[key]))return false;

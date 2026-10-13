@@ -1,0 +1,9 @@
+.notification-optin [data-slot="dialog-title"]{display:flex;align-items:center;gap:10px}
+.notification-optin{max-height:calc(100dvh - 32px);overflow-y:auto}
+.notification-optin-kinds{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.notification-optin-kinds li{padding:4px 10px;border-radius:999px;background:#eeebf8;color:#4b4180;font-size:13px}
+.wuxia-theme .notification-optin-kinds li{background:#efe5cf;color:#5e4a2c;border-radius:4px}
+.notification-optin-lead{margin:2px 0 0;font-size:14px;font-weight:600}
+.notification-optin-actions{align-items:center;gap:10px;flex-wrap:wrap}
+.notification-optin-actions>.primary{flex:1;min-height:48px;font-weight:700}
+.notification-optin-actions>.secondary{flex-basis:100%;min-height:44px}

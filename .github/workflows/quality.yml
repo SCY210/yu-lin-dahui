@@ -33,6 +33,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --no-fund
+      - name: Validate the private release trigger without publishing
+        run: node --test scripts/private-release-trigger.test.mjs
       - name: Protect migration history against the PR base
         if: github.event_name == 'pull_request'
         env:

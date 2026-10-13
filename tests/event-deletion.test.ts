@@ -1,3 +1,5 @@
+import {activityNoticeVersion} from '../lib/activity-notice';
+const acceptedActivityNotice={noticeAccepted:true,noticeVersion:activityNoticeVersion};
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
@@ -58,7 +60,7 @@ test('进行中的比赛阻止删除，不会修改任何状态；比赛结束�
 });
 test('删除活动后禁止开赛、报名、取消报名、投票和嵌套记录修改，包括管理员',async()=>{
  const s=fixture();s.events[0].deletedAt=0;
- const requests:[string,unknown][]=[['register',{eventId:'own',playerId:'a',arrival:at,departure:at+3600000,note:''}],['cancel',{eventId:'own',playerId:'a',reason:'取消'}],['eventStatus',{eventId:'own',status:'open'}],['start',{roundId:'own-round',eventId:'other',at,monthly:true,elo:true}],['bookingBearer',{bookingId:'own-court',eventId:'other',bearer:'subsidy',reason:'修改'}],['awardVote',{eventId:'own',playerId:'a',category:'mvp'}]];
+ const requests:[string,unknown][]=[['register',{...acceptedActivityNotice,eventId:'own',playerId:'a',arrival:at,departure:at+3600000,note:''}],['cancel',{eventId:'own',playerId:'a',reason:'取消'}],['eventStatus',{eventId:'own',status:'open'}],['start',{roundId:'own-round',eventId:'other',at,monthly:true,elo:true}],['bookingBearer',{bookingId:'own-court',eventId:'other',bearer:'subsidy',reason:'修改'}],['awardVote',{eventId:'own',playerId:'a',category:'mvp'}]];
  for(const account of [owner,admin])for(const [action,payload] of requests){const before=structuredClone(s);await assert.rejects(()=>apply(s,account,action,payload,at),/已删除/);assert.deepEqual(s,before);}
 });
 test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者及管理员开放，历史榜单和档案战绩保留',async()=>{
@@ -71,7 +73,7 @@ test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者�
  for(const key of ['bookings','registrations','attendance','rounds','matches','costs','settlements','awardVotes','drafts'] as const)assert.ok(v[key].every(r=>r.eventId!=='own'));
  assert.ok(!('own' in v.rotationPlans));assert.ok(!('own' in v.social.arenas));assert.ok(!('own-match' in v.social.matchLevels));assert.deepEqual(v.challenges,[]);
  assert.deepEqual(v.photos.map(p=>p.id).sort(),['other-photo','racket','avatar'].sort());
- assert.deepEqual(v.leaderboard,before.leaderboard);assert.deepEqual(v.annualLeaderboard,before.annualLeaderboard);assert.deepEqual(v.social.stats,before.social.stats);
+ assert.deepEqual(v.quarterlyLeaderboard,before.quarterlyLeaderboard);assert.deepEqual(v.annualLeaderboard,before.annualLeaderboard);assert.deepEqual(v.social.stats,before.social.stats);
  assert.equal(s.matches.length,2,'Projection must not persist record removal');
  await apply(s,owner,'restoreEvent',{eventId:'own',reason:'恢复'},at+3600001);const restored=projectClubState(s,owner,'2026-10',2026,at+3600000);assert.deepEqual(restored.events,before.events);assert.deepEqual(restored.matches,before.matches);assert.deepEqual(restored.deletedEvents,[]);
 });
@@ -83,7 +85,7 @@ test('删除状态零值仍有效，自动维护不修改删除活动或生成�
 test('不存在的活动与无效删除原因被拒绝，不修改原状态',async()=>{
  const s=fixture(),before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'missing',reason:'删除'},at),/不存在/);
- await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:' '},at));assert.deepEqual(s,before);
+ await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:'x'.repeat(501)},at));assert.deepEqual(s,before);
 });
 
 test('其他管理员也看不到删除列表、关联导出与审计，不能直接恢复；创建者和群主可恢复',async()=>{

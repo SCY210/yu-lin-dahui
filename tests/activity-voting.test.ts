@@ -98,8 +98,8 @@ test('每活动每账号每奖项一票，改投转移真实票数而非累加',
  const {s,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');assert.equal(s.awardVotes.filter(v=>v.playerId==='formal-b-player').length,2);
  await vote('formal-a','attended');assert.equal(s.awardVotes.length,2);assert.equal(s.awardVotes.filter(v=>v.playerId==='formal-b-player').length,1);assert.equal(s.awardVotes.filter(v=>v.playerId==='attended-player').length,1);
  await vote('formal-a','attended','mvp',undefined,now+1000);assert.equal(s.awardVotes.length,2);assert.equal(s.awardVotes.find(v=>v.voterId==='formal-a')?.at,now+1000);
- for(const category of ['defense','net','effort'] as const)await vote('formal-a','formal-b',category);
- assert.equal(s.awardVotes.filter(v=>v.voterId==='formal-a').length,4);
+ for(const category of ['defense','net','effort'] as const){const before=structuredClone(s);await assert.rejects(()=>vote('formal-a','formal-b',category));assert.deepEqual(s,before)}
+ assert.equal(s.awardVotes.filter(v=>v.voterId==='formal-a').length,1);
 });
 
 test('同一账号在两次活动的同类投票独立，不能串用另一活动候选人',async()=>{
@@ -118,29 +118,20 @@ test('空候选名单与零时长/未来自动出勤不产生虚构候选',()=>{
  assert.deepEqual(awardCandidateIds(s,e.id,now),[]);
 });
 
-test('打法标签也必须绑定已打完的活动，个人档案旧请求与提前投票被拒绝',async()=>{
- const {s,e,account}=fixture();const before=structuredClone(s);
- await assert.rejects(()=>apply(s,account('admin'),'tagVote',{playerId:'formal-a-player',tag:'防守怪',active:true},now));assert.deepEqual(s,before);
- e.end=now+3600000;e.status='live';const ongoing=structuredClone(s);
- await assert.rejects(()=>apply(s,account('admin'),'tagVote',{eventId:e.id,playerId:'formal-a-player',tag:'防守怪',active:true},now),/尚未打完/);assert.deepEqual(s,ongoing);
-});
-
-test('打法标签每活动每账号每球友每标签一票，可撤回且不能跨活动投给非参与者',async()=>{
+test('style-tag voting is closed for all actors and activity states',async()=>{
  const {s,e,account}=fixture();
- const tag=(eventId=e.id,active=true)=>apply(s,account('admin'),'tagVote',{eventId,playerId:eventId===e.id?'formal-a-player':'foreign-player',tag:'防守怪',active},now);
- await tag();await tag();assert.equal(s.tagVotes.length,1);assert.equal(s.tagVotes[0].eventId,e.id);
- await tag('other-event');assert.equal(s.tagVotes.length,2);await tag(e.id,false);assert.equal(s.tagVotes.length,1);assert.equal(s.tagVotes[0].eventId,'other-event');
- const before=structuredClone(s);await assert.rejects(()=>apply(s,account('formal-a'),'tagVote',{eventId:'other-event',playerId:'foreign-player',tag:'防守怪',active:true},now),/403/);assert.deepEqual(s,before);
+ for(const status of ['ended','live','cancelled'] as const){e.status=status;for(const id of ['formal-a','admin']){const before=structuredClone(s);await assert.rejects(()=>apply(s,account(id),'tagVote',{eventId:e.id,playerId:'formal-b-player',tag:'legacy tag',active:true},now),/MVP/);assert.deepEqual(s,before)}}
 });
-
-test('旧档案标签票数只读保留，新活动投票与撤回不会删除旧记录',async()=>{
- const {s,e,account}=fixture();s.tagVotes.push({id:'legacy-vote',voterId:'admin',playerId:'formal-a-player',tag:'防守怪',at:now-86400000});
- await apply(s,account('admin'),'tagVote',{eventId:e.id,playerId:'formal-a-player',tag:'防守怪',active:true},now);assert.equal(s.tagVotes.length,2);
- await apply(s,account('admin'),'tagVote',{eventId:e.id,playerId:'formal-a-player',tag:'防守怪',active:false},now);assert.equal(s.tagVotes.length,1);assert.equal(s.tagVotes[0].id,'legacy-vote');
+test('legacy tags and retired awards remain stored but normal projections show only MVP',async()=>{
+ const {s,e,account,vote}=fixture();s.tagVotes.push({id:'legacy-tag',voterId:'admin',playerId:'formal-a-player',tag:'legacy',at:now-1});s.awardVotes.push({id:'legacy-defense',eventId:e.id,voterId:'admin',playerId:'formal-a-player',category:'defense',at:now-1});
+ await vote('formal-a','formal-b');const view=projectClubState(s,account('formal-a'),'2026-10',2026,now);assert.deepEqual(view.tagVotes,[]);assert.equal(view.awardVotes.length,1);assert.ok(view.awardVotes.every(v=>v.category==='mvp'));assert.equal(s.tagVotes.length,1);assert.equal(s.awardVotes.length,2);
+});
+test('retired tag-vote withdrawal cannot delete historical records',async()=>{
+ const {s,e,account}=fixture();s.tagVotes.push({id:'legacy-tag',eventId:e.id,voterId:'admin',playerId:'formal-a-player',tag:'legacy',at:now-1});const before=structuredClone(s);await assert.rejects(()=>apply(s,account('admin'),'tagVote',{eventId:e.id,playerId:'formal-a-player',tag:'legacy',active:false},now),/MVP/);assert.deepEqual(s,before);
 });
 
 test('可撤回自己的本项选票，不影响其他账号、奖项或活动',async()=>{
- const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');await vote('formal-a','attended','defense');await vote('admin','foreign','mvp','other-event');
+ const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');s.awardVotes.push({id:'legacy-defense',eventId:e.id,voterId:'formal-a',playerId:'attended-player',category:'defense',at:now-1});await vote('admin','foreign','mvp','other-event');
  await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now);assert.equal(s.awardVotes.length,3);assert.ok(s.awardVotes.every(v=>!(v.eventId===e.id&&v.voterId==='formal-a'&&v.category==='mvp')));assert.ok(s.awardVotes.some(v=>v.voterId==='creator'));await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now);assert.equal(s.awardVotes.length,3);
 });
 

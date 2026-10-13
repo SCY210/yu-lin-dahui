@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Match,type Round,type Event,type Registration} from '../lib/domain/types';
-import {pendingOwnScores,createScorePromptGate,initialScoreDrafts,scoreEntryPayload,type ScoreReminderData} from '../lib/client/score-reminder';
+import {pendingOwnScores,pendingScores,createScorePromptGate,initialScoreDrafts,scoreEntryPayload,type ScoreReminderData} from '../lib/client/score-reminder';
 
 const now=Date.parse('2026-10-09T12:00:00Z');
 function fixture(){
@@ -58,4 +58,11 @@ test('blank values cannot silently become zero; new scores use server time and c
  assert.throws(()=>scoreEntryPayload(m,[{a:NaN,b:15}],1,'完成'),/实际比分/);
  const first=scoreEntryPayload(m,[{a:21,b:0}],1,'完成');assert.equal(first.games[0].b,0);assert.equal(Object.hasOwn(first,'end'),false);
  const end=now-12345,corrected=scoreEntryPayload({...m,status:'complete',end},[{a:21,b:19}],1,'修正');assert.equal(corrected.end,end);
+});
+test('anyone signed up for the activity can score another court from home, but only own games prompt by themselves',()=>{
+ const s=fixture();s.matches[0].a=['partner','proxy'];
+ assert.deepEqual(pendingScores(s,now).map(m=>m.id),['match'],'a signed-up member may score a game they are not in');
+ assert.equal(pendingOwnScores(s,now).length,0,'that game does not pop up the score form for them');
+ s.registrations=[];assert.equal(pendingScores(s,now).length,0,'members not signed up cannot score');
+ const admin={...s,me:{...s.me,role:'admin' as const}};assert.deepEqual(pendingScores(admin,now).map(m=>m.id),['match']);
 });

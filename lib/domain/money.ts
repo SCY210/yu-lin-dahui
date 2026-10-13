@@ -51,3 +51,9 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');return equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate);
 }
 
+
+/** Estimates use complete automatic signup spans; actual accounting still clips participation to now. */
+export function isPlannedFeeEstimate(e:Event,now:number){return usesAutomaticAttendance(e)&&now<e.end&&!['ended','cancelled'].includes(e.status)}
+export function calculateSettlementPreview(s:State,e:Event,now:number){
+ return calculateSettlement(s,e,isPlannedFeeEstimate(e,now)?e.end:now);
+}

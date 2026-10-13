@@ -94,6 +94,11 @@ export async function POST(req: Request) {
             h.append('Set-Cookie', cookie('yulin_signed_out', '1', req, 30 * 86400));
             return Response.json({...changed, signedOut: true}, {headers: h});
         }
+        // Managing another person's account or creating accounts requires an existing account.
+        if(action==='createAccount'||(action==='resetPassword'||action==='changeUsername')&&input.accountId!==undefined&&input.accountId!==user.userId){
+            const state=await load(),account=state.accounts.find(a=>a.id===user.userId);
+            if(!account)return denied('账号不可用');
+        }
         if (action === 'changeUsername') {
             const p = changeUsernameInput.parse(input), meta = await loginAccountMetadata(user.userId);
             await consumeRateLimit('changeUsername:' + user.userId, meta.isOwner ? 40 : 8, 15 * 60000, { message: '修改账号尝试较多，请15分钟后重试' });

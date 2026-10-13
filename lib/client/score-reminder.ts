@@ -2,17 +2,26 @@ import {canRecordScore} from '../domain/permissions';
 import type {Account,Player,State,Match} from '../domain/types';
 
 export type ScoreReminderData=Pick<State,'events'|'rounds'|'matches'|'registrations'> & {me:Account;players:Pick<Player,'id'|'enabled'>[]};
-/** Only the signed-in account's own on-court games can request score entry. */
-export function pendingOwnScores(data:ScoreReminderData,now=Date.now()):Match[]{
+/** Started, unscored games the signed-in account may score: anyone signed up for the activity, its organiser or an
+ * administrator (the server's score permission), whether or not they are on that court. */
+export function pendingScores(data:ScoreReminderData,now=Date.now()):Match[]{
  if(!data.me||!data.players.some(p=>p.id===data.me.playerId&&p.enabled))return [];
  const events=new Map(data.events.map(e=>[e.id,e])),rounds=new Map(data.rounds.map(r=>[r.id,r]));
  return data.matches.filter(m=>{
   const e=events.get(m.eventId),r=rounds.get(m.roundId);
   return m.status==='playing'&&m.start!==null&&Number.isFinite(m.start)&&m.start>=0&&m.start<=now&&
-   [...m.a,...m.b].includes(data.me.playerId)&&!!e&&!!r&&r.eventId===e.id&&r.status==='playing'&&
+   !!e&&!!r&&r.eventId===e.id&&r.status==='playing'&&
    e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status)&&canRecordScore(data,data.me,e);
  }).sort((a,b)=>b.start!-a.start!||a.id.localeCompare(b.id));
 }
+/** Only the signed-in account's own on-court games prompt for a score by themselves. */
+export function pendingOwnScores(data:ScoreReminderData,now=Date.now()):Match[]{
+ return pendingScores(data,now).filter(m=>[...m.a,...m.b].includes(data.me.playerId));
+}
+
+/** Window event asking the score reminder to open the form for one pending game (detail: match id). */
+export const scoreEntryRequest='yulin:score-entry';
+export function requestScoreEntry(matchId:string){window.dispatchEvent(new CustomEvent(scoreEntryRequest,{detail:matchId}))}
 
 /** A visit is consumed even when it has no pending games. Polling or the next
  * live assignment must not produce another popup in the middle of a game. */

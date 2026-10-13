@@ -1,0 +1,52 @@
+// Real handlers and transactional SQLite; all identities and matches are isolated fixtures.
+import assert from 'node:assert/strict';
+import {AsyncLocalStorage} from 'node:async_hooks';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {sqliteD1} from './helpers/sqlite-d1.mjs';
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
+mkdirSync('.test-output',{recursive:true});
+const fixture=globalThis.__scoreRace={env:{},actor:new AsyncLocalStorage()};
+writeFileSync('.test-output/score-race-entry.ts',"export {GET,POST} from '../app/api/club/route';export {load,save} from '../lib/store';export {emptyState,month} from '../lib/domain/types';export {loadClubState} from '../lib/club-maintenance';");
+await build({entryPoints:['.test-output/score-race-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/score-race-api.mjs',plugins:[{name:'score-race-fixture',setup(b){
+ b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'score-race'}));
+ b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'score-race'}));
+ b.onLoad({filter:/.*/,namespace:'score-race'},a=>({loader:'js',contents:a.path==='env'?'export const env=globalThis.__scoreRace.env;':'export const getAppUser=async()=>globalThis.__scoreRace.actor.getStore()??null;export const passwordEnabled=async()=>true;'}));
+}}]});
+const db=sqliteD1();fixture.env.DB=db.db;
+const api=await import(pathToFileURL(resolve('.test-output/score-race-api.mjs')).href),origin='https://club.example';
+const as=(id,task)=>fixture.actor.run({userId:id,displayName:id,method:'password',username:id},task);
+const post=(id,payload,revision,requestId=crypto.randomUUID())=>as(id,()=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'score',payload,revision,requestId,actor:id})})));
+const payload=(m,a=21,b=17,expected=m.games)=>({matchId:m.id,expectedA:[...m.a],expectedB:[...m.b],expectedGames:structuredClone(expected),a,b,games:[{a,b}],reason:'Fixture score'});
+try{
+ const s=api.emptyState(),now=Date.now();Object.assign(s.settings,{initialized:true,ownerAccountId:'admin0',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ s.accounts=Array.from({length:11},(_,i)=>({id:i<2?'admin'+i:'member'+i,email:'',role:i<2?'admin':'member',playerId:'p'+i}));
+ s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
+ const e={id:'e',creatorId:'admin0',title:'Fictional two-court scoring',start:now-3600000,end:now+3600000,venue:'Venue',address:'',capacity:10,signupDeadline:now-7200000,cancelDeadline:now-86400000,note:'',status:'live',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};
+ s.events=[e];s.bookings=[0,1].map(i=>({id:'c'+i,eventId:e.id,name:'Court '+i,start:e.start,end:e.end,pricing:'total',cents:0}));
+ s.registrations=s.players.slice(0,10).map((p,i)=>({id:'r'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
+ s.rounds=[{id:'round',eventId:e.id,start:now-60000,duration:15,status:'playing',eligible:s.players.slice(2,10).map(p=>p.id),rest:[],seed:1}];
+ s.matches=[0,1].map(i=>({id:'m'+i,eventId:e.id,roundId:'round',courtId:'c'+i,a:['p'+(2+i*4),'p'+(3+i*4)],b:['p'+(4+i*4),'p'+(5+i*4)],status:'playing',start:now-60000,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]}));
+ await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());const first=await api.loadClubState(),initial=first.matches.map(m=>payload(m));
+ const independent=await Promise.all([post('member2',initial[0],first.revision),post('member6',initial[1],first.revision)]);
+ assert.deepEqual(independent.map(r=>r.status),[200,200],'another court saving first must not reject an unchanged score snapshot');
+ let stored=await api.load();assert.equal(stored.audits.filter(a=>a.action==='score').length,2);assert.ok(stored.matches.every(m=>m.status==='complete'));
+ const matches=structuredClone(stored.matches),auditCount=stored.audits.length;
+ const duplicate=await post('member3',initial[0],first.revision);assert.equal(duplicate.status,200);
+ stored=await api.load();assert.deepEqual(stored.matches,matches);assert.equal(stored.audits.length,auditCount,'a second identical score has no second score audit');
+ const beforeDenied=structuredClone(stored);assert.equal((await post('member10',initial[0],stored.revision)).status,403);assert.deepEqual(await api.load(),beforeDenied);
+ const target=stored.matches[0],requestIds=[crypto.randomUUID(),crypto.randomUUID()],correction=payload(target,21,19);
+ const conflicting=await Promise.all([post('admin0',correction,stored.revision,requestIds[0]),post('admin1',payload(target,17,21),stored.revision,requestIds[1])]);
+ assert.deepEqual(conflicting.map(r=>r.status).sort(),[200,409]);
+ const failed=conflicting.find(r=>r.status===409);assert.match((await failed.json()).error,/刚刚录入了比分/);
+ stored=await api.load();assert.equal(stored.audits.filter(a=>a.action==='score').length,3);
+ const winner=conflicting[0].status===200?'admin0':'admin1',winningPayload=winner==='admin0'?correction:payload(target,17,21),winningKey=requestIds[winner==='admin0'?0:1];
+ const beforeRetry=structuredClone(stored);assert.equal((await post(winner,winningPayload,first.revision,winningKey)).status,200);assert.deepEqual(await api.load(),beforeRetry);
+ const rollback=structuredClone(stored),retryId=crypto.randomUUID(),retry=payload(stored.matches[0],21,18);
+ db.injectFailure(q=>q.startsWith('INSERT INTO audits'));assert.equal((await post('admin0',retry,stored.revision,retryId)).status,503);db.injectFailure(null);assert.deepEqual(await api.load(),rollback);
+ assert.equal((await post('admin0',retry,stored.revision,retryId)).status,200);
+ const view=await as('member4',async()=>{const r=await api.GET(new Request(origin+'/api/club'));assert.equal(r.status,200);return r.json()});assert.deepEqual(view.accounts,[]);assert.equal(view.matches.find(m=>m.id==='m0').enteredByPlayerId,'p0');
+ console.log('PASS concurrent score API: independent courts, same-game conflict, identical-score no-op, member permissions, immutable retry, SQL rollback and scorer projection.');
+}finally{db.close();delete globalThis.__scoreRace}

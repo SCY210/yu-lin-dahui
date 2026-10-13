@@ -35,3 +35,9 @@ Historical per-checkout API results remain local and ignored. No production prof
 ## Self-assessed level removed
 
 The self-assessed level (beginner / intermediate / advanced) is no longer shown, edited, accepted by profileDetails, or included in group data. It was display-only and never affected Elo, automatic grouping, seeding, points, or achievements. Old clients that still send level succeed and the server ignores the field. Stored legacy values stay in raw data so historical payloads are not rewritten, but are not sent to any member; only an administrator's full raw export may still contain them. No database-table migration is required.
+
+## Profile layout
+
+Profile details and equipment are expanded when a profile opens. The avatar is changed only from the button in the profile header; the duplicate control below achievements and the decorative ribbon were removed.
+
+The profile no longer shows the note about voluntary extended details; the privacy page still describes it.

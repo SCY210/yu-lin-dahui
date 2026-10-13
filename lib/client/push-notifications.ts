@@ -1,4 +1,5 @@
 import {reminderPreferences,defaultReminderPreferences,type Reminder,type ReminderPreferences} from '../reminder-contract';
+import {browserPushError} from './push-errors';
 export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;items:Reminder[];unread:number;preferences:ReminderPreferences};
 type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean};
 function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)}
@@ -23,7 +24,22 @@ export async function localPushSubscription(){
  return await (await navigator.serviceWorker.getRegistration('/'))?.pushManager?.getSubscription()??null;
 }
 export async function syncPushAccount(accountId:string){
- try{const subscription=await localPushSubscription();if(!subscription)return;const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice)await subscription.unsubscribe()}catch{ /* Retry on a later visit; never auto-enable or request permission. */ }
+ try{const subscription=await localPushSubscription();if(!subscription)return false;const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice)await subscription.unsubscribe();return !!state.enabled&&!state.resetDevice}catch{return null /* Unknown: retry on a later visit; never auto-enable or request permission. */}
+}
+export const pushStateChanged='yulin:push-changed';
+/** Call directly from a user click so the permission request retains its gesture. */
+export async function enablePush(accountId:string,publicKey:string){
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw new Error('尚未允许通知，请在系统提示中选择允许后重试。');
+ const registration=await connectPushWorker();let subscription=await registration.pushManager.getSubscription();
+ if(subscription){const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice){await subscription.unsubscribe();subscription=null}}
+ if(!subscription){
+  const applicationServerKey=vapidBytes(publicKey);
+  try{subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey})}
+  catch(error){throw browserPushError(error)}
+ }
+ await notificationRequest(accountId,'subscribe',{subscription:subscription.toJSON()});
+ window.dispatchEvent(new Event(pushStateChanged));
 }
 export function vapidBytes(key:string){return Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))}
 export async function connectPushWorker(){

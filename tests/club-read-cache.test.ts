@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {emptyState,type Event} from '../lib/domain/types';
 import {createClubReadCache,clubViewValidUntil,type ClubReadVersion} from '../lib/club-read-cache';
 import {projectClubState} from '../lib/club-view';
+import {calculateSettlement} from '../lib/domain/money';
 
 const now=Date.parse('2026-10-04T12:00:00Z'),duration=20*60000;
 function fixture(){
@@ -61,7 +62,8 @@ test('arrival, booking and live fee boundaries never return a stale unchanged vi
  assert.equal(clubViewValidUntil(s,a,e.start-1000),e.start);
  assert.equal(clubViewValidUntil(s,a,e.start),e.start);
  assert.equal(clubViewValidUntil(s,a,e.start+60000),e.start+60000);
- assert.notDeepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts);
+ assert.deepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts,'planned estimates stay stable as time passes');
+ assert.notDeepEqual(calculateSettlement(s,e,e.start+60000),calculateSettlement(s,e,e.start+120000),'actual elapsed accounting still advances');
  const at=now+1000;s.bookings[0].start=at+5000;
  assert.equal(clubViewValidUntil(s,a,at),at+5000);
  s.bookings[0].start=e.start;s.events[0].attendanceMode='manual';
@@ -85,4 +87,23 @@ test('a clock boundary changes the returned activity status without a write or r
  assert.equal(projectClubState(s,a,'2026-10',2026,e.end-1).events[0].status,'open');
  assert.equal(projectClubState(s,a,'2026-10',2026,e.end).events[0].status,'ended');
  assert.equal(s.events[0].status,'open');assert.equal(s.revision,4);
+});
+
+test('weak and list GET validators reuse an account-scoped entry with one canonical ETag',()=>{
+ const {version,identity}=fixture(),cache=createClubReadCache(),token=cache.remember(version,identity,'2026-10',2026,now+60000,now)!;
+ for(const header of ['W/'+token,'  W/'+token+'  ','"unrelated", W/'+token,token+', "unrelated"']){assert.equal(cache.match(header,version,identity,'2026-10',2026,now+1),token);assert.equal(cache.matches(header,version,identity,'2026-10',2026,now+1),true)}
+ for(const header of ['*','w/'+token,'invalid'+token,'"invented"','x'.repeat(8193)])assert.equal(cache.match(header,version,identity,'2026-10',2026,now+1),null);
+ assert.equal(cache.matches('W/'+token,version,{...identity,userId:'another-user'},'2026-10',2026,now+1),false);
+ assert.equal(cache.matches('W/'+token,{...version,revision:version.revision+1},identity,'2026-10',2026,now+1),false);
+ assert.equal(cache.matches('W/'+token,version,identity,'2026-10',2026,now+60000),false);
+});
+
+
+test('notice version and exact text hash invalidate unchanged business revision validators',()=>{
+ const {version,identity}=fixture(),cache=createClubReadCache();
+ const initial={...version,noticeScope:{version:'notice-v1',contentHash:'hash-a'}};
+ const token=cache.remember(initial,identity,'2026-10',2026,now+60000,now)!;
+ assert.equal(cache.matches(token,initial,identity,'2026-10',2026,now+1),true);
+ assert.equal(cache.matches(token,{...version,noticeScope:{version:'notice-v2',contentHash:'hash-a'}},identity,'2026-10',2026,now+1),false);
+ assert.equal(cache.matches(token,{...version,noticeScope:{version:'notice-v1',contentHash:'hash-b'}},identity,'2026-10',2026,now+1),false);
 });

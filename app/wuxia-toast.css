@@ -1,0 +1,13 @@
+/* Sonner toasts in the ink-wash theme: rice-paper slips with a mineral-pigment edge instead of the classic indigo pills. */
+html.wuxia-theme body [data-sonner-toaster][data-sonner-theme]{--normal-bg:#f9f5eb;--normal-border:#bba887;--normal-text:#262a22;--border-radius:2px;
+ --success-bg:#eef0e2;--success-border:#9fae86;--success-text:#2f4a33;
+ --error-bg:#f6e8df;--error-border:#c99a88;--error-text:#8d3429;
+ --warning-bg:#f6eedb;--warning-border:#cdb27a;--warning-text:#7a5a22;
+ --info-bg:#ebeee8;--info-border:#a9b3a6;--info-text:#33433d}
+html.wuxia-theme [data-sonner-toast][data-styled=true]{border-left-width:4px;box-shadow:0 6px 18px #2a22141f,inset 0 0 0 3px #fffaf04d;font-family:'Songti SC','SimSun',serif;letter-spacing:.06em;line-height:1.6;font-size:14px}
+html.wuxia-theme [data-sonner-toast][data-styled=true]:not([data-rich-colors=true]),html.wuxia-theme [data-sonner-toast][data-styled=true][data-type=default]{border-left-color:var(--cinnabar)}
+html.wuxia-theme [data-sonner-toast][data-styled=true] [data-title]{font-weight:600}
+html.wuxia-theme [data-sonner-toast][data-styled=true] [data-description]{color:inherit;opacity:.8}
+html.wuxia-theme [data-sonner-toast][data-styled=true] [data-button]{border-radius:2px;background:var(--cinnabar);color:var(--primary-foreground);font-family:inherit;letter-spacing:.08em}
+html.wuxia-theme [data-sonner-toast][data-styled=true] [data-cancel]{border-radius:2px;background:var(--secondary);color:var(--secondary-foreground)}
+html.wuxia-theme [data-sonner-toast][data-styled=true] [data-close-button]{border-radius:2px}

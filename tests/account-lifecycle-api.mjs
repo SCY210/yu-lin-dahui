@@ -41,6 +41,11 @@ try {
   s.settlements.push({id:'settlement',eventId:'past',version:1,created:now-3600000,reason:'shared',confirmed:true,total:1000,subsidy:0,unallocated:0,bills:[{playerId:'p-member',court:1000,ball:0,other:0,total:1000,minutes:60}],detail:[{name:'court',start:now-7200000,end:now-3600000,cents:1000,shares:{'p-member':1000},subsidy:0,unallocated:0,estimated:false}]});
   s.photos.push({id:'image',eventId:'past',matchId:null,playerIds:['p-member','p-owner'],ownerId:'owner',caption:'Shared photo',created:now,key:'fictional/image',type:'image/png',size:100,kind:'photo'});
   s.audits.push({id:'private-audit',at:now,actor:'owner',action:'profile',reason:'profile update',changes:{playerId:'p-member',profile:{name:'Private member name'}}});
+  s.accountNoticeReceipts.push({id:'notice',accountId:'member',playerId:'p-member',version:'fixture',contentHash:'fixture',contentSnapshot:'Fixture notice',acceptedAt:now,method:'explicit-account-confirmation'});
+  s.treasureProducts.push({id:'product',name:'Fixture',description:'',price:10,stock:1,kind:'digital',active:true,created:now,updated:now});
+  s.treasureOrders.push({id:'order',playerId:'p-member',accountId:'member',productId:'product',productName:'Fixture',kind:'digital',price:10,quantity:1,total:10,status:'fulfilled',created:now,updated:now,requestId:'fixture-order'});
+  s.treasureLedger.push({id:'own-ledger',playerId:'p-member',actor:'owner',delta:20,balance:20,kind:'grant',reason:'Personal grant',at:now,requestId:'fixture-grant'});
+  s.treasureLedger.push({id:'other-ledger',playerId:'p-owner',actor:'member',delta:50,balance:50,kind:'grant',reason:'Private member grant reason',at:now,requestId:'fixture-other-grant'});
   const extra = ['owner','admin','member'].map(id => {const c=api.makePassword(password);return database.db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(id,id,c.salt,c.hash,now);});
   await api.save(s,'fictional-seed',before,extra);
   const owner=(await login('owner')).cookie, admin=(await login('admin')).cookie, member=(await login('member')).cookie, second=(await login('member')).cookie;
@@ -85,6 +90,8 @@ try {
   assert.equal(database.sql.prepare('SELECT * FROM password_credentials WHERE id=?').get('member'),undefined);
   assert.equal(database.sql.prepare('SELECT count(*) AS n FROM account_erasure_objects').get().n,1);
   const replacement=erased.players.find(p=>p.name==='已注销球友'); assert.ok(replacement); assert.equal(replacement.enabled,false);assert.equal(replacement.ownerId,'');assert.equal(replacement.profile,undefined);
+  assert.equal(erased.accountNoticeReceipts.length,0);assert.equal(erased.treasureOrders.length,0);assert.equal(erased.treasureLedger.length,1);
+  assert.equal(erased.treasureLedger[0].delta,50,'Another player keeps the grant and wallet balance');assert.equal(erased.treasureLedger[0].actor,null);assert.equal(erased.treasureLedger[0].reason,'');
   assert.deepEqual(erased.matches[0].a,[replacement.id]); assert.equal(erased.matches[0].scoreA,21);
   assert.equal(erased.settlements[0].detail[0].shares[replacement.id],1000);
   assert.equal(erased.registrations[0].note,''); assert.equal(erased.payments[0].reason,'');

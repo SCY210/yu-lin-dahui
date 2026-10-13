@@ -1,0 +1,11 @@
+.treasure-entry{display:flex;align-items:center;gap:12px;width:100%;text-align:left;color:var(--foreground);margin-block:20px;min-width:0;cursor:pointer}
+.treasure-entry-icon{display:grid;place-items:center;flex:0 0 44px;height:44px;border:1px solid var(--border);border-radius:14px;color:var(--primary);background:var(--accent)}
+.treasure-entry-copy{flex:1;min-width:0;display:grid;gap:4px;overflow-wrap:anywhere}
+.treasure-entry-copy small{font-size:12px;color:var(--muted-foreground)}
+.treasure-entry-balance{display:grid;gap:2px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;overflow-wrap:anywhere;max-width:90px}
+.treasure-entry-balance small{font-size:11px;font-weight:400;color:var(--muted-foreground)}
+@media(max-width:360px){.treasure-entry{gap:8px;padding:14px}.treasure-entry-copy small{font-size:11px}.treasure-entry-icon{flex-basis:36px;height:36px}}
+.top-icon-row{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.treasure-icon{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--primary);cursor:pointer}
+.treasure-icon.is-active{background:color-mix(in srgb,var(--primary) 12%,var(--card));border-color:var(--primary)}
+.wuxia-theme .treasure-icon{border-radius:4px;border-color:#cfc3ab;background:#8d34290d;color:var(--cinnabar)}

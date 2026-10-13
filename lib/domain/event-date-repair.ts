@@ -25,7 +25,7 @@ export function repairEventDate(s:State,plan:EventDateRepair,now:number){
  for(const a of rows(work.attendance)){a.start+=delta;a.end=time(a.end)}
  for(const c of rows(work.costs)){c.start=time(c.start);c.end=time(c.end);for(const interval of c.overrides??[]){interval.start+=delta;interval.end+=delta}}
  for(const settlement of rows(work.settlements))for(const line of settlement.detail){line.start+=delta;line.end+=delta}
- replayRating(work);
+ replayRating(work,now);
  work.audits.push({id:crypto.randomUUID(),at:now,actor:owner,action:'repairEventDate',reason:'群主确认周四双打局实际为2026年10月8日19:00–21:00，修正误存的周五日期，保留比分与接龙',changes:{plan,before:snapshot,after:{start:e.start,end:e.end},matches:rows(work.matches).length,registrations:rows(work.registrations).length}});
  Object.assign(s,work);return true;
 }

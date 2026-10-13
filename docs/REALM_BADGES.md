@@ -1,8 +1,14 @@
 # Animated cultivation badges
 
-Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the 段位分 realm rules (new players start at 1000, 金丹 · 初期). Realm order comes from `lib/domain/realm-rating.ts`.
+Profiles, social player cards, the personal page and ranking rows share the five realm insignia from `app/realm-badge.tsx`. The badge reads the existing realm and stage; it does not change strength, progress, points or the 修为 realm rules. Realm order comes from `lib/domain/realm-rating.ts`.
 
-The My page shows this badge through `app/my-realm-card.tsx`, using the existing 段位分 realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change 段位分 calculations.
+## Placement: 定级中
+
+Everyone starts at 1000, so during placement almost everyone would show 金丹. Until a player has `realmPolicy.placementGames` (10) settled rated games, every member-facing place (profile, social card, My page, ranking rows) shows `PlacementBadge` instead of a realm: `定级中 · N/10 局`, with no stage and no realm progress bar. Profile and My page add the 修为, the games still needed and any pending games of a running activity; detailed ranking rows show only the 修为. Only settled games count, the same settle-after-activity rule as the realm. After the 10th settled game the realm badge appears directly at the realm and stage of the 修为 at that point. The feature guide's realm table still shows all five realm badges.
+
+The placement chip is a plain paper tag (the theme's `--card` with no pigment wash) edged with a quiet dashed line, holding an uncarved seal in neutral ink: a dashed outline, ten beads (one per placement game, filled once settled) and a small centre. The name uses a lighter weight than the realms, and the count uses tabular figures. 水墨江湖 squares the corners and sets 定级中 in brush script, like the realm badges. Motion stays gentle: the dashed outline turns slowly (40s), the next bead pulses and the centre breathes. It uses the same offscreen pause and `prefers-reduced-motion` rules as every realm (static seal, no motion).
+
+The My page shows this badge (or the placement chip) through `app/my-realm-card.tsx`, using the existing 修为 realm, stage and progress. On phones its realm card spans both statistic columns so the badge keeps its full row layout; points and attendance remain below it. This preserves the compact account panels and does not change 修为 calculations.
 
 ## Look
 
@@ -15,8 +21,9 @@ Each badge is a pigment seal on a paper tag. The tag takes its paper from the ac
 | 金丹 | 赤金 gold | twelve-ray sun | breathing golden core in a turning ring |
 | 元婴 | 紫棠 violet | eight-petal lotus | nascent soul seated in the lotus |
 | 化神 | 墨金 ink and gold | round medallion, gold rim | golden heavenly eye with 24 shimmering rays and crackling arcs |
+| 炼虚 | 虚空靛 void indigo and moon silver | ring around an open void, silver rim | a seed star breathing in a dark void with twinkling dust, nine stars wheeling round the ring, a comet sweeping past, a pulse ring leaving the void and sixteen shimmering starlight spikes |
 
-The orbit around each seal carries one node per realm (1–5), so the tier stays readable even at 22px.
+The orbit around each seal carries one node per realm (1–6; 炼虚's are moon-silver beads), so the tier stays readable even at 22px.
 
 Stage text uses the deep realm ink with a small paper wash, preserving contrast on the light surfaces. Ranking names remain 14px and stage metadata 12px; the pigment wash must not replace the stage's deeper ink.
 
@@ -29,6 +36,7 @@ Every realm moves, and each realm adds splendour, so a higher realm is always vi
 | 金丹 | gold-leaf tag; the sun seal turns, the pill ring and core move, the halo pulses with heat; the name glows warm gold; two embers rise; light passes over the tag |
 | 元婴 | starlit violet tag; the name glows and breathes violet; orbit and lotus seat turn; spirit ripples spread and four motes rise beside the seal; light passes more often; violet aura |
 | 化神 | ink thunderclouds lit with gold: pale ink clouds drift irregularly inside the tag and smoke wreathes its edges; two silver-gold bolts strike on unrelated rhythms with a double flicker and light the clouds; the gold name glows and flares with the strike; lightning arcs crackle round the heavenly-eye seal while its rays wheel; gold aura. One set of CSS variables on `.realm-badge-4` holds the whole storm palette |
+| 炼虚 | a starry void edged in moonlight, grander than 化神: aurora clouds in violet, cyan, rose and bright indigo drift through deep indigo space while cosmic dust swirls outside the edges; two white-violet rifts tear the void open on unrelated rhythms with a double flicker and light the aurora; every 4.6s the void pulses, a ring leaves the seal, a double shockwave sweeps the tag and the sky lights up; iridescent light runs round the border; the name flows in moonlight, ice and violet and flares with each pulse; two shooting stars, twinkling stars with a four-point glint, specks drawn into the seal and sixteen shimmering starlight spikes complete it |
 
 Ranking-row progress bars follow the 水墨江湖 progress colours, and narrow progress labels wrap the percentage as a whole.
 

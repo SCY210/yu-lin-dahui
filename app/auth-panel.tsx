@@ -9,7 +9,7 @@ import {readActionResponse} from '../lib/client/api-response';
 export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBound?:()=>void}){
  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const sessionInvalidated=useRef(false);
- const deletionDate=useSyncExternalStore(()=>()=>{},()=>binding?'':sessionStorage.getItem('account-deletion-notice')??'',()=>'');
+ const deletionDate=useSyncExternalStore(()=>()=>{},()=>{try{return binding?'':sessionStorage.getItem('account-deletion-notice')??''}catch{return ''}},()=>'');
  useEffect(()=>{
   if(binding)return; // The authenticated parent invalidates and unmounts binding forms.
   const invalidate=()=>{if(sessionInvalidated.current)return;sessionInvalidated.current=true;flushSync(()=>{setUsername('');setPassword('');setConfirmation('');setError('');setBusy(true)});location.replace('/')};
@@ -19,7 +19,7 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
  },[binding]);
  async function submit(e:React.FormEvent){e.preventDefault();if(busy||sessionInvalidated.current)return;if(binding&&!/^[A-Za-z0-9]{2,32}$/.test(username.trim())){setError('新账号须为2–32位英文字母或数字');return}if(binding&&password!==confirmation){setError('两次密码不一致');return}setBusy(true);setError('');try{
   const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:binding?'bind':'login',username,password})});const result=await readActionResponse(r);
-  sessionStorage.removeItem('account-deletion-notice');if(result.deletionCancelled)toast.success('已重新登录，注销申请已取消');
+  try{sessionStorage.removeItem('account-deletion-notice')}catch{}if(result.deletionCancelled)toast.success('已重新登录，注销申请已取消');
   if(sessionInvalidated.current)return;setPassword('');setConfirmation('');notifySessionChange();
   if(binding){toast.success('账号登录已开通，原权限和记录已保留');onBound?.()}else location.reload();
  }catch(e){if(!sessionInvalidated.current)setError((e as Error).message)}finally{if(!sessionInvalidated.current)setBusy(false)}}

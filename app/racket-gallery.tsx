@@ -117,7 +117,7 @@ function RacketUpload({ctx, playerId, playerName, isOwn}:{ctx:GalleryContext;pla
 export default function RacketGallery({ctx, playerId}:{ctx:GalleryContext;playerId:string}) {
   const player = ctx.data.players.find(p=>p.id === playerId);
   const isOwn = playerId === ctx.data.me.playerId;
-  const canUpload = !!player && (isOwn || (ctx.admin && (!player.protectedOwner || ctx.data.me.isOwner)));
+  const canUpload = !!player && player.profileEditMode !== 'gender-only' && (isOwn || (ctx.admin && (!player.protectedOwner || ctx.data.me.isOwner)));
   const photos = ctx.data.photos.filter(photo=>photo.kind === 'racket' && photo.playerIds.includes(playerId)).slice().sort((a,b)=>b.created-a.created);
   const playerName = player?.name || '球友';
   return <section className="racket-gallery" aria-label={playerName+'的战拍照片'}>

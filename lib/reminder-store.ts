@@ -1,18 +1,18 @@
 import {raw} from './store';
 import {emptyState} from './domain/types';
-import {defaultReminderPreferences,reminderPreferences,remindersForChange,upcomingReminders,feeReminder,type Reminder,type ReminderPreferences} from './reminder-contract';
+import {defaultReminderPreferences,reminderPreferences,remindersForChange,upcomingReminders,unpaidFeeReminders,type Reminder,type ReminderPreferences} from './reminder-contract';
 import {signupPushStatements} from './push-outbox';
 import type {State} from './domain/types';
 export async function preferencesFor(accountId:string):Promise<ReminderPreferences>{const r=await raw().prepare('SELECT payload FROM reminder_settings WHERE account_id=?').bind(accountId).first<{payload:string}>();if(!r)return {...defaultReminderPreferences};const parsed=reminderPreferences.safeParse(JSON.parse(r.payload));return parsed.success?parsed.data:{...defaultReminderPreferences}}
 export function inboxStatements(notice:Reminder){return notice.accountIds.map(accountId=>{
  const base=[notice.id+':'+accountId,accountId,notice.eventId,notice.kind,JSON.stringify(notice),notice.createdAt,accountId];
- if(notice.kind==='fees'&&notice.settlementId){const suffix=':fees:'+notice.settlementId;return raw().prepare(`INSERT INTO reminder_inbox(id,account_id,event_id,kind,payload,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM accounts a JOIN players p ON p.id=a.player_id WHERE a.id=? AND json_extract(p.payload,'$.enabled')=1) AND NOT EXISTS(SELECT 1 FROM reminder_inbox WHERE account_id=? AND event_id=? AND kind='fees' AND (json_extract(payload,'$.settlementId')=? OR substr(json_extract(payload,'$.id'),-length(?))=?)) ON CONFLICT(id) DO NOTHING`).bind(...base,accountId,notice.eventId,notice.settlementId,suffix,suffix)}
+ if(notice.kind==='fees'&&notice.settlementId&&!notice.due){const suffix=':fees:'+notice.settlementId;return raw().prepare(`INSERT INTO reminder_inbox(id,account_id,event_id,kind,payload,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM accounts a JOIN players p ON p.id=a.player_id WHERE a.id=? AND json_extract(p.payload,'$.enabled')=1) AND NOT EXISTS(SELECT 1 FROM reminder_inbox WHERE account_id=? AND event_id=? AND kind='fees' AND (json_extract(payload,'$.settlementId')=? OR substr(json_extract(payload,'$.id'),-length(?))=?)) ON CONFLICT(id) DO NOTHING`).bind(...base,accountId,notice.eventId,notice.settlementId,suffix,suffix)}
  return raw().prepare(`INSERT INTO reminder_inbox(id,account_id,event_id,kind,payload,created_at) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM accounts a JOIN players p ON p.id=a.player_id WHERE a.id=? AND json_extract(p.payload,'$.enabled')=1) ON CONFLICT(id) DO NOTHING`).bind(...base);
  })}
 export function clubReminderStatements(next:State,previous:State,actorId:string,key:string,action:string,now=Date.now()){
  const statements=signupPushStatements(next,previous,actorId,key,action,now),db=raw();
  const notices=remindersForChange(next,previous,actorId,key,now);
- if(action==='notifyFees'){const audit=next.audits.at(-1);if(audit?.action==='notifyFees'){const id=(audit.changes as {settlementId?:string})?.settlementId,bill=next.settlements.find(b=>b.id===id);if(bill){const notice=feeReminder(next,bill,now);if(notice)notices.push(notice)}}}
+ if(action==='notifyFees'){const audit=next.audits.at(-1);if(audit?.action==='notifyFees'){const id=(audit.changes as {settlementId?:string})?.settlementId,bill=next.settlements.find(b=>b.id===id);if(bill)notices.push(...unpaidFeeReminders(next,bill,key,now))}}
  for(const notice of notices){
   statements.push(...inboxStatements(notice));if(notice.kind==='signup')continue;
   statements.push(db.prepare('INSERT INTO push_jobs(id,event_id,request_key,created_at,message) VALUES(?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(notice.id,notice.eventId,key,now,JSON.stringify(notice)));

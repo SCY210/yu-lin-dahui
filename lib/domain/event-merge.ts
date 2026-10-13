@@ -1,3 +1,4 @@
+import {eventFormat} from './match-format';
 import {clubOwnerId,isClubOwner} from './ownership';
 import {cancellationDeadline} from './cancellation';
 import {bookingCapacity,syncRegistration} from './booking-signups';
@@ -22,6 +23,7 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
  if(!sourceIds.length||sourceIds.length>10||new Set([targetId,...sourceIds]).size!==sourceIds.length+1)fail('请选择不同的活动');
  const work=structuredClone(s),target=work.events.find(e=>e.id===targetId&&e.deletedAt===undefined)??fail('保留的活动不存在');
  const sources=sourceIds.map(id=>work.events.find(e=>e.id===id&&e.deletedAt===undefined)??fail('待合并活动不存在'));
+ if(sources.some(e=>eventFormat(e)!==eventFormat(target)))fail('不同类型的活动不能合并');
  const ids=new Set([targetId,...sourceIds]);
  for(const e of [target,...sources]){
   if(e.creatorId!==clubOwnerId(work))fail('只能迁移群主创建的活动');
@@ -42,13 +44,19 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
    const copy={...b,id:crypto.randomUUID(),eventId:target.id,venue:b.venue??source.venue,address:b.address??source.address,signupCapacity:bookingCapacity(b,source)};mapping.set(b.id,copy.id);work.bookings.push(copy);
   }
   const scoped=structuredClone(work);upgradeActivitySignups(scoped,scoped.events.find(e=>e.id===source.id)!);
-  for(const original of scoped.registrations.filter(r=>r.eventId===source.id)){
+  for(const stored of scoped.registrations.filter(r=>r.eventId===source.id)){
+   const guest=work.players.find(p=>p.id===stored.playerId&&p.guestEventId===source.id);
+   const participantId=guest?crypto.randomUUID():stored.playerId;
+   if(guest)work.players.push({...guest,id:participantId,guestEventId:target.id});
+   const original={...stored,playerId:participantId};
    const slots=(original.bookingSignups??[]).map(x=>({...x,bookingId:mapping.get(x.bookingId)??fail('报名关联场地不存在')}));
    let r=work.registrations.find(r=>r.eventId===target.id&&r.playerId===original.playerId);
    if(r){
     if(JSON.stringify(r.courtExempt)!==JSON.stringify(original.courtExempt)||JSON.stringify(r.ballExempt)!==JSON.stringify(original.ballExempt))fail('同一球友的费用豁免不同，请先核对');
     if(slots.some(x=>x.status!=='cancelled'&&(r!.bookingSignups??[]).some(y=>y.status!=='cancelled'&&x.arrival<y.departure&&x.departure>y.arrival)))fail('同一球友在两个活动报名时间重叠，请先核对');
     r.bookingSignups!.push(...slots);
+    // Carry original receipts without claiming a new agreement to the merged activity.
+    if(original.noticeAcknowledgements?.length){const known=new Set((r.noticeAcknowledgements??[]).map(record=>record.id));(r.noticeAcknowledgements??=[]).push(...original.noticeAcknowledgements.filter(record=>!known.has(record.id)))}
    }else{r={...original,id:crypto.randomUUID(),eventId:target.id,sequence:Math.max(0,...work.registrations.filter(x=>x.eventId===target.id).map(x=>x.sequence))+1,bookingSignups:slots};work.registrations.push(r)}
    syncRegistration(r);
   }

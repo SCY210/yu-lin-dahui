@@ -1,0 +1,14 @@
+.match-player-filter{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0;color:var(--foreground)}
+.match-player-filter label{flex:1 1 190px;min-width:0;max-width:420px;display:grid;gap:7px}
+.match-player-filter label>span{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted-foreground)}
+.match-player-filter select{width:100%;min-width:0;min-height:46px;padding:10px 34px 10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground);font:inherit;text-overflow:ellipsis}
+.match-filter-shortcuts{display:flex;gap:6px;flex-wrap:wrap}.match-filter-shortcuts button{min-height:44px;font-size:13px;padding:9px 13px}
+.match-filter-empty{padding:20px 14px;border:1px dashed var(--border);border-radius:14px;color:var(--muted-foreground);text-align:center;font-size:14px}
+@media(max-width:420px){.match-player-filter{gap:8px}.match-player-filter label{max-width:none;flex-basis:100%}.match-filter-shortcuts{width:100%}}
+.event-scheduling .match-player-filter{flex-wrap:nowrap;align-items:center;gap:5px;margin:6px 0}
+.event-scheduling .match-player-filter label{flex:1 1 0;display:flex;flex-direction:row;align-items:center;gap:5px;max-width:none}
+.event-scheduling .match-player-filter label>span{flex:none;font-size:11px;gap:3px;white-space:nowrap}
+.event-scheduling .match-player-filter label>span svg{display:none}
+.event-scheduling .match-player-filter select{flex:1;min-height:44px;padding:5px 3px;font-size:12px;border-radius:8px}
+.event-scheduling .match-filter-shortcuts{width:auto;flex:none;flex-wrap:nowrap}
+.event-scheduling .match-filter-shortcuts button{font-size:11px;padding:5px;white-space:nowrap}

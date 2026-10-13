@@ -1,4 +1,5 @@
 import type {Attendance,Booking,Event,Registration,State} from './types';
+import {clearCancellation} from './cancellations';
 
 export function bookingCapacity(b:Booking,e:Event){return b.signupCapacity??e.capacity}
 export function promoteLegacy(s:State,e:Event,now:number){
@@ -11,6 +12,7 @@ export function syncRegistration(r:Registration){
  const active=r.bookingSignups.filter(x=>x.status!=='cancelled'),confirmed=active.filter(x=>x.status==='confirmed');
  r.status=confirmed.length?'confirmed':active.length?'waitlist':'cancelled';
  r.cancelRequested=active.some(x=>x.cancelRequested);
+ if(r.status!=='cancelled')clearCancellation(r);
  if(active.length){r.arrival=Math.min(...active.map(x=>x.arrival));r.departure=Math.max(...active.map(x=>x.departure))}
 }
 export function promoteBooking(s:State,e:Event,b:Booking,now:number){

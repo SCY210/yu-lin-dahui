@@ -1,6 +1,8 @@
 import vinext from "vinext";
 import { defineConfig } from "vite";
 import hostingConfig from "./.openai/hosting.json";
+import cloudflareDeployment from "./wrangler.cloudflare.json";
+import { usesStandaloneCloudflare } from "./build/deployment-target";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { sites } from "./build/sites-vite-plugin";
 import { connectorPreview } from "./build/connector-preview-plugin.mjs";
@@ -40,6 +42,7 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  const standaloneCloudflare = usesStandaloneCloudflare(command);
   const localTest = localTestEnabled(command, process.env.YULIN_LOCAL_TEST)
     ? localTestConfiguration(process.cwd(), process.env.YULIN_LOCAL_TEST_BRANCH) : null;
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
@@ -69,14 +72,14 @@ export default defineConfig(async ({ command }) => {
     plugins: [
       ...(localTest ? [localTestLogin(localTestOrigin)] : []),
       vinext(),
-      sites({ mockAuth: !!localTest || !managedLinux }),
+      sites({ mockAuth: !standaloneCloudflare && (!!localTest || !managedLinux) }),
       connectorPreview(),
       cloudflare({
         ...(localTest ? { persistState: { path: localTest.state } } : {}),
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
         config: {
-          ...localBindingConfig,
+          ...(standaloneCloudflare ? cloudflareDeployment : localBindingConfig),
           ...(localTest ? localTest.bindings : {}),
           ...(command === "serve"
             ? {

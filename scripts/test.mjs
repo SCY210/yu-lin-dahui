@@ -24,8 +24,20 @@ if (!unitOnly) {
   // These suites run handlers locally with isolated persistence. Legacy scripts
   // requiring a running Worker are separate and must never target production.
   const suites = [
-    'photo-rights-api', 'score-reminder-ui', 'install-theme-api', 'live-play-api',
-    'match-scoring-api', 'point-grants-api', 'all-ranked-api', 'award-voting-api',
+    'score-conflict-api', 'score-conflict-ui',
+    'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
+    'owner-rating-ui',
+    'account-notice-api', 'activity-notice-api',
+    'bonus-popup-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
+    'published-swap-api', 'published-swap-ui',
+    'early-score-api',
+    'match-player-filter-ui',
+    'treasure-shop-api', 'treasure-shop-ui', 'cancelled-signups-api', 'guest-levels-ui', 'points-next-api', 'friend-signup-api', 'no-show-api', 'admin-simulation-api', 'admin-simulation-ui', 'notification-prompt-ui', 'push-enable-client',
+    'points-attendance-api', 'points-attendance-ui', 'tournament-api', 'tournament-ui', 'maintenance-read-cost', 'scheduling-modes-ui', 'home-today-ui', 'pull-refresh-ui', 'home-fees-reminders-ui', 'compact-sections-ui', 'mvp-only-ui', 'home-live-matches-ui', 'season-points-review-api', 'profile-permissions-api', 'profile-permissions-ui', 'simple-forms-ui', 'photo-rights-api', 'score-reminder-ui', 'install-theme-api', 'live-play-api',
+
+
+    'match-formats-api', 'match-scoring-api', 'point-grants-api', 'all-ranked-api', 'award-voting-api',
+
     'event-date-repair-api', 'settlement-api', 'requested-thursday-split-api',
     'write-retry-api', 'club-read-api', 'requested-event-merge-api',
     'trial-cleanup-api', 'push-api', 'auth-business.integration', 'account-lifecycle-api',

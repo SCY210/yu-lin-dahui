@@ -1,3 +1,5 @@
+import {acknowledgeAccountNotice,accountNoticeView,noticeContent} from '../../../lib/domain/notice-gate';
+import {friendSignupCreatesGuest} from '../../../lib/domain/friend-signup';
 import { privateEventState } from '../../../lib/domain/event-privacy';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, reserveDailyCreation, trustedClientIP } from '../../../lib/rate-limit';
@@ -15,6 +17,7 @@ import { month, fail } from '../../../lib/domain/types';
 import { leaderboard, replayRating } from '../../../lib/domain/ranking';
 import { z } from 'zod';
 import { clubReminderStatements } from '../../../lib/reminder-store';
+import { canRebaseLineupWrite } from '../../../lib/lineup-write';
 export const dynamic = 'force-dynamic';
 const response = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 function error(e: unknown) { return writeErrorResponse(e); }
@@ -30,12 +33,14 @@ export async function GET(req: Request) {
         const year = Number(url.searchParams.get('year') ?? period.slice(0, 4));
         if (!Number.isInteger(year) || year < 2000 || year > 2100)
             fail('年份无效');
+        const content=await noticeContent(),noticeScope={version:content.version,contentHash:content.contentHash};
         const identity = { userId: user.userId, method: user.method, username: user.username };
         // Authentication precedes every conditional read. Exports always get fresh full data.
-        if (url.searchParams.get('export') !== '1' && req.headers.has('If-None-Match')) {
+        if (url.searchParams.get('export') !== '1' && !url.searchParams.has('noticeExport') && req.headers.has('If-None-Match')) {
             const version = await clubReadVersion(user.userId);
-            if (readCache.matches(req.headers.get('If-None-Match'), version, identity, period, year, Date.now())) {
-                return new Response(null, { status: 304, headers: { 'Cache-Control': 'no-store', 'ETag': req.headers.get('If-None-Match')! } });
+            const matched=readCache.match(req.headers.get('If-None-Match'), {...version,noticeScope}, identity, period, year, Date.now());
+            if (matched) {
+                return new Response(null, { status: 304, headers: { 'Cache-Control': 'no-store', 'ETag': matched } });
             }
         }
         const s = await loadClubState();
@@ -46,6 +51,12 @@ export async function GET(req: Request) {
             if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
                 return response({ error: '请联系管理员创建登录账号' }, 403);
             return response({ join: true, user: { name: user.displayName } });
+        }
+        const accountNotice=accountNoticeView(s,a,content);
+        if(url.searchParams.has('noticeExport')){
+            const all=url.searchParams.get('noticeExport')==='all';
+            if(all&&!isClubOwner(s,a))return response({error:'403: 仅群主可以导出全部确认记录'},403);
+            return new Response(JSON.stringify({exportedAt:Date.now(),currentVersion:content.version,contentHash:content.contentHash,receipts:all?s.accountNoticeReceipts:accountNotice.receipts},null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="activity-notice-receipts.json"','Cache-Control':'no-store'}});
         }
         if (url.searchParams.get('export') === '1') {
             if (a.role !== 'admin')
@@ -68,8 +79,8 @@ export async function GET(req: Request) {
                 usernameChangedAt: number | null;
             } => c !== null);
         const ownCredential = credentials.find(c => c.accountId === a.id) ?? null, ownUsername = ownCredential?.username ?? null, owner = isClubOwner(s, a), now = Date.now();
-        const data: ClubData = { ...projectClubState(s, a, period, year, now), loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
-        const token = readCache.remember({ revision: s.revision, settings: s.settings, account: a }, identity, period, year, clubViewValidUntil(s, a, now), now);
+        const data: ClubData = { ...projectClubState(s, a, period, year, now), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
+        const token = readCache.remember({ noticeScope, revision: s.revision, settings: s.settings, account: a, profileRestrictions:s.profileRestrictions }, identity, period, year, clubViewValidUntil(s, a, now), now);
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', ...(token ? { 'ETag': token } : {}) } });
     }
     catch (e) {
@@ -94,16 +105,8 @@ export async function POST(req: Request) {
         if (body.actor !== undefined && body.actor !== user.userId)
             return response({ error: '登录账号已切换，本次操作未保存。请确认当前账号后再操作', actorMismatch: true }, 409);
         const key = user.userId + ':' + body.requestId;
-        if (body.action === 'friend' || body.action === 'event') {
-            const account = await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{
-                role: string;
-            }>();
-            if (!account)
-                return response({ error: '请先加入群组' }, 403);
-            if (await committed(key))
-                return response({ ok: true, duplicate: true });
-            await reserveDailyCreation(user.userId, body.requestId, body.action, account.role === 'admin');
-        }
+        const rebaseLineup = canRebaseLineupWrite(body.action, body.payload);
+        const creationAction=body.action==='friendSignup'&&friendSignupCreatesGuest(body.payload)?'friend':body.action;
         for (let attempt = 0; attempt < 5; attempt++) {
             const s = await loadClubState();
             const previous = structuredClone(s);
@@ -136,11 +139,31 @@ export async function POST(req: Request) {
             else {
                 if (!a)
                     return response({ error: '403: 请先加入群组' }, 403);
-                if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'profile', 'shuttleVote', 'pointsModeVote'].includes(body.action) && body.revision !== s.revision)
+                // The entry notice no longer blocks any action. An app installed before its removal may still
+                // send its confirmation; it is stored as before so that click never fails.
+                const content=await noticeContent();
+                if(body.action==='acknowledgeActivityNotice')acknowledgeAccountNotice(s,a,body.payload,Date.now(),content);
+                else {
+        if (creationAction === 'friend' || creationAction === 'event') {
+            const account = await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{
+                role: string;
+            }>();
+            if (!account)
+                return response({ error: '请先加入群组' }, 403);
+            if (await committed(key))
+                return response({ ok: true, duplicate: true });
+            await reserveDailyCreation(user.userId, body.requestId, creationAction, account.role === 'admin');
+        }
+
+                if (!rebaseLineup && !['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
-                const preview = await apply(s, a, body.action, body.payload, Date.now());
+                // Domain replay keys come from the authenticated write envelope, never a client-selected payload key.
+                const payload = ['treasureGrant','treasureRedeem'].includes(body.action) && body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
+                    ? { ...body.payload, requestId: body.requestId } : body.payload;
+                const preview = await apply(s, a, body.action, payload, Date.now());
                 if (body.action === 'historyPreview' && preview)
                     return response({ preview: { input: body.payload, leaderboard: leaderboard(preview, z.object({ season: z.string() }).parse(body.payload).season), ratingHistory: replayRating(preview) } });
+                }
             }
             try {
                 await save(s, key, previous, clubReminderStatements(s, previous, a!.id, key, body.action));
@@ -148,7 +171,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!['register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'profile', 'shuttleVote', 'pointsModeVote'].includes(body.action))
+                    if (!rebaseLineup && !['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

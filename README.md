@@ -10,7 +10,7 @@ See [collaboration and checkout hygiene](docs/REPOSITORY_HYGIENE.md), [security]
 
 ## Current application flows
 
-Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, the realm rating realm rating (an Elo-style score that sets the visible realm and the leaderboard points) and a singles leaderboard are available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
+Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, the realm rating (a long-term Elo-style score that sets the visible realm; grouping replays the same formula over doubles games only; reset only after three months without rated games), season points for the quarterly and annual boards (3 per win, minus 1 per loss, plus an upset bonus) and a singles leaderboard are available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
 
 ## Local setup
 
@@ -54,7 +54,7 @@ The login entry is public; club data, photos, events, scores, and costs require 
 2. Each participant has a separate profile and registration. Full events create a waitlist; cancellation promotes the first eligible waiting participant. Cancellation within 24 hours of the start requires a manager's approval.
 3. Confirmed registrations default to participation without mandatory check-in. Actual participation intervals determine court planning and cost sharing; future time is not treated as completed attendance.
 4. Generate a round draft, inspect rest opportunities, swap players/courts, lock selected matches, and publish. Regeneration preserves locked matches.
-5. Before starting, choose whether the round counts toward monthly points and Elo. Record a legal final score (for example, 21:15) or best-of-three result. Correcting scores rebuilds points and replays later ratings.
+5. Start the round; every complete website match counts toward season points and the realm rating. Record a legal final score (for example, 21:15) or best-of-three result. Correcting scores rebuilds points and replays later ratings.
 6. Record actual shuttle usage per ball: model, price per ball, and ball count (convert whole tubes to balls, e.g. one 12-ball tube plus 4 balls = 16), optionally with a consumption interval. Legacy per-tube records still load and settle with unchanged amounts (see docs/UPDATE_FEES.md). Record other costs and choose independent court and shuttle split modes.
 7. Configure item exemptions and club subsidies. Each result reconciles participant charges, subsidies, and unallocated costs. Unallocatable costs require explicit handling before final settlement.
 8. Save or confirm a settlement version. All club members can view participant shares and details. Corrections create a new version; previous versions remain available.
@@ -71,10 +71,10 @@ Writes use atomic D1 batches with a unique revision and idempotency key. Registr
 - lib/domain/commands.ts implements registration order, promotion, permissions, validation, and state transitions.
 - lib/domain/grouping.ts selects by opportunity deficit and waiting time, then runs 600 seeded local-search iterations to balance strength and repeated pairings. Matches require a valid booking that covers their duration. This is a heuristic, not a global-optimum guarantee.
 - lib/domain/money.ts supports equal, duration, and interval splits. BigInt rational arithmetic and deterministic largest-remainder allocation reconcile cents. Item totals are fixed in cents before allocation: new shuttle records (price per ball × count) are already whole cents, while hourly costs and legacy per-tube shuttle records round half-up. Estimated shuttle intervals are marked when precise consumption times are absent.
-- lib/domain/ranking.ts treats matches as the factual source. Leaderboard points are the sum of realm rating changes from each rated game in the period by Madrid start month, plus owner point adjustments on the combined board (lib/domain/realm-rating.ts, see docs/REALM_PROGRESSION.md). All enabled players appear without a minimum-game threshold. Ties use points, win rate, and average point difference. Elo replays by completion time and ID; the four-player change sums to zero. The first ten rated games are provisional.
+- lib/domain/ranking.ts treats matches as the factual source. Leaderboard points are the season points of each rated game in the period by Madrid start month (lib/domain/season-points.ts), plus owner point adjustments on the combined board (see docs/REALM_PROGRESSION.md). All enabled players appear without a minimum-game threshold. Ties use points, win rate, and average point difference. The realm rating replays by completion time and ID; each game's changes sum to zero when both sides use the same K. The first ten rated games are placement games.
 
 
-Stored per-month win/loss/cap values stay readable but no longer affect points; realms settle after each activity ends. Hidden Elo starts at 1000 with K=32; target=21, lead=2 and ceiling=30. Rules are bound to a month; default updates do not rewrite historical months. Historical changes require preview and explicit confirmation and retain an audit trail.
+Stored per-month win/loss/cap values stay readable but no longer affect points; realms settle after each activity ends. The realm rating starts at 1000 (K=32 for the first 20 games, then 16); target=21, lead=2 and ceiling=30. Rules are bound to a month; default updates do not rewrite historical months. Historical changes require preview and explicit confirmation and retain an audit trail.
 
 ## Verification
 
@@ -98,6 +98,8 @@ The read-only request-body HTTP regression uses port 8794 by default and require
 
 ## Deployment
 
+For a standalone deployment in the owner's Cloudflare account, see [Cloudflare deployment](docs/CLOUDFLARE_DEPLOYMENT.md).
+
 .openai/hosting.json identifies the shared existing Sites project and logical DB/BUCKET bindings. It is required deployment configuration, not a personal Codex profile. The Sites build plugin produces a Cloudflare Worker ESM bundle and includes Drizzle migrations. Deploy only the supported build artifacts, hosting metadata, and migrations; exclude local state and credentials.
 
 Source synchronization to GitHub does not deploy a Site. Follow the authorized Sites hosting workflow and verify its successful receipt. Do not alter audiences, collaborator protections, identities, or production data incidentally.
@@ -119,3 +121,5 @@ Complete the real operator information and privacy decisions in [legal readiness
 - [Visual assets and provenance](docs/VISUAL_ASSETS.md)
 
 Known boundaries: rescheduling a whole event does not automatically update all dependent records; individual bookings and supported event fields can be edited. Chat, payments, inventory, and a multi-club platform are outside scope. Cost forms support two time-adjusted shuttle intervals at once; additional records can represent more intervals. Large historical datasets still need further pagination. Automated checks are not a substitute for real-device, production-access, or load testing.
+
+Activity creation supports Singles and Doubles with automatically generated date-based names and separate ranking boards. Modification forms use automatic audit descriptions instead of mandatory notes; see [Singles and doubles activities](docs/SINGLES_RANKING.md).

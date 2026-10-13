@@ -1,4 +1,5 @@
 import {achievementCatalog,achievementTargets,achievementParticipationDays,type AchievementMetric,type AchievementSummary} from '../achievement-catalog';
+import {validTeams} from './match-format';
 import {winner} from './social';
 import type {State,Match} from './types';
 
@@ -8,8 +9,7 @@ function validResult(m:Match,now:number){
  return m.status==='complete'&&m.start!==null&&m.end!==null&&
   Number.isFinite(m.start)&&Number.isFinite(m.end)&&m.start>=0&&m.start<=m.end&&m.end<=now&&
   m.scoreA!==null&&m.scoreB!==null&&Number.isFinite(m.scoreA)&&Number.isFinite(m.scoreB)&&
-  m.scoreA>=0&&m.scoreB>=0&&m.scoreA!==m.scoreB&&Array.isArray(m.a)&&Array.isArray(m.b)&&m.a.length===2&&m.b.length===2&&
-  new Set([...m.a,...m.b]).size===4;
+  m.scoreA>=0&&m.scoreB>=0&&m.scoreA!==m.scoreB&&Array.isArray(m.a)&&Array.isArray(m.b)&&validTeams(m);
 }
 
 /** Derive lifetime achievements from authorized, completed facts in one pass.

@@ -6,12 +6,20 @@ import { cancelUnreadWriteBody } from "../lib/write-security";
 import { flushPushOutbox } from "../lib/push-outbox";
 import { requestMetric } from "../lib/observability";
 import {purgeExpiredAccounts} from "../lib/account-lifecycle";
+import { hostingRequest } from "../lib/hosting-request";
+import { operatorExport } from "../lib/operator-export";
+import {legacySiteRedirect} from '../lib/legacy-redirect';
 
 export default {
   async scheduled(_controller: ScheduledController, _env: Cloudflare.Env, ctx: ExecutionContext) {
     ctx.waitUntil(purgeExpiredAccounts());
   },
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+    const moved=legacySiteRedirect(request,(env as Cloudflare.Env&{CLUB_REDIRECT_ORIGIN?:string}).CLUB_REDIRECT_ORIGIN);
+    if(moved)return moved;
+    request = hostingRequest(request, env.YULIN_HOSTING_PROVIDER);
+    const exported = await operatorExport(request, env);
+    if (exported) return exported;
     const started = performance.now();
     if (new URL(request.url).pathname.startsWith('/api/')) {
       ctx.waitUntil(purgeExpiredAccounts().catch(() => {console.warn('Account erasure deferred');}));

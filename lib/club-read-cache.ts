@@ -1,12 +1,14 @@
 import type {Account,Settings,State} from './domain/types';
+import {awardVotingClosesAt} from './domain/activity-voting';
 import {attendanceForEvent} from './domain/attendance';
+import {inactivityDeadline,isRatedMatch} from './domain/realm-rating';
 
 const roundDuration=20*60000;
 const maxAge=5*60000;
-export type ClubReadVersion={revision:number;settings:Settings;account:Account|null};
+export type ClubReadVersion={revision:number;settings:Settings;account:Account|null;profileRestrictions?:State['profileRestrictions'];noticeScope?:{version:string;contentHash:string}};
 export type ClubReadIdentity={userId:string;method:string;username:string|null};
 const scope=(version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number)=>JSON.stringify([
- version.revision,version.settings.initialized,version.settings.ownerAccountId??null,version.account,
+ version.noticeScope??null,version.profileRestrictions??null,version.revision,version.settings.initialized,version.settings.ownerAccountId??null,version.account,
  identity.userId,identity.method,identity.username,period,year,
 ]);
 
@@ -14,14 +16,23 @@ const scope=(version:ClubReadVersion,identity:ClubReadIdentity,period:string,yea
  * A different Worker / a cold start is a harmless miss and reads a full snapshot. */
 export function createClubReadCache(limit=256){
  const entries=new Map<string,{scope:string;expires:number}>();
+ const match=(header:string|null,version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,now:number):string|null=>{
+  if(!header||header.length>8192||!version.settings.initialized||!version.account)return null;
+  const expected=scope(version,identity,period,year);
+  // GET validators use weak comparison. Proxies may weaken ETags after compression.
+  for(const candidate of header.split(',')){
+   const value=candidate.trim();
+   if(!/^(?:W\/)?"club-[0-9a-f-]{36}"$/.test(value))continue;
+   const token=value.startsWith('W/')?value.slice(2):value,entry=entries.get(token);
+   if(!entry)continue;
+   if(now>=entry.expires){entries.delete(token);continue}
+   if(entry.scope===expected)return token;
+  }
+  return null;
+ };
  return {
-  matches(token:string|null,version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,now:number){
-   if(!token||!version.settings.initialized||!version.account)return false;
-   const entry=entries.get(token);
-   if(!entry)return false;
-   if(now>=entry.expires){entries.delete(token);return false}
-   return entry.scope===scope(version,identity,period,year);
-  },
+  match,
+  matches(...args:Parameters<typeof match>){return match(...args)!==null},
   remember(version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number,expires:number,now:number){
    if(expires<=now)return null;
    for(const [key,value] of entries)if(value.expires<=now)entries.delete(key);
@@ -58,5 +69,10 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  for(const e of s.events)if(scored.has(e.id))boundary(e.end);
  const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
  for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
+ // Derived realm/placement and grouping strength can restart without a write.
+ for(const m of s.matches)if(isRatedMatch(m,now))boundary(inactivityDeadline(m.end!));
+ // MVP voting closes on the clock: the result, its points and the winner's notice appear without a write.
+ const voted=new Set(s.awardVotes.map(v=>v.eventId));
+ for(const e of s.events)if(voted.has(e.id))boundary(awardVotingClosesAt(e));
  return expires;
 }

@@ -54,9 +54,9 @@ test('积分赛不能越界、不能由普通成员管理，擂台仍用逐轮�
  await assert.rejects(()=>act('planPoints',{at:start,pointsMinutes:90,roundMinutes:15,seed:12,pairing:'rotate'},'actor1'),/403/);assert.deepEqual(s,before);
  e.playMode='arena';before=structuredClone(s);await assert.rejects(()=>plan(),/擂台/);assert.deepEqual(s,before);
 });
-test('重新预排仅取消未开始轮次，开始后禁止重排，原成绩不被修改',async()=>{
+test('重新预排仅取消未开始轮次，不允许覆盖已完成时段，原成绩不被修改',async()=>{
  const {s,plan}=fixture();await plan();const old=s.rounds.map(r=>r.id);await plan('fixed');assert.ok(s.rounds.filter(r=>old.includes(r.id)).every(r=>r.status==='cancelled'));assert.equal(s.rounds.filter(r=>r.status==='draft').length,6);
- const m=s.matches.find(m=>m.status==='draft')!;m.status='complete';m.start=start;m.end=start+15*minute;m.scoreA=21;m.scoreB=17;const before=structuredClone(s);await assert.rejects(()=>plan(),/比赛开始或完成/);assert.deepEqual(s,before);
+ const m=s.matches.find(m=>m.status==='draft')!;m.status='complete';m.start=start;m.end=start+15*minute;m.scoreA=21;m.scoreB=17;const before=structuredClone(s);await assert.rejects(()=>plan(),/剩余赛程必须/);assert.deepEqual(s,before);
 });
 test('发布全部轮次先完整验证，名单改变时不会部分发布',async()=>{
  const {s,act,plan}=fixture();await plan();s.registrations[0].status='cancelled';const before=structuredClone(s);await assert.rejects(()=>act('publishPoints'),/参加时段/);assert.deepEqual(s,before);
@@ -118,7 +118,7 @@ test('未配置搭档投票时正式成员默认可投；显式关闭及确认�
 test('连续两轮预排积分赛默认沿用各轮时间，第二局同样自动加减分',async()=>{
  const {s,e,account}=fixture(4),creator=account('creator');await apply(s,creator,'planPoints',{eventId:e.id,at:start+30*minute,pointsMinutes:90,roundMinutes:15,seed:17,pairing:'rotate'},now);await apply(s,creator,'publishPoints',{eventId:e.id},now);
  const rounds=s.rounds.filter(r=>r.pointsSlot!==undefined).sort((a,b)=>a.pointsSlot!-b.pointsSlot!);
- for(let i=0;i<2;i++){const r=rounds[i];const at=roundStartTime(e,r,now);assert.equal(at,start+(30+i*15)*minute);await apply(s,creator,'start',{roundId:r.id,at,monthly:true,elo:true},now);const before=new Map(leaderboard(s,'2026-10').map(row=>[row.playerId,row.points]));for(const m of s.matches.filter(m=>m.roundId===r.id)){await apply(s,creator,'score',{matchId:m.id,a:21,b:17,end:at+10*minute,reason:'真实两轮回归'},now);assert.equal(m.monthly,true);for(const id of m.a)assert.ok(leaderboard(s,'2026-10').find(row=>row.playerId===id)!.points>before.get(id)!,'winner gains 段位分');for(const id of m.b)assert.ok(leaderboard(s,'2026-10').find(row=>row.playerId===id)!.points<before.get(id)!,'loser drops 段位分')}}
+ for(let i=0;i<2;i++){const r=rounds[i];const at=roundStartTime(e,r,now);assert.equal(at,start+(30+i*15)*minute);await apply(s,creator,'start',{roundId:r.id,at,monthly:true,elo:true},now);const before=new Map(leaderboard(s,'2026-10').map(row=>[row.playerId,row.points]));for(const m of s.matches.filter(m=>m.roundId===r.id)){await apply(s,creator,'score',{matchId:m.id,a:21,b:17,end:at+10*minute,reason:'真实两轮回归'},now);assert.equal(m.monthly,true);for(const id of m.a)assert.ok(leaderboard(s,'2026-10').find(row=>row.playerId===id)!.points>=before.get(id)!+3,'winner gains at least 3 season points');for(const id of m.b)assert.ok(leaderboard(s,'2026-10').find(row=>row.playerId===id)!.points===before.get(id)!-1,'loser loses 1 season point')}}
  assert.equal(s.matches.filter(m=>m.status==='complete'&&m.monthly).length,2);assert.ok(leaderboard(s,'2026-10').every(row=>row.games===2));
 });
 
