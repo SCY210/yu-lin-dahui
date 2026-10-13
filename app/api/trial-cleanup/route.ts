@@ -1,4 +1,3 @@
-import {noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../lib/domain/notice-gate';
 import {z} from 'zod';
 import {getAppUser} from '../../../lib/auth';
 import {load,raw,save,committed} from '../../../lib/store';
@@ -16,7 +15,6 @@ export async function POST(req:Request){try{
  const p=z.object({action:z.enum(['remove','restore']),requestId:z.string().uuid(),revision:z.number().int().nonnegative()}).strict().parse(await readJsonBody(req,2048));
  await consumeRateLimit('trial-cleanup:'+u.userId,10,60000);
  const s=await load(),a=s.accounts.find(a=>a.id===u.userId);if(!a)return reply({error:'账号不可用'},403);
- const notice=await noticeContent();if(requiresAccountNotice(s,a,notice))return noticeGateResponse(s,a,notice);
  trialCleanupStatus(s,a);const key=u.userId+':trial-cleanup:'+p.requestId;
  if(await committed(key))return reply({ok:true,duplicate:true});
  if(p.revision!==s.revision)return reply({error:'数据已更新，请刷新重试'},409);

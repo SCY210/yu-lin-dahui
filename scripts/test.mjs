@@ -27,7 +27,7 @@ if (!unitOnly) {
     'score-conflict-api', 'score-conflict-ui',
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
     'owner-rating-ui',
-    'account-notice-api', 'activity-notice-gate-ui', 'activity-notice-api', 'activity-notice-ui',
+    'account-notice-api', 'activity-notice-api',
     'bonus-popup-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
     'published-swap-api', 'published-swap-ui',
     'early-score-api',

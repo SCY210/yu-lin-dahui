@@ -1,4 +1,3 @@
-import {noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../lib/domain/notice-gate';
 import { readJsonBody } from '../../../lib/request-body';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, loginRateKey, rateLimitId, trustedClientIP } from '../../../lib/rate-limit';
@@ -78,12 +77,10 @@ export async function POST(req: Request) {
         const user = await getAppUser();
         if (!user)
             return denied('请先登录账号', 401);
-        // Credential recovery for the signed-in account remains available. Managing
-        // another person's account or creating accounts requires current notice acceptance.
+        // Managing another person's account or creating accounts requires an existing account.
         if(action==='createAccount'||(action==='resetPassword'||action==='changeUsername')&&input.accountId!==undefined&&input.accountId!==user.userId){
             const state=await load(),account=state.accounts.find(a=>a.id===user.userId);
             if(!account)return denied('账号不可用');
-            const notice=await noticeContent();if(requiresAccountNotice(state,account,notice))return noticeGateResponse(state,account,notice);
         }
         if (action === 'changeUsername') {
             const p = changeUsernameInput.parse(input), meta = await loginAccountMetadata(user.userId);

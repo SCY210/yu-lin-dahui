@@ -1,4 +1,3 @@
-import {noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../lib/domain/notice-gate';
 import {assertPlayerMutable} from '../../../lib/domain/ownership';
 import {assertFullProfileEditable} from '../../../lib/domain/profile-permissions';
 import {readPhotoForm} from '../../../lib/request-body';
@@ -25,7 +24,6 @@ export async function POST(req:Request){
   const f=await readPhotoForm(req),requestId=z.string().uuid().parse(f.get('requestId')),key=u.userId+':'+requestId;
   const s=await load(),a=s.accounts.find(a=>a.id===u.userId);
   if(!a)return Response.json({error:'请先加入群组'},{status:403});
-  const notice=await noticeContent();if(requiresAccountNotice(s,a,notice))return noticeGateResponse(s,a,notice);
   if(await committed(key))return Response.json({ok:true,duplicate:true});
   const rights=assertImageRights(f);
   if(Number(f.get('revision'))!==s.revision)return Response.json({error:'数据已更新，请刷新后重新上传'},{status:409});

@@ -43,23 +43,22 @@ try{
  const oldRegistration=structuredClone(s.registrations);
  const extra=s.accounts.map(a=>{const c=api.makePassword(password);return database.db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(a.id,a.id,c.salt,c.hash,1)});
  await api.save(s,'fictional-seed',api.emptyState(),extra);
- let storageWrites=0;fixture.env.BUCKET={async put(){storageWrites++},async delete(){storageWrites++}};
+ fixture.env.BUCKET={async put(){},async delete(){}};
  const current=await api.noticeContent();assert.match(current.contentHash,/^[a-f0-9]{64}$/);assert.equal(createHash('sha256').update(current.contentSnapshot).digest('hex'),current.contentHash);
  assert.equal((await post('','acknowledgeActivityNotice',payload(current))).status,401);
  assert.equal((await read('','?noticeExport=all')).status,401);
  const cookies=Object.fromEntries(await Promise.all(s.accounts.map(async a=>[a.id,await login(a.id)])));
+ // The entry notice was retired: no account is asked to confirm and nothing is blocked without a receipt.
  for(const id of ['owner','admin','member']){
-  const response=await read(cookies[id]);assert.equal(response.status,200);const view=await response.json();assert.equal(view.accountNotice.required,true);assert.deepEqual(view.accountNotice.receipts,[]);
-  const blocked=await post(cookies[id],'profile',{playerId:s.accounts.find(a=>a.id===id).playerId,name:'Should be blocked'},{revision:(await api.load()).revision});assert.equal(blocked.status,428,await blocked.clone().text());assert.equal((await blocked.json()).noticeRequired,true);
+  const response=await read(cookies[id]);assert.equal(response.status,200);const view=await response.json();assert.equal(view.accountNotice.required,false);assert.deepEqual(view.accountNotice.receipts,[]);
+  const write=await post(cookies[id],'profileGender',{playerId:s.accounts.find(a=>a.id===id).playerId,gender:'undisclosed'},{revision:(await api.load()).revision});assert.equal(write.status,200,await write.clone().text());
  }
  const ownerBefore=cookies.owner,gateBefore=await api.load();
- const simulationDenied=await run(ownerBefore,()=>api.simulation(request('/api/simulation',{action:'initialize',payload:{},requestId:crypto.randomUUID()},ownerBefore)));assert.equal(simulationDenied.status,428);
- const cleanupDenied=await run(ownerBefore,()=>api.trialCleanup(request('/api/trial-cleanup',{action:'remove',requestId:crypto.randomUUID(),revision:gateBefore.revision},ownerBefore)));assert.equal(cleanupDenied.status,428);
- const deleteDenied=await run(cookies.member,()=>api.removePhoto(request('/api/photos/fixture',{action:'delete',requestId:crypto.randomUUID(),revision:gateBefore.revision},cookies.member),{params:Promise.resolve({id:'fixture'})}));assert.equal(deleteDenied.status,428);
- const form=new FormData();form.set('requestId',crypto.randomUUID());form.set('revision',String(gateBefore.revision));form.set('kind','avatar');form.set('playerId','p2');form.set('rightsConfirmed','true');form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');const uploadDenied=await run(cookies.member,()=>api.upload(new Request(origin+'/api/photos',{method:'POST',headers:{origin,cookie:cookies.member},body:form})));assert.equal(uploadDenied.status,428);assert.equal(storageWrites,0);assert.deepEqual(await api.load(),gateBefore);
- for(const body of [{action:'createAccount',name:'Fictional blocked account',username:'newfixture',password,requestId:crypto.randomUUID()},{action:'resetPassword',accountId:'other',password:'fictional-reset-password-123',requestId:crypto.randomUUID()},{action:'changeUsername',accountId:'other',newUsername:'renamedfixture',requestId:crypto.randomUUID()}]){const before=await api.load();assert.equal((await auth(body,cookies.owner)).status,428);assert.deepEqual(await api.load(),before)}
- const replacement='fictional-own-password-456';const ownPassword=await auth({action:'changePassword',currentPassword:password,newPassword:replacement,confirmPassword:replacement,requestId:crypto.randomUUID()},cookies.admin);assert.equal(ownPassword.status,200);assert.equal((await ownPassword.json()).signedOut,true);cookies.admin=await login('admin',api,replacement);assert.equal((await (await read(cookies.admin)).json()).accountNotice.required,true,'password recovery never accepts the notice');
- assert.equal(count(),0);assert.deepEqual((await api.load()).registrations,oldRegistration,'reading/gating never fabricates old signup acceptance');
+ const simulation=await run(ownerBefore,()=>api.simulation(request('/api/simulation',{action:'initialize',payload:{},requestId:crypto.randomUUID()},ownerBefore)));assert.notEqual(simulation.status,428);
+ const cleanup=await run(ownerBefore,()=>api.trialCleanup(request('/api/trial-cleanup',{action:'remove',requestId:crypto.randomUUID(),revision:gateBefore.revision},ownerBefore)));assert.notEqual(cleanup.status,428);
+ const removal=await run(cookies.member,()=>api.removePhoto(request('/api/photos/fixture',{action:'delete',requestId:crypto.randomUUID(),revision:gateBefore.revision},cookies.member),{params:Promise.resolve({id:'fixture'})}));assert.notEqual(removal.status,428);
+ const replacement='fictional-own-password-456';const ownPassword=await auth({action:'changePassword',currentPassword:password,newPassword:replacement,confirmPassword:replacement,requestId:crypto.randomUUID()},cookies.admin);assert.equal(ownPassword.status,200);assert.equal((await ownPassword.json()).signedOut,true);cookies.admin=await login('admin',api,replacement);assert.equal(count(),0,'password recovery never records a confirmation');
+ assert.equal(count(),0);assert.deepEqual((await api.load()).registrations,oldRegistration,'reading never fabricates old signup acceptance');
  const member=cookies.member;
  for(const input of [{},{...payload(current),noticeAccepted:false},{...payload(current),noticeAccepted:'true'},{noticeAccepted:true,noticeVersion:current.version},{noticeAccepted:true,noticeHash:current.contentHash}])await rejectUnchanged(member,input,400);
  for(const input of [{...payload(current),noticeVersion:'obsolete'},{...payload(current),noticeHash:'0'.repeat(64)}])await rejectUnchanged(member,input,409);
@@ -78,7 +77,7 @@ try{
  }
  const adminExport=await (await read(cookies.admin,'?export=1')).json();assert.ok(!JSON.stringify(adminExport).includes(receipt.id),'legacy full export cannot bypass owner-only evidence');
  const all=await read(cookies.owner,'?noticeExport=all');assert.equal(all.status,200);assert.deepEqual((await all.json()).receipts,[receipt],'owner can inspect evidence before own acceptance');
- assert.equal((await post(member,'profileGender',{playerId:'p2',gender:'other'},{revision:(await api.load()).revision})).status,200,'explicit account acceptance unlocks normal authorized writes');
+ assert.equal((await post(member,'profileGender',{playerId:'p2',gender:'other'},{revision:(await api.load()).revision})).status,200,'normal authorized writes keep working after a confirmation sent by an older app');
  assert.deepEqual((await api.load()).registrations,oldRegistration,'account gate never backfills activity-specific confirmations');
  // Logout and fresh real-password sessions retain the durable evidence.
  assert.equal((await auth({action:'logout'},member)).status,200);assert.equal((await read(member)).status,401);cookies.member=await login('member');assert.equal((await (await read(cookies.member)).json()).accountNotice.required,false);
@@ -99,5 +98,5 @@ try{
  assert.equal((await post(cookies.member,'acknowledgeActivityNotice',payload(next),{module:future})).status,200);
  stored=await api.load();assert.deepEqual(stored.accountNoticeReceipts.find(r=>r.id===receipt.id),receipt);assert.equal(stored.accountNoticeReceipts.filter(r=>r.accountId==='member').length,2);assert.equal((await (await read(cookies.member,'',future)).json()).accountNotice.required,false);
  const changedText=await bundle('account-notice-changed-text-api','text-only'),changed=await changedText.noticeContent();assert.equal(changed.version,current.version);assert.notEqual(changed.contentHash,current.contentHash);const revisedView=(await (await read(cookies.member,'',changedText)).json()).accountNotice;assert.equal(revisedView.required,false,'same-version edits do not repeat entry confirmation');assert.equal(revisedView.currentConfirmed,false);assert.equal(count(),stored.accountNoticeReceipts.length,'reading updated text never creates a receipt');assert.equal((await post(cookies.member,'acknowledgeActivityNotice',payload(changed),{module:changedText})).status,200);assert.deepEqual((await api.load()).accountNoticeReceipts.find(r=>r.id===receipt.id),receipt);
- console.log('PASS mandatory account notice: real login/logout, explicit version/hash, server identity/time/text, private owner audit/export, no old-signup backfill, business gate, durable receipt, retries/concurrency/rollback, immutable SQLite history and one-time entry across version/text updates');
+ console.log('PASS retired account notice: no entry gate or blocked writes, confirmations from older apps still validated and stored once, private owner audit/export, no old-signup backfill, retries/concurrency/rollback and immutable SQLite history');
 }finally{database.close();delete globalThis.__accountNoticeTest}

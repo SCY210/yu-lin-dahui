@@ -1,4 +1,4 @@
-import {acknowledgeAccountNotice,accountNoticeView,noticeContent,noticeGateResponse,requiresAccountNotice} from '../../../lib/domain/notice-gate';
+import {acknowledgeAccountNotice,accountNoticeView,noticeContent} from '../../../lib/domain/notice-gate';
 import {friendSignupCreatesGuest} from '../../../lib/domain/friend-signup';
 import { privateEventState } from '../../../lib/domain/event-privacy';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
@@ -139,10 +139,11 @@ export async function POST(req: Request) {
             else {
                 if (!a)
                     return response({ error: '403: 请先加入群组' }, 403);
+                // The entry notice no longer blocks any action. An app installed before its removal may still
+                // send its confirmation; it is stored as before so that click never fails.
                 const content=await noticeContent();
                 if(body.action==='acknowledgeActivityNotice')acknowledgeAccountNotice(s,a,body.payload,Date.now(),content);
                 else {
-                if(requiresAccountNotice(s,a,content))return noticeGateResponse(s,a,content);
         if (creationAction === 'friend' || creationAction === 'event') {
             const account = await raw().prepare('SELECT role FROM accounts WHERE id=?').bind(user.userId).first<{
                 role: string;
