@@ -5,30 +5,49 @@ import {Crown,Sparkles} from 'lucide-react';
 import {Avatar} from './avatar';
 import './ranking-podium.css';
 
+const METALS: Record<number, string[]> = {
+  1: ['#fff6c8', '#f0cb63', '#c99a2e', '#8a5f12', '#5c3d08'],
+  2: ['#ffffff', '#e3e8ef', '#aeb8c7', '#6f7d92', '#46526a'],
+  3: ['#ffe2cc', '#dca57a', '#b67449', '#7f4628', '#552c18'],
+};
+const TITLES: Record<number, string> = {1: '冠军', 2: '亚军', 3: '季军'};
+
+/** A championship-style medal: a broad two-strap ribbon with an edge stripe and a metal clasp, a thick
+ * engraved rim, a beaded inner ring and an embossed shuttlecock, with light sweeping across the metal.
+ * The club's own wording and emblem; no event marks are used. */
 function Medal({rank}: {rank: number}) {
   const id = useId().replace(/:/g, '');
-  const metals = rank === 1
-    ? ['#fff3b4', '#d9ad46', '#b88321', '#815714']
-    : rank === 2
-      ? ['#ffffff', '#d0d7e2', '#9aa6bb', '#58677e']
-      : ['#f9dbc7', '#cc976c', '#ab7047', '#77452d'];
+  const m = METALS[rank] ?? METALS[3];
+  const rim = 'rp-rim-' + id, face = 'rp-face-' + id, clip = 'rp-clip-' + id, arc = 'rp-arc-' + id;
   return <svg className="rp-medal" viewBox="0 0 84 96" aria-hidden="true" focusable="false">
     <defs>
-      <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor={metals[0]}/>
-        <stop offset="38%" stopColor={metals[1]}/>
-        <stop offset="67%" stopColor={metals[0]}/>
-        <stop offset="100%" stopColor={metals[2]}/>
+      <linearGradient id={rim} x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor={m[0]}/><stop offset=".35" stopColor={m[1]}/><stop offset=".62" stopColor={m[3]}/><stop offset=".8" stopColor={m[1]}/><stop offset="1" stopColor={m[3]}/>
       </linearGradient>
+      <radialGradient id={face} cx=".38" cy=".32" r=".8">
+        <stop offset="0" stopColor={m[0]}/><stop offset=".45" stopColor={m[1]}/><stop offset="1" stopColor={m[2]}/>
+      </radialGradient>
+      <clipPath id={clip}><circle cx="42" cy="64" r="27.5"/></clipPath>
+      <path id={arc} d="M42 64 m-24.2 0 a24.2 24.2 0 1 1 48.4 0 a24.2 24.2 0 1 1 -48.4 0"/>
     </defs>
-    <path d="M24 5h15l9 30-17 9z" fill="#5e54a8"/>
-    <path d="M45 5h15L53 44l-17-9z" fill="#8177c5"/>
-    <path d="M28 5h4l9 29-4 2zM50 5h4l-7 31-4-2z" fill="#c6bfe9" opacity=".65"/>
-    <circle cx="42" cy="58" r="31" fill={metals[2]} opacity=".2"/>
-    <circle cx="42" cy="55" r="30" fill={`url(#${id})`} stroke={metals[2]} strokeWidth="1.2"/>
-    <circle cx="42" cy="55" r="24" fill="none" stroke={metals[3]} strokeOpacity=".35"/>
-    <path d="m42 39 3 6.2 6.8 1-4.9 4.8 1.1 6.8-6-3.2-6 3.2 1.1-6.8-4.9-4.8 6.8-1z" fill={metals[3]} opacity=".68"/>
-    <path d="M26 63q16 18 32 0" fill="none" stroke={metals[0]} strokeWidth="1.5" strokeLinecap="round" opacity=".8"/>
+    <path className="rp-ribbon" d="M10 0h22l14 37-12 4z"/>
+    <path className="rp-ribbon rp-ribbon-back" d="M52 0h22L50 41l-12-4z"/>
+    <path className="rp-ribbon-stripe" d="M18 0h6l13.5 35.6-3 1.1zM60 0h6L46.5 36.7l-3-1.1z"/>
+    <circle cx="42.6" cy="65.2" r="28" fill="#00000026"/>
+    <circle cx="42" cy="64" r="28" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".8"/>
+    <rect x="35" y="31.5" width="14" height="6.5" rx="2" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".7"/>
+    <path d="M37.5 34.7h9" stroke={m[0]} strokeWidth=".8" strokeLinecap="round" opacity=".8"/>
+    <text className="rp-rim-text" fill={m[4]}><textPath href={`#${arc}`} startOffset="0">羽林大会 · {TITLES[rank] ?? '第' + rank + '名'} · 羽林大会 · {TITLES[rank] ?? '第' + rank + '名'} ·</textPath></text>
+    <circle cx="42" cy="64" r="21" fill={`url(#${face})`} stroke={m[3]} strokeWidth="1"/>
+    <circle cx="42" cy="64" r="19.2" fill="none" stroke={m[3]} strokeWidth="1.1" strokeDasharray=".1 2.4" strokeLinecap="round" opacity=".75"/>
+    <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round">
+      <g transform="translate(.5 .6)" stroke={m[4]} fill="none" opacity=".45"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/></g>
+      <g stroke={m[3]} fill="none" strokeWidth="1.25"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/><path d="M37.5 63 Q42 61.6 46.5 63"/></g>
+      <path d="M37.6 72.6 Q42 70.6 46.4 72.6 Q46.4 78.4 42 78.4 Q37.6 78.4 37.6 72.6Z" fill={m[3]}/>
+      <path d="M39 73.2 Q42 72 45 73.2" fill="none" stroke={m[0]} strokeWidth=".9" opacity=".8"/>
+    </g>
+    <path d="M26 52 A19 19 0 0 1 46 45.5" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" opacity=".55"/>
+    <g clipPath={`url(#${clip})`}><rect className="rp-medal-shine" x="6" y="30" width="12" height="70" fill="#fff" opacity=".45"/></g>
   </svg>;
 }
 

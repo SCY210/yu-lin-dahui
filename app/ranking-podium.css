@@ -187,3 +187,18 @@
  .rp-root .rp-center .rp-number { font-size:32px; }
  .rp-root .rp-right .rp-number { font-size:24px; }
 }
+
+/* Championship-style medals: the ribbon follows the theme, the metal stays gold, silver or bronze. */
+.rp-ribbon { fill: #4a3fb0; }
+.rp-ribbon-back { fill: #6a5fd0; }
+.rp-ribbon-stripe { fill: #f0cb63; }
+.rp-rim-text { font: 700 4.3px/1 system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; letter-spacing: .35px; opacity: .8; }
+.rp-medal-shine { transform-box: view-box; transform-origin: 42px 64px; transform: rotate(24deg) translateX(-30px); animation: rp-medal-shine 4.2s ease-in-out infinite; }
+.rp-metal-2 .rp-medal-shine { animation-delay: -1.4s; }
+.rp-metal-3 .rp-medal-shine { animation-delay: -2.8s; }
+@keyframes rp-medal-shine { 0%, 60% { transform: rotate(24deg) translateX(-30px); } 85%, 100% { transform: rotate(24deg) translateX(72px); } }
+.wuxia-theme .rp-ribbon { fill: #a8382a; }
+.wuxia-theme .rp-ribbon-back { fill: #c25a43; }
+.wuxia-theme .rp-ribbon-stripe { fill: #f3e7cc; }
+.wuxia-theme .rp-rim-text { font-family: 'Songti SC', 'SimSun', serif; }
+@media (prefers-reduced-motion: reduce) { .rp-medal-shine { animation: none; opacity: 0; } }

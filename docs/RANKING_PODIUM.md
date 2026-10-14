@@ -12,3 +12,7 @@ Supply the existing rows.filter(r => r.games > 0 && r.rank <= 3).slice(0, 3), da
 - Names wrap, controls target at least 44px, focus remains visible, and reduced motion disables transitions.
 
 rp-* styles avoid the previous podium-card cascade. Verify centering, elevation, medals, visible numbers, tie labels, profile links, and page overflow on narrow screens. Screenshots such as preview-captures/podium-mobile.png are ignored local evidence, not required source.
+
+## Championship-style medals
+
+The medal on each pedestal follows the form of a championship medal: a broad two-strap ribbon with an edge stripe and a metal clasp, a thick bevelled rim engraved with the club name and the place (champion, runner-up, third), a beaded inner ring and an embossed shuttlecock in the centre, with a highlight and light sweeping across the metal. It uses the club's own wording and emblem and no event marks. The metal stays gold, silver or bronze; the ribbon follows the theme (indigo with a gold stripe in the classic theme, cinnabar with a cream stripe in the ink-wash theme). The sweep stops under reduced motion.
