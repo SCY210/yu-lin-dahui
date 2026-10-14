@@ -1,6 +1,6 @@
 import {defaultRules, type Rules} from './domain/types';
 import {expectedScore,gameChanges,perfectionScore,realmPolicy,realms,roundDelta} from './domain/realm-rating';
-import {seasonPointsPolicy} from './domain/season-points';
+import {seasonPointsPolicy,winningStreakBonus} from './domain/season-points';
 
 import {guideLabels,guideTopics,type GuideTopic,type FeatureGuideContent,type GuideTable} from './feature-guide-topics';
 export * from './feature-guide-topics';
@@ -8,10 +8,12 @@ export * from './feature-guide-topics';
 const singlesGuide='双打榜只统计双打计分小局。单打榜只统计每方各 1 人的单打小局，赛季积分和同分规则相同，只列出所选周期打过单打的正式球友；群主手动积分调整只计入双打榜。单打与双打共用同一个修为。创建活动时选择单打或双打，活动名称自动生成；单打每场2人，双打每场4人，由群主或管理员开启积分赛后，录入比分才计入对应榜单；普通活动不计积分或修为。';
 const signed=(n:number)=>(n>0?'+':n<0?'−':'±')+Math.abs(n);
 const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap),upsetGaps=upsets.map(u=>u.gap).join(' / '),upsetBonuses=upsets.map(u=>u.bonus).join(' / ');
+export const streakPointsGuide=`第 ${seasonPointsPolicy.streak.start} 个连续胜局另加 ${winningStreakBonus(2)} 分，第 3 个另加 ${winningStreakBonus(3)} 分，第 4 个及之后每局另加 ${seasonPointsPolicy.streak.cap} 分；每局连胜加分最多 ${seasonPointsPolicy.streak.cap} 分，可与强弱加成叠加。单打、双打分别按完赛时间、比赛编号、小局顺序累计；输掉计分小局或开始新的马德里自然季度时重置。友谊赛、让分局、取消和未完成记录不参与连胜；缺席判负中断缺席者的连胜。当前季度任一类型达到2连胜，头像显示“On fire”火焰边框；没有符合条件的连胜时熄灭。修正或作废比分后从记录重新计算，历史排名也按现行规则更新。`;
 /** 赛季积分 per rated game, generated from seasonPointsPolicy. */
 export const seasonPointsTable:GuideTable={caption:'每个计分小局的赛季积分',columns:['结果','赛季积分'],rows:[
  ['输',String(seasonPointsPolicy.loss).replace('-','−')],['赢',String(seasonPointsPolicy.win)],
  ...upsets.map((u,i)=>[`赢赛前平均修为高 ${u.gap}${upsets[i+1]?'–'+(upsets[i+1].gap-1):' 及以上'} 分的对手`,String(seasonPointsPolicy.win+u.bonus)]),
+ ['第2个连续胜局的额外加分','+'+winningStreakBonus(2)],['第3个连续胜局的额外加分','+'+winningStreakBonus(3)],['第4个及之后连续胜局的额外加分','+'+seasonPointsPolicy.streak.cap],
 ]};
 export const realmTable:GuideTable={caption:'修仙境界门槛（修为）',columns:['境界','修为'],rows:realms.map(realm=>[realm.name,realm.range])};
 /** Gains for one game at the settled K; the provisional K doubles them. */
@@ -28,11 +30,12 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
   switch(topic) {
     case 'ranking': return {
       title:guideLabels.ranking,
-      description:'季度榜按自然季度累计赛季积分：每个计分小局赢 3 分、输扣 1 分，赢修为更高的对手另有加成；积分、胜率与局均净胜共同决定名次。',
+      description:'季度榜按自然季度累计赛季积分：每个计分小局赢 3 分、输扣 1 分，连胜和赢修为更高的对手另有加成；积分、胜率与局均净胜共同决定名次。',
       sections:[
         {title:'积分与名次', items:[
           `季度积分 = 本季度每个计分小局的赛季积分之和 + 群主手动积分调整。每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分；赢下赛前队伍平均修为比自己高 ${upsetGaps} 分以上的对手，另加 ${upsetBonuses} 分。`,
-          '赛季积分只用于本季度和年度排名，每季度从 0 开始累计，允许负积分；不计爆冷加成和手动调整时，输局数超过胜局数 3 倍就会是负数；比赛积分不改变修为和境界。修为是长期实力，不随季度重置，只有群主单独填写的修为调整会直接改变它。',
+          streakPointsGuide,
+          '赛季积分只用于本季度和年度排名，每季度从 0 开始累计，允许负积分；不计连胜、爆冷加成和手动调整时，输局数超过胜局数 3 倍就会是负数；比赛积分不改变修为和境界。修为是长期实力，不随季度重置，只有群主单独填写的修为调整会直接改变它。',
           '先比积分，再比计分小局胜率，再比局均净胜分，均按从高到低排列。',
           '胜率 = 胜局 ÷ 计分小局数；局均净胜 = 各计分小局本方得分与对方得分之差的合计 ÷ 计分小局数。三局两胜按实际打完的每一局分别计算。',
           '三项都相同则并列：例如两人并列第 1，下一位第 3。比赛编号 / 球友编号只稳定显示顺序，不打破并列名次。',
@@ -45,7 +48,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         ]},
       ],
       tables:[seasonPointsTable],
-      example:{title:'一个季度的积分',text:'某人本季度打了 12 个计分小局，赢 7 局、输 5 局，其中 2 局赢的是平均修为高 60 分的对手：7 × 3 − 5 × 1 + 2 × 1 = 18 分。胜率用全季度胜局除以计分小局总数，不能直接平均三个月的胜率。'},
+      example:{title:'一个季度的积分',text:'某人本季度打了 12 个计分小局，赢 7 局、输 5 局，其中 2 局赢的是平均修为高 60 分的对手，并有两次2连胜、没有更长连胜：7 × 3 − 5 × 1 + 2 × 1 + 2 × 1 = 20 分。连胜加分已包含在总积分中。胜率用全季度胜局除以计分小局总数，不能直接平均三个月的胜率。'},
       related:['annualRanking','rating','matches','state'],
     };
     case 'annualRanking': return {
@@ -54,6 +57,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
       sections:[
         {title:'积分怎么来', paragraphs:[
           `年度积分 = 1 月至 12 月每个计分小局的赛季积分之和 + 计入本年各月的手动积分调整：每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分，赢修为高 ${upsetGaps} 分以上的对手另加 ${upsetBonuses} 分。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按现行规则重新计算。`,
+          streakPointsGuide,
           '年度胜局、负局和计分小局数为这些计入修为的小局合计；实际比赛数还包括友谊赛和让分局。手动积分调整计入指定月份并汇总到年度榜，不增加胜场；群主也可以另填修为调整，保存后立即改变修为、境界和双打分组实力，但不计入比赛局数。',
         ]},
         {title:'年度并列与年份归属', paragraphs:[
@@ -65,7 +69,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         {title:'赛季积分与修仙境界', paragraphs:[`网站只有两个分数：修为是长期实力，决定修仙境界（自动分组按同一公式只计双打小局），不随季度或年度重置，只有连续 ${realmPolicy.inactivityMonths} 个月没有计分小局才回到 ${realmPolicy.start} 分重新定级；赛季积分只用于季度和年度排名。榜单上的境界是当前境界，历史季度和年份也一样。计分小局少于 ${realmPolicy.placementGames} 局的球友只显示“定级中 · N/${realmPolicy.placementGames} 局”。`]},
       ],
       tables:[seasonPointsTable],
-      example:{title:'积分与修为互不影响',text:'某人全年赢 30 局、输 20 局，其中 4 局爆冷赢了修为高 150 分以上的对手：年度积分 30 × 3 − 20 × 1 + 4 × 2 = 78 分。同一年他的修为可能只从 1000 涨到 1040，两者分别计算。'},
+      example:{title:'积分与修为互不影响',text:'某人全年赢 30 局、输 20 局，其中 4 局爆冷赢了修为高 150 分以上的对手，四个季度共获得12分连胜加成：年度积分 30 × 3 − 20 × 1 + 4 × 2 + 12 = 90 分。同一年他的修为可能只从 1000 涨到 1040，两者分别计算。'},
       related:['ranking','rating','matches'],
     };
     case 'rating': return {
@@ -201,7 +205,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
       description:'最近状态用最近最多 10 小局完整比赛的胜率表示。',
       sections:[
         {title:'状态值怎样计算', paragraphs:['按实际开赛时间排列已完成比赛，取最近最多 10 场。状态值 = 最近胜局 ÷ 最近小局数 × 100，四舍五入为整数。包含已完成友谊赛，不受积分榜上限影响。', '没有完整比赛时显示空值；少于 5 小局显示样本不足。达到 5 小局后，状态值 ≥ 70 显示火热，≤ 30 显示低迷，其余显示正常。']},
-        {title:'连胜与连败', paragraphs:['最长连胜 / 连败使用完整小局序列中的连续胜负；当前连胜 / 连败从最新一小局往前延续。取消、弃权和未完成比赛不进入这条序列。', '这是近期结果的描述，没有额外状态加分，也不会直接改变境界。对手强弱与搭档变化都会影响胜率。']},
+        {title:'连胜与连败', paragraphs:['最长连胜 / 连败使用完整小局序列中的连续胜负；当前连胜 / 连败从最新一小局往前延续。取消、弃权和未完成比赛不进入这条序列。', '近期状态描述全部有效完整对局，与按类型和季度分别计算的积分连胜口径不同。',streakPointsGuide,'连胜积分不会直接改变修为和境界。对手强弱与搭档变化都会影响胜率。']},
       ],
       example:{title:'最近 10 场 7 胜',text:'7 ÷ 10 × 100 = 70，显示火热。若只完成 4 场且全胜，虽然状态值 100，仍显示样本不足。'},
       related:['rating','ranking','partners'],

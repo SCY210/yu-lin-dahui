@@ -2,6 +2,8 @@ import type {Account,Settings,State} from './domain/types';
 import {awardVotingClosesAt} from './domain/activity-voting';
 import {attendanceForEvent} from './domain/attendance';
 import {inactivityDeadline,isRatedMatch} from './domain/realm-rating';
+import {month} from './domain/types';
+import {nextQuarterStart} from './ranking-quarter';
 
 const roundDuration=20*60000;
 const maxAge=5*60000;
@@ -50,6 +52,7 @@ export function createClubReadCache(limit=256){
 export function clubViewValidUntil(s:State,a:Account,now:number){
  let expires=now+maxAge;
  const boundary=(at:number)=>{if(at>now)expires=Math.min(expires,at)};
+ boundary(nextQuarterStart(month(now)));
  const events=s.events.filter(e=>e.deletedAt===undefined&&(a.role==='admin'||e.status!=='draft'||e.creatorId===a.id));
  for(const e of events){
   if(e.start<=now&&now<e.end)return now;
