@@ -8,7 +8,7 @@ export * from './feature-guide-topics';
 const singlesGuide='双打榜只统计双打计分小局。单打榜只统计每方各 1 人的单打小局，赛季积分和同分规则相同，只列出所选周期打过单打的正式球友；群主手动积分调整只计入双打榜。单打与双打共用同一个修为。创建活动时选择单打或双打，活动名称自动生成；单打每场2人，双打每场4人，由群主或管理员开启积分赛后，录入比分才计入对应榜单；普通活动不计积分或修为。';
 const signed=(n:number)=>(n>0?'+':n<0?'−':'±')+Math.abs(n);
 const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap),upsetGaps=upsets.map(u=>u.gap).join(' / '),upsetBonuses=upsets.map(u=>u.bonus).join(' / ');
-export const streakPointsGuide=`第 ${seasonPointsPolicy.streak.start} 个连续胜局另加 ${winningStreakBonus(2)} 分，第 3 个另加 ${winningStreakBonus(3)} 分，第 4 个及之后每局另加 ${seasonPointsPolicy.streak.cap} 分；每局连胜加分最多 ${seasonPointsPolicy.streak.cap} 分，可与强弱加成叠加。单打、双打分别按完赛时间、比赛编号、小局顺序累计；输掉计分小局或开始新的马德里自然季度时重置。友谊赛、让分局、取消和未完成记录不参与连胜；缺席判负中断缺席者的连胜。当前季度任一类型达到2连胜，头像显示“On fire”火焰边框；没有符合条件的连胜时熄灭。修正或作废比分后从记录重新计算，历史排名也按现行规则更新。`;
+export const streakPointsGuide=`第 ${seasonPointsPolicy.streak.start} 个连续胜局另加 ${winningStreakBonus(2)} 分，第 3 个另加 ${winningStreakBonus(3)} 分，第 4 个及之后每局另加 ${seasonPointsPolicy.streak.cap} 分；每局连胜加分最多 ${seasonPointsPolicy.streak.cap} 分，可与强弱加成叠加。单打、双打分别按完赛时间、比赛编号、小局顺序累计；输掉计分小局或开始新的马德里自然季度时重置。友谊赛、让分局、取消和未完成记录不参与连胜；缺席判负中断缺席者的连胜。当前季度任一类型达到2连胜，头像显示灵火护体：2–3 连胜赤焰、4–5 连胜真火、6 连胜以上三昧真火，右下角印章标出连胜数；没有符合条件的连胜时熄灭。修正或作废比分后从记录重新计算，历史排名也按现行规则更新。`;
 /** 赛季积分 per rated game, generated from seasonPointsPolicy. */
 export const seasonPointsTable:GuideTable={caption:'每个计分小局的赛季积分',columns:['结果','赛季积分'],rows:[
  ['输',String(seasonPointsPolicy.loss).replace('-','−')],['赢',String(seasonPointsPolicy.win)],
