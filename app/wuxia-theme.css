@@ -101,7 +101,7 @@ html{background:var(--background)}
 .wuxia-theme .rp-root .rp-avatar{background:#e8d8b7;color:#785b30;border-color:#fff6df;border-radius:4px;box-shadow:0 0 0 1px #b69a63,0 4px 12px #8a6d3520}
 .wuxia-theme .rp-profile{color:#473f2d;border-radius:3px}.wuxia-theme .rp-profile:hover{background:#d5bb8830}.wuxia-theme .rp-name{font-family:'KaiTi','STKaiti','SimSun',serif;font-size:19px}.wuxia-theme .rp-score{color:#7b582d}.wuxia-theme .rp-score b{font-family:'Songti SC','SimSun',serif;font-weight:600}.wuxia-theme .rp-score span,.wuxia-theme .rp-record{color:#97805a}
 .wuxia-theme .rp-pedestal{background:linear-gradient(145deg,#eaddc0,#d9c5a0);border-color:#bba16d;border-radius:4px 4px 0 0;box-shadow:inset 0 1px #fff6}.wuxia-theme .rp-metal-1 .rp-pedestal{background:linear-gradient(135deg,#ebd6a3,#d7bc7e)}.wuxia-theme .rp-metal-2 .rp-pedestal{background:linear-gradient(135deg,#e8e2d3,#cdcbb9)}.wuxia-theme .rp-metal-3 .rp-pedestal{background:linear-gradient(135deg,#ebd8c0,#d3b898)}
-.wuxia-theme .rp-aura,.wuxia-theme .rp-pedestal svg{filter:grayscale(.6) sepia(.6)}.wuxia-theme .rp-place{color:#785d34}.wuxia-theme .rp-number{color:#9a7b4855}
+.wuxia-theme .rp-aura{filter:grayscale(.6) sepia(.6)}.wuxia-theme .rp-place{color:#785d34}.wuxia-theme .rp-number{color:#9a7b4855}
 .wuxia-theme .month-picker,.wuxia-theme .month-panel{background:#f8efdc;border-color:#c5ac7b;border-radius:3px;color:#765a32;box-shadow:none}.wuxia-theme .month-current,.wuxia-theme .month-arrow{color:#765a32}.wuxia-theme .month-current svg{color:#907044}.wuxia-theme .month-grid button.selected{background:#26342a;color:#eed8ad}
 .wuxia-theme .cultivation-ornament img{filter:grayscale(1) sepia(.7) brightness(.65);opacity:.9}
 

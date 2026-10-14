@@ -61,3 +61,7 @@
  .rv-heading .rv-title .eyebrow { font-size:12px; letter-spacing:1px; }
  .rv-controls .rv-date-picker .month-arrow { width:36px; min-height:40px; }
 }
+
+/* Streak signs (bagua, swords, clouds, rune rings) reach up to about 11px beyond the avatar; keep the name and
+   realm tag clear of them. Every row gets the same space so names stay aligned. */
+.leaderboard-row>.ranking-person{padding-left:10px}
