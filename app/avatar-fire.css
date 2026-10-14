@@ -1,45 +1,73 @@
-/* 灵火护体: spirit fire around the avatar of a player on a winning streak. Three tiers (data-tier):
-   1 赤焰 red flame (2–3 wins), 2 真火 golden flame (4–5), 3 三昧真火 violet flame with a rune ring (6+).
-   Colours are custom properties, so each theme restyles them: the classic theme glows in colour, the
-   水墨江湖 theme draws the ring in ink and stamps a cinnabar seal. */
+/* Winning-streak signs around the avatar, one cultivation motif per tier (data-tier):
+   1 灵气护体: a breathing jade qi ring, two drifting 如意 clouds and rising motes (2–3 wins, seal 连胜).
+   2 剑意凌空: a double gold frame with three flying swords circling it, trailing sword light (4–5, seal 连斩).
+   3 八卦天阵: a violet-gold bagua array turning behind the avatar, a counter-turning rune ring and
+     thunder that crackles at two corners (6+, seal 连霸).
+   The frame follows the avatar: round in the classic theme, square in 水墨江湖. Colours are custom
+   properties so a theme can restyle them. */
 .avatar.avatar-fire-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible;border-radius:50%;container-type:inline-size;
- --af-tip:#e0401f;--af-mid:#ff8a2a;--af-core:#ffe9a8;--af-inner:#fff6d8;--af-ring:#e2582a;--af-ember:#ffb347;--af-glow:#ff6f2099;
- --af-seal-bg:linear-gradient(135deg,#ff8a2a,#e0401f);--af-seal-ink:#fff;--af-seal-edge:#fff;--af-seal-radius:999px;--af-seal-font:inherit}
-.avatar-fire-shell[data-tier='2']{--af-tip:#ff8a1c;--af-mid:#ffd24a;--af-core:#fffbe6;--af-inner:#ffffff;--af-ring:#d9a12b;--af-ember:#ffe27a;--af-glow:#f5c04a99;--af-seal-bg:linear-gradient(135deg,#ffd24a,#e58a12)}
-.avatar-fire-shell[data-tier='3']{--af-tip:#6a34e8;--af-mid:#b07cff;--af-core:#f6e9ff;--af-inner:#ffffff;--af-ring:#9b6cff;--af-ember:#f3cf6a;--af-glow:#a77cff99;--af-seal-bg:linear-gradient(135deg,#b07cff,#5a2bd0);--af-seal-edge:#f3cf6a}
+ --af-qi:#3fae8a;--af-qi-light:#bff0dc;--af-cloud:#e9fbf3;--af-cloud-line:#3fae8a;
+ --af-gold:#d4a23a;--af-gold-light:#fff3c8;--af-steel:#eef3f8;--af-steel-edge:#9fb3c8;
+ --af-violet:#7b4fd6;--af-violet-light:#d9c6ff;--af-thunder:#f4ecff;--af-thunder-glow:#a77cff;
+ --af-seal-radius:999px;--af-seal-font:inherit}
 span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;height:100%;min-width:0;object-fit:cover;border-radius:inherit;border:0;flex:1;margin:0}
-.avatar-fire-art{position:absolute;inset:-20%;width:140%;height:140%;overflow:visible;pointer-events:none;z-index:1;filter:drop-shadow(0 0 2px var(--af-glow))}
-.af-stop-tip{stop-color:var(--af-tip);stop-opacity:.2}.af-stop-mid{stop-color:var(--af-mid)}.af-stop-core{stop-color:var(--af-core)}
-.avatar-fire-brush{fill:var(--af-ring)}
-.avatar-fire-core{fill:var(--af-inner);opacity:.45}
-.avatar-fire-runes{stroke:var(--af-ember);stroke-width:1.1;opacity:.75;transform-origin:50px 50px}
-.avatar-fire-embers circle{fill:var(--af-ember);opacity:0}
+.avatar-fire-art{position:absolute;inset:-20%;width:140%;height:140%;overflow:visible;pointer-events:none;z-index:1}
+.avatar-fire-art.avatar-fire-back{z-index:-1}
+.avatar-fire-art *{transform-box:view-box}
+.af-square{display:none}
+.wuxia-theme .avatar.avatar-fire-shell{border-radius:3px}
+.wuxia-theme .af-round{display:none}.wuxia-theme .af-square{display:inline}
 
-/* Two layers of the flame halo turn against each other like a qi vortex and breathe on different beats;
-   embers rise and fade. */
-.avatar-fire-swirl{transform-origin:50px 50px;animation:af-swirl 14s linear infinite}
-.avatar-fire-swirl.is-inner{animation-direction:reverse;animation-duration:10s}
-.avatar-fire-flame{transform-origin:50px 50px;transform-box:view-box;animation:af-flicker 1.3s ease-in-out infinite alternate}
-.avatar-fire-swirl.is-inner .avatar-fire-flame{animation-duration:.9s;animation-delay:-.4s}
-.avatar-fire-embers circle{animation:af-ember 2.4s ease-out infinite;animation-delay:var(--af-delay,0s);transform-box:fill-box;transform-origin:center}
-.avatar-fire-runes{animation:af-swirl 22s linear infinite reverse}
-.avatar-fire-shell[data-tier='3'] .avatar-fire-swirl{animation-duration:9s}
-.avatar-fire-shell[data-tier='2'] .avatar-fire-swirl{animation-duration:11s}
-.avatar-fire-shell .avatar-fire-swirl,.avatar-fire-shell .avatar-fire-flame,.avatar-fire-shell .avatar-fire-embers circle,.avatar-fire-shell .avatar-fire-runes{animation-play-state:paused}
-.avatar-fire-shell[data-moving=true] .avatar-fire-swirl,.avatar-fire-shell[data-moving=true] .avatar-fire-flame,.avatar-fire-shell[data-moving=true] .avatar-fire-embers circle,.avatar-fire-shell[data-moving=true] .avatar-fire-runes{animation-play-state:running}
-@keyframes af-swirl{to{transform:rotate(360deg)}}
-@keyframes af-flicker{0%{transform:scale(.96);opacity:.82}55%{transform:scale(1.035);opacity:1}100%{transform:scale(.99);opacity:.9}}
-@keyframes af-ember{0%{transform:translateY(0) scale(1);opacity:0}20%{opacity:1}100%{transform:translateY(-9px) scale(.4);opacity:0}}
+/* ── 1 灵气护体 ── */
+.af-qi-ring{fill:none;stroke:var(--af-qi);stroke-width:2.2;filter:drop-shadow(0 0 2.5px var(--af-qi-light));animation:af-breathe 3.2s ease-in-out infinite}
+.af-cloud path{fill:var(--af-cloud);stroke:var(--af-cloud-line);stroke-width:1.1;stroke-linejoin:round}
+.af-cloud .af-curl{fill:none;stroke-linecap:round}
+.af-cloud-a{animation:af-bob-a 4.2s ease-in-out infinite}
+.af-cloud-b{animation:af-bob-b 5s ease-in-out infinite}
+.af-motes circle{fill:var(--af-qi);opacity:0;animation:af-rise 2.8s ease-out infinite;animation-delay:var(--af-delay,0s)}
+@keyframes af-breathe{0%,100%{opacity:.7;stroke-width:2}50%{opacity:1;stroke-width:2.6}}
+@keyframes af-bob-a{0%,100%{transform:translate(3px,5px) scale(1.25)}50%{transform:translate(1px,3.5px) scale(1.25)}}
+@keyframes af-bob-b{0%,100%{transform:translate(97px,84px) scale(-1.15,1.15)}50%{transform:translate(99px,85.5px) scale(-1.15,1.15)}}
+@keyframes af-rise{0%{transform:translateY(0);opacity:0}25%{opacity:.9}100%{transform:translateY(-10px);opacity:0}}
 
-/* The streak count is stamped as a small seal at the lower right; hidden on avatars too small to read it. */
-.avatar-fire-seal{position:absolute;right:-14%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);background:var(--af-seal-bg);color:var(--af-seal-ink);border:1px solid var(--af-seal-edge);box-shadow:0 1px 3px #0003;font:700 clamp(8px,24cqw,13px)/1.15 var(--af-seal-font);letter-spacing:0;white-space:nowrap;pointer-events:none}
+/* ── 2 剑意凌空 ── */
+.af-sword-frame-outer{fill:none;stroke:var(--af-gold);stroke-width:2.2}
+.af-sword-frame-inner{fill:none;stroke:var(--af-gold);stroke-width:.9;opacity:.7}
+.af-swords{transform-origin:50px 50px;animation:af-turn 6s linear infinite;filter:drop-shadow(0 0 1.5px var(--af-gold-light))}
+.af-sword-blade{fill:var(--af-steel);stroke:var(--af-steel-edge);stroke-width:.5;stroke-linejoin:round}
+.af-sword-edge{stroke:#fff;stroke-width:.5;opacity:.9}
+.af-sword-guard{fill:var(--af-gold)}
+.af-sword-hilt{fill:#7a4a1f}
+.af-sword-trail{fill:none;stroke:var(--af-gold-light);stroke-width:2.6;stroke-linecap:round;opacity:.55;stroke-dasharray:2 3 6 40}
+
+/* ── 3 八卦天阵 ── */
+.af-runes{fill:none;stroke:var(--af-gold);stroke-width:1;opacity:.75;transform-origin:50px 50px;animation:af-turn 24s linear infinite reverse}
+.af-bagua{transform-origin:50px 50px;animation:af-turn 18s linear infinite;filter:drop-shadow(0 0 2px var(--af-thunder-glow))}
+.af-bagua-scale{transform-origin:50px 50px}
+.wuxia-theme .af-bagua-scale{transform:scale(1.12)}
+.af-octagon{fill:color-mix(in srgb,var(--af-violet) 28%,transparent);stroke:var(--af-violet);stroke-width:1.6;stroke-linejoin:round}
+.af-yao{fill:var(--af-gold)}
+.af-bagua-frame{fill:none;stroke:var(--af-violet-light);stroke-width:1.4}
+.af-thunder{fill:none;stroke:var(--af-thunder);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 3px var(--af-thunder-glow));animation:af-strike 3.6s linear infinite}
+.af-thunder-b{animation-duration:4.7s;animation-delay:-1.9s}
+@keyframes af-turn{to{transform:rotate(360deg)}}
+@keyframes af-strike{0%,64%{opacity:0}65%{opacity:1}67%{opacity:.2}69%{opacity:1}76%,100%{opacity:0}}
+
+/* Motion runs only while the avatar is on screen and the page is visible. */
+.avatar-fire-shell .avatar-fire-art *{animation-play-state:paused}
+.avatar-fire-shell[data-moving=true] .avatar-fire-art *{animation-play-state:running}
+
+/* The seal: the count and the tier's own word (连胜 / 连斩 / 连霸), styled per tier; hidden on tiny avatars. */
+.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font:700 clamp(8px,22cqw,13px)/1.15 var(--af-seal-font);letter-spacing:0;white-space:nowrap;pointer-events:none;color:#fff;background:linear-gradient(135deg,#4cc39b,#23876a)}
 .avatar-fire-seal small{font-size:.72em;font-weight:600}
+.avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507;border-color:#fff3c8}
+.avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
 @container (max-width:34px){.avatar-fire-seal{display:none}}
 
-/* 水墨江湖: an ink brush ring, softer flame glow and a square cinnabar seal in a serif face. */
-.wuxia-theme .avatar.avatar-fire-shell{--af-ring:#2b2620;--af-glow:#c2502e66;--af-seal-bg:#a8382a;--af-seal-ink:#fff6e6;--af-seal-edge:#fff6e6;--af-seal-radius:3px;--af-seal-font:'Songti SC','SimSun',serif}
-.wuxia-theme .avatar-fire-shell[data-tier='2']{--af-ring:#3a2c14;--af-glow:#d9a12b66;--af-seal-bg:#b8862b}
-.wuxia-theme .avatar-fire-shell[data-tier='3']{--af-ring:#2a1d3d;--af-glow:#8e63d866;--af-seal-bg:#5b3a8e;--af-seal-edge:#e8c87a}
-.wuxia-theme .avatar-fire-art{filter:drop-shadow(0 0 1.5px var(--af-glow))}
+/* 水墨江湖: ink-and-mineral colours, a square frame and square seals in a serif face. */
+.wuxia-theme .avatar.avatar-fire-shell{--af-qi:#3d7a62;--af-qi-light:#cfe6d6;--af-cloud:#f6f1e3;--af-cloud-line:#3d7a62;--af-gold:#a8792a;--af-gold-light:#f2dfae;--af-steel:#f3efe4;--af-steel-edge:#6b6355;--af-violet:#5b3a8e;--af-violet-light:#bca8dc;--af-thunder-glow:#8e63d8;--af-seal-radius:3px;--af-seal-font:'Songti SC','SimSun',serif}
+.wuxia-theme .avatar-fire-seal{background:#3d7a62;border-color:#fff6e6;color:#fff6e6}
+.wuxia-theme .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:#a8382a;color:#fff6e6;border-color:#f2dfae}
+.wuxia-theme .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:#3a2458;color:#f2dfae;border-color:#c9a14e;box-shadow:none}
 
-@media(prefers-reduced-motion:reduce){.avatar-fire-swirl,.avatar-fire-flame,.avatar-fire-embers circle,.avatar-fire-runes{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.avatar-fire-art *{animation:none!important}.af-thunder{opacity:.8}.af-motes circle{opacity:.6}}

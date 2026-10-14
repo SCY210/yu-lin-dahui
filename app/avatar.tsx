@@ -1,5 +1,5 @@
 'use client';
-import {useId,useRef,useState,type CSSProperties} from 'react';
+import {useRef,useState,type CSSProperties} from 'react';
 import {seasonPointsPolicy,type WinningStreaks} from '../lib/domain/season-points';
 import {useVisibleAvatarMotion} from '../lib/client/visible-avatar-motion';
 import './avatar-fire.css';
@@ -11,48 +11,86 @@ function AvatarImage({p,size=''}:{p?:AvatarPlayer;size?:string}){
  return <img className={'avatar '+size} src={custom?'/api/photos/'+avatarId:'/default-avatar.svg'} alt={name+'的头像'} loading="lazy" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
 }
 
-/** Spirit fire grows with the streak, like 凡火 → 真火 → 三昧真火: red flame, golden flame, violet flame with a rune ring. */
-export const fireTiers=[{wins:6,name:'三昧真火'},{wins:4,name:'真火护体'},{wins:seasonPointsPolicy.streak.start,name:'赤焰护体'}] as const;
-export function fireTier(wins:number){const index=fireTiers.findIndex(t=>wins>=t.wins);return index<0?0:fireTiers.length-index}
+/** A winning streak shows a different cultivation sign as it grows, each with its own word on the seal:
+ * 灵气护体 (jade qi and auspicious clouds), 剑意凌空 (orbiting flying swords), 八卦天阵 (a bagua array with thunder). */
+export const streakTiers=[
+ {wins:seasonPointsPolicy.streak.start,name:'灵气护体',word:'连胜'},
+ {wins:4,name:'剑意凌空',word:'连斩'},
+ {wins:6,name:'八卦天阵',word:'连霸'},
+] as const;
+export function streakTier(wins:number){let tier=0;streakTiers.forEach((t,i)=>{if(wins>=t.wins)tier=i+1});return tier}
 
 const r1=(n:number)=>Math.round(n*10)/10;
-const at=(radius:number,deg:number)=>r1(50+radius*Math.cos(deg*Math.PI/180))+' '+r1(50+radius*Math.sin(deg*Math.PI/180));
-/** A halo of flame (火焰背光): tongues of uneven height rise from the ring and lean with the swirl. */
-function flameCrown(count:number,base:number,heights:readonly number[],lean:number,offset=0){
- const step=360/count;let d='M'+at(base,offset-90);
- for(let i=0;i<count;i++){
-  const a=offset-90+i*step,tip=base+heights[i%heights.length];
-  d+=' C'+at(base+(tip-base)*.35,a+step*.15)+' '+at(tip-(tip-base)*.2,a+step*.35+lean)+' '+at(tip,a+step*.55+lean)
-   +' C'+at(tip-(tip-base)*.45,a+step*.6+lean*.4)+' '+at(base+(tip-base)*.15,a+step*.8)+' '+at(base,a+step);
- }
- // Cut the centre out so only the halo is filled.
- const hole=base-.5;
- return d+'Z M'+r1(50-hole)+' 50 A'+hole+' '+hole+' 0 1 0 '+r1(50+hole)+' 50 A'+hole+' '+hole+' 0 1 0 '+r1(50-hole)+' 50Z';
+/** The frame follows the avatar: round in the classic theme, square in 水墨江湖 (CSS shows one of the two). */
+function Frame({className}:{className:string}){
+ return <><circle className={className+' af-round'} cx="50" cy="50" r="37.5"/><rect className={className+' af-square'} x="12.5" y="12.5" width="75" height="75" rx="3"/></>;
 }
-const OUTER=flameCrown(16,37,[8,4.5,10,5,7.5,4,9.5,5,8.5,4.5,6.5,4,10,5.5,7,4],9);
-const INNER=flameCrown(12,37,[4,2.5,5,3,4.5,2.5,5,3,4,2.5,4.5,3],-6,11);
-/** A brush-stroke ring: two offset circles make the line thicken and thin like ink. */
-const BRUSH='M50 11 A39 39 0 1 1 49.9 11Z M50.6 12.9 A37.4 37.4 0 1 0 50.7 12.9Z';
+/** 如意云头: an auspicious cloud with a curl, drawn at the origin. */
+const CLOUD='M0 6 C-1 2 2 -1 5 0 C6 -3 10 -4 12 -1 C15 -3 19 0 17 4 C20 5 19 9 16 9 L2 9 C-1 9 -2 7 0 6Z';
+const CLOUD_CURL='M5.5 5.5 C5.5 3.2 9 3.2 9 5.4 C9 7 6.8 7 6.8 5.8';
+/** A flying sword lying along the orbit at the top, point forward (clockwise). */
+const SWORD_BLADE='M41 3.9 L58.5 3.9 L62 5 L58.5 6.1 L41 6.1Z';
+/** 先天八卦 from 乾 to 坤; 1 is a solid line, 0 a broken one, inner line first. */
+const TRIGRAMS=['111','011','101','001','110','010','100','000'];
+
+function QiArt(){
+ return <>
+  <Frame className="af-qi-ring"/>
+  <g className="af-cloud af-cloud-a" transform="translate(3 5) scale(1.25)"><path d={CLOUD}/><path className="af-curl" d={CLOUD_CURL}/></g>
+  <g className="af-cloud af-cloud-b" transform="translate(97 84) scale(-1.15 1.15)"><path d={CLOUD}/><path className="af-curl" d={CLOUD_CURL}/></g>
+  <g className="af-motes">{[[24,20],[86,40],[16,70],[64,92]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="1.5" style={{'--af-delay':(i*0.6)+'s'} as CSSProperties}/>)}</g>
+ </>;
+}
+
+function SwordArt(){
+ return <>
+  <Frame className="af-sword-frame-outer"/>
+  <g transform="translate(50 50) scale(.93) translate(-50 -50)"><Frame className="af-sword-frame-inner"/></g>
+  <g className="af-swords">
+   {[0,120,240].map(angle=><g key={angle} transform={'rotate('+angle+' 50 50)'}>
+    <path className="af-sword-trail" d="M34 5 A45 45 0 0 0 16 12"/>
+    <path className="af-sword-blade" d={SWORD_BLADE}/>
+    <path className="af-sword-edge" d="M42 5 L59 5"/>
+    <rect className="af-sword-guard" x="39" y="2.2" width="2" height="5.6" rx=".8"/>
+    <rect className="af-sword-hilt" x="34.5" y="4.2" width="4.6" height="1.6" rx=".6"/>
+    <circle className="af-sword-guard" cx="34" cy="5" r="1.3"/>
+   </g>)}
+  </g>
+ </>;
+}
+
+/** The bagua array turns behind the avatar, so its disc never tints the face. */
+function BaguaBack(){
+ const octagon=Array.from({length:8},(_,i)=>{const a=(-90+22.5+i*45)*Math.PI/180;return r1(50+48*Math.cos(a))+','+r1(50+48*Math.sin(a))}).join(' ');
+ return <g className="af-bagua-scale">
+  <circle className="af-runes" cx="50" cy="50" r="51.5" strokeDasharray=".6 2.4 2.6 2.4"/>
+  <g className="af-bagua">
+   <polygon className="af-octagon" points={octagon}/>
+   {TRIGRAMS.map((lines,i)=><g key={i} transform={'rotate('+(i*45)+' 50 50)'}>
+    {[...lines].map((line,j)=>{const y=r1(9.6-j*2.3);return line==='1'?<rect key={j} className="af-yao" x="46.6" y={y} width="6.8" height="1.25" rx=".4"/>:<g key={j}><rect className="af-yao" x="46.6" y={y} width="2.9" height="1.25" rx=".4"/><rect className="af-yao" x="50.5" y={y} width="2.9" height="1.25" rx=".4"/></g>})}
+   </g>)}
+  </g>
+ </g>;
+}
+function BaguaArt(){
+ return <>
+  <Frame className="af-bagua-frame"/>
+  {['M8 22 L14 27 L10 30 L17 36','M92 70 L85 74 L89 78 L81 84'].map((d,i)=><path key={i} className={'af-thunder af-thunder-'+(i?'b':'a')} d={d}/>)}
+ </>;
+}
 
 export function Avatar({p,size=''}:{p?:AvatarPlayer;size?:string}){
  const streak=p?.winningStreak,wins=streak?Math.max(streak.singles,streak.doubles):0,onFire=wins>=seasonPointsPolicy.streak.start;
- const ref=useRef<HTMLSpanElement>(null),moving=useVisibleAvatarMotion(ref,onFire),id='avatar-fire-'+useId().replaceAll(':','');
- const tier=fireTier(wins),title=fireTiers[fireTiers.length-tier]?.name??'';
- const label=onFire&&streak?title+' · '+[streak.singles>=seasonPointsPolicy.streak.start?'单打 '+streak.singles+' 连胜':'',streak.doubles>=seasonPointsPolicy.streak.start?'双打 '+streak.doubles+' 连胜':''].filter(Boolean).join(' · '):'';
+ const ref=useRef<HTMLSpanElement>(null),moving=useVisibleAvatarMotion(ref,onFire);
+ const tier=streakTier(wins),info=streakTiers[tier-1];
+ const label=onFire&&streak&&info?info.name+' · '+[streak.singles>=seasonPointsPolicy.streak.start?'单打 '+streak.singles+' 连胜':'',streak.doubles>=seasonPointsPolicy.streak.start?'双打 '+streak.doubles+' 连胜':''].filter(Boolean).join(' · '):'';
  const img=<AvatarImage p={onFire?{...p,name:(p?.name??'球友')+' · '+label}:p} size={onFire?'avatar-fire-image':size}/>;
- if(!onFire)return img;
+ if(!onFire||!info)return img;
  return <span ref={ref} className={'avatar avatar-fire-shell '+size} title={label} data-moving={moving?'true':'false'} data-tier={tier}>
+  {tier===3&&<svg className="avatar-fire-art avatar-fire-back" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><BaguaBack/></svg>}
   {img}<svg className="avatar-fire-art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-   <defs>
-    <radialGradient id={id} gradientUnits="userSpaceOnUse" cx="50" cy="50" r="53"><stop offset=".68" className="af-stop-core"/><stop offset=".8" className="af-stop-mid"/><stop offset="1" className="af-stop-tip"/></radialGradient>
-   </defs>
-   <g className="avatar-fire-swirl"><path className="avatar-fire-flame" d={OUTER} fillRule="evenodd" fill={'url(#'+id+')'}/></g>
-   <g className="avatar-fire-swirl is-inner"><path className="avatar-fire-flame avatar-fire-core" d={INNER} fillRule="evenodd"/></g>
-   {/* The ink ring is drawn over the flames so its line stays crisp. */}
-   <path className="avatar-fire-brush" d={BRUSH} fillRule="evenodd"/>
-   {tier===3&&<circle className="avatar-fire-runes" cx="50" cy="50" r="45.5" fill="none" strokeDasharray=".6 2.4 2.6 2.4" strokeLinecap="round"/>}
-   <g className="avatar-fire-embers">{[[20,30],[82,38],[30,86],[74,80]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="1.6" style={{'--af-delay':(i*0.55)+'s'} as CSSProperties}/>)}</g>
+   {tier===1?<QiArt/>:tier===2?<SwordArt/>:<BaguaArt/>}
   </svg>
-  <b className="avatar-fire-seal" aria-hidden="true">{wins}<small>连</small></b>
+  <b className="avatar-fire-seal" aria-hidden="true">{wins}<small>{info.word}</small></b>
  </span>;
 }
