@@ -10,7 +10,7 @@ import {nextQuarterStart} from './ranking-quarter';
  * every member's request until the next moment those results could change on the clock, or `maxAge` at most.
  * Only the read route opts in, keyed by the revision it loaded from storage; viewer-specific parts (draft
  * visibility, permissions, fees) are always computed per request. A cold isolate simply computes again. */
-const maxAge=15000,limit=8;
+const maxAge=15000,limit=16;
 const entries=new Map<string,{from:number;expires:number;value:unknown}>();
 
 /** The earliest future time at which a history-only result could change without a write. */
