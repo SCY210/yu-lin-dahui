@@ -44,7 +44,7 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .af-runes{fill:none;stroke:var(--af-gold);stroke-width:1;opacity:.75;transform-origin:50px 50px;animation:af-turn 16s linear infinite reverse}
 .af-bagua{transform-origin:50px 50px;animation:af-turn 11s linear infinite;filter:drop-shadow(0 0 2px var(--af-thunder-glow))}
 .af-bagua-scale{transform-origin:50px 50px}
-.wuxia-theme .af-bagua-scale{transform:scale(1.12)}
+.wuxia-theme .af-bagua-scale{transform:scale(1.08)}
 .af-octagon{fill:color-mix(in srgb,var(--af-violet) 28%,transparent);stroke:var(--af-violet);stroke-width:1.6;stroke-linejoin:round}
 .af-yao{fill:var(--af-gold)}
 .af-bagua-frame{fill:none;stroke:var(--af-violet-light);stroke-width:1.4}
@@ -57,8 +57,9 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .avatar-fire-shell .avatar-fire-art *{animation-play-state:paused}
 .avatar-fire-shell[data-moving=true] .avatar-fire-art *{animation-play-state:running}
 
-/* The seal: the count and the tier's own word (连胜 / 连斩 / 连霸), styled per tier; hidden on tiny avatars. */
-.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex!important;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px!important;overflow:hidden;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font)!important;font-size:clamp(8px,22cqw,13px)!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;white-space:nowrap;pointer-events:none;color:#fff!important;background:linear-gradient(135deg,#4cc39b,#23876a)}
+/* The seal sits centred under the avatar, so it never reaches into the name or realm tag beside it.
+   It shows the count and the tier's own word (连胜 / 连斩 / 连霸), styled per tier; hidden on tiny avatars. */
+.avatar-fire-seal{position:absolute;left:50%;bottom:-11%;transform:translateX(-50%);z-index:2;display:inline-flex!important;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px!important;overflow:hidden;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font)!important;font-size:clamp(8px,22cqw,13px)!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;white-space:nowrap;pointer-events:none;color:#fff!important;background:linear-gradient(135deg,#4cc39b,#23876a)}
 .avatar-fire-seal>.af-seal-count,.avatar-fire-seal>.af-seal-word{position:relative;z-index:1;color:inherit!important;font:inherit!important;margin:0!important}
 .avatar-fire-seal>.af-seal-word{font-size:.8em!important;font-weight:700!important}
 /* A glint sweeps across the seal. */

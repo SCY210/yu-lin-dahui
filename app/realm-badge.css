@@ -45,8 +45,9 @@
   font-family: 'KaiTi', 'STKaiti', 'Kaiti SC', 'Songti SC', 'SimSun', serif !important;
 }
 
-/* Insignia SVG wrapper */
+/* Insignia SVG wrapper, nudged a little right and up so the seal sits visually centred in the tag. */
 .rb-insignia-wrap {
+  transform: translate(1.5px, -1px);
   position: relative !important;
   z-index: 1;
   width: 26px !important;
