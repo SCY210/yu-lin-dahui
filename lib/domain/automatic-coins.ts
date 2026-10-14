@@ -3,7 +3,7 @@ import {awaitingArrival} from './points-attendance';
 import {isGuest} from './guests';
 import {clubOwnerId} from './ownership';
 import {gameFacts} from './game-facts';
-import {realmLedger} from './realm-rating';
+import {realmLedger,type RealmLedger} from './realm-rating';
 import {scoreSeasonGames,seasonGameScope} from './season-points';
 import {appendTreasureLedger,automaticRewardPool} from './treasure-ledger';
 import {fail,type Event,type State,type TreasureRewardClaim} from './types';
@@ -30,27 +30,38 @@ export function pendingAutomaticCorrection(s:State,playerId:string){return Math.
 function endedRewardEvent(e:Event,activatedAt:number,excluded:Set<string>,now:number){
  return !excluded.has(e.id)&&e.status!=='cancelled'&&e.status!=='draft'&&Number.isFinite(e.end)&&e.end>activatedAt&&e.end<=now;
 }
-function participation(s:State,e:Event,playerId:string,now:number){
- const registration=s.registrations.find(r=>r.eventId===e.id&&r.playerId===playerId);
+/** Lookups for participation, built once per reconciliation instead of scanning every signup, match and derived
+ * attendance per activity and player. Same answers: the first signup row wins, as with Array.find. */
+type ParticipationIndex={registrations:Map<string,State['registrations'][number]>;played:Set<string>;attendance:Map<string,ReturnType<typeof attendanceForEvent>>};
+const pair=(eventId:string,playerId:string)=>eventId+'\u0000'+playerId;
+function participationIndex(s:State,now:number):ParticipationIndex{
+ const registrations=new Map<string,State['registrations'][number]>();
+ for(const r of s.registrations){const key=pair(r.eventId,r.playerId);if(!registrations.has(key))registrations.set(key,r)}
+ const played=new Set<string>();
+ for(const m of s.matches)if(m.end!==null&&m.end<=now&&gameFacts(m).length>0)for(const id of [...m.a,...m.b])played.add(pair(m.eventId,id));
+ return {registrations,played,attendance:new Map()};
+}
+function participation(s:State,e:Event,playerId:string,now:number,index=participationIndex(s,now)){
+ const registration=index.registrations.get(pair(e.id,playerId));
  if(!registration)return false;
  // A real played result can establish arrival even after a missing-player report,
  // waitlist promotion or an organiser correcting the signup afterwards.
- const played=s.matches.some(m=>m.eventId===e.id&&[...m.a,...m.b].includes(playerId)&&m.end!==null&&m.end<=now&&gameFacts(m).length>0);
- if(played)return true;
+ if(index.played.has(pair(e.id,playerId)))return true;
  if(e.noShowHold?.includes(playerId)||awaitingArrival(e,playerId))return false;
  if(registration.status==='waitlist')return false;
- return attendanceForEvent(s,e).some(a=>a.playerId===playerId&&Math.min(a.end??e.end,e.end,now)>Math.max(a.start,e.start));
+ let attendance=index.attendance.get(e.id);if(!attendance){attendance=attendanceForEvent(s,e);index.attendance.set(e.id,attendance)}
+ return attendance.some(a=>a.playerId===playerId&&Math.min(a.end??e.end,e.end,now)>Math.max(a.start,e.start));
 }
 
 /** Build current entitlements from the same rated-game iterator as the board.
  * Owner grants, losses and attendance/notification/MVP points are never sources. */
-function rewardEntitlements(s:State,now:number){
+function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
  const policy=s.settings.automaticCoins;if(!policy)return [];
  const excluded=new Set(policy.excludedEventIds),prior=new Set((s.treasureRewardClaims??[]).map(row=>row.id)),events=new Map(s.events.filter(e=>endedRewardEvent(e,policy.activatedAt,excluded,now)).map(e=>[e.id,e]));
  // Account disabling does not cancel genuine attendance or an earned entitlement.
  const members=new Set(s.accounts.map(a=>a.playerId).filter(id=>s.players.some(p=>p.id===id)&&!isGuest(s,id)));
- const claims:TreasureRewardClaim[]=[];
- for(const e of events.values())for(const playerId of members)if(participation(s,e,playerId,now)){
+ const claims:TreasureRewardClaim[]=[],index=participationIndex(s,now);
+ for(const e of events.values())for(const playerId of members)if(participation(s,e,playerId,now,index)){
   const id=JSON.stringify(['participation',e.id,playerId]);
   if(e.deletedAt===undefined||prior.has(id))claims.push({id,eventId:e.id,playerId,source:'participation',amount:participationCoins,updated:now});
  }
@@ -58,7 +69,7 @@ function rewardEntitlements(s:State,now:number){
  // earlier games establish (or break) a streak but receive no retroactive coins.
  // The canonical scope keeps quarters and singles/doubles streaks independent.
  const matches=new Map(s.matches.map(match=>[match.id,match]));
- const scored=scoreSeasonGames(realmLedger(s,now).games,g=>seasonGameScope(g,matches.get(g.matchId)!));
+ const scored=scoreSeasonGames((ledger??realmLedger(s,now)).games,g=>seasonGameScope(g,matches.get(g.matchId)!));
  for(const {game:g,points} of scored){
   if(!g.won||!events.has(g.eventId)||!members.has(g.playerId))continue;
   const amount=Math.max(0,points);if(!amount)continue;
@@ -71,7 +82,8 @@ function rewardEntitlements(s:State,now:number){
 /** Caller saves this alongside business changes under the store revision gate.
  * Each source is unique and mutable only as an entitlement; money movements stay
  * append-only. Replaying polling, cron, edits or voids cannot re-award a source. */
-export function reconcileAutomaticCoins(s:State,now:number){
+/** `ledger`: an already computed realmLedger(s,now) for this exact state, when the caller has one to share. */
+export function reconcileAutomaticCoins(s:State,now:number,ledger?:RealmLedger){
  if(!s.settings.automaticCoins)return false;
  const actor=clubOwnerId(s);if(!s.accounts.some(a=>a.id===actor))return false;
  // Persisted source amounts are the reconciliation checkpoint. In particular,
@@ -79,7 +91,7 @@ export function reconcileAutomaticCoins(s:State,now:number){
  // or order refund just because maintenance runs again.
  const previousDesired=new Map<string,number>();
  for(const row of s.treasureRewardClaims??[])previousDesired.set(row.playerId,total([previousDesired.get(row.playerId)??0,row.amount]));
- const desired=new Map(rewardEntitlements(s,now).map(row=>[row.id,row]));
+ const desired=new Map(rewardEntitlements(s,now,ledger).map(row=>[row.id,row]));
  s.treasureRewardClaims??=[];
  let changed=false;
  for(const row of s.treasureRewardClaims){const next=desired.get(row.id);if(row.amount!==(next?.amount??0)||next&&row.eventId!==next.eventId){row.amount=next?.amount??0;if(next)row.eventId=next.eventId;row.updated=now;changed=true}desired.delete(row.id)}
