@@ -1,6 +1,8 @@
 import {sqliteTable,text,integer,uniqueIndex,index} from 'drizzle-orm/sqlite-core';
 const payload=()=>text('payload').notNull();
 export const commits=sqliteTable('commits',{revision:integer('revision').primaryKey(),key:text('key').notNull().unique(),at:integer('at').notNull()});
+// Server-only change feed, populated by migration 0016 triggers in each business transaction.
+export const clubChanges=sqliteTable('club_changes',{seq:integer('seq').primaryKey({autoIncrement:true}),tableName:text('table_name').notNull(),rowId:text('row_id').notNull(),payload:text('payload')});
 export const settings=sqliteTable('settings',{id:text('id').primaryKey(),payload:payload()});
 export const accounts=sqliteTable('accounts',{id:text('id').primaryKey(),email:text('email').notNull(),role:text('role').notNull(),playerId:text('player_id').notNull(),payload:payload()});
 export const players=sqliteTable('players',{id:text('id').primaryKey(),ownerId:text('owner_id').notNull(),payload:payload()});

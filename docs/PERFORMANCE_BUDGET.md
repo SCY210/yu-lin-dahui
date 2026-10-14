@@ -39,6 +39,22 @@ Any write still changes the revision, so scores reach every phone on its next po
 
 `tests/live-conditional-read.test.ts` walks whole fictional activities and checks that inside every reuse window neither any viewer's projection nor the clock-driven maintenance (auto-started rounds, refilled live courts, coin settlement) changes. Removing the live boundaries fails all of its scenarios.
 
+## Incremental persistence reads
+
+The read route opts into a server-side raw-row snapshot (`lib/incremental-store.ts`). The first request in each Worker isolate loads a consistent snapshot. Subsequent reads use the indexed change cursor and fetch only inserted, updated or deleted rows. A quiet 15-second refresh no longer scans all business tables. SQL triggers in migration 0016 record changes in the same transaction as the underlying write, including writes outside `save()`. No change-feed data is exposed to browsers. Authorization and current account permissions are still checked on every request; exports and write commands retain fresh full loads.
+
+Snapshots contain immutable raw JSON strings and are limited to 16 MiB of UTF-16 payload per database. Each caller gets separately parsed objects, and rollback restores capture the original snapshot. Concurrent refreshes serialize their database synchronization. A cold isolate, a cursor outside the retained 4,096 changes, a reset cursor, or an oversized update safely falls back to a full transaction. A failed database read never serves stale data. Saves prune the change feed; its payloads are transient derived state, not an authoritative backup. Restore/import procedures must restart Worker isolates, as before, and must retain the migration's triggers.
+
+Automatic scheduling first checks whether a new round can start or a live court is empty, before cloning the club. The GET handler also consumes its own parsed state after recording the validator, avoiding a redundant full clone. Other projection callers keep their previous copy semantics.
+
+### Capacity rehearsal
+
+`tests/incremental-club-read.mjs` exercises the actual SQLite migration and incremental loader with 20 independent readers, 3-second polling for three simulated hours, a cold reader every five minutes, roughly 1,422 historical rows, and nine changed rows every 30 seconds. It deliberately invokes the loader on **every** poll; real 304 hits skip the loader. It validates deletes, transaction rollback, concurrent reads, history pruning, retry, snapshot isolation and an indexed cursor query plan.
+
+The measured rehearsal returned 1,153,440 rows. Adding a reserve of 20 indexed rows per poll for authentication, permissions and ancillary work gives **2,593,440 reads** versus the 5,000,000 daily free allowance. A conservative write estimate including change-feed overhead and 20,000 extra writes is **32,960**, below 100,000/day. There are 72,000 poll requests, leaving 28,000 for other Worker requests within the daily 100,000 allowance. These are whole-account limits: other traffic uses the same reserve. Frequent cold starts, larger histories or a higher write rate require repeating the rehearsal; this is not an unlimited capacity claim.
+
+The generated `.test-output/incremental-club-capacity.json` records the assumptions and counts. Local Node handler timings are not Cloudflare CPU measurements. Validate the deployed revision and invocation metrics separately; do not describe a small post-release sample as proof of a three-hour production load test.
+
 ## Merge requirements
 
 Every PR that touches server code (`app/api`, `lib`) must:

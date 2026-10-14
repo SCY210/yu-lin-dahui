@@ -4,7 +4,7 @@ import {canEnableEventRanking,eventRankingEnabled} from './event-ranking';
 import {pointsSession} from './points-attendance';
 import {pointsWindow} from './points-window';
 import {schedulingMode} from './scheduling';
-import {fillLiveCourts} from './live-play';
+import {fillLiveCourts,hasEmptyLiveCourt} from './live-play';
 import type {State,Account,Round} from './types';
 
 type Runner=(s:State,a:Account,action:string,input:unknown,now:number)=>Promise<unknown>;
@@ -17,6 +17,19 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
   if(original.deletedAt!==undefined||isPractice(original)||original.tournament||!['open','locked','live'].includes(eventStatusAt(original,now))||now<Math.max(original.start,window.start)||now>=original.end)continue;
   const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
   if(!actor)continue;
+  const mode=schedulingMode(s,original),playing=s.matches.some(m=>m.eventId===original.id&&m.status==='playing');
+  // Cloning the complete history twice on every unchanged poll can itself exceed the free CPU budget.
+  // First activation still records its audit; later polls clone only when a clock action can actually run.
+  if(original.pointsSession?.startedAt){
+   if(mode==='live'){
+    if(original.livePlay?.paused||(original.livePlay?.enabled&&!hasEmptyLiveCourt(s,original,now)))continue;
+   }else{
+    if(playing)continue;
+    const rounds=s.rounds.filter(r=>r.eventId===original.id);
+    const next=rounds.filter(r=>['draft','published'].includes(r.status)).sort((a,b)=>(a.pointsSlot??0)-(b.pointsSlot??0)||a.start-b.start)[0];
+    if(!(next?.status==='published'&&next.start<=now)&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000))continue;
+   }
+  }
   const work=structuredClone(s),e=work.events.find(e=>e.id===original.id)!;
   e.pointsSession??=pointsSession();
   const first=!e.pointsSession.startedAt;
@@ -25,7 +38,6 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
    work.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-clock',action:'pointsAutoStart',reason:'积分赛时段到达，自动开始',changes:{eventId:e.id,startedAt:e.pointsSession.startedAt}});
   }
   let started=false;
-  const mode=schedulingMode(work,e),playing=work.matches.some(m=>m.eventId===e.id&&m.status==='playing');
   const attempt=structuredClone(work),event=attempt.events.find(x=>x.id===e.id)!;
   const beforeAudits=attempt.audits.length;
   try{

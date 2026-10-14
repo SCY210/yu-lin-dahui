@@ -38,6 +38,11 @@ export function livePresentIds(s:Pick<State,'players'|'registrations'|'bookings'
 export function liveResting(e:Event,playerId:string,venue?:string){
  return !!e.livePlay?.rest.some(rest=>rest.playerId===playerId&&(!venue||rest.venue===venue));
 }
+/** Cheap no-work guard for read maintenance; use the same physical-court identity as fillLiveCourts. */
+export function hasEmptyLiveCourt(s:Pick<State,'bookings'|'matches'>,e:Event,now:number){
+ const busy=new Set(s.matches.filter(m=>m.eventId===e.id&&playing(m)).map(m=>physical(s,e,m.courtId)));
+ return s.bookings.some(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busy.has(physical(s,e,b.id)));
+}
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }

@@ -6,6 +6,17 @@ import {leaderboard,replayRating} from '../lib/domain/ranking';
 import {startDuePointsSessions} from '../lib/domain/points-auto-start';
 const now=Date.parse('2030-10-10T13:00:00Z'),minute=60000;
 
+test('unchanged scheduled and occupied live courts do not clone the whole club during read maintenance',async()=>{
+ for(const mode of ['live','round'] as const){
+  const s=createSimulation(now).state,e=s.events[0];e.schedulingMode=mode;
+  await startDuePointsSessions(s,now,apply);
+  const before=structuredClone(s),clone=globalThis.structuredClone;let copies=0;
+  globalThis.structuredClone=(...args)=>{copies++;return clone(...args)};
+  try{assert.equal(await startDuePointsSessions(s,now+1000,apply),false)}finally{globalThis.structuredClone=clone}
+  assert.deepEqual(s,before);assert.equal(copies,0,mode+' should use a read-only no-work guard');
+ }
+});
+
 test('due clock starts live and first generated round once, with scheduled session time and actual match time',async()=>{
  for(const mode of ['live','round'] as const){
   const s=createSimulation(now).state,e=s.events[0];e.start=now-minute;e.schedulingMode=mode;

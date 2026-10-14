@@ -28,8 +28,9 @@ import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendanc
 const hiddenProfileKeys=['grip','shoes','level'];
 /** `shared.revision`: the stored revision this state was loaded at. Only the read route passes it, so history-only
  * results can be reused across members' requests (lib/club-view-shared.ts); without it everything is computed. */
-export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now(),shared?:{revision:number}){
- s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
+export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now(),shared?:{revision:number;consumeState?:boolean}){
+ // The GET handler owns its parsed snapshot and discards it after projection. Other callers retain copy semantics.
+ if(!shared?.consumeState)s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));

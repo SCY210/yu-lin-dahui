@@ -58,6 +58,7 @@ test('the shared club view is identical to a per-request projection for every ki
   const period=periodAt(at),year=Number(period.slice(0,4));
   const plain=projectClubState(s,viewer,period,year,at);
   assert.deepEqual(projectClubState(s,viewer,period,year,at,{revision:s.revision}),plain,viewer.id+' at '+new Date(at).toISOString());
+   assert.deepEqual(projectClubState(structuredClone(s),viewer,period,year,at,{revision:s.revision,consumeState:true}),plain,'owned request snapshot is identical for '+viewer.id);
  }
  clearSharedClubValues();
 });

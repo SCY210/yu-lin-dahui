@@ -44,7 +44,7 @@ export async function GET(req: Request) {
                 return new Response(null, { status: 304, headers: { 'Cache-Control': 'no-store', 'ETag': matched } });
             }
         }
-        const s = await loadClubState();
+        const s = await loadClubState({incremental:url.searchParams.get('export')!=='1'&&!url.searchParams.has('noticeExport')});
         if (!s.settings.initialized)
             return response({ setup: true, user: { name: user.displayName, email: user.email } });
         const a = s.accounts.find(a => a.id === user.userId);
@@ -80,8 +80,8 @@ export async function GET(req: Request) {
                 usernameChangedAt: number | null;
             } => c !== null);
         const ownCredential = credentials.find(c => c.accountId === a.id) ?? null, ownUsername = ownCredential?.username ?? null, owner = isClubOwner(s, a), now = Date.now();
-        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
         const token = readCache.remember({ noticeScope, revision: s.revision, settings: s.settings, account: a, profileRestrictions:s.profileRestrictions }, identity, period, year, clubViewValidUntil(s, a, now), now);
+        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision, consumeState:true }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', ...(token ? { 'ETag': token } : {}) } });
     }
     catch (e) {

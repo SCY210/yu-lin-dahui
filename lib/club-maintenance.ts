@@ -18,7 +18,7 @@ import {runRequestedEventDateRepair,requestedEventDateRepair} from './requested-
 import {runRequestedThursdaySplit,requestedThursdaySplit} from './requested-thursday-split';
 
 /** Upgrade current activities once; completed historical attendance stays intact. */
-export async function loadClubState(){
+export async function loadClubState(options:{incremental?:boolean}={}){
  const keys=[requestedEventDateRepair.key,requestedThursdaySplit.key];
  const done=new Set((await raw().prepare('SELECT key FROM commits WHERE key IN (?,?)').bind(...keys).all<{key:string}>()).results.map(row=>row.key));
  // Keep pending jobs ordered; completed jobs share one indexed lookup.
@@ -26,7 +26,7 @@ export async function loadClubState(){
  if(!done.has(requestedThursdaySplit.key))await runRequestedThursdaySplit();
  for(let attempt=0;attempt<4;attempt++){
   // The untouched snapshot is only needed when something changes; rebuild it from the fetched rows on demand.
-  const {state,restore}=await loadWithRestore(),now=Date.now();let snapshot:State|null=null;const previous=()=>snapshot??=restore();
+  const {state,restore}=await loadWithRestore(options),now=Date.now();let snapshot:State|null=null;const previous=()=>snapshot??=restore();
   const ownershipChanged=ensureClubOwner(state),attendanceChanged=enableDefaultAttendance(state,now),rankingChanged=enableSignedRanking(state,now),allRankedChanged=enableAllRanked(state,now),rankedEventsChanged=enableRoleRankedEvents(state,now),realmMigration=enableEloRealms(state,now);
   // While nothing has changed yet, this state is exactly the stored revision, so the clock-driven 修为 refresh and the
   // coin ledger can be shared between requests of the same revision (lib/club-view-shared.ts).

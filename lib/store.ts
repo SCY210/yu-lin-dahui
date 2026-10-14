@@ -3,7 +3,9 @@ import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
 import {profileRestrictionsFromConfig} from './profile-policy-config';
+import {createIncrementalStore} from './incremental-store';
 const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger', 'treasureRewardClaims', 'accountNoticeReceipts'] as const;
+const incrementalStores=new WeakMap<D1Database,ReturnType<typeof createIncrementalStore>>();
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
 /** Indexed metadata reads verify freshness and current permissions on every poll. */
@@ -36,7 +38,20 @@ function assignRecords<K extends TableName>(state: State, table: K, rows: Payloa
 export async function load(): Promise<State> { return (await loadWithRestore()).state; }
 /** The loaded state plus `restore`, which rebuilds an independent copy from the same fetched rows. Callers that only
  * sometimes need an untouched "previous" snapshot (maintenance, before saving) avoid cloning on every request. */
-export async function loadWithRestore(): Promise<{ state: State; restore: () => State }> {
+export async function loadWithRestore(options:{incremental?:boolean}={}): Promise<{ state: State; restore: () => State }> {
+    if(options.incremental){
+        const db=raw();let reader=incrementalStores.get(db);
+        if(!reader){reader=createIncrementalStore(db,names);incrementalStores.set(db,reader)}
+        const snapshot=await reader.read();
+        const restore=()=>{
+            const state=emptyState();state.revision=snapshot.revision;
+            const settings=snapshot.rows('settings')[0];if(settings)state.settings=storedSettings(settings.payload);
+            for(const name of names)assignRecords(state,name,snapshot.rows(name));
+            const policy=profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS);if(policy)state.profileRestrictions=policy;
+            return state;
+        };
+        return {state:restore(),restore};
+    }
     const result = await raw().batch<Record<string, unknown>>([
         raw().prepare('SELECT COALESCE(MAX(revision),0) AS revision FROM commits'),
         raw().prepare('SELECT payload FROM settings WHERE id = ?').bind('club'),
@@ -120,6 +135,7 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
             qs.push(db.prepare(`INSERT INTO ${n}(${columns.join(',')}) VALUES(${columns.map(() => '?').join(',')}) ON CONFLICT(id) DO UPDATE SET ${columns.slice(1).map(c => c + '=excluded.' + c).join(',')}`).bind(...values));
         }
     }
-    await db.batch([...qs, ...extra]);
+    // Keep a bounded change window. A reader older than this window safely reloads its snapshot.
+    await db.batch([...qs, ...extra, db.prepare('DELETE FROM club_changes WHERE seq<=(SELECT COALESCE(MAX(seq),0)-4096 FROM club_changes)')]);
     s.revision++;
 }
