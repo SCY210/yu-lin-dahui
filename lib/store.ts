@@ -3,7 +3,7 @@ import { emptyState, type State, type Account } from './domain/types';
 import { parseStoredObject, PersistenceError } from './persistence-payload';
 import type { ClubReadVersion } from './club-read-cache';
 import {profileRestrictionsFromConfig} from './profile-policy-config';
-const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger', 'accountNoticeReceipts'] as const;
+const names = ['accounts', 'players', 'events', 'bookings', 'registrations', 'attendance', 'rounds', 'matches', 'costs', 'settlements', 'payments', 'seasons', 'audits', 'ratingChanges', 'challenges', 'tagVotes', 'awardVotes', 'photos', 'treasureProducts', 'treasureOrders', 'treasureLedger', 'treasureRewardClaims', 'accountNoticeReceipts'] as const;
 export function raw() { if (!env.DB)
     throw new Error('数据库暂不可用，请稍后重试'); return env.DB; }
 /** Indexed metadata reads verify freshness and current permissions on every poll. */
@@ -84,6 +84,9 @@ export async function save(s: State, key: string, previous: State, extra: D1Prep
             }
             else if (n === 'accountNoticeReceipts') {
                 columns.push('account_id','notice_version','content_hash'); values.push(r.accountId,r.version,r.contentHash);
+            }
+            else if (n === 'treasureRewardClaims') {
+                columns.push('player_id','event_id'); values.push(r.playerId,r.eventId);
             }
             else if (n === 'treasureProducts') {
                 // Catalog records have no activity foreign key.

@@ -2,8 +2,47 @@
 
 The treasure shop uses a separate integer currency. Redeeming an item never
 changes ranking points, strength ratings, cultivation realms, or match results.
-Members start with zero coins. This version has no automatic rewards, cash
-payments, shipping, or default catalog items.
+Members start with zero coins. Coins come from automatic activity rewards or
+manual owner adjustments. There are no cash payments, shipping, or default
+catalog items.
+
+## Automatic activity rewards
+
+The activation timestamp is recorded once on the server. Only activities whose
+end time is after that timestamp qualify. Activities that ended before activation
+are not backfilled, including when their scores are later edited.
+
+After a qualifying activity ends, the server settles rewards automatically:
+
+- Each positive ranking point earned from a match win awards one coin, including
+  the win's upset and consecutive-win bonuses. The server uses the same canonical
+  winning-game points as the ranking, with consecutive wins scoped to their
+  season and singles/doubles format. Losing a match does not deduct coins.
+  Ranking points may still decrease independently.
+- Eligible participants receive five coins per activity, once across all courts
+  and time slots. A confirmed elapsed attendance interval or a completed match
+  establishes participation; waitlist-only entries and no-show/awaiting-arrival
+  holds without completed play do not. Cancellation without actual participation
+  gives no bonus, while preserved attendance before cancellation still counts.
+  An entirely cancelled or deleted activity gives no reward. Temporary guests do
+  not have wallets. Disabling an account after genuine participation does not
+  remove its already-earned entitlement.
+- Manual ranking-point changes, MVP/voting bonuses, and notification bonuses do
+  not create coins. The owner can continue to adjust coins separately.
+
+The wallet and its transactions are the authoritative result. The compact
+"Coin reward rules" disclosure in the shop explains the ratio, the activation
+boundary, and corrections without expanding the catalog page by default.
+
+Repeated settlement does not repeat the reward. Correcting or voiding a score
+recalculates the affected reward instead of adding another award. A correction
+may reclaim unspent automatic coins that were awarded incorrectly; an ordinary
+loss never does. Manual grants and redemption refunds are protected, including
+when a correction is first discovered. Redemptions spend automatic coins first.
+Wallet balances remain nonnegative. If incorrect coins have already been spent,
+the outstanding correction is shown separately and offsets later automatic
+earnings. It is not a cash charge and does not change the member's ranking.
+Manual coin grants and redemption refunds retain their own ledger entries.
 
 ## Club owner
 
@@ -34,10 +73,13 @@ a tile reveals the full description, quantity controls and live total in a
 dialog; redemption still requires the existing confirmation. Category filters
 remain available as text tabs. History,
 transactions and owner management remain collapsed, compact links below the goods.
+Transactions identify activity rewards, reward corrections, owner adjustments,
+redemptions, and refunds. A pending reward correction is visible above the goods
+only when it is nonzero; the owner can also see it beside each member's balance.
 
 ## Persistence and concurrency
 
-Products, coin transactions, and orders are stored in D1 using an additive
+Products, coin transactions, reward settlement records, and orders are stored in D1 using additive
 schema migration. They participate in the existing commit-revision transaction
 gate. A conflicting write rolls back the whole batch, preventing overselling or
 partial deductions. Retried redemptions reload current state and validate it

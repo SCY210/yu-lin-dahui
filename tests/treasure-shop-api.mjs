@@ -43,6 +43,8 @@ try{
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:a.id!=='disabled',ratingReason:''}));
  s.players.push({id:'p5',name:'Fictional guest',ownerId:'member',guestEventId:'fictional-event',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
  await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());
+ // Initialize clock-driven rollout policy before testing revision-sensitive shop writes.
+ await view('owner');
  await rejectUnchanged(null,'treasureProduct',productInput,401);
  await rejectUnchanged('owner','treasureProduct',productInput,403,{headers:{Origin:'https://attacker.invalid'}});
  for(const actor of ['member','admin']){

@@ -23,6 +23,10 @@ async function viewProduct(name){await act(()=>{const b=buttons().find(b=>b.prop
 async function submit(){await act(async()=>renderer.root.findByType('form').props.onSubmit({preventDefault(){}}))}
 try{
  await mount({mode:'member'});
+ const rewardDetails=renderer.root.findAllByType('details').find(d=>text(d.findByType('summary')).startsWith('羽币奖励规则'));assert.ok(rewardDetails);assert.equal(rewardDetails.props.open,false,'Rules stay collapsed to save mobile space');assert.ok(!renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('待校正')));
+ await expand('羽币奖励规则');assert.ok(text(renderer.toJSON()).includes('自动奖励尚未启用'));assert.ok(text(renderer.toJSON()).includes('1 积分'));assert.ok(text(renderer.toJSON()).includes('5 羽币'));assert.ok(text(renderer.toJSON()).includes('羽币不扣'));
+ await mount({mode:'member',rewardPreview:true});assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('待校正 3 羽币')));await expand('羽币奖励规则');assert.ok(text(renderer.toJSON()).includes('活动结束后自动结算'));assert.ok(text(renderer.toJSON()).includes('更早结束的活动不补发'));assert.ok(text(renderer.toJSON()).includes('群主调分、投票和通知'));await expand('羽币明细');assert.ok(text(renderer.toJSON()).includes('活动奖励'));assert.ok(text(renderer.toJSON()).includes('奖励校正'));
+ await mount({mode:'member'});
  assert.ok(text(renderer.toJSON()).includes('羽林宝阁'));assert.ok(!text(renderer.toJSON()).includes('库存保留款'),'Inactive products hidden from members');
  assert.equal(button('添加商品'),undefined);assert.equal(button('调整羽币'),undefined);assert.ok(!renderer.root.findAllByType('summary').some(n=>text(n).includes('群主管理')));
  let products=renderer.root.findAllByType('article').filter(n=>n.props.className?.includes('ts-product'));assert.equal(products.length,3);

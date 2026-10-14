@@ -68,6 +68,8 @@ try {
   const signedIn = await authResponse.json(); assert.equal(signedIn.signedIn, true); assert.equal(signedIn.username, 'a');
   assert.equal((await auth({ action: 'createAccount', username: 'intruder', password: credentials.a, name: 'intruder', requestId: crypto.randomUUID() }, aCookie)).status, 403);
   const start = Date.now() + 3_600_000, end = start + 3_600_000;
+  const firstClubRead = await fixture.context.run(ownerCookie, () => api.clubGet(new Request(origin + '/api/club')));
+  assert.equal(firstClubRead.status, 200, 'Initialize first-visit policy before capturing a business-write revision');
   let snapshot = await api.load();
   assert.equal((await command('event', { title: 'Fictional concurrency test', start, end, venue: 'fixture', address: '', capacity: 1, cancelDeadline: start, note: '', status: 'open', bookings: [{ name: 'one', start, end, pricing: 'total', cents: 1200 }] }, ownerCookie, snapshot.revision)).status, 200);
   snapshot = await api.load(); const event = snapshot.events[0];

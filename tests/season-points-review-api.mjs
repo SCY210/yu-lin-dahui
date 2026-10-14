@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 import {sqliteD1} from './helpers/sqlite-d1.mjs';
 mkdirSync('.test-output',{recursive:true});
 const database=sqliteD1();globalThis.__seasonReview={env:{DB:database.db},user:{userId:'owner',method:'password',displayName:'owner'}};
-await build({stdin:{contents:`export {GET,POST} from './app/api/club/route';export {load,save} from './lib/store';export {loadClubState} from './lib/club-maintenance';export {emptyState,month} from './lib/domain/types';export {replayRating} from './lib/domain/ranking';`,resolveDir:process.cwd(),loader:'ts'},outfile:'.test-output/season-review-api.mjs',bundle:true,platform:'node',format:'esm',plugins:[{name:'isolated-season',setup(b){
+await build({stdin:{contents:`export {GET,POST} from './app/api/club/route';export {load,save} from './lib/store';export {loadClubState} from './lib/club-maintenance';export {emptyState,month} from './lib/domain/types';export {replayRating} from './lib/domain/ranking';export {activateAutomaticCoins} from './lib/domain/automatic-coins';`,resolveDir:process.cwd(),loader:'ts'},outfile:'.test-output/season-review-api.mjs',bundle:true,platform:'node',format:'esm',plugins:[{name:'isolated-season',setup(b){
  b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'season-review'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'season-review'}));
  b.onLoad({filter:/.*/,namespace:'season-review'},a=>({loader:'js',contents:a.path==='env'?'export const env=globalThis.__seasonReview.env;':'export const getAppUser=async()=>globalThis.__seasonReview.user;export const passwordEnabled=async()=>true;'}));
 }}]});
@@ -23,7 +23,8 @@ try{
  s.rounds.push({id:'old-round',eventId:oldEvent.id,start:at-60000,duration:1,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});
  s.matches.push({id:'old-match',eventId:oldEvent.id,roundId:'old-round',courtId:'old-court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:at-60000,end:at,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'owner'});
  for(const [i,p]of s.players.entries())s.registrations.push({id:'r'+i,eventId:current.id,playerId:p.id,sequence:i,status:'confirmed',arrival:current.start,departure:current.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
- api.replayRating(s,at+1);assert.equal(s.players[0].rating,1016);await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
+ // This fixture models an existing rollout so inactivity reads remain the only operation under test.
+ api.activateAutomaticCoins(s,now);api.replayRating(s,at+1);assert.equal(s.players[0].rating,1016);await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const raw=await api.load(),fresh=await api.loadClubState();assert.equal(fresh.revision,raw.revision);assert.ok(fresh.players.every(p=>p.rating===1000&&p.ratedGames===0));assert.deepEqual(fresh.matches,raw.matches);assert.equal((await api.load()).players[0].rating,1016,'Read-only catch-up must not manufacture a maintenance write');
  assert.equal((await api.loadClubState()).revision,raw.revision);assert.deepEqual((await api.load()).audits,raw.audits);
  const origin='https://club.example',read=await api.GET(new Request(origin+'/api/club?month='+api.month(at)+'&year='+new Date(at).getUTCFullYear()));assert.equal(read.status,200);const view=await read.json();assert.ok(Array.isArray(view.leaderboard));assert.ok(view.players.every(p=>p.rating===1000));assert.equal(view.quarterlyLeaderboard.find(p=>p.playerId==='p0').points,3);

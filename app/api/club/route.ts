@@ -18,6 +18,7 @@ import { leaderboard, replayRating } from '../../../lib/domain/ranking';
 import { z } from 'zod';
 import { clubReminderStatements } from '../../../lib/reminder-store';
 import { canRebaseLineupWrite } from '../../../lib/lineup-write';
+import {reconcileAutomaticCoins} from '../../../lib/domain/automatic-coins';
 export const dynamic = 'force-dynamic';
 const response = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 function error(e: unknown) { return writeErrorResponse(e); }
@@ -166,6 +167,7 @@ export async function POST(req: Request) {
                 }
             }
             try {
+                reconcileAutomaticCoins(s,Date.now());
                 await save(s, key, previous, clubReminderStatements(s, previous, a!.id, key, body.action));
                 return response({ ok: true, revision: s.revision });
             }

@@ -2,6 +2,9 @@ import {z} from 'zod';
 import {isClubOwner} from './ownership';
 import {isGuest} from './guests';
 import {parseDomainCommand} from './command-contract';
+import {pendingAutomaticCorrection} from './automatic-coins';
+import {treasureBalance,appendTreasureLedger} from './treasure-ledger';
+export {treasureBalance} from './treasure-ledger';
 import {fail,type Account,type State,type TreasureLedger} from './types';
 
 const identifier=z.string().min(1).max(100),amount=z.number().int().min(0).max(1000000);
@@ -14,8 +17,7 @@ const actions=new Set(Object.keys(schemas));
 export function isTreasureAction(action:string){return actions.has(action)}
 function owner(s:State,a:Account){if(!isClubOwner(s,a))fail('403: 只有群主可以管理羽林宝阁')}
 function member(s:State,playerId:string){const p=s.players.find(p=>p.id===playerId);if(!p?.enabled||isGuest(s,playerId)||!s.accounts.some(a=>a.playerId===playerId))fail('请选择已启用的正式球友');return p}
-export function treasureBalance(s:State,playerId:string){const balance=s.treasureLedger.filter(r=>r.playerId===playerId).reduce((sum,r)=>sum+r.delta,0);if(!Number.isSafeInteger(balance)||balance<0)fail('羽币账本异常，请联系群主');return balance}
-function addLedger(s:State,row:Omit<TreasureLedger,'id'|'balance'>){const balance=treasureBalance(s,row.playerId)+row.delta;if(!Number.isSafeInteger(balance)||balance<0)fail('羽币余额不足');const next={...row,id:crypto.randomUUID(),balance};s.treasureLedger.push(next);return next}
+function addLedger(s:State,row:Omit<TreasureLedger,'id'|'balance'|'sequence'>){return appendTreasureLedger(s,row)}
 function audit(s:State,a:Account,action:string,reason:string,now:number,changes:unknown){s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason,changes})}
 function nextProductVersion(version:number|undefined){const next=(version??0)+1;if(!Number.isSafeInteger(next)||next<1)fail('商品版本异常，请联系群主');return next}
 
@@ -67,5 +69,6 @@ export function treasureShopView(s:State,a:Account){
  const isOwner=isClubOwner(s,a);
  const ledger=s.treasureLedger.filter(r=>r.playerId===a.playerId).map(r=>({id:r.id,playerId:r.playerId,delta:r.delta,balance:r.balance,kind:r.kind,reason:r.reason,at:r.at,orderId:r.orderId}));
  const orders=s.treasureOrders.filter(o=>isOwner||o.playerId===a.playerId).map(o=>({id:o.id,playerId:o.playerId,productId:o.productId,productName:o.productName,kind:o.kind,price:o.price,quantity:o.quantity,total:o.total,status:o.status,created:o.created,updated:o.updated}));
- return {products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId)})):[]};
+ const policy=s.settings.automaticCoins,rewardPolicy=policy?{version:policy.version,activatedAt:policy.activatedAt}:null;
+ return {products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId),rewardPolicy,ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId)})):[]};
 }

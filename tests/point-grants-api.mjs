@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 mkdirSync('.test-output',{recursive:true});
 const fixture=globalThis.__grantsTest={env:{},user:null};
-writeFileSync('.test-output/grants-entry.ts',`export {GET,POST} from '../app/api/club/route';export {load,save,committed} from '../lib/store';export {emptyState} from '../lib/domain/types';`);
+writeFileSync('.test-output/grants-entry.ts',`export {GET,POST} from '../app/api/club/route';export {load,save,committed} from '../lib/store';export {emptyState} from '../lib/domain/types';export {loadClubState} from '../lib/club-maintenance';`);
 await build({entryPoints:['.test-output/grants-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/grants-api-bundle.mjs',plugins:[{name:'isolated-grants',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'grants-fixture'}));b.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'grants-fixture'}));b.onLoad({filter:/.*/,namespace:'grants-fixture'},a=>({contents:a.path==='env'?'export const env=globalThis.__grantsTest.env;':'export const getAppUser=async()=>globalThis.__grantsTest.user;export const passwordEnabled=async()=>true;',loader:'js'}))}}]});
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
 function statement(query,parameters=[]){return {query,parameters,bind(...args){return statement(query,args)},async first(){return sql.prepare(query).get(...parameters)??null},async all(){return {results:sql.prepare(query).all(...parameters)}},async run(){const r=sql.prepare(query).run(...parameters);return {meta:{changes:Number(r.changes)},results:[]}}}}
@@ -17,6 +17,8 @@ const api=await import(pathToFileURL(resolve('.test-output/grants-api-bundle.mjs
 try{
  const initial=api.emptyState(),s=api.emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.rankedEventsVersion='admins-v1';s.settings.strengthVersion='realm-elo-v2';
  s.accounts=['owner','admin','member'].map((id,i)=>({id,email:'',role:i<2?'admin':'member',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));await seedAccountNoticeFixture(s);await api.save(s,'seed',initial);
+ // Initialize rollout policy before capturing the grant request revision.
+ s.revision=(await api.loadClubState()).revision;
  const origin='https://club.example',payload={playerId:'p2',period:'2026-10',points:25,reason:"组织奖励 '); DROP TABLE players; --"};
  const user=id=>fixture.user=id?{userId:id,displayName:id,method:'password'}:null;
  const post=(body,extra={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...extra},body:JSON.stringify(body)}));

@@ -31,9 +31,16 @@ function projection(s:ReturnType<typeof initialState>,mode:Mode):ClubData{const 
 export function fixtureData(mode:Mode='owner'){return projection(initialState(),mode)}
 
 /** Synthetic local fixture only: no fetch, credentials, or live persistence. */
-export default function Preview({mode='owner',busy=false,fail=false,onOpen,onAction}:{mode?:Mode;busy?:boolean;fail?:boolean;onOpen?:(form:Form)=>void;onAction?:(action:string,payload:Record<string,unknown>)=>void}){
+export default function Preview({mode='owner',busy=false,fail=false,rewardPreview=false,onOpen,onAction}:{mode?:Mode;busy?:boolean;fail?:boolean;rewardPreview?:boolean;onOpen?:(form:Form)=>void;onAction?:(action:string,payload:Record<string,unknown>)=>void}){
  const [state,setState]=useState(initialState),[form,setForm]=useState<Form|null>(null),[error,setError]=useState(''),[saved,setSaved]=useState('');
  const data=projection(state,mode);
+ if(rewardPreview){
+  const ownId=data.me.playerId;
+  data.treasureShop.rewardPolicy={version:'win-points-v1',activatedAt:now};
+  data.treasureShop.pendingCorrection=3;
+  data.treasureShop.ledger.push({id:'fictional-automatic-credit',playerId:ownId,delta:8,balance:108,kind:'automatic_reward',reason:'虚构结束活动奖励',at:now+2,orderId:undefined},{id:'fictional-automatic-correction',playerId:ownId,delta:-3,balance:105,kind:'automatic_correction',reason:'虚构比分更正',at:now+3,orderId:undefined});
+  data.treasureShop.wallets=data.treasureShop.wallets.map(w=>({...w,pendingCorrection:w.playerId===ownId?3:0}));
+ }
  const open=(title:string,action:string,values:Record<string,unknown>,fields:Form['fields'],convert?:Form['convert'],description?:string)=>{const f={title,action,values,fields,convert,description};setError('');setSaved('');setForm(f);onOpen?.(f)};
  const action=async(command:string,payload:Record<string,unknown>)=>{
   onAction?.(command,payload);

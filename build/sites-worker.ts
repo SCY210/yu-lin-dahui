@@ -8,8 +8,14 @@ import { requestMetric } from "../lib/observability";
 import { hostingRequest } from "../lib/hosting-request";
 import { operatorExport } from "../lib/operator-export";
 import {legacySiteRedirect} from '../lib/legacy-redirect';
+import {runCoinRewardSweep} from '../lib/coin-reward-sweep';
+import {loadClubState} from '../lib/club-maintenance';
 
 export default {
+  async scheduled(_controller:ScheduledController,env:Cloudflare.Env){
+    if(!env.DB||env.YULIN_HOSTING_PROVIDER!=='cloudflare'||env.YULIN_RELEASE_CHANNEL!=='private')return;
+    await runCoinRewardSweep({db:env.DB,now:Date.now(),settle:loadClubState});
+  },
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     const moved=legacySiteRedirect(request,(env as Cloudflare.Env&{CLUB_REDIRECT_ORIGIN?:string}).CLUB_REDIRECT_ORIGIN);
     if(moved)return moved;

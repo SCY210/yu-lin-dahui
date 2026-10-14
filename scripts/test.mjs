@@ -33,7 +33,7 @@ if (!unitOnly) {
     'published-swap-api', 'published-swap-ui',
     'early-score-api',
     'match-player-filter-ui',
-    'treasure-shop-api', 'treasure-shop-ui', 'cancelled-signups-api', 'guest-levels-ui', 'points-next-api', 'friend-signup-api', 'no-show-api', 'admin-simulation-api', 'admin-simulation-ui', 'notification-prompt-ui', 'notification-incentive-ui', 'push-enable-client',
+    'treasure-shop-api', 'treasure-shop-ui', 'automatic-coins-api', 'cancelled-signups-api', 'guest-levels-ui', 'points-next-api', 'friend-signup-api', 'no-show-api', 'admin-simulation-api', 'admin-simulation-ui', 'notification-prompt-ui', 'notification-incentive-ui', 'push-enable-client',
     'points-attendance-api', 'points-attendance-ui', 'tournament-api', 'tournament-ui', 'maintenance-read-cost', 'scheduling-modes-ui', 'home-today-ui', 'pull-refresh-ui', 'home-fees-reminders-ui', 'compact-sections-ui', 'mvp-only-ui', 'home-live-matches-ui', 'season-points-review-api', 'profile-permissions-api', 'profile-permissions-ui', 'simple-forms-ui', 'photo-rights-api', 'score-reminder-ui', 'install-theme-api', 'live-play-api',
 
 

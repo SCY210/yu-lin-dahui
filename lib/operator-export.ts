@@ -5,7 +5,7 @@ export const exportTables = [
   'password_credentials', 'payments', 'photos', 'players', 'push_deliveries',
   'push_jobs', 'push_subscriptions', 'ratingChanges', 'registrations',
   'reminder_inbox', 'reminder_settings', 'rounds', 'seasons', 'settings',
-  'settlements', 'tagVotes', 'treasureLedger', 'treasureOrders', 'treasureProducts',
+  'settlements', 'tagVotes', 'treasureLedger', 'treasureOrders', 'treasureProducts', 'treasureRewardClaims',
   'trial_credential_archive',
 ] as const;
 
