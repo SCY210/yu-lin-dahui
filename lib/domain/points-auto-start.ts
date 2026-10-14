@@ -1,5 +1,6 @@
 import {eventStatusAt} from './event-lifecycle';
 import {isPractice} from './match-format';
+import {canEnableEventRanking,eventRankingEnabled} from './event-ranking';
 import {pointsSession} from './points-attendance';
 import {pointsWindow} from './points-window';
 import {schedulingMode} from './scheduling';
@@ -14,7 +15,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
  for(const original of s.events){
   const window=pointsWindow(original);
   if(original.deletedAt!==undefined||isPractice(original)||original.tournament||!['open','locked','live'].includes(eventStatusAt(original,now))||now<Math.max(original.start,window.start)||now>=original.end)continue;
-  const actor=s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
+  const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
   if(!actor)continue;
   const work=structuredClone(s),e=work.events.find(e=>e.id===original.id)!;
   e.pointsSession??=pointsSession();

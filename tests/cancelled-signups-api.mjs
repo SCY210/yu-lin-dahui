@@ -18,7 +18,7 @@ const database=sqliteD1();fixture.env.DB=database.db;
 const api=await import(pathToFileURL(resolve('.test-output/cancelled-signups-api.mjs')).href);
 try{
  const s=api.emptyState(),now=Date.now(),start=Math.ceil((now+3*86400000)/1800000)*1800000,hour=3600000;
- Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=['owner','host','m2','m3'].map((id,i)=>({id,email:'',playerId:'p'+i,role:i?'member':'admin'}));s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const event=(id,at)=>({id,creatorId:'host',title:'Fictional '+id,start:at,end:at+2*hour,venue:'Fictional venue',address:'',capacity:4,signupDeadline:at-2*hour,cancelDeadline:at-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'});
  const lateStart=Math.ceil((now+12*hour)/1800000)*1800000;s.events=[event('e',start),event('late',lateStart)];

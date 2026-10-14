@@ -1,6 +1,7 @@
+import {notificationPointEntries} from './notification-points';
 import {attendancePointAdjustments} from './points-attendance';
 import {mvpPointAdjustments} from './activity-voting';
-import {isPractice} from './match-format';
+import {eventRankingEnabled} from './event-ranking';
 import {pointGrants,ratingAdjustments} from './point-grants';
 import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
 import {gameFacts} from './game-facts';
@@ -42,9 +43,10 @@ export {seasonPointsPolicy,upsetBonus,gamePoints} from './season-points';
  * `leaderboard` (one month) only backs the owner's history-rules preview; members see quarterly and annual boards. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
 function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
- const practice=new Set(s.events.filter(isPractice).map(e=>e.id));
+ const practice=new Set(s.events.filter(e=>!eventRankingEnabled(e)).map(e=>e.id));
  const singles=format==='singles',accept=(m:Match)=>!practice.has(m.eventId)&&(format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m))),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
+ const notification=new Map<string,number>();if(!singles)for(const g of notificationPointEntries(s))if(chosen.has(g.period))notification.set(g.playerId,(notification.get(g.playerId)??0)+g.points);
  const attendance=new Map<string,number>();for(const g of attendancePointAdjustments(s))if(chosen.has(g.period)&&(format==='all'||g.format===format))attendance.set(g.playerId,(attendance.get(g.playerId)??0)+g.delta);
  const mvp=new Map<string,number>();for(const g of mvpPointAdjustments(s,now))if(chosen.has(g.period)&&(format==='all'||g.format===format))mvp.set(g.playerId,(mvp.get(g.playerId)??0)+g.delta);
  const members=new Set(s.accounts.map(account=>account.playerId));
@@ -56,7 +58,7 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
   const rated=scored.map(row=>row.game);
   const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=scored.reduce((n,row)=>n+row.points,0),upsets=rated.reduce((n,g)=>n+upsetBonus(g),0),streakPoints=scored.reduce((n,row)=>n+row.streakPoints,0),pending=scored.filter(row=>!row.game.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,points:score+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,m)=>n+gameFacts(m).length,0),totalMatches:all.length,games,wins,losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0||row.mvpPoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }

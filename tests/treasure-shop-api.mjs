@@ -38,7 +38,7 @@ const editProduct=async(id,changes)=>{
 };
 try{
  const s=api.emptyState();
- Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=['owner','admin','member','other','disabled'].map((id,i)=>({id,email:'',playerId:'p'+i,role:i<2?'admin':'member'}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:a.id!=='disabled',ratingReason:''}));
  s.players.push({id:'p5',name:'Fictional guest',ownerId:'member',guestEventId:'fictional-event',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});

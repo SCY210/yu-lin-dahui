@@ -1,3 +1,4 @@
+import {eventRankingEnabled} from './event-ranking';
 import {canManageEvent} from './permissions';
 import {isPractice,eventFormat} from './match-format';
 import {eventStatusAt} from './event-lifecycle';
@@ -8,7 +9,7 @@ export const awardVotingHours=24;
 export const mvpPoints=5;
 export const awardVotingClosesAt=(e:Pick<Event,'end'>)=>e.end+awardVotingHours*3600000;
 export function mvpVotes(s:Pick<State,'awardVotes'>,e:Pick<Event,'id'|'start'|'end'>){return s.awardVotes.filter(v=>v.eventId===e.id&&v.category==='mvp'&&Number.isFinite(v.at)&&v.at>=e.start&&v.at<awardVotingClosesAt(e))}
-export function canAwardMvpPoints(e:Event){return e.deletedAt===undefined&&!isPractice(e)&&!e.tournament&&!['draft','cancelled'].includes(e.status)}
+export function canAwardMvpPoints(e:Event){return e.deletedAt===undefined&&eventRankingEnabled(e)&&!e.tournament&&!['draft','cancelled'].includes(e.status)}
 
 type VotingState={players:Pick<State['players'][number],'id'|'enabled'>[];registrations:State['registrations'];attendance:State['attendance'];matches?:State['matches']};
 

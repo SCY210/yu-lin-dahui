@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {canManageEvent} from '../lib/domain/permissions';
+import {canScheduleEvent} from '../lib/domain/permissions';
 import {canVotePointsMode,pointsVotingOpen,pointsChoiceCounts,pointsModeLabels,type PointsMode} from '../lib/domain/points-voting';
 import type {Event} from '../lib/domain/types';
 import {eventFormat} from '../lib/domain/match-format';
@@ -9,7 +9,7 @@ import './event-points-plan.css';
 export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;planning?:boolean}){
  const {data,open,send,busy,name}=ctx,[now,setNow]=useState(Date.now);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer)},[e.id]);
- const manager=canManageEvent(data.me,e),editable=manager&&!['ended','cancelled','draft'].includes(e.status);
+ const manager=canScheduleEvent(data.me,e),editable=manager&&!['ended','cancelled','draft'].includes(e.status);
  const fixedIds=new Set(e.pointsChoice?.teams?.flat()??[]);
  const unmatched=e.pointsChoice?.selectedMode==='fixed'?data.registrations.filter((r:any)=>r.eventId===e.id&&r.status==='confirmed'&&!fixedIds.has(r.playerId)):[];
  const counts=pointsChoiceCounts(data,e),mine=e.pointsChoice?.votes.find(v=>v.voterId===data.me.id),canVote=canVotePointsMode(data,e,data.me,now);

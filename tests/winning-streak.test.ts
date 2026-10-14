@@ -102,3 +102,13 @@ test('conditional reads expire exactly at the Madrid quarter reset in both summe
  assert.equal(nextQuarterStart('2026-03'),Date.parse('2026-03-31T22:00:00Z'));assert.equal(nextQuarterStart('2026-12'),Date.parse('2026-12-31T23:00:00Z'));
  const s=fixture(),boundary=nextQuarterStart('2026-03');assert.equal(clubViewValidUntil(s,s.accounts[0],boundary-1),boundary);
 });
+
+test('ordinary activities neither award streak points nor ignite avatars even with stale ranked match flags',()=>{
+ const s=fixture(),at=Date.parse('2026-10-03T12:00:00Z');
+ for(let i=0;i<2;i++){
+  const m=match('ordinary-'+i,`2026-10-0${i+1}T12:00:00Z`);s.matches.push(m);
+  s.events.push({id:m.eventId,ranked:false,title:'Ordinary',creatorId:'A',start:m.start!,end:m.end!,capacity:4,venue:'',address:'',signupDeadline:m.start!,cancelDeadline:m.start!,note:'',status:'ended',courtMode:'equal',ballMode:'equal'});
+ }
+ const view=projectClubState(s,s.accounts[0],'2026-10',2026,at);
+ assert.deepEqual(view.players.find(p=>p.id==='A')!.winningStreak,{singles:0,doubles:0});assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='A')!.streakPoints,0);assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,0);
+});

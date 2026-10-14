@@ -21,7 +21,7 @@ const as=(id,task)=>fixture.actor.run({userId:id,displayName:id,method:'password
 const post=(id,payload,revision,requestId=crypto.randomUUID())=>as(id,()=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'score',payload,revision,requestId,actor:id})})));
 const payload=(m,a=21,b=17,expected=m.games)=>({matchId:m.id,expectedA:[...m.a],expectedB:[...m.b],expectedGames:structuredClone(expected),a,b,games:[{a,b}],reason:'Fixture score'});
 try{
- const s=api.emptyState(),now=Date.now();Object.assign(s.settings,{initialized:true,ownerAccountId:'admin0',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'});
+ const s=api.emptyState(),now=Date.now();Object.assign(s.settings,{initialized:true,ownerAccountId:'admin0',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
  s.accounts=Array.from({length:11},(_,i)=>({id:i<2?'admin'+i:'member'+i,email:'',role:i<2?'admin':'member',playerId:'p'+i}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  const e={id:'e',creatorId:'admin0',title:'Fictional two-court scoring',start:now-3600000,end:now+3600000,venue:'Venue',address:'',capacity:10,signupDeadline:now-7200000,cancelDeadline:now-86400000,note:'',status:'live',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};

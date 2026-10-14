@@ -4,5 +4,6 @@ export async function pushSubscriptionId(endpoint:string){
  return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
 }
 export async function removePushSubscription(accountId:string,endpoint:string){
- await raw().prepare('DELETE FROM push_subscriptions WHERE id=? AND account_id=?').bind(await pushSubscriptionId(endpoint),accountId).run();
+ const id=await pushSubscriptionId(endpoint),db=raw();
+ await db.batch([db.prepare('DELETE FROM push_subscriptions WHERE id=? AND account_id=?').bind(id,accountId),db.prepare('UPDATE notification_devices SET active=0 WHERE account_id=? AND subscription_id=?').bind(accountId,id)]);
 }

@@ -17,7 +17,7 @@ Singles and doubles streaks are independent, and changing a doubles partner does
 
 Each completed rated game counts separately, including individual games in a best-of-three match. Replay uses the existing canonical ordering: match finish time, match ID, then game index. Quarter attribution follows the actual match start time in Madrid, including matches that finish after a quarter boundary. Counter scopes are separate, so an older-quarter match finishing later cannot reset a newer-quarter streak.
 
-Friendly games, applied-handicap games, cancelled matches, unfinished results, future results and practice activities are excluded from the rated sequence; they neither advance nor reset it. A rated no-show loss resets only the absent player's streak. Present participants receive no fabricated win or loss.
+Ordinary/unranked activities, friendly games, applied-handicap games, cancelled matches, unfinished results, future results and practice activities are excluded from the rated sequence; they neither advance nor reset it. Ordinary activities remain excluded even if old match flags claim ranking is enabled. A rated no-show loss resets only the absent player's streak. Present participants receive no fabricated win or loss.
 
 Correcting or voiding a past result automatically rebuilds downstream streak awards and ranking positions. Completed games in a running activity receive their points immediately, including streak points in the pending subtotal. Activity settlement does not award them a second time. Historical boards also use the current policy; original results are preserved.
 

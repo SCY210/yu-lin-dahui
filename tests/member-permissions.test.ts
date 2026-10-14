@@ -13,7 +13,7 @@ const admin:Account={id:'admin',role:'admin',playerId:'admin-player',email:'admi
 function fixture(){
  const s=emptyState();s.accounts.push(member,admin);
  for(const [id,ownerId] of [['self',member.id],['friend',member.id],['other','other-account'],['fourth','fourth-account'],['admin-player',admin.id]])s.players.push({id,ownerId,name:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});
- const base:Event={id:'own',creatorId:member.id,title:'球局',start,end,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};
+ const base:Event={ranked:false,id:'own',creatorId:member.id,title:'球局',start,end,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'live',courtMode:'interval',ballMode:'interval'};
  s.events.push(base,{...base,id:'foreign',creatorId:'another-organizer'});
  for(const e of s.events){
   s.bookings.push({id:e.id+'-court',eventId:e.id,name:'一号场',start,end,pricing:'hourly',cents:1000});
@@ -62,7 +62,7 @@ test('普通创建者完整管理报名、出勤、排场、比赛结果和费�
  await apply(s,member,'lock',{matchId:m.id,locked:true},start);await apply(s,member,'lock',{matchId:m.id,locked:false},start);
  await apply(s,member,'swap',{roundId:r.id,p1:'self',p2:'other'},start);await apply(s,member,'publish',{roundId:r.id},start);
  await apply(s,member,'start',{roundId:r.id,at:start,monthly:true,elo:true},start);
- await apply(s,member,'score',{matchId:m.id,a:21,b:19,end:start+20*60000,reason:'活动创建者确认'},start+20*60000);assert.equal(m.enteredBy,member.id);
+ await apply(s,member,'score',{matchId:m.id,a:21,b:19,end:start+20*60000,reason:'活动创建者确认'},start+20*60000);assert.equal(m.enteredBy,member.id);assert.equal(m.monthly,false);assert.equal(m.elo,false);
  await apply(s,member,'bookingEdit',{bookingId:'own-court',name:'一号场',start,end,pricing:'total',cents:2000,reason:'费用确认'},end);
  await apply(s,member,'costOverride',{costId:'own-cost',reason:'确认耗球',segments:[{start,end,cents:200}]},end);
  for(const at of [...s.attendance])await apply(s,member,'attendanceEdit',{attendanceId:at.id,start,end,reason:'确认出勤'},end);

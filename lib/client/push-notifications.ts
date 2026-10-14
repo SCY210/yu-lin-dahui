@@ -1,7 +1,9 @@
+import {notificationPointsPolicy} from '../domain/notification-points';
 import {reminderPreferences,defaultReminderPreferences,type Reminder,type ReminderPreferences} from '../reminder-contract';
 import {browserPushError} from './push-errors';
-export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;items:Reminder[];unread:number;preferences:ReminderPreferences};
-type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean};
+export type NotificationIncentive={policy:string;enablePoints:number;disablePoints:number;reactivationPoints?:number;eligibleOnDevice?:boolean;status:'available'|'earned'|'disabled'};
+export type NotificationConfig={configured:boolean;publicKey:string|null;accountId:string;incentive?:NotificationIncentive;items:Reminder[];unread:number;preferences:ReminderPreferences};
+type NotificationReply={error?:string;enabled?:boolean;resetDevice?:boolean;ok?:boolean;accepted?:boolean;pointsDelta?:number;incentive?:NotificationIncentive};
 function record(value:unknown):value is Record<string,unknown>{return !!value&&typeof value==='object'&&!Array.isArray(value)}
 export function pushSupport(){
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -17,18 +19,31 @@ export async function notificationRequest(accountId:string,action:string,detail:
 export async function notificationConfig(accountId:string):Promise<NotificationConfig>{
  const response=await fetch('/api/notifications',{cache:'no-store',signal:AbortSignal.timeout(10000)}),data:unknown=await response.json();
  if(!record(data)||!response.ok)throw new Error(record(data)&&typeof data.error==='string'?data.error:'通知服务暂不可用');if(data.accountId!==accountId)throw new Error('登录账号已更新，请刷新后操作');
- if(typeof data.configured!=='boolean'||(data.publicKey!==null&&typeof data.publicKey!=='string'))throw new Error('通知设置暂时无法同步');const prefs=reminderPreferences.safeParse(data.preferences);return {accountId,configured:data.configured,publicKey:data.publicKey,items:Array.isArray(data.items)?data.items as Reminder[]:[],unread:typeof data.unread==='number'?data.unread:0,preferences:prefs.success?prefs.data:{...defaultReminderPreferences}};
+ if(typeof data.configured!=='boolean'||(data.publicKey!==null&&typeof data.publicKey!=='string'))throw new Error('通知设置暂时无法同步');const prefs=reminderPreferences.safeParse(data.preferences);return {accountId,incentive:record(data.incentive)?data.incentive as NotificationIncentive:undefined,configured:data.configured,publicKey:data.publicKey,items:Array.isArray(data.items)?data.items as Reminder[]:[],unread:typeof data.unread==='number'?data.unread:0,preferences:prefs.success?prefs.data:{...defaultReminderPreferences}};
 }
 export async function localPushSubscription(){
  if(!('serviceWorker' in navigator))return null;
  return await (await navigator.serviceWorker.getRegistration('/'))?.pushManager?.getSubscription()??null;
 }
 export async function syncPushAccount(accountId:string){
- try{const subscription=await localPushSubscription();if(!subscription)return false;const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(state.resetDevice)await subscription.unsubscribe();return !!state.enabled&&!state.resetDevice}catch{return null /* Unknown: retry on a later visit; never auto-enable or request permission. */}
+ try{
+  const permission='Notification' in window?Notification.permission:undefined;
+  const revoked=permission==='denied'||permission==='default';
+  let subscription;
+  try{subscription=await localPushSubscription()}catch(error){if(!revoked)throw error;subscription=null}
+  if(revoked){
+   const result=await notificationRequest(accountId,'permission',{permission,...(subscription?{endpoint:subscription.endpoint}:{})});
+   if(result.pointsDelta===-30)window.dispatchEvent(new CustomEvent(pushStateChanged,{detail:{accountId,pointsDelta:-30}}));
+   return false;
+  }
+  if(!subscription)return false;
+  const state=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint,...(permission==='granted'?{permission}:{})});
+  if(state.resetDevice)await subscription.unsubscribe();return !!state.enabled&&!state.resetDevice;
+ }catch{return null /* Unknown: retry on a later visit; never auto-enable or request permission. */}
 }
 export const pushStateChanged='yulin:push-changed';
 /** Call directly from a user click so the permission request retains its gesture. */
-export async function enablePush(accountId:string,publicKey:string){
+export async function enablePush(accountId:string,publicKey:string,acceptPoints=false){
  const permission=await Notification.requestPermission();
  if(permission!=='granted')throw new Error('尚未允许通知，请在系统提示中选择允许后重试。');
  const registration=await connectPushWorker();let subscription=await registration.pushManager.getSubscription();
@@ -38,8 +53,9 @@ export async function enablePush(accountId:string,publicKey:string){
   try{subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey})}
   catch(error){throw browserPushError(error)}
  }
- await notificationRequest(accountId,'subscribe',{subscription:subscription.toJSON()});
+ const result=await notificationRequest(accountId,'subscribe',{subscription:subscription.toJSON(),...(acceptPoints?{pointsPolicy:notificationPointsPolicy}:{})});
  window.dispatchEvent(new Event(pushStateChanged));
+ return result;
 }
 export function vapidBytes(key:string){return Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))}
 export async function connectPushWorker(){

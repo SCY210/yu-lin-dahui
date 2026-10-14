@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import type {Event} from '../lib/domain/types';
-import {canManageEvent} from '../lib/domain/permissions';
+import {canScheduleEvent} from '../lib/domain/permissions';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventFormat} from '../lib/domain/match-format';
@@ -24,7 +24,7 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
   const sides=fixtureSides(t,data,f);
   return t.teams.some(team=>(team.id===sides.a||team.id===sides.b)&&team.players.includes(playerId));
  };
- const manager=!ctx.readOnly&&canManageEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now));
+ const manager=!ctx.readOnly&&canScheduleEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now));
  const singles=eventFormat(e)==='singles';
  const eligible=data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&data.players.some(p=>p.id===r.playerId&&p.enabled)).slice().sort((a,b)=>a.sequence-b.sequence).map(r=>r.playerId);
  const [selected,setSelected]=useState<string[]>(eligible),[pairs,setPairs]=useState<string[][]>([]),[groups,setGroups]=useState(2),[advance,setAdvance]=useState(2);

@@ -1,3 +1,4 @@
+import {markRanked} from './all-ranked';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction} from './permissions';
@@ -64,7 +65,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
    if(now<e.start||now>=e.end||now<court.start||now>=court.end)fail('当前不在赛事或场地预约时间内');
    const roundId=crypto.randomUUID(),m:Match={id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,a:[...ta.players],b:[...tb.players],status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:true,enteredBy:null,games:[]};
    validateRound(s,e.id,now,0,[m]);
-   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...m.a,...m.b],rest:[],seed:1});s.matches.push(m);f.matchId=m.id;
+   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...m.a,...m.b],rest:[],seed:1});markRanked(m,e);s.matches.push(m);f.matchId=m.id;
    if(!s.seasons.some(x=>x.id===month(now)))s.seasons.push({id:month(now),rules:{...s.settings.rules},version:1});break;
   }
  }

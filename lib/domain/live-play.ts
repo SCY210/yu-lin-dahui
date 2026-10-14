@@ -8,7 +8,8 @@ import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
-import {canManageEvent} from './permissions';
+import {authorizeEventAction,canManageEvent} from './permissions';
+import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
 import {eventFormat,courtPlayers,isPractice} from './match-format';
@@ -90,7 +91,7 @@ export function fillLiveCourts(s:State,e:Event,now:number){
   const roundId=crypto.randomUUID();
   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
-  decorateMatch(s,e,match);markRanked(match);s.matches.push(match);clearFilledPointsWaiting(s,e);
+  decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);clearFilledPointsWaiting(s,e);
   const season=month(now);if(!s.seasons.some(p=>p.id===season))s.seasons.push({id:season,rules:{...s.settings.rules},version:1});
  }
 }
@@ -117,8 +118,9 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(['ended','cancelled','draft'].includes(eventStatusAt(e,now)))fail('请在活动开放后、结束前使用实时排场');
  if(e.tournament)fail('赛事请使用对战表安排比赛');
  if(isPractice(e))fail('练球活动不生成比赛或积分');
- const manager=canManageEvent(a,e);
+ const manager=canManageEvent(a,e)||canEnableEventRanking(s,a);
  if(command.action==='liveStart'||command.action==='livePause'){
+  authorizeEventAction(s,a,command.action,p);
   if(!manager)fail('403: 只有活动创建者或管理员可以开始或暂停排场');
  }else{
   const p=command.payload;

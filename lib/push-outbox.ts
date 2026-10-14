@@ -1,4 +1,5 @@
 import {raw} from './store';
+import {removePushSubscription} from './push-subscriptions';
 import {newlyOpenedSignups,signupPushMessage,pushSubscriptionInput} from './push-contract';
 import {pushConfiguration,sendWebPush,type PushEnvironment} from './push-crypto';
 import {reminderPreferences,defaultReminderPreferences,reminderKinds,type Reminder} from './reminder-contract';
@@ -67,7 +68,7 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     else{
      const subscription=pushSubscriptionInput.parse(JSON.parse(row.subscription));
      const status=await sendWebPush(subscription,notice?{title:'羽林大会 · '+notice.title,body:notice.body,eventId:notice.eventId,kind:notice.kind,tab:notice.tab,tag:'yulin-reminder-'+notice.id}:signupPushMessage(event),config,send,notice?Math.floor((notice.expires-Date.now())/1000):86400);
-     if(status===404||status===410){await db.prepare('DELETE FROM push_subscriptions WHERE id=?').bind(row.subscriptionId).run();return}
+     if(status===404||status===410){await removePushSubscription(account.id,subscription.endpoint);return}
      if(status>=200&&status<300)state='sent';else if(status>=400&&status<500&&status!==429)state='failed';
     }
    }catch{ /* Network or encryption failure: retry without logging private endpoints. */ }

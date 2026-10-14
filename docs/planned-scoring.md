@@ -1,9 +1,11 @@
-# 网站所有对局统一积分
+# Activity ranking policy
 
-所有网站记录的完整有效对局都自动计算排行榜积分：积分为赛季积分之和（每局赢 3、输扣 1，另有强弱加成，见 [REALM_PROGRESSION.md](REALM_PROGRESSION.md)）。预排范围与开始时间只用于排场，不再控制积分开关；开赛或录分时即使旧客户端发送不计分标志，服务端仍统一计积分。取消、弃权、未完成对局保持原来的统计排除规则。
+Only the club owner and administrators can enable ranked play. New member-created activities are ordinary activities; they retain signup, court fees, grouping, all scheduling modes and score recording, but results do not affect season points, cultivation or grouping ratings. MVP awards and lateness adjustments also do not add or subtract points in ordinary activities.
 
-默认预排整个活动时段。取消自由赛、关闭积分和最后半小时不计分的界面选项。已应用让分的对局保存比分，但不计修为和排行榜积分。
+Admin/owner creation can select ranked or ordinary play. The activity-level `eventRanking` command checks stored authority and the expected previous setting. It may update pending lineups before any match has started or received scores. Once play has begun, or the activity has ended/cancelled, its ranking setting is frozen. Individual start/score/handicap requests cannot override it. Practice remains unranked and does not generate matches.
 
-`enableAllRanked` 在已初始化群组中通过既有乐观 D1 事务一次性修复历史标记、回放实力并写审计；比分、球员、开赛与结束时间原样保留。重复加载不重复加分；后续生成、开赛和录分均强制采用统一规则。榜单继续按原有各月规则汇总。
+Ranked activities keep the existing per-game rules, including separate singles/doubles boards, handicap exclusions and the cultivation settlement boundary. See [REALM_PROGRESSION.md](REALM_PROGRESSION.md). Ordinary results are excluded again during leaderboard and cultivation replay even if stale match flags incorrectly claim ranking is enabled.
 
-验证包含历史 7 场记录中 4 场漏计分的真实 SQLite 迁移回归、幂等、回滚、时段外开赛、旧客户端标志、让分、自动胜负加减和权限。
+The idempotent `admins-v1` maintenance upgrade classifies previously unflagged activities. Unplayed activities with a known ordinary-member creator become ordinary; ended activities, activities with started/results history, unknown legacy creators and administrator-created activities retain their previous ranked behavior. No historical score or earned result is rewritten. Event/settings payloads use existing JSON storage, so no SQL schema migration is required.
+
+The earlier `enableAllRanked` migration is retained for legacy recovery and now respects explicitly ordinary activities. Tests cover direct commands and real SQLite handlers, forged enable/scoring requests, all three scheduling modes, MVP/lateness exclusion, replay safeguards, stale settings, duplicate requests, transaction failure/retry, UI controls and preservation of historical results.

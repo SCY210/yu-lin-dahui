@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import React from 'react';
+import renderer,{act} from 'react-test-renderer';
+mkdirSync('.test-output',{recursive:true});
+writeFileSync('.test-output/event-ranking-ui-entry.ts',"export {default as EventRanking} from '../app/event-ranking';export {newEventForm} from '../app/event-create-form';");
+await build({entryPoints:['.test-output/event-ranking-ui-entry.ts'],bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*'],outfile:'.test-output/event-ranking-ui.mjs'});
+const {EventRanking,newEventForm}=await import(pathToFileURL(resolve('.test-output/event-ranking-ui.mjs')).href);
+const ordinary=newEventForm(Date.now(),false,false);assert.ok(!ordinary.fields.some(f=>f.key==='ranking'));assert.equal(ordinary.convert({...ordinary.values,ranking:'ranked'}).ranked,false);
+const adminForm=newEventForm(Date.now(),false,true);assert.ok(adminForm.fields.some(f=>f.key==='ranking'));assert.equal(adminForm.convert(adminForm.values).ranked,true);assert.equal(adminForm.convert({...adminForm.values,ranking:'ordinary'}).ranked,false);assert.equal(adminForm.convert({...adminForm.values,matchFormat:'practice'}).ranked,false);
+const original={window:globalThis.window,document:globalThis.document},surface={addEventListener(){},removeEventListener(){}};globalThis.window=surface;globalThis.document=surface;
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;const opened=[],e={id:'e',creatorId:'member',ranked:false,status:'open',start:Date.now()-1000,end:Date.now()+3600000},ctx={data:{me:{id:'member',role:'member'},matches:[]},busy:false,open(...args){opened.push(args)}};
+const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');
+try{
+ await act(()=>{ui=renderer.create(React.createElement(EventRanking,{e,ctx}))});assert.equal(ui.root.findAllByType('button').length,0);assert.ok(text(ui.root).includes('普通活动'));assert.ok(text(ui.root).includes('不加减积分或修为'));
+ ctx.data.me={id:'admin',role:'admin'};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));await act(()=>ui.root.findByType('button').props.onClick());assert.deepEqual(opened.at(-1).slice(0,3),['开启积分赛','eventRanking',{eventId:'e',ranked:true,expectedRanked:false}]);
+ ctx.data.me={id:'owner',role:'member',isOwner:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,1);
+ ctx.data.matches=[{eventId:'e',start:1,games:[],scoreA:null,scoreB:null,status:'playing'}];await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0);
+ console.log('PASS event ranking UI: member creation cannot enable, admin/owner controls, ordinary labels, and started activities frozen');
+}finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT;for(const key of ['window','document']){if(original[key]===undefined)delete globalThis[key];else globalThis[key]=original[key]}}
