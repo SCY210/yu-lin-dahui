@@ -5,8 +5,8 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{position:relative;z-index:1;
 .avatar-fire-fallback{position:absolute;inset:-2px;border:2px solid #ff941c;border-radius:inherit;box-shadow:0 0 5px #ff641b55;pointer-events:none;z-index:0}
 .avatar-fire-art[data-fire-ready=true]+.avatar-fire-fallback{visibility:hidden}
 /* Preserve the count seal and its existing 2 / 4 / 6-win progression. */
-.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font:700 clamp(8px,22cqw,13px)/1.15 var(--af-seal-font);letter-spacing:0;white-space:nowrap;pointer-events:none;color:#fff;background:linear-gradient(135deg,#ed901c,#c64a16)}
-.avatar-fire-seal small{font-size:.72em;font-weight:600}
+.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font);font-size:clamp(8px,22cqw,13px);font-weight:700;line-height:1.15;letter-spacing:0;white-space:nowrap;pointer-events:none;color:#fff;background:linear-gradient(135deg,#ed901c,#c64a16)}
+.avatar-fire-seal small{font-size:.72em;font-weight:600;color:inherit;margin:0}
 .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507;border-color:#fff3c8}
 .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
 @container (max-width:34px){.avatar-fire-seal{display:none}}

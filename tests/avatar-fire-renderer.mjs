@@ -5,10 +5,10 @@ import {pathToFileURL} from 'node:url';
 
 await build({entryPoints:['lib/client/avatar-fire-renderer.ts'],outfile:'.test-output/avatar-fire-renderer.mjs',bundle:true,platform:'node',format:'esm'});
 const {subscribeAvatarFire}=await import(pathToFileURL(resolve('.test-output/avatar-fire-renderer.mjs')).href);
-const keys=['document','window','ResizeObserver','requestAnimationFrame','cancelAnimationFrame'];
+const keys=['document','window','ResizeObserver','MutationObserver','requestAnimationFrame','cancelAnimationFrame'];
 const old=Object.fromEntries(keys.map(key=>[key,globalThis[key]]));
-const frames=new Map(),observed=new Set(),mediaListeners=new Set();
-let frameId=0,contexts=0,draws=0,released=0,resize,unsupported=false,compilationFails=false;
+const frames=new Map(),observed=new Set(),mediaListeners=new Set(),themeTargets=new Set();
+let frameId=0,contexts=0,draws=0,released=0,resize,theme,ink=false,unsupported=false,compilationFails=false;
 const sources=[],uniforms=new Map();
 const media={matches:false,addEventListener:(_event,fn)=>mediaListeners.add(fn),removeEventListener:(_event,fn)=>mediaListeners.delete(fn)};
 const gl={
@@ -25,12 +25,13 @@ function canvas(){
 }
 function step(time){assert.equal(frames.size,1,'Every visible avatar shares one pending frame');const [id,fn]=frames.entries().next().value;frames.delete(id);fn(time);}
 function preference(reduced){media.matches=reduced;for(const fn of mediaListeners)fn();}
-globalThis.document={hidden:false,documentElement:{classList:{contains:()=>false}},createElement:()=>{
+globalThis.document={hidden:false,documentElement:{classList:{contains:()=>ink}},createElement:()=>{
  const events=new Map(),source={width:0,height:0,events,getContext:()=>{contexts++;return unsupported?null:gl},addEventListener:(event,fn)=>events.set(event,fn),removeEventListener:event=>events.delete(event)};
  sources.push(source);return source;
 }};
 globalThis.window={devicePixelRatio:3,matchMedia:()=>media};
 globalThis.ResizeObserver=class{constructor(callback){resize=callback}observe(element){observed.add(element)}unobserve(element){observed.delete(element)}disconnect(){observed.clear()}};
+globalThis.MutationObserver=class{constructor(callback){theme=callback}observe(element){themeTargets.add(element)}disconnect(){themeTargets.clear()}};
 globalThis.requestAnimationFrame=fn=>{frames.set(++frameId,fn);return frameId};
 globalThis.cancelAnimationFrame=id=>frames.delete(id);
 try{
@@ -42,11 +43,12 @@ try{
  a.setMoving(false);assert.equal(frames.size,0,'The last offscreen target cancels the timer');
  a.setMoving(true);document.hidden=true;step(130);assert.equal(frames.size,0,'A hidden page cannot continue painting');document.hidden=false;a.setMoving(true);
  preference(true);assert.equal(frames.size,0);assert.equal(uniforms.get('embers'),0,'Reduced-motion users get no floating embers');assert.equal(uniforms.get('time'),3,'Reduced motion uses a stable static frame');
+ ink=true;theme();assert.equal(uniforms.get('square'),1,'Changing to the ink theme gives even paused avatars a square fire rim');assert.equal(frames.size,0);ink=false;theme();assert.equal(uniforms.get('square'),0);assert.equal(contexts,1,'Changing theme reuses the GPU context');
  preference(false);assert.equal(frames.size,1);assert.equal(uniforms.get('embers'),1);
  let prevented=false;sources[0].events.get('webglcontextlost')({preventDefault:()=>{prevented=true}});assert.ok(prevented);assert.equal(frames.size,0);assert.equal(first.dataset.fireReady,'false','Context loss reveals the CSS fallback');
  sources[0].events.get('webglcontextrestored')();assert.equal(first.dataset.fireReady,'true');assert.equal(frames.size,1,'Restored contexts resume visible flames');
  first.getBoundingClientRect=()=>({width:160,height:210});resize([{target:first}]);assert.equal(first.height,315,'Resized avatars redraw at the correct size');
- a.dispose();a.dispose();assert.equal(observed.size,1);assert.equal(mediaListeners.size,1);b.dispose();assert.equal(observed.size,0);assert.equal(mediaListeners.size,0);assert.equal(frames.size,0);assert.equal(sources[0].events.size,0);assert.equal(released,1,'Removing the final avatar releases the GPU context');
+ a.dispose();a.dispose();assert.equal(observed.size,1);assert.equal(mediaListeners.size,1);b.dispose();assert.equal(observed.size,0);assert.equal(mediaListeners.size,0);assert.equal(themeTargets.size,0);assert.equal(frames.size,0);assert.equal(sources[0].events.size,0);assert.equal(released,1,'Removing the final avatar releases the GPU context');
  unsupported=true;const fallback=canvas();const c=subscribeAvatarFire(fallback);c.setMoving(true);c.dispose();assert.notEqual(fallback.dataset.fireReady,'true');assert.equal(frames.size,0);assert.equal(mediaListeners.size,0);
  unsupported=false;compilationFails=true;const failed=canvas();const d=subscribeAvatarFire(failed);d.setMoving(true);d.dispose();assert.notEqual(failed.dataset.fireReady,'true','Shader failures retain the static fallback');assert.equal(frames.size,0);assert.equal(mediaListeners.size,0);
  console.log('PASS flowing fire renderer: shared GPU/context/frame, bounded density/30fps, offscreen/hidden pause, reduced-motion frame without embers, resize, context loss/recovery, unsupported/failed shader fallback and final cleanup');
