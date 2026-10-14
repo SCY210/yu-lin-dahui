@@ -62,7 +62,7 @@ test('每局双方合计基本为零，长期全群平均分不漂移',()=>{
  assert.ok(Math.abs(mean-1000)<3,'club mean '+mean);
  assert.ok(snap.get('P1')!.score>snap.get('P8')!.score);
  // Season points are independent of 修为: win 3, loss 1, plus the upset bonus.
- const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids){const rows=[year,next].map(b=>b.find(r=>r.playerId===id)!);assert.equal(rows.reduce((n,r)=>n+r.points,0),rows.reduce((n,r)=>n+3*r.wins-r.losses+r.upsetPoints,0))}
+ const year=annualLeaderboard(s,2026,later),next=annualLeaderboard(s,2027,later);for(const id of ids){const rows=[year,next].map(b=>b.find(r=>r.playerId===id)!);assert.equal(rows.reduce((n,r)=>n+r.points,0),rows.reduce((n,r)=>n+3*r.wins-r.losses+r.upsetPoints+r.streakPoints,0))}
 });
 
 test('境界门槛：每境150分，达到即晋升，跌破门槛减30分才降级',()=>{
@@ -163,7 +163,7 @@ test('页面境界与队伍境界标签在活动中保持，结束时自动结�
  const member={id:'C',email:'',role:'member' as const,playerId:'C'},mid=start+3600000;replayRating(s,mid);
  assert.equal(s.players[0].rating,1152,'grouping strength counts the running game at once');
  const during=projectClubState(s,member,'2026-10',2026,mid),a=(data:typeof during)=>data.social.stats.find(p=>p.playerId==='A')!;
- assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'金丹');assert.equal(a(during).realmScore.score,1147);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.quarterlyLeaderboard.find(r=>r.playerId==='A')!.pendingPoints,3);assert.equal(during.quarterlyLeaderboard.find(r=>r.playerId==='A')!.realmScore.score,1147);assert.equal(during.social.matchLevels.late.a,'金丹');
+ assert.equal(during.events[0].status,'live');assert.equal(a(during).tier,'金丹');assert.equal(a(during).realmScore.score,1147);assert.equal(a(during).realmScore.pendingGames,1);assert.equal(during.quarterlyLeaderboard.find(r=>r.playerId==='A')!.pendingPoints,6);assert.equal(during.quarterlyLeaderboard.find(r=>r.playerId==='A')!.realmScore.score,1147);assert.equal(during.social.matchLevels.late.a,'金丹');
  const after=projectClubState(s,member,'2026-10',2026,e.end);assert.equal(after.events[0].status,'ended');assert.equal(a(after).realmScore.score,1152);assert.equal(a(after).tier,'元婴');assert.equal(after.quarterlyLeaderboard.find(r=>r.playerId==='A')!.realmScore.score,1152);assert.equal(after.social.matchLevels.late.a,'元婴');
  assert.equal(realmSnapshot(s,mid).get('A')!.score,1147);assert.equal(realmSnapshot(s,e.end).get('A')!.score,s.players[0].rating);assert.equal(s.events[0].status,'live');
  assert.ok(after.players.every(p=>p.rating===null));
@@ -202,10 +202,10 @@ test('赛季积分：胜3负−1，赢修为高50/150以上的对手另加1/2分
  // B loses three singles to A (A 1044, B 956: 88 apart), then beats A: 3 + 1.
  const s=fixture(['A','B']);for(let i=0;i<4;i++)s.matches.push(match('u'+i,start+i*120000,i<3,['A'],['B']));
  const row=(id:string)=>annualLeaderboard(s,2026,now).find(r=>r.playerId===id)!;
- assert.deepEqual([row('B').points,row('B').upsetPoints,row('B').wins,row('B').losses],[-1-1-1+4,1,1,3]);assert.deepEqual([row('A').points,row('A').upsetPoints],[3+3+3-1,0]);
+ assert.deepEqual([row('B').points,row('B').upsetPoints,row('B').wins,row('B').losses],[-1-1-1+4,1,1,3]);assert.deepEqual([row('A').points,row('A').upsetPoints],[3+3+3-1+1+2,0]);
  // Doubles compare the two team averages.
  const d=fixture();for(let i=0;i<4;i++)d.matches.push(match('d'+i,start+i*120000,i<3));
- const doubles=annualLeaderboard(d,2026,now);assert.deepEqual(['A','B','C','D'].map(id=>doubles.find(r=>r.playerId===id)!.points),[8,8,1,1]);
+ const doubles=annualLeaderboard(d,2026,now);assert.deepEqual(['A','B','C','D'].map(id=>doubles.find(r=>r.playerId===id)!.points),[11,11,1,1]);
 });
 
 test('一次性合并隐藏分组实力：球友实力改为修为，写入版本并幂等',()=>{

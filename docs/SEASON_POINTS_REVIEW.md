@@ -2,6 +2,8 @@
 
 The season-point policy is now win 3 / loss −1 (changed from loss +1 so that a 5–0 run is clearly ahead of a 2–4 run), with a 1 or 2 point upset bonus at pre-game team-rating gaps of 50 or 150. Singles and doubles remain separate in the visible boards. The long-term realm-rating policy and proposed 150-point realm bands are retained.
 
+[Winning streak points](WINNING_STREAK_POINTS.md) add 1 on the second consecutive rated win, 2 on the third, and 3 on the fourth and each later win. The bonus stacks with upset points, resets on a loss or a new Madrid quarter, and stays separate for singles and doubles. Historical and pending results are replayed consistently; Elo remains unchanged.
+
 Review regression tests exposed and repaired these integration cases:
 
 - Three UTC calendar months clamp the original day to the target month's last day, preserving hours, seconds and milliseconds. January 31 becomes April 30, rather than rolling into May. Leap-year February is covered.

@@ -7,7 +7,8 @@ import {maskClubContent} from './domain/blocked-words';
 import {canDeletePhoto} from './domain/photo-deletion';
 import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
-import type {State,Account} from './domain/types';
+import {month,type State,type Account} from './domain/types';
+import {activeWinningStreaks} from './domain/season-points';
 import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {cancellationView} from './domain/cancellations';
@@ -36,6 +37,11 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  // Realms, 修为 and strength labels settle per activity, while ranking points stay live.
  const guests=guestIds(history);
  const ledger=realmLedger(history,now),monthly=leaderboard(history,period,now,ledger),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter,now,ledger),annual=annualLeaderboard(history,year,now,ledger),singlesQuarterly=singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual=singlesAnnualLeaderboard(history,year,now,ledger);
+ const historicalMatches=new Map(history.matches.map(m=>[m.id,m]));
+ const visibleHistory=new Set(history.events.filter(e=>admin||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
+ const knownEvents=new Set(history.events.map(e=>e.id));
+ const currentStreaks=activeWinningStreaks(ledger.games.filter(g=>!knownEvents.has(g.eventId)||visibleHistory.has(g.eventId)),historicalMatches,rankingQuarter(month(now)));
+ const members=new Set(history.accounts.map(account=>account.playerId));
  const ratingHistory=admin?replayRating(structuredClone(history),now):[];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
  const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&canRecoverEvent(s,a,e)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
@@ -52,7 +58,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy})=>({id,name,phone,mine:createdBy===a.id})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
-  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?currentStreaks.get(p.id)??{singles:0,doubles:0}:{singles:0,doubles:0},...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations.map(({cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason,noticeAcknowledgements:_notice,...r})=>{const notice=visibleActivityAcknowledgements(history,a,{...r,noticeAcknowledgements:_notice}),cancellation=cancellationView(history,{...r,cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason});return {...r,...(notice?.length?{noticeAcknowledgements:notice}:{}),...(cancellation?{cancellation}:{})}}),attendance:s.attendance,rounds:s.rounds,matches:s.matches.map(m=>withScorer(s,m)),costs:s.costs,seasons:s.seasons,
   // Compatibility for tabs opened before deployment; no monthly board is shown.
   leaderboard:board(monthly),quarterlyLeaderboard:board(quarterly),rankingQuarter:quarter,annualLeaderboard:board(annual),rankingYear:year,period,

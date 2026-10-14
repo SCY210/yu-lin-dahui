@@ -85,6 +85,8 @@
 
 ## 赛季积分与排行榜
 
+Season points now also include the [winning-streak bonus](WINNING_STREAK_POINTS.md): +1 on the second consecutive rated win, +2 on the third, and +3 on the fourth and later wins. Singles and doubles use separate quarterly runs. `streakPoints` is already included in `matchPoints`; the current-quarter run also drives the on-fire avatar border. Elo and realm calculations remain unchanged.
+
 - 每个计分小局：赢 3 分、输扣 1 分；赢下的一方若赛前本队平均修为比对方低 50–149 分另加 1 分，低 150 分及以上另加 2 分（`seasonPointsPolicy`）。单打按两人各自的修为比较。比较使用该局开打前的实时修为（含进行中活动已打完的小局），与修为回放同一次计算。
 - 季度 / 年度双打榜积分 = 该周期每个双打计分小局的赛季积分之和 + 群主手动积分调整；单打榜 = 单打小局的赛季积分之和，不含手动调整。年度积分等于四个季度之和。每个周期从 0 开始累计；输局扣分或群主扣分都可能让积分为负，榜单照实显示。
 - 赛季积分与修为互不影响：积分奖励多打和赢球，修为只看对手强弱下的胜负。榜单行里另给出 `upsetPoints`（本周期强弱加成合计）和 `matchPoints`（比赛积分合计）。
