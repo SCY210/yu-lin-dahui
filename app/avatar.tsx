@@ -61,15 +61,16 @@ function SwordArt(){
  </>;
 }
 
-/** The bagua array turns behind the avatar, so its disc never tints the face. */
+/** The bagua array sits behind the avatar, so its disc never tints the face. The octagon stays upright and
+ * centred; only the trigrams and the rune ring turn, so the array never looks lopsided mid-turn. */
 function BaguaBack(){
- const octagon=Array.from({length:8},(_,i)=>{const a=(-90+22.5+i*45)*Math.PI/180;return r1(50+48*Math.cos(a))+','+r1(50+48*Math.sin(a))}).join(' ');
+ const octagon=Array.from({length:8},(_,i)=>{const a=(-90+22.5+i*45)*Math.PI/180;return r1(50+46*Math.cos(a))+','+r1(50+46*Math.sin(a))}).join(' ');
  return <g className="af-bagua-scale">
-  <circle className="af-runes" cx="50" cy="50" r="51.5" strokeDasharray=".6 2.4 2.6 2.4"/>
+  <circle className="af-runes" cx="50" cy="50" r="49.5" strokeDasharray=".6 2.4 2.6 2.4"/>
+  <polygon className="af-octagon" points={octagon}/>
   <g className="af-bagua">
-   <polygon className="af-octagon" points={octagon}/>
    {TRIGRAMS.map((lines,i)=><g key={i} transform={'rotate('+(i*45)+' 50 50)'}>
-    {[...lines].map((line,j)=>{const y=r1(9.6-j*2.3);return line==='1'?<rect key={j} className="af-yao" x="46.6" y={y} width="6.8" height="1.25" rx=".4"/>:<g key={j}><rect className="af-yao" x="46.6" y={y} width="2.9" height="1.25" rx=".4"/><rect className="af-yao" x="50.5" y={y} width="2.9" height="1.25" rx=".4"/></g>})}
+    {[...lines].map((line,j)=>{const y=r1(12.2-j*2.1);return line==='1'?<rect key={j} className="af-yao" x="46.6" y={y} width="6.8" height="1.25" rx=".4"/>:<g key={j}><rect className="af-yao" x="46.6" y={y} width="2.9" height="1.25" rx=".4"/><rect className="af-yao" x="50.5" y={y} width="2.9" height="1.25" rx=".4"/></g>})}
    </g>)}
   </g>
  </g>;
