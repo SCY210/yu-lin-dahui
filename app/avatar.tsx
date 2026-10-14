@@ -85,7 +85,8 @@ function BaguaArt(){
 
 /** A losing streak brings weather instead, lightly teased and xianxia in spirit: 乌云罩顶 (a grey cloud and drizzle),
  * 风雨交加 (a dark storm cloud, driving rain and flashes) and 天劫加身 (a turning tribulation cloud whose lightning
- * strikes the avatar). A winning streak in either format always takes precedence. */
+ * strikes the avatar). The projection keeps only the format of the player's latest rated game, so the avatar shows
+ * the live state and a broken run disappears; if both ever arrive, the winning streak is shown. */
 export const losingTiers=[
  {losses:2,name:'乌云罩顶',seal:(n:number)=>n+'连败'},
  {losses:4,name:'风雨交加',seal:(n:number)=>n+'连跪'},
