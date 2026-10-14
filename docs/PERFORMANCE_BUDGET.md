@@ -33,9 +33,9 @@ Every PR that touches server code (`app/api`, `lib`) must:
 2. Never scan the whole history once per player, per activity or per match. Build a map or index once per request and pass it down.
 3. Share results that do not depend on the viewer per stored revision through `sharedClubValue`, and give them a validity window that ends at the next clock boundary that can change them (`sharedViewValidUntil`). Never share results that depend on the viewer, permissions or unsaved changes.
 4. When optimizing, prove that the output is unchanged: compare the full projection before and after on a fictional club, including viewers with different permissions and a live activity.
-5. Keep `tests/performance.test.ts` passing. It runs in `npm run verify` on every PR. It checks `month()` against `Intl` every hour for two years, shared against per-request projections, cache expiry, maintenance equivalence, absolute budgets that the old code fails, and that doubling the club does not quadruple the cost. Do not loosen a budget to make a change pass; find the scan that grew instead.
+5. Keep `tests/performance.test.ts` passing. It runs in `npm run verify` on every PR. It checks `month()` against `Intl` every hour for two years, shared against per-request projections, cache expiry, maintenance equivalence, absolute budgets that the old code fails, and that tripling the members and activities does not multiply the cost by nine. Do not loosen a budget to make a change pass; find the scan that grew instead.
 
-Timing assertions use medians and generous budgets so that busy CI runners stay green. Locally, profile with `node --cpu-prof` against the same fixture before and after a change.
+Other test files run in parallel, so CPU contention can slow any single run. Timing assertions therefore take the fastest of several alternating runs (contention only adds time), compare growth ratios with a wide margin, and keep absolute budgets generous; a median of a few runs was not enough on a shared CI runner. Locally, profile with `node --cpu-prof` against the same fixture before and after a change.
 
 ## Plan limits
 

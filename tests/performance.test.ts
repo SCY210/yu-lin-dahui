@@ -7,9 +7,10 @@ import {mergeStrengthRating,strengthAlgorithm} from '../lib/domain/ranking';
 import {realmLedger} from '../lib/domain/realm-rating';
 import {activateAutomaticCoins,reconcileAutomaticCoins} from '../lib/domain/automatic-coins';
 
-// Cloudflare's free Workers plan allows 10ms of CPU per request; see docs/PERFORMANCE_BUDGET.md. Timings here are
-// medians with generous budgets so a busy CI runner stays green while a return to per-player or per-event full
-// scans (the 169ms projection this file was written against) still fails.
+// Cloudflare's free Workers plan allows 10ms of CPU per request; see docs/PERFORMANCE_BUDGET.md. Other test files
+// run in parallel and steal CPU at random moments, so every timing is the fastest of several runs (contention only
+// ever adds time) with generous budgets. A return to per-player or per-event full scans (the 169ms projection this
+// file was written against) still fails.
 const hour=3600000,day=24*hour,base=Date.parse('2026-07-01T17:00:00Z');
 
 /** A fictional club about the size of the real one: 22 players, two weekly activities of 14 players and 20 matches. */
@@ -32,11 +33,13 @@ function club(weeks:number,members=22){
  }
  return {s,now:base+weeks*3.5*day};
 }
-/** The median CPU time of `runs` calls after one warm-up call. */
-function median(runs:number,f:()=>void){
- f();const times:number[]=[];
- for(let i=0;i<runs;i++){const t=performance.now();f();times.push(performance.now()-t)}
- return times.sort((a,b)=>a-b)[Math.floor(runs/2)];
+/** The fastest of `runs` timed calls of each function after one warm-up call. Calls alternate between the
+ * functions so a burst of contention slows all of them alike. */
+function fastest(runs:number,...fs:(()=>void)[]){
+ for(const f of fs)f();
+ const best=fs.map(()=>Infinity);
+ for(let i=0;i<runs;i++)fs.forEach((f,j)=>{const t=performance.now();f();best[j]=Math.min(best[j],performance.now()-t)});
+ return best;
 }
 const periodAt=(now:number)=>month(now);
 
@@ -91,15 +94,18 @@ test('maintenance shares the 修为 refresh and coin ledger without changing the
  clearSharedClubValues();
 });
 
+// Budgets are counted in copies of the whole club state (structuredClone, about 2ms on a laptop) timed alongside, so
+// they hold on any machine and under any load. The 10ms Workers limit is about five copies on a laptop.
 test('a club-sized view stays far below the old cost, and shared viewers are cheaper still',()=>{
  const {s,now}=club(30),period=periodAt(now),year=Number(period.slice(0,4)),viewers=s.accounts.slice(0,10);
- const plain=median(7,()=>projectClubState(s,viewers[1],period,year,now));
  clearSharedClubValues();projectClubState(s,viewers[0],period,year,now,{revision:s.revision});
- let i=0;const shared=median(15,()=>projectClubState(s,viewers[++i%10],period,year,now,{revision:s.revision}));
+ let i=0;const [copy,plain,shared]=fastest(9,()=>{structuredClone(s)},()=>{projectClubState(s,viewers[1],period,year,now)},()=>{projectClubState(s,viewers[++i%10],period,year,now,{revision:s.revision})});
  clearSharedClubValues();
- assert.ok(plain<100,`per-request projection took ${plain.toFixed(1)}ms (budget 100ms, was 169ms before indexing)`);
- assert.ok(shared<40,`shared projection took ${shared.toFixed(1)}ms per viewer (budget 40ms)`);
- assert.ok(shared<plain,`sharing must be cheaper (${shared.toFixed(1)}ms vs ${plain.toFixed(1)}ms)`);
+ const copies=(ms:number)=>(ms/copy).toFixed(1)+' state copies';
+ // Measured 11 copies per request and 2.4 per shared viewer; the code this file replaced took 78.
+ assert.ok(plain<35*copy,`per-request projection took ${copies(plain)} (budget 35)`);
+ assert.ok(shared<8*copy,`shared projection took ${copies(shared)} per viewer (budget 8)`);
+ assert.ok(shared<plain,`sharing must be cheaper (${copies(shared)} vs ${copies(plain)})`);
 });
 
 test('maintenance of an unchanged revision is cheap once shared',()=>{
@@ -107,15 +113,16 @@ test('maintenance of an unchanged revision is cheap once shared',()=>{
  // Rewards of the past activities are already settled, as on every load after an activity ends.
  mergeStrengthRating(s,now);activateAutomaticCoins(s,base-day);reconcileAutomaticCoins(s,now);
  const run=()=>{const state=structuredClone(s);refreshStrength(state,now);activateAutomaticCoins(state,base-day);reconcileAutomaticCoins(state,now,sharedRealmLedger(state,now))};
- const cloned=median(7,()=>structuredClone(s)),shared=median(9,run)-cloned;
+ const [copy,whole]=fastest(9,()=>{structuredClone(s)},run),work=whole-copy;
  clearSharedClubValues();
- assert.ok(shared<25,`shared maintenance took ${shared.toFixed(1)}ms (budget 25ms)`);
+ // Measured about one copy; the unshared 修为 replay and coin ledger took about four.
+ assert.ok(work<3*copy,`shared maintenance took ${(work/copy).toFixed(1)} state copies (budget 3)`);
 });
 
 test('projection cost grows linearly with the size of the club',()=>{
- const cost=({s,now}:{s:State;now:number})=>{const period=periodAt(now);return median(5,()=>projectClubState(s,s.accounts[1],period,Number(period.slice(0,4)),now))};
- const ratio=cost(club(32,44))/cost(club(16,22));
- // Twice the members and activities may cost at most about twice as much (1.5x measured). Scanning the whole history
- // once per player or per activity makes it about four times (3.1x measured on the code this file replaced).
- assert.ok(ratio<2.4,`doubling members and activities multiplied the projection time by ${ratio.toFixed(2)}`);
+ const view=(weeks:number,members:number)=>{const {s,now}=club(weeks,members),period=periodAt(now);return ()=>{projectClubState(s,s.accounts[1],period,Number(period.slice(0,4)),now)}};
+ const [small,large]=fastest(7,view(16,22),view(48,66)),ratio=large/small;
+ // Three times the members and activities measured 3.4x here. Scanning the whole history once per player or per
+ // activity makes it about nine times (7.7x measured on the code this file replaced).
+ assert.ok(ratio<5.5,`tripling members and activities multiplied the projection time by ${ratio.toFixed(2)}`);
 });
