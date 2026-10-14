@@ -51,4 +51,11 @@ export function emptyState():State{return {treasureRewardClaims:[],accountNotice
 export class DomainError extends Error{constructor(message:string){super(message);this.name='DomainError'}}
 export function fail(message:string):never{throw new DomainError(message)}
 const monthFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'});
-export function month(t:number){const p=monthFormatter.formatToParts(t);return `${p.find(x=>x.type==='year')!.value}-${p.find(x=>x.type==='month')!.value}`}
+/** Madrid changes month only at local midnight, and its UTC offset is a whole hour, so the month is constant within
+ * any UTC hour. Caching by hour avoids a time-zone format per call (thousands per projection); results are identical. */
+const monthByHour=new Map<number,string>();
+export function month(t:number){
+ const hour=Math.floor(t/3600000);let value=monthByHour.get(hour);
+ if(value===undefined){const p=monthFormatter.formatToParts(t);value=`${p.find(x=>x.type==='year')!.value}-${p.find(x=>x.type==='month')!.value}`;if(monthByHour.size>=20000)monthByHour.clear();monthByHour.set(hour,value)}
+ return value;
+}

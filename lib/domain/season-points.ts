@@ -26,47 +26,25 @@ export function seasonGameScope(game:RatedGame,match:Pick<Match,'a'|'b'>){
  return rankingQuarter(month(game.start))+':'+format;
 }
 export type WinningStreaks={singles:number;doubles:number};
-/** Current-quarter avatar state, from exactly the ranking's rated sequence. */
-export function activeWinningStreaks(games:RatedGame[],matches:Map<string,Match>,quarter:string){
- const active=new Map<string,WinningStreaks>();
- for(const {game,consecutiveWins} of scoreSeasonGames(games,g=>seasonGameScope(g,matches.get(g.matchId)!))){
-  const scope=seasonGameScope(game,matches.get(game.matchId)!);
-  if(!scope.startsWith(quarter+':'))continue;
-  const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
-  if(!format)continue;
-  const streak=active.get(game.playerId)??{singles:0,doubles:0};streak[format]=consecutiveWins;active.set(game.playerId,streak);
- }
- return active;
-}
-/** Current-quarter consecutive rated losses per format, for the avatar's losing-streak sign only; season points
- * and Elo are unaffected. Same rated sequence, order and scope as the winning streak: a win resets it. */
-export function activeLosingStreaks(games:RatedGame[],matches:Map<string,Match>,quarter:string){
- const runs=new Map<string,number>(),active=new Map<string,WinningStreaks>();
- for(const game of [...games].sort(replayOrder)){
-  const scope=seasonGameScope(game,matches.get(game.matchId)!),key=JSON.stringify([game.playerId,scope]);
-  const losses=game.won?0:(runs.get(key)??0)+1;runs.set(key,losses);
-  if(!scope.startsWith(quarter+':'))continue;
-  const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
-  if(!format)continue;
-  const streak=active.get(game.playerId)??{singles:0,doubles:0};streak[format]=losses;active.set(game.playerId,streak);
- }
- return active;
-}
-
-/** The avatar shows the player's live state: only the format of their most recent rated game this quarter counts,
- * so a run in the other format that has since gone quiet is not shown. Season-point streak bonuses stay per format. */
-export function latestRatedFormats(games:RatedGame[],matches:Map<string,Match>,quarter:string){
- const latest=new Map<string,'singles'|'doubles'>();
+export type AvatarStreak={winningStreak:WinningStreaks;losingStreak:WinningStreaks};
+/** One pass for the avatar signs: the current-quarter winning and losing runs per format, kept only for the format
+ * of the player's most recent rated game (the live state). Same rated sequence, order and quarter scope as the
+ * season-point streaks; a win resets the losing run and a loss resets the winning run. */
+export function activeAvatarStreaks(games:RatedGame[],matches:Map<string,Match>,quarter:string){
+ const runs=new Map<string,{singles:{wins:number;losses:number};doubles:{wins:number;losses:number};latest:'singles'|'doubles'}>();
  for(const game of [...games].sort(replayOrder)){
   const scope=seasonGameScope(game,matches.get(game.matchId)!);
   if(!scope.startsWith(quarter+':'))continue;
   const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
-  if(format)latest.set(game.playerId,format);
+  if(!format)continue;
+  const run=runs.get(game.playerId)??{singles:{wins:0,losses:0},doubles:{wins:0,losses:0},latest:format};
+  const current=run[format];if(game.won){current.wins++;current.losses=0}else{current.losses++;current.wins=0}
+  run.latest=format;runs.set(game.playerId,run);
  }
- return latest;
-}
-/** Keep only the live format's count, so the avatar never mixes a fresh loss with an older win in another format. */
-export function liveStreak(streak:WinningStreaks|undefined,format:'singles'|'doubles'|undefined):WinningStreaks{
- if(!streak||!format)return {singles:0,doubles:0};
- return format==='singles'?{singles:streak.singles,doubles:0}:{singles:0,doubles:streak.doubles};
+ const result=new Map<string,AvatarStreak>();
+ for(const [playerId,run] of runs){
+  const only=(count:number):WinningStreaks=>run.latest==='singles'?{singles:count,doubles:0}:{singles:0,doubles:count};
+  result.set(playerId,{winningStreak:only(run[run.latest].wins),losingStreak:only(run[run.latest].losses)});
+ }
+ return result;
 }

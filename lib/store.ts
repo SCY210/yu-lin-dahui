@@ -33,12 +33,19 @@ function storedSettings(payload: string): State['settings'] { const value = pars
 function storedRecord<K extends TableName>(table: K, row: PayloadRow): State[K][number] { const value = parseStoredObject(row.payload, table); if (typeof value.id !== 'string' || !value.id || value.id !== row.id)
     throw new PersistenceError(table); return value as State[K][number]; }
 function assignRecords<K extends TableName>(state: State, table: K, rows: PayloadRow[]) { state[table] = rows.map(row => storedRecord(table, row)) as State[K]; }
-export async function load(): Promise<State> {
+export async function load(): Promise<State> { return (await loadWithRestore()).state; }
+/** The loaded state plus `restore`, which rebuilds an independent copy from the same fetched rows. Callers that only
+ * sometimes need an untouched "previous" snapshot (maintenance, before saving) avoid cloning on every request. */
+export async function loadWithRestore(): Promise<{ state: State; restore: () => State }> {
     const result = await raw().batch<Record<string, unknown>>([
         raw().prepare('SELECT COALESCE(MAX(revision),0) AS revision FROM commits'),
         raw().prepare('SELECT payload FROM settings WHERE id = ?').bind('club'),
         ...names.map(table => raw().prepare(`SELECT id,payload FROM ${table}`)),
     ]);
+    const restore = () => stateFromRows(result);
+    return { state: restore(), restore };
+}
+function stateFromRows(result: D1Result<Record<string, unknown>>[]): State {
     const state = emptyState();
     state.revision = revisionFrom(result[0].results[0]);
     const settings = result[1].results[0];

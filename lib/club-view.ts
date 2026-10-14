@@ -8,7 +8,7 @@ import {canDeletePhoto} from './domain/photo-deletion';
 import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import {month,type State,type Account} from './domain/types';
-import {activeLosingStreaks,activeWinningStreaks,latestRatedFormats,liveStreak} from './domain/season-points';
+import {activeAvatarStreaks} from './domain/season-points';
 import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {cancellationView} from './domain/cancellations';
@@ -19,29 +19,38 @@ import {withScorer} from './domain/score-conflict';
 import {guestIds,guestHostName,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlementPreview} from './domain/money';
-import {socialSnapshot} from './domain/social';
+import {socialHistoryParts,socialSnapshot} from './domain/social';
+import {sharedClubValue,sharedViewValidUntil} from './club-view-shared';
 import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
 // Retired profile fields may remain in stored JSON for compatibility, but are never shown: grip/shoes and the self-assessed level.
 const hiddenProfileKeys=['grip','shoes','level'];
-export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now()){
+/** `shared.revision`: the stored revision this state was loaded at. Only the read route passes it, so history-only
+ * results can be reused across members' requests (lib/club-view-shared.ts); without it everything is computed. */
+export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now(),shared?:{revision:number}){
  s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));
  const eventCollections=['bookings','registrations','attendance','rounds','matches','costs','settlements','payments','awardVotes'] as const;
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>historicalIds.has(row.eventId));
- const achievements=achievementSnapshot({...history,events:s.events,matches:s.matches},now);
  // Deletion hides an activity's workspace; completed results stay historical facts.
  // Realms, 修为 and strength labels settle per activity, while ranking points stay live.
  const guests=guestIds(history);
- const ledger=realmLedger(history,now),monthly=leaderboard(history,period,now,ledger),quarter=rankingQuarter(period),quarterly=quarterlyLeaderboard(history,quarter,now,ledger),annual=annualLeaderboard(history,year,now,ledger),singlesQuarterly=singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual=singlesAnnualLeaderboard(history,year,now,ledger);
+ const quarter=rankingQuarter(period);
+ const computeShared=()=>{const ledger=realmLedger(history,now);return {ledger,monthly:leaderboard(history,period,now,ledger),quarterly:quarterlyLeaderboard(history,quarter,now,ledger),annual:annualLeaderboard(history,year,now,ledger),singlesQuarterly:singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual:singlesAnnualLeaderboard(history,year,now,ledger),socialParts:socialHistoryParts(history,period,year,ledger.snapshot)}};
+ const {ledger,monthly,quarterly,annual,singlesQuarterly,singlesAnnual,socialParts}=shared?sharedClubValue(shared.revision+'|'+period+'|'+year,now,()=>sharedViewValidUntil(history,now),computeShared):computeShared();
  const historicalMatches=new Map(history.matches.map(m=>[m.id,m]));
  const visibleHistory=new Set(history.events.filter(e=>admin||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
  const knownEvents=new Set(history.events.map(e=>e.id));
  const streakGames=ledger.games.filter(g=>!knownEvents.has(g.eventId)||visibleHistory.has(g.eventId));
- const currentStreaks=activeWinningStreaks(streakGames,historicalMatches,rankingQuarter(month(now))),currentLosses=activeLosingStreaks(streakGames,historicalMatches,rankingQuarter(month(now))),liveFormats=latestRatedFormats(streakGames,historicalMatches,rankingQuarter(month(now)));
+ // Achievements and avatar streaks depend only on which drafts this viewer may see: members without drafts of their
+ // own all share one result per revision.
+ const visibility=admin?'admin':'drafts:'+history.events.filter(e=>e.status==='draft'&&e.creatorId===a.id).map(e=>e.id).sort().join(',');
+ const computeVisible=()=>({achievements:achievementSnapshot({...history,events:s.events,matches:s.matches},now),avatarStreaks:activeAvatarStreaks(streakGames,historicalMatches,rankingQuarter(month(now)))});
+ const {achievements,avatarStreaks}=shared?sharedClubValue(shared.revision+'|'+visibility,now,()=>sharedViewValidUntil(history,now),computeVisible):computeVisible();
+ const noStreak={singles:0,doubles:0};
  const members=new Set(history.accounts.map(account=>account.playerId));
  const ratingHistory=admin?replayRating(structuredClone(history),now):[];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
@@ -53,13 +62,13 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  // Members never see a realm during placement: rows and stats carry only the settled count and 修为 then.
  const realmView=(realm:RealmSnapshot)=>realm.placement?null:realm.realm;
  const board=<T extends {rating:number;realm:string;realmScore:RealmSnapshot}>(rows:T[])=>rows.map(r=>({...r,rating:admin?r.rating:null,realm:realmView(r.realmScore),realmScore:visibleRealm(r.realmScore)}));
- const fullSocial=socialSnapshot(s,period,year,now,history,ledger.snapshot);
+ const fullSocial=socialSnapshot(s,period,year,now,history,ledger.snapshot,socialParts);
  const permanent=new Set(history.players.filter(p=>!guests.has(p.id)).map(p=>p.id));
  const social={...fullSocial,funny:fullSocial.funny.filter(st=>permanent.has(st.playerId)),personality:fullSocial.personality.filter(st=>permanent.has(st.playerId)),annual:fullSocial.annual.filter(st=>permanent.has(st.playerId)),stats:fullSocial.stats.filter(st=>permanent.has(st.playerId)).map(st=>({...st,tier:realmView(st.realmScore),realmScore:visibleRealm(st.realmScore)}))};
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy})=>({id,name,phone,mine:createdBy===a.id})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin},
-  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?liveStreak(currentStreaks.get(p.id),liveFormats.get(p.id)):{singles:0,doubles:0},losingStreak:p.enabled&&members.has(p.id)?liveStreak(currentLosses.get(p.id),liveFormats.get(p.id)):{singles:0,doubles:0},...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,mapUrl:googleMapsUrl(e.venue,e.address),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations.map(({cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason,noticeAcknowledgements:_notice,...r})=>{const notice=visibleActivityAcknowledgements(history,a,{...r,noticeAcknowledgements:_notice}),cancellation=cancellationView(history,{...r,cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason});return {...r,...(notice?.length?{noticeAcknowledgements:notice}:{}),...(cancellation?{cancellation}:{})}}),attendance:s.attendance,rounds:s.rounds,matches:s.matches.map(m=>withScorer(s,m)),costs:s.costs,seasons:s.seasons,
   // Compatibility for tabs opened before deployment; no monthly board is shown.
   leaderboard:board(monthly),quarterlyLeaderboard:board(quarterly),rankingQuarter:quarter,annualLeaderboard:board(annual),rankingYear:year,period,
