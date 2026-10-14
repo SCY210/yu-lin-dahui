@@ -1,6 +1,6 @@
 # Worker CPU budget
 
-The club runs on Cloudflare's free Workers plan, which stops a request after 10 ms of CPU time. Network and D1 waiting time do not count; JavaScript work does. Every member's phone polls the club read every 3 seconds during a live activity and every 15 seconds otherwise, and there is no conditional-read cache while an activity is running. CPU per read therefore decides whether a weekly session fits the free plan. In October 2026 the club received a "hit CPU limit" notice for more than 100 requests from about 20 visitors.
+The club runs on Cloudflare's free Workers plan, which stops a request after 10 ms of CPU time. Network and D1 waiting time do not count; JavaScript work does. Every member's phone polls the club read every 3 seconds during a live activity and every 15 seconds otherwise, and until October 2026 a running activity disabled the conditional-read cache. CPU per read therefore decides whether a weekly session fits the free plan. In October 2026 the club received a "hit CPU limit" notice for more than 100 requests from about 20 visitors.
 
 ## Where the time went
 
@@ -25,6 +25,20 @@ The main costs were:
 
 `lib/club-view-shared.ts` keeps a small in-isolate cache keyed by the stored revision. Results that are the same for every viewer (realm rating ledger, ranking boards, history statistics, the clock-driven realm rating refresh, the coin ledger) are computed once and reused by every member's request until the next moment they could change on the clock, at most 15 seconds. Viewer-specific parts (draft visibility, permissions, fees) are keyed by what the viewer can see or computed per request. Only the read route and the load maintenance of an unchanged stored revision opt in; commands, saves and other callers compute everything. A cold isolate simply computes again, so correctness never depends on the cache.
 
+## Live conditional reads
+
+A running activity used to turn every poll into a full read: load every row, run the clock-driven maintenance, project the view and serialize about 1 MB. On the fictional club that was about 13 ms of CPU per poll with shared results, and every poll read every database row.
+
+Now `clubViewValidUntil` (`lib/club-read-cache.ts`) also lets a running activity reuse its validator, for 15 seconds at most (`liveMaxAge`) and only until the next live clock boundary (`liveBoundaries`):
+
+- the activity end, the points window, and every round start and end (published rounds start on the clock);
+- every court booking and every signup span (arrival, departure, per-court signups, waitlist promotion), plus the moment a court or player can no longer last a whole round;
+- each moment the remaining-round count of the current court and attendance phase drops (`pointsRoundWindows`).
+
+Any write still changes the revision, so scores reach every phone on its next poll. Simulated 3-second polling through whole activities answers about 80% of live polls with 304, which costs only authentication and three indexed metadata rows. Live CPU and D1 rows read drop to about a fifth. Request counts do not change; each 304 is still a Worker request. Activities with legacy check-in attendance bill elapsed minutes continuously and stay on full refresh.
+
+`tests/live-conditional-read.test.ts` walks whole fictional activities and checks that inside every reuse window neither any viewer's projection nor the clock-driven maintenance (auto-started rounds, refilled live courts, coin settlement) changes. Removing the live boundaries fails all of its scenarios.
+
 ## Merge requirements
 
 Every PR that touches server code (`app/api`, `lib`) must:
@@ -33,7 +47,8 @@ Every PR that touches server code (`app/api`, `lib`) must:
 2. Never scan the whole history once per player, per activity or per match. Build a map or index once per request and pass it down.
 3. Share results that do not depend on the viewer per stored revision through `sharedClubValue`, and give them a validity window that ends at the next clock boundary that can change them (`sharedViewValidUntil`). Never share results that depend on the viewer, permissions or unsaved changes.
 4. When optimizing, prove that the output is unchanged: compare the full projection before and after on a fictional club, including viewers with different permissions and a live activity.
-5. Keep `tests/performance.test.ts` passing. It runs in `npm run verify` on every PR. It checks `month()` against `Intl` every hour for two years, shared against per-request projections, cache expiry, maintenance equivalence, absolute budgets that the old code fails, and that tripling the members and activities does not multiply the cost by nine. Do not loosen a budget to make a change pass; find the scan that grew instead.
+5. Any new behaviour that changes a view or runs maintenance on the clock during an activity must add its moment to `liveBoundaries` (or to `clubViewValidUntil` outside activities) and a scenario to `tests/live-conditional-read.test.ts`. A missed boundary leaves phones up to 15 seconds behind and delays the clock-driven action until the next full read.
+6. Keep `tests/performance.test.ts` passing. It runs in `npm run verify` on every PR. It checks `month()` against `Intl` every hour for two years, shared against per-request projections, cache expiry, maintenance equivalence, absolute budgets that the old code fails, and that tripling the members and activities does not multiply the cost by nine. Do not loosen a budget to make a change pass; find the scan that grew instead.
 
 Other test files run in parallel, so CPU contention can slow any single run. Timing assertions therefore take the fastest of several alternating runs (contention only adds time), compare growth ratios with a wide margin, and keep absolute budgets generous; a median of a few runs was not enough on a shared CI runner. Locally, profile with `node --cpu-prof` against the same fixture before and after a change.
 

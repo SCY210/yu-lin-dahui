@@ -52,7 +52,9 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const {achievements,avatarStreaks}=shared?sharedClubValue(shared.revision+'|'+visibility,now,()=>sharedViewValidUntil(history,now),computeVisible):computeVisible();
  const noStreak={singles:0,doubles:0};
  const members=new Set(history.accounts.map(account=>account.playerId));
- const ratingHistory=admin?replayRating(structuredClone(history),now):[];
+ // The admin rating replay is the same for every admin; share it like the boards.
+ const replayHistory=()=>replayRating(structuredClone(history),now);
+ const ratingHistory=!admin?[]:shared?sharedClubValue(shared.revision+'|rating-history',now,()=>sharedViewValidUntil(history,now),replayHistory):replayHistory();
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
  const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&canRecoverEvent(s,a,e)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
  s.events=s.events.filter(e=>e.deletedAt===undefined);

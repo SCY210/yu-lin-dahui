@@ -18,7 +18,7 @@ Every conditional GET still authenticates and checks current revision, settings,
 
 The cache stores bounded validation metadata, not reusable cross-account response bodies. A cold or different Worker falls back to a full read.
 
-Account/role, month/year, revision, or time boundaries invalidate validators. Active-event data refreshes fully so participation time and round opportunities stay current. Exports always fetch fresh complete data.
+Account/role, month/year, revision, or time boundaries invalidate validators. During a running activity a validator lasts until the next live clock boundary and 15 seconds at most; see [Worker CPU budget](PERFORMANCE_BUDGET.md#live-conditional-reads). Activities with legacy check-in attendance still refresh fully. Exports always fetch fresh complete data.
 
 ## Voting behavior
 

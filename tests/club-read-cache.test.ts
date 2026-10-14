@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Event} from '../lib/domain/types';
-import {createClubReadCache,clubViewValidUntil,type ClubReadVersion} from '../lib/club-read-cache';
+import {createClubReadCache,clubViewValidUntil,liveMaxAge,type ClubReadVersion} from '../lib/club-read-cache';
 import {projectClubState} from '../lib/club-view';
 import {calculateSettlement} from '../lib/domain/money';
 
@@ -60,8 +60,10 @@ test('future rounds start at the activity, with no phantom pre-activity countdow
 test('arrival, booking and live fee boundaries never return a stale unchanged view',()=>{
  const {s,a,e}=fixture();
  assert.equal(clubViewValidUntil(s,a,e.start-1000),e.start);
- assert.equal(clubViewValidUntil(s,a,e.start),e.start);
- assert.equal(clubViewValidUntil(s,a,e.start+60000),e.start+60000);
+ // A running activity is reused briefly; its first remaining-round change is 10 minutes in.
+ assert.equal(clubViewValidUntil(s,a,e.start),e.start+liveMaxAge);
+ assert.equal(clubViewValidUntil(s,a,e.start+60000),e.start+60000+liveMaxAge);
+ assert.equal(clubViewValidUntil(s,a,e.start+10*60000-3000),e.start+10*60000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts,'planned estimates stay stable as time passes');
  assert.notDeepEqual(calculateSettlement(s,e,e.start+60000),calculateSettlement(s,e,e.start+120000),'actual elapsed accounting still advances');
  const at=now+1000;s.bookings[0].start=at+5000;
@@ -77,7 +79,8 @@ test('completed history remains stable and another creator private activity does
  const expires=clubViewValidUntil(s,a,now);
  assert.equal(expires,now+300000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,now),projectClubState(s,a,'2026-10',2026,expires-1));
- assert.equal(clubViewValidUntil(s,{...a,role:'admin'},now),now);
+ // An admin also sees the running private activity, which limits reuse to the live window.
+ assert.equal(clubViewValidUntil(s,{...a,role:'admin'},now),now+liveMaxAge);
 });
 
 test('a clock boundary changes the returned activity status without a write or reusable old validator',()=>{
