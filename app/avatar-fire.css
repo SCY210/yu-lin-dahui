@@ -9,7 +9,7 @@
  --af-qi:#3fae8a;--af-qi-light:#bff0dc;--af-cloud:#e9fbf3;--af-cloud-line:#3fae8a;
  --af-gold:#d4a23a;--af-gold-light:#fff3c8;--af-steel:#eef3f8;--af-steel-edge:#9fb3c8;
  --af-violet:#7b4fd6;--af-violet-light:#d9c6ff;--af-thunder:#f4ecff;--af-thunder-glow:#a77cff;
- --af-seal-radius:999px;--af-seal-font:inherit}
+ --af-seal-radius:999px;--af-seal-font:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
 span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;height:100%;min-width:0;object-fit:cover;border-radius:inherit;border:0;flex:1;margin:0}
 .avatar-fire-art{position:absolute;inset:-20%;width:140%;height:140%;overflow:visible;pointer-events:none;z-index:1}
 .avatar-fire-art.avatar-fire-back{z-index:-1}
@@ -26,14 +26,14 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .af-cloud-b{animation:af-bob-b 5s ease-in-out infinite}
 .af-motes circle{fill:var(--af-qi);opacity:0;animation:af-rise 2.8s ease-out infinite;animation-delay:var(--af-delay,0s)}
 @keyframes af-breathe{0%,100%{opacity:.7;stroke-width:2}50%{opacity:1;stroke-width:2.6}}
-@keyframes af-bob-a{0%,100%{transform:translate(3px,5px) scale(1.25)}50%{transform:translate(1px,3.5px) scale(1.25)}}
-@keyframes af-bob-b{0%,100%{transform:translate(97px,84px) scale(-1.15,1.15)}50%{transform:translate(99px,85.5px) scale(-1.15,1.15)}}
+@keyframes af-bob-a{0%,100%{transform:translate(3px,5px) scale(1.25) rotate(0deg)}50%{transform:translate(-1px,2px) scale(1.25) rotate(-4deg)}}
+@keyframes af-bob-b{0%,100%{transform:translate(97px,84px) scale(-1.15,1.15) rotate(0deg)}50%{transform:translate(101px,86.5px) scale(-1.15,1.15) rotate(4deg)}}
 @keyframes af-rise{0%{transform:translateY(0);opacity:0}25%{opacity:.9}100%{transform:translateY(-10px);opacity:0}}
 
 /* ── 2 剑意凌空 ── */
 .af-sword-frame-outer{fill:none;stroke:var(--af-gold);stroke-width:2.2}
 .af-sword-frame-inner{fill:none;stroke:var(--af-gold);stroke-width:.9;opacity:.7}
-.af-swords{transform-origin:50px 50px;animation:af-turn 6s linear infinite;filter:drop-shadow(0 0 1.5px var(--af-gold-light))}
+.af-swords{transform-origin:50px 50px;animation:af-turn 4.5s linear infinite;filter:drop-shadow(0 0 1.5px var(--af-gold-light))}
 .af-sword-blade{fill:var(--af-steel);stroke:var(--af-steel-edge);stroke-width:.5;stroke-linejoin:round}
 .af-sword-edge{stroke:#fff;stroke-width:.5;opacity:.9}
 .af-sword-guard{fill:var(--af-gold)}
@@ -41,8 +41,8 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .af-sword-trail{fill:none;stroke:var(--af-gold-light);stroke-width:2.6;stroke-linecap:round;opacity:.55;stroke-dasharray:2 3 6 40}
 
 /* ── 3 八卦天阵 ── */
-.af-runes{fill:none;stroke:var(--af-gold);stroke-width:1;opacity:.75;transform-origin:50px 50px;animation:af-turn 24s linear infinite reverse}
-.af-bagua{transform-origin:50px 50px;animation:af-turn 18s linear infinite;filter:drop-shadow(0 0 2px var(--af-thunder-glow))}
+.af-runes{fill:none;stroke:var(--af-gold);stroke-width:1;opacity:.75;transform-origin:50px 50px;animation:af-turn 16s linear infinite reverse}
+.af-bagua{transform-origin:50px 50px;animation:af-turn 11s linear infinite;filter:drop-shadow(0 0 2px var(--af-thunder-glow))}
 .af-bagua-scale{transform-origin:50px 50px}
 .wuxia-theme .af-bagua-scale{transform:scale(1.12)}
 .af-octagon{fill:color-mix(in srgb,var(--af-violet) 28%,transparent);stroke:var(--af-violet);stroke-width:1.6;stroke-linejoin:round}
@@ -58,16 +58,27 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .avatar-fire-shell[data-moving=true] .avatar-fire-art *{animation-play-state:running}
 
 /* The seal: the count and the tier's own word (连胜 / 连斩 / 连霸), styled per tier; hidden on tiny avatars. */
-.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font:700 clamp(8px,22cqw,13px)/1.15 var(--af-seal-font);letter-spacing:0;white-space:nowrap;pointer-events:none;color:#fff;background:linear-gradient(135deg,#4cc39b,#23876a)}
-.avatar-fire-seal small{font-size:.72em;font-weight:600}
-.avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507;border-color:#fff3c8}
-.avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
-@container (max-width:34px){.avatar-fire-seal{display:none}}
+.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex!important;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px!important;overflow:hidden;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font)!important;font-size:clamp(8px,22cqw,13px)!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;white-space:nowrap;pointer-events:none;color:#fff!important;background:linear-gradient(135deg,#4cc39b,#23876a)}
+.avatar-fire-seal>.af-seal-count,.avatar-fire-seal>.af-seal-word{position:relative;z-index:1;color:inherit!important;font:inherit!important;margin:0!important}
+.avatar-fire-seal>.af-seal-word{font-size:.8em!important;font-weight:700!important}
+/* A glint sweeps across the seal. */
+.avatar-fire-seal::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,#ffffffb3 48%,transparent 66%);transform:translateX(-120%);animation:af-glint 2.8s ease-in-out infinite;animation-play-state:paused}
+.avatar-fire-shell[data-moving=true] .avatar-fire-seal::after{animation-play-state:running}
+@keyframes af-glint{0%,55%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+/* A band of light flows along the frame, round or square, in the tier's colour. */
+.af-flow{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-dasharray:14 60 6 156;animation:af-flow 3.4s linear infinite}
+.af-flow-qi{stroke:var(--af-qi-light);filter:drop-shadow(0 0 2px var(--af-qi))}
+.af-flow-gold{stroke:var(--af-gold-light);filter:drop-shadow(0 0 2px var(--af-gold));animation-duration:2.6s}
+.af-flow-violet{stroke:var(--af-thunder);filter:drop-shadow(0 0 2.5px var(--af-thunder-glow));animation-duration:2.2s}
+@keyframes af-flow{to{stroke-dashoffset:-236}}
+.avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507!important;border-color:#fff3c8}
+.avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9!important;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
+@container (max-width:34px){.avatar-fire-seal{display:none!important}}
 
 /* 水墨江湖: ink-and-mineral colours, a square frame and square seals in a serif face. */
 .wuxia-theme .avatar.avatar-fire-shell{--af-qi:#3d7a62;--af-qi-light:#cfe6d6;--af-cloud:#f6f1e3;--af-cloud-line:#3d7a62;--af-gold:#a8792a;--af-gold-light:#f2dfae;--af-steel:#f3efe4;--af-steel-edge:#6b6355;--af-violet:#5b3a8e;--af-violet-light:#bca8dc;--af-thunder-glow:#8e63d8;--af-seal-radius:3px;--af-seal-font:'Songti SC','SimSun',serif}
-.wuxia-theme .avatar-fire-seal{background:#3d7a62;border-color:#fff6e6;color:#fff6e6}
-.wuxia-theme .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:#a8382a;color:#fff6e6;border-color:#f2dfae}
-.wuxia-theme .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:#3a2458;color:#f2dfae;border-color:#c9a14e;box-shadow:none}
+.wuxia-theme .avatar-fire-seal{background:#3d7a62;border-color:#fff6e6;color:#fff6e6!important}
+.wuxia-theme .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:#a8382a;color:#fff6e6!important;border-color:#f2dfae}
+.wuxia-theme .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:#3a2458;color:#f2dfae!important;border-color:#c9a14e;box-shadow:none}
 
-@media(prefers-reduced-motion:reduce){.avatar-fire-art *{animation:none!important}.af-thunder{opacity:.8}.af-motes circle{opacity:.6}}
+@media(prefers-reduced-motion:reduce){.avatar-fire-art *,.avatar-fire-seal::after{animation:none!important}.af-flow{stroke-dasharray:none;opacity:.5}.af-thunder{opacity:.8}.af-motes circle{opacity:.6}}

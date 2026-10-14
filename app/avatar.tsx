@@ -36,6 +36,7 @@ const TRIGRAMS=['111','011','101','001','110','010','100','000'];
 function QiArt(){
  return <>
   <Frame className="af-qi-ring"/>
+  <Frame className="af-flow af-flow-qi"/>
   <g className="af-cloud af-cloud-a" transform="translate(3 5) scale(1.25)"><path d={CLOUD}/><path className="af-curl" d={CLOUD_CURL}/></g>
   <g className="af-cloud af-cloud-b" transform="translate(97 84) scale(-1.15 1.15)"><path d={CLOUD}/><path className="af-curl" d={CLOUD_CURL}/></g>
   <g className="af-motes">{[[24,20],[86,40],[16,70],[64,92]].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="1.5" style={{'--af-delay':(i*0.6)+'s'} as CSSProperties}/>)}</g>
@@ -45,6 +46,7 @@ function QiArt(){
 function SwordArt(){
  return <>
   <Frame className="af-sword-frame-outer"/>
+  <Frame className="af-flow af-flow-gold"/>
   <g transform="translate(50 50) scale(.93) translate(-50 -50)"><Frame className="af-sword-frame-inner"/></g>
   <g className="af-swords">
    {[0,120,240].map(angle=><g key={angle} transform={'rotate('+angle+' 50 50)'}>
@@ -75,6 +77,7 @@ function BaguaBack(){
 function BaguaArt(){
  return <>
   <Frame className="af-bagua-frame"/>
+  <Frame className="af-flow af-flow-violet"/>
   {['M8 22 L14 27 L10 30 L17 36','M92 70 L85 74 L89 78 L81 84'].map((d,i)=><path key={i} className={'af-thunder af-thunder-'+(i?'b':'a')} d={d}/>)}
  </>;
 }
@@ -91,6 +94,7 @@ export function Avatar({p,size=''}:{p?:AvatarPlayer;size?:string}){
   {img}<svg className="avatar-fire-art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
    {tier===1?<QiArt/>:tier===2?<SwordArt/>:<BaguaArt/>}
   </svg>
-  <b className="avatar-fire-seal" aria-hidden="true">{wins}<small>{info.word}</small></b>
+  {/* Own spans with fixed type so page rules for b or small (ranking rows, podium) never resize or recolour it. */}
+  <span className="avatar-fire-seal" aria-hidden="true"><span className="af-seal-count">{wins}</span><span className="af-seal-word">{info.word}</span></span>
  </span>;
 }
