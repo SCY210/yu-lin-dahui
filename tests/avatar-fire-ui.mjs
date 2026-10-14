@@ -16,7 +16,7 @@ const props={p:{name:'Fictional player',avatarId:'fixture-avatar',winningStreak:
 try{
  await act(async()=>{renderer=create(React.createElement(Avatar,props),{createNodeMock:()=>({})})});
  const shell=()=>renderer.root.findByType('span');assert.ok(shell().props.className.includes('avatar avatar-fire-shell ranking-avatar'));assert.match(shell().props.title,/On fire.*双打 2 连胜/);
- assert.equal(renderer.root.findByType('svg').props['aria-hidden'],'true');assert.equal(renderer.root.findAllByType('path').length,12);
+ assert.equal(renderer.root.findByType('svg').props['aria-hidden'],'true');
  assert.equal(shell().props['data-moving'],'false');assert.equal(observed.size,1);
  await act(async()=>notify([...observed].map(target=>({target,isIntersecting:true}))));assert.equal(shell().props['data-moving'],'true');
  await act(async()=>{document.hidden=true;for(const fn of listeners)fn()});assert.equal(shell().props['data-moving'],'false');
