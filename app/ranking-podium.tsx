@@ -13,12 +13,12 @@ const METALS: Record<number, string[]> = {
 const TITLES: Record<number, string> = {1: '冠军', 2: '亚军', 3: '季军'};
 
 /** A championship-style medal: a broad two-strap ribbon with an edge stripe and a metal clasp, a thick
- * rim engraved with the place (冠军 / 亚军 / 季军) along the bottom, clear of the clasp, a beaded inner ring and an embossed shuttlecock,
+ * rim, the place (冠军 / 亚军 / 季军) written above a small embossed shuttlecock, a beaded inner ring,
  * with light sweeping across the metal. No event marks are used. */
 function Medal({rank}: {rank: number}) {
   const id = useId().replace(/:/g, '');
   const m = METALS[rank] ?? METALS[3];
-  const rim = 'rp-rim-' + id, face = 'rp-face-' + id, clip = 'rp-clip-' + id, arc = 'rp-arc-' + id;
+  const rim = 'rp-rim-' + id, face = 'rp-face-' + id, clip = 'rp-clip-' + id;
   return <svg className="rp-medal" viewBox="0 0 84 96" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id={rim} x1="0" y1="0" x2="1" y2="1">
@@ -28,7 +28,6 @@ function Medal({rank}: {rank: number}) {
         <stop offset="0" stopColor={m[0]}/><stop offset=".45" stopColor={m[1]}/><stop offset="1" stopColor={m[2]}/>
       </radialGradient>
       <clipPath id={clip}><circle cx="42" cy="64" r="27.5"/></clipPath>
-      <path id={arc} d="M15.7 64 A26.3 26.3 0 0 0 68.3 64"/>
     </defs>
     <path className="rp-ribbon" d="M10 0h22l14 37-12 4z"/>
     <path className="rp-ribbon rp-ribbon-back" d="M52 0h22L50 41l-12-4z"/>
@@ -37,10 +36,10 @@ function Medal({rank}: {rank: number}) {
     <circle cx="42" cy="64" r="28" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".8"/>
     <rect x="35" y="31.5" width="14" height="6.5" rx="2" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".7"/>
     <path d="M37.5 34.7h9" stroke={m[0]} strokeWidth=".8" strokeLinecap="round" opacity=".8"/>
-    <text className="rp-rim-text" fill={m[4]} textAnchor="middle"><textPath href={`#${arc}`} startOffset="50%">{TITLES[rank] ?? '第' + rank + '名'}</textPath></text>
     <circle cx="42" cy="64" r="21" fill={`url(#${face})`} stroke={m[3]} strokeWidth="1"/>
     <circle cx="42" cy="64" r="19.2" fill="none" stroke={m[3]} strokeWidth="1.1" strokeDasharray=".1 2.4" strokeLinecap="round" opacity=".75"/>
-    <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round">
+    <text className="rp-face-text" x="42" y="57.2" textAnchor="middle" fill={m[4]}>{TITLES[rank] ?? '第' + rank + '名'}</text>
+    <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round" transform="translate(42 70) scale(.62) translate(-42 -66)">
       <g transform="translate(.5 .6)" stroke={m[4]} fill="none" opacity=".45"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/></g>
       <g stroke={m[3]} fill="none" strokeWidth="1.25"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/><path d="M37.5 63 Q42 61.6 46.5 63"/></g>
       <path d="M37.6 72.6 Q42 70.6 46.4 72.6 Q46.4 78.4 42 78.4 Q37.6 78.4 37.6 72.6Z" fill={m[3]}/>
