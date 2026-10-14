@@ -1,13 +1,17 @@
 type SweepPort={db:D1Database;now:number;settle:()=>Promise<unknown>};
 export const coinRewardSweepKey='automatic-coins-sweep-v1';
+export const coinRewardSweepInterval=5*60*60*1000;
 /** Only scan event metadata while idle; a separate cursor never rewrites club settings. */
 export async function runCoinRewardSweep({db,now,settle}:SweepPort){
+ const marker=await db.prepare('SELECT payload FROM settings WHERE id=?').bind(coinRewardSweepKey).first<{payload:string}>();
+ const recorded=marker?Number((JSON.parse(marker.payload) as {through?:number}).through):NaN;
+ // Hourly wakeups preserve five elapsed hours across midnight. Waiting ticks
+ // read only this marker, never scan activities, settle or advance the cursor.
+ if(Number.isFinite(recorded)&&recorded<=now&&now-recorded<coinRewardSweepInterval)return {settled:false};
  const settings=await db.prepare('SELECT payload FROM settings WHERE id=?').bind('club').first<{payload:string}>();
  if(!settings)return {settled:false};
  const club=JSON.parse(settings.payload) as {initialized?:boolean;automaticCoins?:{activatedAt:number}};
  if(!club.initialized)return {settled:false};
- const marker=await db.prepare('SELECT payload FROM settings WHERE id=?').bind(coinRewardSweepKey).first<{payload:string}>();
- const recorded=marker?Number((JSON.parse(marker.payload) as {through?:number}).through):NaN;
  const activation=club.automaticCoins?.activatedAt;
  const from=Number.isFinite(recorded)&&recorded<=now?recorded:activation;
  let due=!Number.isFinite(activation);
