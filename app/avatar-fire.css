@@ -1,12 +1,16 @@
-.avatar.avatar-fire-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible;border-radius:50%}
-span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;height:100%;min-width:0;object-fit:cover;border-radius:inherit;border:0;flex:1;margin:0}
-/* The 60-unit rim matches the avatar; extra space above carries rising fire. */
-.avatar-fire-art{position:absolute;left:-33.333%;top:-66.667%;width:166.667%;height:200%;overflow:visible;pointer-events:none;z-index:1;filter:drop-shadow(0 0 1px #ff641b88)}
-.avatar-fire-tongue{transform-origin:0 0;animation:avatar-fire-burn var(--fire-duration) var(--fire-delay) ease-in-out infinite;animation-play-state:paused}
-.avatar-fire-heat{opacity:.7;animation:avatar-fire-heat 1.7s ease-in-out infinite;animation-play-state:paused}
-.avatar-fire-ember{opacity:0;animation:avatar-fire-rise var(--fire-duration) var(--fire-delay) linear infinite;animation-play-state:paused}
-.avatar-fire-shell[data-moving=true] :is(.avatar-fire-tongue,.avatar-fire-heat,.avatar-fire-ember){animation-play-state:running}
-@keyframes avatar-fire-burn{0%,100%{transform:scale(.94,.88) skewX(-5deg)}23%{transform:scale(1.04,1.08) skewX(5deg)}51%{transform:scale(.88,.96) skewX(-3deg)}77%{transform:scale(1.02,1.14) skewX(3deg)}}
-@keyframes avatar-fire-heat{0%,100%{opacity:.55}45%{opacity:.9}75%{opacity:.7}}
-@keyframes avatar-fire-rise{0%{opacity:0;transform:translate(0,5px) scale(.6)}18%{opacity:.9}70%{opacity:.6}100%{opacity:0;transform:translate(var(--ember-drift),-18px) scale(.25)}}
-@media(prefers-reduced-motion:reduce){.avatar-fire-tongue,.avatar-fire-heat,.avatar-fire-ember{animation:none!important}.avatar-fire-ember{opacity:0}}
+.avatar.avatar-fire-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible;border-radius:50%;container-type:inline-size;--af-seal-radius:999px;--af-seal-font:inherit}
+span.avatar-fire-shell>img.avatar.avatar-fire-image{position:relative;z-index:1;display:block;width:100%;height:100%;min-width:0;object-fit:cover;border-radius:inherit;border:0;flex:1;margin:0}
+/* Match the approved preview: portrait diameter .34 and center y .565. */
+.avatar-fire-art{position:absolute;left:-62.045%;top:-116.176%;width:224.09%;height:294.118%;pointer-events:none;z-index:0}
+.avatar-fire-fallback{position:absolute;inset:-2px;border:2px solid #ff941c;border-radius:inherit;box-shadow:0 0 5px #ff641b55;pointer-events:none;z-index:0}
+.avatar-fire-art[data-fire-ready=true]+.avatar-fire-fallback{visibility:hidden}
+/* Preserve the count seal and its existing 2 / 4 / 6-win progression. */
+.avatar-fire-seal{position:absolute;right:-16%;bottom:-12%;z-index:2;display:inline-flex;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font:700 clamp(8px,22cqw,13px)/1.15 var(--af-seal-font);letter-spacing:0;white-space:nowrap;pointer-events:none;color:#fff;background:linear-gradient(135deg,#ed901c,#c64a16)}
+.avatar-fire-seal small{font-size:.72em;font-weight:600}
+.avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507;border-color:#fff3c8}
+.avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
+@container (max-width:34px){.avatar-fire-seal{display:none}}
+.wuxia-theme .avatar.avatar-fire-shell{border-radius:3px;--af-seal-radius:3px;--af-seal-font:'Songti SC','SimSun',serif}
+.wuxia-theme .avatar-fire-seal{background:#a8382a;border-color:#fff6e6;color:#fff6e6}
+.wuxia-theme .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:#a8792a;color:#fff6e6;border-color:#f2dfae}
+.wuxia-theme .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:#3a2458;color:#f2dfae;border-color:#c9a14e;box-shadow:none}

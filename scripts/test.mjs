@@ -24,7 +24,7 @@ if (!unitOnly) {
   // These suites run handlers locally with isolated persistence. Legacy scripts
   // requiring a running Worker are separate and must never target production.
   const suites = [
-    'winning-streak-api-ui', 'avatar-fire-ui',
+    'winning-streak-api-ui', 'avatar-fire-ui', 'avatar-fire-renderer',
     'score-conflict-api', 'score-conflict-ui',
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
     'owner-rating-ui', 'event-ranking-ui',
