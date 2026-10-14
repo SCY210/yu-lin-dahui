@@ -10,10 +10,9 @@ const METALS: Record<number, string[]> = {
   2: ['#ffffff', '#e3e8ef', '#aeb8c7', '#6f7d92', '#46526a'],
   3: ['#ffe2cc', '#dca57a', '#b67449', '#7f4628', '#552c18'],
 };
-const TITLES: Record<number, string> = {1: '冠军', 2: '亚军', 3: '季军'};
 
 /** A championship-style medal: a broad two-strap ribbon with an edge stripe and a metal clasp, a thick
- * rim, the place (冠军 / 亚军 / 季军) written above a small embossed shuttlecock, a beaded inner ring,
+ * rim, a beaded inner ring and an embossed shuttlecock with no lettering,
  * with light sweeping across the metal. No event marks are used. */
 function Medal({rank}: {rank: number}) {
   const id = useId().replace(/:/g, '');
@@ -38,8 +37,7 @@ function Medal({rank}: {rank: number}) {
     <path d="M37.5 34.7h9" stroke={m[0]} strokeWidth=".8" strokeLinecap="round" opacity=".8"/>
     <circle cx="42" cy="64" r="21" fill={`url(#${face})`} stroke={m[3]} strokeWidth="1"/>
     <circle cx="42" cy="64" r="19.2" fill="none" stroke={m[3]} strokeWidth="1.1" strokeDasharray=".1 2.4" strokeLinecap="round" opacity=".75"/>
-    <text className="rp-face-text" x="42" y="57.2" textAnchor="middle" fill={m[4]}>{TITLES[rank] ?? '第' + rank + '名'}</text>
-    <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round" transform="translate(42 70) scale(.62) translate(-42 -66)">
+    <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round">
       <g transform="translate(.5 .6)" stroke={m[4]} fill="none" opacity=".45"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/></g>
       <g stroke={m[3]} fill="none" strokeWidth="1.25"><path d="M36 58 L42 74 L48 58 M39 57.2 L42 74 M45 57.2 L42 74 M42 56.8 V74"/><path d="M35.5 58 Q42 54.2 48.5 58"/><path d="M37.5 63 Q42 61.6 46.5 63"/></g>
       <path d="M37.6 72.6 Q42 70.6 46.4 72.6 Q46.4 78.4 42 78.4 Q37.6 78.4 37.6 72.6Z" fill={m[3]}/>
