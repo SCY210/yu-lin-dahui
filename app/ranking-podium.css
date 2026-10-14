@@ -192,7 +192,7 @@
 .rp-ribbon { fill: #4a3fb0; }
 .rp-ribbon-back { fill: #6a5fd0; }
 .rp-ribbon-stripe { fill: #f0cb63; }
-.rp-rim-text { font: 700 4.3px/1 system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; letter-spacing: .35px; opacity: .8; }
+.rp-rim-text { font: 700 5.6px/1 system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; letter-spacing: 2px; opacity: .85; }
 .rp-medal-shine { transform-box: view-box; transform-origin: 42px 64px; transform: rotate(24deg) translateX(-30px); animation: rp-medal-shine 4.2s ease-in-out infinite; }
 .rp-metal-2 .rp-medal-shine { animation-delay: -1.4s; }
 .rp-metal-3 .rp-medal-shine { animation-delay: -2.8s; }

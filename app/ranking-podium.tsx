@@ -13,8 +13,8 @@ const METALS: Record<number, string[]> = {
 const TITLES: Record<number, string> = {1: '冠军', 2: '亚军', 3: '季军'};
 
 /** A championship-style medal: a broad two-strap ribbon with an edge stripe and a metal clasp, a thick
- * engraved rim, a beaded inner ring and an embossed shuttlecock, with light sweeping across the metal.
- * The club's own wording and emblem; no event marks are used. */
+ * rim engraved with the place (冠军 / 亚军 / 季军) along the bottom, clear of the clasp, a beaded inner ring and an embossed shuttlecock,
+ * with light sweeping across the metal. No event marks are used. */
 function Medal({rank}: {rank: number}) {
   const id = useId().replace(/:/g, '');
   const m = METALS[rank] ?? METALS[3];
@@ -28,7 +28,7 @@ function Medal({rank}: {rank: number}) {
         <stop offset="0" stopColor={m[0]}/><stop offset=".45" stopColor={m[1]}/><stop offset="1" stopColor={m[2]}/>
       </radialGradient>
       <clipPath id={clip}><circle cx="42" cy="64" r="27.5"/></clipPath>
-      <path id={arc} d="M42 64 m-24.2 0 a24.2 24.2 0 1 1 48.4 0 a24.2 24.2 0 1 1 -48.4 0"/>
+      <path id={arc} d="M15.7 64 A26.3 26.3 0 0 0 68.3 64"/>
     </defs>
     <path className="rp-ribbon" d="M10 0h22l14 37-12 4z"/>
     <path className="rp-ribbon rp-ribbon-back" d="M52 0h22L50 41l-12-4z"/>
@@ -37,7 +37,7 @@ function Medal({rank}: {rank: number}) {
     <circle cx="42" cy="64" r="28" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".8"/>
     <rect x="35" y="31.5" width="14" height="6.5" rx="2" fill={`url(#${rim})`} stroke={m[4]} strokeWidth=".7"/>
     <path d="M37.5 34.7h9" stroke={m[0]} strokeWidth=".8" strokeLinecap="round" opacity=".8"/>
-    <text className="rp-rim-text" fill={m[4]}><textPath href={`#${arc}`} startOffset="0">羽林大会 · {TITLES[rank] ?? '第' + rank + '名'} · 羽林大会 · {TITLES[rank] ?? '第' + rank + '名'} ·</textPath></text>
+    <text className="rp-rim-text" fill={m[4]} textAnchor="middle"><textPath href={`#${arc}`} startOffset="50%">{TITLES[rank] ?? '第' + rank + '名'}</textPath></text>
     <circle cx="42" cy="64" r="21" fill={`url(#${face})`} stroke={m[3]} strokeWidth="1"/>
     <circle cx="42" cy="64" r="19.2" fill="none" stroke={m[3]} strokeWidth="1.1" strokeDasharray=".1 2.4" strokeLinecap="round" opacity=".75"/>
     <g className="rp-shuttle" strokeLinecap="round" strokeLinejoin="round">
