@@ -3,7 +3,7 @@ import {useRef,useState,type CSSProperties} from 'react';
 import {seasonPointsPolicy,type WinningStreaks} from '../lib/domain/season-points';
 import {useVisibleAvatarMotion} from '../lib/client/visible-avatar-motion';
 import './avatar-fire.css';
-type AvatarPlayer={name?:string;avatarId?:string;winningStreak?:WinningStreaks};
+type AvatarPlayer={name?:string;avatarId?:string;winningStreak?:WinningStreaks;losingStreak?:WinningStreaks};
 function AvatarImage({p,size=''}:{p?:AvatarPlayer;size?:string}){
  const [failedId,setFailedId]=useState<string|null>(null);
  const name=p?.name??'球友',avatarId=p?.avatarId;
@@ -83,11 +83,45 @@ function BaguaArt(){
  </>;
 }
 
+/** A losing streak brings weather instead, lightly teased and xianxia in spirit: 乌云罩顶 (a grey cloud and drizzle),
+ * 风雨交加 (a dark storm cloud, driving rain and flashes) and 天劫加身 (a turning tribulation cloud whose lightning
+ * strikes the avatar). A winning streak in either format always takes precedence. */
+export const losingTiers=[
+ {losses:2,name:'乌云罩顶',seal:(n:number)=>n+'连败'},
+ {losses:4,name:'风雨交加',seal:(n:number)=>n+'连跪'},
+ {losses:6,name:'天劫加身',seal:(n:number)=>'渡劫·'+n},
+] as const;
+export function losingTier(losses:number){let tier=0;losingTiers.forEach((t,i)=>{if(losses>=t.losses)tier=i+1});return tier}
+/** A rain cloud drawn above the avatar's top edge. */
+const RAIN_CLOUD='M22 17 C17 17 15 12 19 9.5 C18 4.5 24 2 28 4.6 C30 -0.6 39 -1.4 42 3.4 C45 -1 54 -0.8 56 4 C60 0.6 68 2 68 7.4 C73 6.6 77 10.4 75 14 C78 16 76 19.4 72 19.4 L24 19.4 C22.6 19.4 22 18.4 22 17Z';
+const BOLT='M52 18 L46 31 L51.5 31 L44 47 L57 27.5 L51 27.5 L56 18Z';
+function StormArt({tier}:{tier:number}){
+ const drops=tier===1?[30,42,56,68]:[26,34,42,50,58,66,74];
+ return <>
+  {tier===3&&<g className="al-vortex"><ellipse cx="49" cy="10" rx="31" ry="9" /><ellipse cx="49" cy="10" rx="20" ry="5.5"/></g>}
+  <g className="al-cloud"><path d={RAIN_CLOUD}/><path className="al-cloud-shade" d="M24 19.4 C30 15 40 18 46 15.5 C53 18.5 64 14.6 72 19.4Z"/></g>
+  {tier>=2&&<path className="al-cloud-flash" d={RAIN_CLOUD}/>}
+  <g className="al-rain">{drops.map((x,i)=><line key={x} x1={x} y1="21" x2={x-(tier===1?0:3)} y2={tier===1?27:30} style={{'--al-delay':(i*0.17)+'s'} as CSSProperties}/>)}</g>
+  {tier===3&&<path className="al-bolt" d={BOLT}/>}
+ </>;
+}
+
 export function Avatar({p,size=''}:{p?:AvatarPlayer;size?:string}){
  const streak=p?.winningStreak,wins=streak?Math.max(streak.singles,streak.doubles):0,onFire=wins>=seasonPointsPolicy.streak.start;
- const ref=useRef<HTMLSpanElement>(null),moving=useVisibleAvatarMotion(ref,onFire);
+ const lost=p?.losingStreak,losses=lost?Math.max(lost.singles,lost.doubles):0,stormy=!onFire&&losses>=losingTiers[0].losses;
+ const ref=useRef<HTMLSpanElement>(null),moving=useVisibleAvatarMotion(ref,onFire||stormy);
  const tier=streakTier(wins),info=streakTiers[tier-1];
  const label=onFire&&streak&&info?info.name+' · '+[streak.singles>=seasonPointsPolicy.streak.start?'单打 '+streak.singles+' 连胜':'',streak.doubles>=seasonPointsPolicy.streak.start?'双打 '+streak.doubles+' 连胜':''].filter(Boolean).join(' · '):'';
+ if(stormy&&lost){
+  const lossTier=losingTier(losses),loss=losingTiers[lossTier-1];
+  const lossLabel=loss.name+' · '+[lost.singles>=losingTiers[0].losses?'单打 '+lost.singles+' 连败':'',lost.doubles>=losingTiers[0].losses?'双打 '+lost.doubles+' 连败':''].filter(Boolean).join(' · ');
+  return <span ref={ref} className={'avatar avatar-fire-shell '+size} title={lossLabel} data-moving={moving?'true':'false'} data-mood="loss" data-tier={lossTier}>
+   <AvatarImage p={{...p,name:(p?.name??'球友')+' · '+lossLabel}} size="avatar-fire-image"/>
+   {lossTier===3&&<span className="al-strike" aria-hidden="true"/>}
+   <svg className="avatar-fire-art" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><StormArt tier={lossTier}/></svg>
+   <span className="avatar-fire-seal" aria-hidden="true"><span className="af-seal-word">{loss.seal(losses)}</span></span>
+  </span>;
+ }
  const img=<AvatarImage p={onFire?{...p,name:(p?.name??'球友')+' · '+label}:p} size={onFire?'avatar-fire-image':size}/>;
  if(!onFire||!info)return img;
  return <span ref={ref} className={'avatar avatar-fire-shell '+size} title={label} data-moving={moving?'true':'false'} data-tier={tier}>

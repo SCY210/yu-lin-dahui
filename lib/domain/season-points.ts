@@ -9,11 +9,12 @@ export function upsetBonus(g:Pick<RatedGame,'won'|'team'|'opponent'>){if(!g.won)
 export function winningStreakBonus(wins:number){return Number.isSafeInteger(wins)?Math.max(0,Math.min(seasonPointsPolicy.streak.cap,wins-seasonPointsPolicy.streak.start+1)):0}
 export function gamePoints(g:Pick<RatedGame,'won'|'team'|'opponent'>,consecutiveWins=0){return (g.won?seasonPointsPolicy.win:seasonPointsPolicy.loss)+upsetBonus(g)+(g.won?winningStreakBonus(consecutiveWins):0)}
 
+const replayOrder=(a:RatedGame,b:RatedGame)=>a.end-b.end||a.matchId.localeCompare(b.matchId)||a.gameIndex-b.gameIndex;
 /** Replay the same canonical order as Elo without changing its values. Scope is
  * quarter + format, independent of the selected monthly/quarterly/annual view. */
 export function scoreSeasonGames(games:RatedGame[],scope:(game:RatedGame)=>string){
  const streaks=new Map<string,number>();
- return [...games].sort((a,b)=>a.end-b.end||a.matchId.localeCompare(b.matchId)||a.gameIndex-b.gameIndex).map(game=>{
+ return [...games].sort(replayOrder).map(game=>{
   const key=JSON.stringify([game.playerId,scope(game)]),wins=game.won?(streaks.get(key)??0)+1:0;
   streaks.set(key,wins);
   return {game,consecutiveWins:wins,streakPoints:game.won?winningStreakBonus(wins):0,points:gamePoints(game,wins)};
@@ -34,6 +35,20 @@ export function activeWinningStreaks(games:RatedGame[],matches:Map<string,Match>
   const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
   if(!format)continue;
   const streak=active.get(game.playerId)??{singles:0,doubles:0};streak[format]=consecutiveWins;active.set(game.playerId,streak);
+ }
+ return active;
+}
+/** Current-quarter consecutive rated losses per format, for the avatar's losing-streak sign only; season points
+ * and Elo are unaffected. Same rated sequence, order and scope as the winning streak: a win resets it. */
+export function activeLosingStreaks(games:RatedGame[],matches:Map<string,Match>,quarter:string){
+ const runs=new Map<string,number>(),active=new Map<string,WinningStreaks>();
+ for(const game of [...games].sort(replayOrder)){
+  const scope=seasonGameScope(game,matches.get(game.matchId)!),key=JSON.stringify([game.playerId,scope]);
+  const losses=game.won?0:(runs.get(key)??0)+1;runs.set(key,losses);
+  if(!scope.startsWith(quarter+':'))continue;
+  const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
+  if(!format)continue;
+  const streak=active.get(game.playerId)??{singles:0,doubles:0};streak[format]=losses;active.set(game.playerId,streak);
  }
  return active;
 }
