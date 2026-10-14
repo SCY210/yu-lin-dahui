@@ -37,7 +37,7 @@ Validate with `npm run verify`, synchronize this independent feature branch to G
 
 ## Losing-streak avatar weather
 
-Members with at least two consecutive rated losses in either format in the current Madrid quarter, and no current winning streak, get weather over their avatar instead. It is decoration only: season points, upset bonuses and Elo are unchanged, and each loss still counts -1. The run uses the same rated sequence, replay order, format scope and quarter reset as the winning streak; a win ends it. Disabled players and guests get none, and hidden drafts cannot reveal it.
+Members whose live run is two or more consecutive rated losses get weather over their avatar instead. It is decoration only: season points, upset bonuses and Elo are unchanged, and each loss still counts -1. The run uses the same rated sequence, replay order, format scope and quarter reset as the winning streak; a win ends it. Disabled players and guests get none, and hidden drafts cannot reveal it.
 
 | Losses | Tier | Look | Seal |
 | ---: | --- | --- | --- |
@@ -46,3 +46,7 @@ Members with at least two consecutive rated losses in either format in the curre
 | 6+ | heavenly tribulation | a violet-black tribulation cloud turns above; lightning strikes the avatar, which flashes white and shakes a little | "du jie N" |
 
 Colours follow the theme (cool greys in the classic theme, ink greys in the ink-wash theme). The seal uses the same placement and fixed type as the winning seal, and motion pauses offscreen, in the background and under reduced motion. Tests: `tests/losing-streak.test.ts` and `tests/avatar-fire-ui.mjs`.
+
+## Live state
+
+Avatar signs show the player's live state, not history: only the format of their most recent rated game in the current quarter counts. If a player won two singles games and then lost a doubles game, the singles winning sign disappears and the doubles count starts; when they return to singles and win, the still-unbroken singles run shows again. Season-point streak bonuses are unchanged and stay per format. Implemented by `latestRatedFormats` and `liveStreak` in `lib/domain/season-points.ts`; covered in `tests/losing-streak.test.ts`.

@@ -52,3 +52,21 @@ export function activeLosingStreaks(games:RatedGame[],matches:Map<string,Match>,
  }
  return active;
 }
+
+/** The avatar shows the player's live state: only the format of their most recent rated game this quarter counts,
+ * so a run in the other format that has since gone quiet is not shown. Season-point streak bonuses stay per format. */
+export function latestRatedFormats(games:RatedGame[],matches:Map<string,Match>,quarter:string){
+ const latest=new Map<string,'singles'|'doubles'>();
+ for(const game of [...games].sort(replayOrder)){
+  const scope=seasonGameScope(game,matches.get(game.matchId)!);
+  if(!scope.startsWith(quarter+':'))continue;
+  const format=scope.endsWith(':singles')?'singles':scope.endsWith(':doubles')?'doubles':null;
+  if(format)latest.set(game.playerId,format);
+ }
+ return latest;
+}
+/** Keep only the live format's count, so the avatar never mixes a fresh loss with an older win in another format. */
+export function liveStreak(streak:WinningStreaks|undefined,format:'singles'|'doubles'|undefined):WinningStreaks{
+ if(!streak||!format)return {singles:0,doubles:0};
+ return format==='singles'?{singles:streak.singles,doubles:0}:{singles:0,doubles:streak.doubles};
+}
