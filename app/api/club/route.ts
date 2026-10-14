@@ -35,7 +35,9 @@ export async function GET(req: Request) {
         if (!Number.isInteger(year) || year < 2000 || year > 2100)
             fail('年份无效');
         const content=await noticeContent(),noticeScope={version:content.version,contentHash:content.contentHash};
-        const identity = { userId: user.userId, method: user.method, username: user.username };
+        const activityId=url.searchParams.get('activity')??undefined;
+        if(activityId!==undefined&&(!activityId.trim()||activityId.length>200))fail('活动无效');
+        const identity = { userId: user.userId, method: user.method, username: user.username, activityId };
         // Authentication precedes every conditional read. Exports always get fresh full data.
         if (url.searchParams.get('export') !== '1' && !url.searchParams.has('noticeExport') && req.headers.has('If-None-Match')) {
             const version = await clubReadVersion(user.userId);
@@ -80,8 +82,10 @@ export async function GET(req: Request) {
                 usernameChangedAt: number | null;
             } => c !== null);
         const ownCredential = credentials.find(c => c.accountId === a.id) ?? null, ownUsername = ownCredential?.username ?? null, owner = isClubOwner(s, a), now = Date.now();
+        // A deleted, merged or newly private activity returns a fresh full view so navigation can recover safely.
+        const scopedActivity=activityId&&s.events.some(e=>e.id===activityId&&e.deletedAt===undefined&&(a.role==='admin'||e.status!=='draft'||e.creatorId===a.id))?activityId:undefined;
         const token = readCache.remember({ noticeScope, revision: s.revision, settings: s.settings, account: a, profileRestrictions:s.profileRestrictions }, identity, period, year, clubViewValidUntil(s, a, now), now);
-        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision, consumeState:true }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
+        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision, consumeState:true, activityId:scopedActivity }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', ...(token ? { 'ETag': token } : {}) } });
     }
     catch (e) {

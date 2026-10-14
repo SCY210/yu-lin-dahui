@@ -12,10 +12,10 @@ const maxAge=5*60000;
 /** While an activity runs, a view is reused for at most this long even if no clock boundary below applies. */
 export const liveMaxAge=15000;
 export type ClubReadVersion={revision:number;settings:Settings;account:Account|null;profileRestrictions?:State['profileRestrictions'];noticeScope?:{version:string;contentHash:string}};
-export type ClubReadIdentity={userId:string;method:string;username:string|null};
+export type ClubReadIdentity={userId:string;method:string;username:string|null;activityId?:string};
 const scope=(version:ClubReadVersion,identity:ClubReadIdentity,period:string,year:number)=>JSON.stringify([
  version.noticeScope??null,version.profileRestrictions??null,version.revision,version.settings.initialized,version.settings.ownerAccountId??null,version.account,
- identity.userId,identity.method,identity.username,period,year,
+ identity.userId,identity.method,identity.username,period,year,identity.activityId??null,
 ]);
 
 /** Only validators are retained, never a shared response or an unfiltered state.

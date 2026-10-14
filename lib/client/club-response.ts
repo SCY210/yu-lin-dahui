@@ -3,6 +3,7 @@ const isObject=(value:unknown):value is Record<string,unknown>=>!!value&&typeof 
 /** A proxy's HTML/partial error page must never replace the last usable view. */
 export function isClubResponse(value:unknown){
  if(!isObject(value))return false;
+ if(value.activityScope!==undefined&&(typeof value.activityScope!=='string'||!value.activityScope||value.activityScope.length>200))return false;
  if(value.setup===true||value.join===true)return isObject(value.user)&&typeof value.user.name==='string';
  if(!isObject(value.me)||typeof value.me.id!=='string'||typeof value.me.playerId!=='string'||(value.me.role!=='admin'&&value.me.role!=='member'))return false;
  if(!isObject(value.settings)||typeof value.settings.name!=='string'||!isObject(value.settings.rules))return false;

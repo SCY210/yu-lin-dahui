@@ -32,7 +32,7 @@ export function fastLineupRefresh(page:string,eventId:string|undefined,tab:strin
  if(page==='home')return data.matches.some(m=>m.status==='playing'&&data.events.some(e=>e.id===m.eventId&&['open','locked','live'].includes(e.status)));
  if(page!=='events')return false;
  const event=data.events.find(e=>e.id===eventId);
- return !!event&&(!!event.livePlay?.enabled||tab==='rounds'&&data.rounds.some(r=>r.eventId===event.id&&['draft','published','playing'].includes(r.status)));
+ return !!event&&!['ended','cancelled'].includes(event.status)&&(!!event.livePlay?.enabled||tab==='rounds'&&data.rounds.some(r=>r.eventId===event.id&&['draft','published','playing'].includes(r.status)));
 }
 /** Never move an accepted view backwards, including after a successful write. */
 export function readBelowRevision(incoming:{revision?:unknown},minimum:number){

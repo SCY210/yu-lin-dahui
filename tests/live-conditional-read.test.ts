@@ -58,10 +58,12 @@ for(const scenario of scenarios)test('a reused live view never hides a clock cha
   if(until<=t0)continue;
   if(live)reused++;
   const period=month(t0),view=JSON.stringify(projectClubState(s,viewer,period,Number(period.slice(0,4)),t0));
+  const activity=JSON.stringify(projectClubState(s,viewer,period,Number(period.slice(0,4)),t0,{revision:s.revision,activityId:e.id}));
   for(const t of [Math.floor((t0+until)/2),until-1]){
    const at=new Date(t).toISOString(),window=new Date(t0).toISOString()+' until '+new Date(until).toISOString();
    assert.equal(await maintain(structuredClone(s),t),false,'clock-driven maintenance became due at '+at+' inside '+window);
    assert.equal(JSON.stringify(projectClubState(s,viewer,month(t),Number(month(t).slice(0,4)),t)),view,viewer.role+' view changed at '+at+' inside '+window);
+   assert.equal(JSON.stringify(projectClubState(s,viewer,month(t),Number(month(t).slice(0,4)),t,{revision:s.revision,activityId:e.id})),activity,'activity response changed inside '+window);
   }
  }
  assert.ok(liveWindows>100&&reused>liveWindows*.9,`most live polls can be answered without a full read (${reused} of ${liveWindows})`);

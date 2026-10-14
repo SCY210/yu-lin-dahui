@@ -69,5 +69,25 @@ try{
  assert.equal(fixture.reads.at(-1).headers?.['If-None-Match'],undefined,'the post-write refresh does not reuse an older validator');await refresh();assert.deepEqual(displayed(),{revision:13,a:fixture.server.matches[0].a,b:fixture.server.matches[0].b});
  let complete;fixture.queuedReads.push(new Promise(resolve=>{complete=resolve}));let oldRead;await act(async()=>{oldRead=fixture.ctx.refresh();await pause()});fixture.server=state(14,['p6','p1']);await refresh();await act(async()=>{complete(response(state(13)));await oldRead;await settle()});assert.equal(displayed().revision,14,'an in-flight old read cannot undo a fresh lineup');
  const notificationBefore=fixture['./notification-prompt'].blocked;fixture.server=state(15);fixture.server.me.bonusNotices=[{id:'bonus-fixture',kind:'mvp',points:5,at:Date.now(),title:'Fixture'}];await refresh();assert.equal(fixture['./bonus-popup'].notices.length,1);assert.equal(fixture['./bonus-popup'].blocked,false);assert.equal(fixture['./score-reminder'].blocked,true);assert.equal(fixture['./notification-prompt'].blocked,true);await act(async()=>{fixture['./bonus-popup'].onDismiss(['bonus-fixture']);await settle()});assert.equal(fixture['./bonus-popup'].notices.length,0);assert.equal(fixture['./score-reminder'].blocked,false);assert.equal(fixture['./notification-prompt'].blocked,notificationBefore);
- console.log('PASS club lineup UI: remote-admin editor invalidation, 409 refresh/close, monotonic reads, write-acknowledged revision, forced fresh read, own-write notice isolation and fast polling');
+ // Scoped responses are replacements, never a history cache used to paint an unrelated route.
+ fixture.server={...state(16),activityScope:'event'};await refresh();assert.equal(fixture.ctx.data.activityScope,'event');
+ assert.match(fixture.reads.at(-1).url,/activity=event/);
+ const oldRefresh=fixture.ctx.refresh;let finishA,lateA;
+ fixture.queuedReads.push(new Promise(resolve=>{finishA=resolve}));
+ await act(async()=>{lateA=oldRefresh();await pause()});
+ const next=state(17);next.activityScope='second';next.events[0].id='second';next.rounds[0].eventId='second';next.matches[0].eventId='second';fixture.server=next;
+ fixture.route={page:'events',eventId:'second',tab:'rounds'};
+ await act(async()=>{ui.update(React.createElement(App));await settle()});
+ assert.equal(fixture.ctx.data.activityScope,'second');assert.equal(displayed().revision,17);
+ assert.match(fixture.reads.at(-1).url,/activity=second/);assert.equal(fixture.reads.find(r=>r.url.includes('activity=second')).headers?.['If-None-Match'],undefined);
+ const readsBefore=fixture.reads.length;await act(async()=>{await oldRefresh();finishA(response({...state(16),activityScope:'event'}));await lateA;await settle()});
+ assert.equal(fixture.reads.length,readsBefore,'a write callback from the previous activity cannot start another old-scope read');
+ assert.equal(displayed().revision,17,'an old activity response cannot replace the current activity');
+ let finishFull;fixture.queuedReads.push(new Promise(resolve=>{finishFull=resolve}));fixture.route={page:'home'};
+ await act(async()=>{ui.update(React.createElement(App));await pause()});
+ assert.equal(ui.root.findAllByProps({'data-lineup':true}).length,0,'scoped content is hidden while loading the full home view');
+ assert.ok(!fixture.reads.at(-1).url.includes('activity='));assert.equal(fixture.reads.at(-1).headers?.['If-None-Match'],undefined);
+ await act(async()=>{finishFull(response(state(18)));await settle()});
+ assert.equal(ui.root.findAllByProps({'data-lineup':true}).length,0);
+ console.log('PASS club lineup UI: remote-admin editor invalidation, write races, scope switch gates, full-view recovery, stale closure/response rejection and fast polling');
 }finally{if(ui)await act(()=>ui.unmount());for(const [key,value]of Object.entries(prior)){if(value)Object.defineProperty(globalThis,key,value);else delete globalThis[key]}delete globalThis.__clubLineupUi}

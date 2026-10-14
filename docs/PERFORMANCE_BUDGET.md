@@ -57,6 +57,20 @@ The generated `.test-output/incremental-club-capacity.json` records the assumpti
 
 ## Merge requirements
 
+## Activity responses and adaptive polling
+
+New clients request `GET /api/club?activity=<id>&month=...&year=...` while viewing an activity. The response carries an explicit `activityScope` and replaces that workspace; it is not merged into a supposedly complete club snapshot. It contains current signups, rounds, scores, costs, fees and activity social data, plus authorized player/identity information, current avatar streaks and the viewer's own achievements. Visible playing matches from other activities are retained only to prevent selecting occupied players. Historical games, full leaderboards, administrative audit rows, rating replay and unrelated fee projections are omitted. Server ranking calculations and persisted results remain unchanged.
+
+Authentication and current permissions still precede every read. ETags bind the activity as well as the viewer, role, revision, period and year. Deleted, merged or inaccessible activities return a freshly filtered full response so navigation can recover. Export reads remain full. The client gates other screens until their requested scope has loaded, rejects late responses and old refresh closures after navigation, and forces a fresh read after writes. Browser-agent overview tools explicitly request full data.
+
+Active match/lineup collaboration and live home cards keep the existing 3-second interval. Home and non-fast activity views retain a 15-second ceiling so clock-driven starts do not wait for a long idle backoff. Other screens start at 15 seconds and, after successive unchanged revisions, back off to 30 and then 60 seconds. Any observed new revision resets the delay. Returning to the foreground or receiving the existing wake events refreshes immediately; offline/hidden pages stop polling. Failures retry with bounded backoff and never overlap reads. Finished/cancelled activities no longer retain fast polling merely because an old live-play flag remains.
+
+The authenticated synthetic handler fixture (200 historical matches, 600 audit rows) measured 633,122 bytes for the full response and 20,983 bytes for the activity response (96.7% smaller, before compression). `tests/club-activity-api.mjs` verifies next-poll score/lineup changes, permission changes, scoped 304s and full-view recovery. `tests/club-lineup-sync-ui.mjs` verifies navigation gates, stale closures/responses and write conflict recovery. Live boundary tests exercise both full and activity projections.
+
+For 20 viewers over three hours, continuous live collaboration still has a worst-case 72,000 scheduled poll requests. Quiet browsing falls below 4,000 scheduled polls. The prior conservative D1 rehearsal deliberately runs the incremental loader on all 72,000 polls, so its read/write budget remains the upper-bound scenario for this change under the same data, write-rate and cold-start assumptions. Reminder requests, explicit user actions, navigation, retries and other account traffic use the remaining request reserve; these calculations are not an actual three-hour production stress test or a guarantee for unlimited traffic.
+
+## Merge requirements
+
 Every PR that touches server code (`app/api`, `lib`) must:
 
 1. Keep the per-request CPU of a club read within the 10 ms free-plan budget for a club of the current size. Do not add work that runs on every poll unless it is cheap or shared.

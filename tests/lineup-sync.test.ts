@@ -37,6 +37,7 @@ test('planned and round-by-round match views poll quickly without speeding unrel
  assert.equal(fastLineupRefresh('home',undefined,undefined,data),true);
  assert.equal(fastLineupRefresh('events','e','rounds',{...data,rounds:[{...round,status:'complete'}]}),false);
  assert.equal(fastLineupRefresh('events','e','overview',{...data,events:[{...event,livePlay:{enabled:true} as Event['livePlay']}]}),true);
+ for(const status of ['ended','cancelled'] as const)assert.equal(fastLineupRefresh('events','e','rounds',{...data,events:[{...event,status,livePlay:{enabled:true} as Event['livePlay']}]}),false,'old live-play flags cannot keep finished activities polling rapidly');
 });
 test('accepted and acknowledged revisions cannot be replaced by an older read',()=>{
  assert.equal(readBelowRevision({revision:11},12),true);

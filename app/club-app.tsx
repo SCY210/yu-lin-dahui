@@ -32,6 +32,7 @@ import {newEventForm} from './event-create-form';
 import {useVisualTheme} from './visual-theme';
 import {isClubResponse} from '../lib/client/club-response';
 import {createClubRefresh} from '../lib/client/club-refresh';
+import {requestedActivity,scopePending,validResponseScope,clubRefreshVersion} from '../lib/client/club-scope';
 import {fastLineupRefresh,liveLineupFormChanged,readBelowRevision} from '../lib/client/lineup-sync';
 import {fetchWithWakeRetry} from '../lib/client/wake-recovery';
 import {listenForSessionChanges,notifySessionChange} from '../lib/client/session-sync';
@@ -86,6 +87,7 @@ export default function ClubApp(){
  const [year,setYear]=useState(Number(month(Date.now()).slice(0,4))),[data,setData]=useState<any>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[period,setPeriod]=useState(month(Date.now())),[form,setForm]=useState<Form|null>(null),[danger,setDanger]=useState<any>(null),[preview,setPreview]=useState<any>(null);
  const {route,navigation}=useClubNavigation(data?.me?.id??data?.user?.id);
  const {page,eventId,tab,playerId:profilePlayerId,socialTab}=route;
+ const activityScope=requestedActivity(page,eventId);
  const setPage=(value:string)=>navigation?.navigate({page:value as ClubPage});
  const setTab=(value:string)=>navigation?.navigate({...route,tab:value as EventTab});
  const setSocialTab=(value:string)=>navigation?.navigate({page:'social',socialTab:value as SocialTab});
@@ -94,16 +96,18 @@ export default function ClubApp(){
  const visitBonuses=(data?.me?.bonusNotices??[]).filter((n:{id:string})=>deferredBonuses.accountId!==data?.me?.id||!deferredBonuses.ids.includes(n.id));
  const refreshSequence=useRef(0),dataSnapshot=useRef<any>(null),actionInFlight=useRef(false),sessionInvalidated=useRef(false),pageActive=useRef(false);dataSnapshot.current=sessionInvalidated.current?null:data;
  useEffect(()=>{pageActive.current=true;return()=>{pageActive.current=false}},[]);
- const readValidator=useRef<{etag:string;period:string;year:number}|null>(null);
+ const readValidator=useRef<{etag:string;period:string;year:number;scope:string}|null>(null);
+ const readKey=JSON.stringify([activityScope,period,year]),currentReadKey=useRef(readKey);currentReadKey.current=readKey;
+ useLayoutEffect(()=>{refreshSequence.current++;readValidator.current=null},[activityScope,period,year]);
  const minimumReadRevision=useRef(0),lineupFormSnapshot=useRef<Form|null>(null);
  useLayoutEffect(()=>{lineupFormSnapshot.current=form},[form]);
- const refresh=useCallback(async()=>{
-  if(sessionInvalidated.current)return;
-  const request=++refreshSequence.current,snapshot=dataSnapshot.current;
-  const validator=readValidator.current?.period===period&&readValidator.current.year===year&&snapshot?.me?readValidator.current:null;
+ const refresh=useCallback(async(options?:{full?:boolean})=>{
+  if(sessionInvalidated.current||readKey!==currentReadKey.current)return;
+  const request=++refreshSequence.current,snapshot=dataSnapshot.current,requestScope=options?.full?'':activityScope;
+  const validator=readValidator.current?.period===period&&readValidator.current.year===year&&readValidator.current.scope===requestScope&&snapshot?.me?readValidator.current:null;
   try{
-   const r=await fetchWithWakeRetry('/api/club?month='+period+'&year='+year,{cache:'no-store',headers:validator?{'If-None-Match':validator.etag}:{}});
-   if(sessionInvalidated.current)return;
+   const r=await fetchWithWakeRetry('/api/club?month='+period+'&year='+year+(requestScope?'&activity='+encodeURIComponent(requestScope):''),{cache:'no-store',headers:validator?{'If-None-Match':validator.etag}:{}});
+   if(sessionInvalidated.current||readKey!==currentReadKey.current)return;
    if(request===refreshSequence.current&&[401,403].includes(r.status)){
     readValidator.current=null;minimumReadRevision.current=0;dataSnapshot.current=null;setData(null);setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false);
    }
@@ -113,9 +117,10 @@ export default function ClubApp(){
     return snapshot;
    }
    const d:any=await r.json().catch(()=>{throw new Error('服务暂时无法响应，请稍后重试')});
-   if(sessionInvalidated.current)return;
+   if(sessionInvalidated.current||readKey!==currentReadKey.current)return;
    if(!r.ok)throw new Error(d.error||'暂时无法同步数据');
    if(!isClubResponse(d))throw new Error('服务返回的资料暂不可用，请稍后重试');
+   if(!validResponseScope(d,requestScope))throw new Error('活动资料已切换，请重新加载');
    if(request===refreshSequence.current){
     if(readBelowRevision(d,minimumReadRevision.current)){readValidator.current=null;setError('资料仍在同步，请稍候');return dataSnapshot.current}
     if(typeof d.revision==='number')minimumReadRevision.current=Math.max(minimumReadRevision.current,d.revision);
@@ -126,15 +131,15 @@ export default function ClubApp(){
     }
     if(dataSnapshot.current?.me?.id&&dataSnapshot.current.me.id!==d.me?.id){setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false)}
     if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>typeof old.progress[a.id]?.level==='number'&&next.progress[a.id]?.level>old.progress[a.id].level);if(fresh.length)toast.success('成就升级：'+fresh.map(a=>a.name+' Lv.'+next.progress[a.id].level).join('、'))}}
-    const etag=r.headers.get('ETag');readValidator.current=etag&&d.me?{etag,period,year}:null;
+    const etag=r.headers.get('ETag');readValidator.current=etag&&d.me?{etag,period,year,scope:requestScope}:null;
     dataSnapshot.current=d;setData(d);setError('');
    }
    return d;
   }catch(e){if(request===refreshSequence.current){readValidator.current=null;setError((e as Error).message)}}
   finally{if(request===refreshSequence.current)setLoading(false)}
- },[period,year]);
- const liveRefreshing=fastLineupRefresh(page,eventId,tab,data);
- useEffect(()=>{const poll=createClubRefresh({refresh,available:()=>!document.hidden&&navigator.onLine,schedule:(callback,delay)=>setTimeout(callback,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)},liveRefreshing?3000:15000);const wake=()=>poll.wake(),events=['online','offline','focus','pageshow','yulin:push-changed'];document.addEventListener('visibilitychange',wake);for(const name of events)window.addEventListener(name,wake);return()=>{poll.stop();document.removeEventListener('visibilitychange',wake);for(const name of events)window.removeEventListener(name,wake)}},[refresh,liveRefreshing]);
+ },[period,year,activityScope,readKey]);
+ const liveRefreshing=(page==='events'&&tab==='rounds'&&(!data||scopePending(data,activityScope)))||fastLineupRefresh(page,eventId,tab,data);
+ useEffect(()=>{const poll=createClubRefresh({refresh,available:()=>!document.hidden&&navigator.onLine,schedule:(callback,delay)=>setTimeout(callback,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)},{base:liveRefreshing?3000:15000,maximum:liveRefreshing?3000:(page==='home'||activityScope?15000:60000),version:clubRefreshVersion});const wake=()=>poll.wake(),events=['online','offline','focus','pageshow','yulin:push-changed'];document.addEventListener('visibilitychange',wake);for(const name of events)window.addEventListener(name,wake);return()=>{poll.stop();document.removeEventListener('visibilitychange',wake);for(const name of events)window.removeEventListener(name,wake)}},[refresh,liveRefreshing,page,activityScope]);
  useEffect(()=>{
   const invalidate=()=>{
    if(sessionInvalidated.current)return;sessionInvalidated.current=true;readValidator.current=null;refreshSequence.current++;dataSnapshot.current=null;
@@ -190,18 +195,19 @@ export default function ClubApp(){
  const selectRankingFormat=(value:string)=>{const format=value==='singles'?'singles':'all';setRankingFormat(format);navigation?.updateRankingSelection({period,year,rankingPeriod:rankingPeriod==='annual'?'annual':'quarterly',...formatSelection(format)})};
  const openEvent=(id:string,t='overview')=>navigation?.navigate({page:'events',eventId:id,tab:(t==='matches'?'rounds':t) as EventTab});
  useEffect(()=>{
-  if(!navigation||!data?.me)return;
+  if(!navigation||!data?.me||scopePending(data,activityScope))return;
   if(route.page==='events'&&route.eventId&&data.mergedEventTargets?.[route.eventId])navigation.replaceRoute({...route,eventId:data.mergedEventTargets[route.eventId]});
   else if(route.page==='events'&&route.eventId&&!data.events.some((e:any)=>e.id===route.eventId))navigation.replaceRoute({page:'events'});
   else if(route.page==='social'&&route.playerId&&!data.players.some((p:PlayerView)=>p.id===route.playerId&&!p.guestEventId&&!p.guest))navigation.replaceRoute({page:'social'});
   else if(route.page==='admin'&&data.me.role!=='admin')navigation.replaceRoute({page:'me'});
- },[navigation,data,route]);
- useEffect(()=>registerClubWebMcp({current:()=>live.current.data,refresh:()=>live.current.refresh(),openSignup:(event,booking,me)=>{
+ },[navigation,data,route,activityScope]);
+ useEffect(()=>registerClubWebMcp({current:()=>live.current.data,refresh:()=>live.current.refresh({full:true}),openSignup:(event,booking,me)=>{
   live.current.open('接龙确认 · '+event.title,'courtRegister',{bookingId:booking.id,playerId:me.playerId,arrival:dt(booking.start),departure:dt(booking.end),note:''},[halfTimed('arrival','参加开始'),halfTimed('departure','参加结束'),text('note','备注')],(values:Record<string,unknown>)=>({...values,arrival:epoch(String(values.arrival)),departure:epoch(String(values.departure))}),'确认参加场地与时段后提交接龙；满员时自动候补。');
  }}),[]);
  const regs=(ev:any)=>data.registrations.filter((r:any)=>r.eventId===ev.id&&r.status!=='cancelled').sort((a:any,b:any)=>a.sequence-b.sequence);
  const eventCard=(ev:ClubData['events'][number])=>{const capacity=eventCapacitySummary(ev,data.bookings,data.registrations);return <button className="event-card" key={ev.id} onClick={()=>openEvent(ev.id)}><div className="date-box"><b>{fmt(ev.start,{day:'2-digit'}).replace(/\D/g,'')}</b><span>{fmt(ev.start,{month:'numeric'})}</span><small>{fmt(ev.start,{weekday:'short'})}</small></div><div className="event-info"><div className="row"><h3>{ev.title}</h3><EventStatusBadge e={ev} capacity={capacity}/></div><p><span>{formatLabel(eventFormat(ev))}</span> · <span className="event-card-time"><Clock size={15}/>{hm(ev.start)}–{hm(ev.end)}</span> · <span className="event-card-venue">{ev.venue}</span></p><div className="row event-capacity-row"><span className="event-capacity-count" aria-label={'已报名'+capacity.occupied+'，上限'+capacity.capacity+(capacity.slots>1?'个名额':'人')} title={capacity.people+'位球友，占用'+capacity.occupied+'个名额'}><Users size={15}/><strong>{capacity.occupied} / {capacity.capacity}</strong>{capacity.slots>1?'名额':'人'}<span className="event-capacity-slots">· {capacity.slots}时段</span></span><span className="muted">我：{labels[regs(ev).find((r:ClubData['registrations'][number])=>r.playerId===data.me.playerId)?.status]??'尚未报名'}</span></div>{eventFormat(ev)==='practice'&&<small className="prewrap">{ev.note}</small>}{capacity.courts.length>1&&<small>{capacity.courts.length} 个场地时段 · 点开查看接龙</small>}</div></button>};
  function newEvent(tournament=false){const form=newEventForm(Date.now(),tournament,data.me.role==='admin'||!!data.me.isOwner);open(form.title,form.action,form.values,form.fields,form.convert,form.description)}
+ if(scopePending(data,activityScope))return error?<main className="shell"><p className="error">{error}</p><button className="primary" onClick={()=>void refresh()}>重新加载</button><button className="ghost" onClick={()=>setPage('events')}>返回活动</button></main>:<AppLoading/>;
  const viewedRules=data?.seasons?.find((s:any)=>s.id===period)?.rules??data?.settings?.rules;
  const context={data,refresh,admin,name,open,send,action,setDanger,busy,openEvent,openProfile,regs};
  if(loading)return <AppLoading/>;

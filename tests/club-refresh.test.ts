@@ -1,8 +1,19 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createClubRefresh} from '../lib/client/club-refresh';
+import {clubRefreshVersion} from '../lib/client/club-scope';
 
 const tick=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve()};
+
+test('adaptive browsing backs off after unchanged replies, then wakes immediately and resets its delay',async()=>{
+ let visible=true,revision=1,calls=0,delay=0,scheduled:(()=>void)|null=null;
+ const poll=createClubRefresh({refresh:async()=>{calls++;return {revision,me:{id:'viewer'}}},available:()=>visible,schedule:(callback,ms)=>{scheduled=callback;delay=ms;return 1},cancel:()=>{scheduled=null}}, {base:15000,maximum:60000,version:clubRefreshVersion});
+ await tick();assert.equal(delay,15000);
+ for(let i=0;i<4;i++){const run=scheduled!;scheduled=null;run();await tick()}
+ assert.equal(delay,60000);visible=false;poll.wake();assert.equal(scheduled,null);
+ const before=calls;visible=true;revision++;poll.wake();assert.equal(calls,before+1);await tick();assert.equal(delay,15000);
+ poll.stop();assert.equal(scheduled,null);
+});
 function fixture(available=true){
  let calls=0;const state={available};const waits:{resolve:()=>void;reject:()=>void}[]=[],timers=new Map<number,()=>void>();let sequence=0;
  const poll=createClubRefresh({refresh:()=>{calls++;return new Promise<void>((resolve,reject)=>waits.push({resolve,reject:()=>reject(new Error('offline'))}))},available:()=>state.available,schedule:callback=>{const id=++sequence;timers.set(id,callback);return id},cancel:id=>timers.delete(id as number)});
