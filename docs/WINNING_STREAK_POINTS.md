@@ -34,3 +34,15 @@ Guest/friend profiles and disabled players receive no fire state. Results of ano
 No database migration or stored bonus ledger is required. The implementation reads authoritative rated-game facts, never mutates match history, and uses one shared policy for calculations and explanations. Unit coverage exercises the cap, upset stacking, loss resets, individual games, score correction/voiding, separate formats, quarter/month/annual consistency, exclusions, no-show handling, pending points and deterministic replay. API/UI coverage verifies the projected ranking and displayed rules.
 
 Validate with `npm run verify`, synchronize this independent feature branch to GitHub, and release approved shared changes through the controlled private Cloudflare workflow. Do not deploy a public-only build over private production.
+
+## Losing-streak avatar weather
+
+Members with at least two consecutive rated losses in either format in the current Madrid quarter, and no current winning streak, get weather over their avatar instead. It is decoration only: season points, upset bonuses and Elo are unchanged, and each loss still counts -1. The run uses the same rated sequence, replay order, format scope and quarter reset as the winning streak; a win ends it. Disabled players and guests get none, and hidden drafts cannot reveal it.
+
+| Losses | Tier | Look | Seal |
+| ---: | --- | --- | --- |
+| 2–3 | dark clouds overhead | a grey cloud drifts above the avatar with light drizzle; the photo is slightly greyed | "N lian bai" |
+| 4–5 | wind and rain | a dark storm cloud, slanting rain and flashes inside the cloud | "N lian gui" |
+| 6+ | heavenly tribulation | a violet-black tribulation cloud turns above; lightning strikes the avatar, which flashes white and shakes a little | "du jie N" |
+
+Colours follow the theme (cool greys in the classic theme, ink greys in the ink-wash theme). The seal uses the same placement and fixed type as the winning seal, and motion pauses offscreen, in the background and under reduced motion. Tests: `tests/losing-streak.test.ts` and `tests/avatar-fire-ui.mjs`.
