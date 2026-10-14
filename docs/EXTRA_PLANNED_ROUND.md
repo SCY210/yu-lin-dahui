@@ -16,5 +16,5 @@ Unfinished rounds, live or round mode, practice, tournaments, deleted or inactiv
 activities, fewer than five remaining minutes, or unavailable players/courts are
 rejected. The displayed round ID snapshot and the API revision/request receipt
 protect against stale or concurrent duplicate additions. Failed proposals or start operations leave
-all history and event settings unchanged. The administrator simulation supports
-the same command in its isolated store.
+all history and event settings unchanged. Regression tests use an isolated local
+fictional fixture; the former administrator simulation is no longer available.

@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 import {sqliteD1} from './helpers/sqlite-d1.mjs';
 mkdirSync('.test-output',{recursive:true});
 const database=sqliteD1();globalThis.__pointsClock={env:{DB:database.db}};
-await build({stdin:{contents:`export {loadClubState} from './lib/club-maintenance';export {createSimulation} from './lib/admin-simulation';export {load,save} from './lib/store';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:'.test-output/points-auto-start-api.mjs',plugins:[{name:'isolated-points-clock',setup(builder){builder.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'points-clock'}));builder.onLoad({filter:/.*/,namespace:'points-clock'},()=>({loader:'js',contents:'export const env=globalThis.__pointsClock.env;'}));}}]});
+await build({stdin:{contents:`export {loadClubState} from './lib/club-maintenance';export {createSimulation} from './tests/helpers/scheduling-fixture';export {load,save} from './lib/store';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:'.test-output/points-auto-start-api.mjs',plugins:[{name:'isolated-points-clock',setup(builder){builder.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'points-clock'}));builder.onLoad({filter:/.*/,namespace:'points-clock'},()=>({loader:'js',contents:'export const env=globalThis.__pointsClock.env;'}));}}]});
 const api=await import(pathToFileURL(resolve('.test-output/points-auto-start-api.mjs')).href);
 try{
  const previous=await api.load(),s=api.createSimulation(Date.now()).state;s.events[0].start=Date.now()+3600000;await api.save(s,'clock-fixture',previous);

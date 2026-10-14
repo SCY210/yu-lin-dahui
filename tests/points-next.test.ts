@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createSimulation} from '../lib/admin-simulation';
+import {createSimulation} from './helpers/scheduling-fixture';
 import {apply} from '../lib/domain/commands';
 import {applyPointsPlan} from '../lib/domain/points-plan';
 const now=Date.parse('2030-10-10T13:00:00Z'),minute=60000;

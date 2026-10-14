@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createSimulation} from '../lib/admin-simulation';
+import {createSimulation} from './helpers/scheduling-fixture';
 import {apply} from '../lib/domain/commands';
 import {leaderboard,replayRating} from '../lib/domain/ranking';
 import {startDuePointsSessions} from '../lib/domain/points-auto-start';
