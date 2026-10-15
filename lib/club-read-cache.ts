@@ -96,7 +96,7 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  const scored=new Set(s.matches.filter(m=>m.status==='complete').map(m=>m.eventId));
  for(const e of s.events)if(scored.has(e.id))boundary(e.end);
  const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
- for(const m of s.matches)if(m.status==='complete'&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
+ for(const m of s.matches)if(['complete','forfeit'].includes(m.status)&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
  // Derived realm/placement and grouping strength can restart without a write.
  for(const m of s.matches)if(isRatedMatch(m,now))boundary(inactivityDeadline(m.end!));
  // MVP voting closes on the clock: the result, its points and the winner's notice appear without a write.

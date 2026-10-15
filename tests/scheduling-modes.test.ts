@@ -37,7 +37,7 @@ test('a mixed round never cancels a playing or completed match when its remainin
 });
 
 test('remaining-time planning preserves the confirmed partner mode and previously fixed teams',async()=>{
- const {s,e,owner}=fixture();await apply(s,owner,'planPoints',{eventId:e.id,at:start,pointsMinutes:30,roundMinutes:15,seed:3,pairing:'fixed'},start-minute);await apply(s,owner,'publishPoints',{eventId:e.id},start-minute);const first=s.rounds[0];await apply(s,owner,'start',{roundId:first.id,at:start,monthly:true,elo:true},start);const m=s.matches.find(m=>m.roundId===first.id)!;await apply(s,owner,'score',{matchId:m.id,a:21,b:19},start+10*minute);const teams=structuredClone(e.pointsChoice!.teams),before=structuredClone(s);
+ const {s,e,owner}=fixture();await apply(s,owner,'planPoints',{eventId:e.id,at:start,pointsMinutes:15,roundMinutes:15,seed:3,pairing:'fixed'},start-minute);await apply(s,owner,'publishPoints',{eventId:e.id},start-minute);const first=s.rounds[0];await apply(s,owner,'start',{roundId:first.id,at:start,monthly:true,elo:true},start);const m=s.matches.find(m=>m.roundId===first.id)!;await apply(s,owner,'score',{matchId:m.id,a:21,b:19},start+10*minute);const teams=structuredClone(e.pointsChoice!.teams),before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'planPoints',{eventId:e.id,at:start+30*minute,pointsMinutes:30,roundMinutes:15,seed:4,pairing:'rotate'},start+11*minute),/保留已确认搭档/);assert.deepEqual(s,before);
  await apply(s,owner,'planPoints',{eventId:e.id,at:start+30*minute,pointsMinutes:30,roundMinutes:15,seed:4,pairing:'fixed'},start+11*minute);assert.deepEqual(e.pointsChoice!.teams,teams);assert.equal(m.scoreA,21);
 });

@@ -5,6 +5,7 @@ import {pointsSession} from './points-attendance';
 import {pointsWindow} from './points-window';
 import {schedulingMode} from './scheduling';
 import {fillLiveCourts,hasEmptyLiveCourt} from './live-play';
+import {advanceScheduledCourts,readyScheduledMatches} from './scheduled-courts';
 import type {State,Account,Round} from './types';
 
 type Runner=(s:State,a:Account,action:string,input:unknown,now:number)=>Promise<unknown>;
@@ -17,17 +18,15 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
   if(original.deletedAt!==undefined||isPractice(original)||original.tournament||!['open','locked','live'].includes(eventStatusAt(original,now))||now<Math.max(original.start,window.start)||now>=original.end)continue;
   const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
   if(!actor)continue;
-  const mode=schedulingMode(s,original),playing=s.matches.some(m=>m.eventId===original.id&&m.status==='playing');
+  const mode=schedulingMode(s,original);
   // Cloning the complete history twice on every unchanged poll can itself exceed the free CPU budget.
   // First activation still records its audit; later polls clone only when a clock action can actually run.
   if(original.pointsSession?.startedAt){
    if(mode==='live'){
     if(original.livePlay?.paused||(original.livePlay?.enabled&&!hasEmptyLiveCourt(s,original,now)))continue;
    }else{
-    if(playing)continue;
     const rounds=s.rounds.filter(r=>r.eventId===original.id);
-    const next=rounds.filter(r=>['draft','published'].includes(r.status)).sort((a,b)=>(a.pointsSlot??0)-(b.pointsSlot??0)||a.start-b.start)[0];
-    if(!(next?.status==='published'&&next.start<=now)&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000))continue;
+    if(!readyScheduledMatches(s,original,now).length&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000))continue;
    }
   }
   const work=structuredClone(s),e=work.events.find(e=>e.id===original.id)!;
@@ -52,7 +51,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
       started=true;attempt.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-clock',action:'pointsAutoFill',reason:'到场或场地时段开始，自动补排空场',changes:{eventId:e.id,matchIds:attempt.matches.slice(count).map(m=>m.id)}});
      }
     }
-   }else if(!playing){
+   }else{
     let next:Round|undefined=attempt.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).sort((a,b)=>(a.pointsSlot??0)-(b.pointsSlot??0)||a.start-b.start)[0];
     if(mode==='round'&&!next&&!attempt.rounds.some(r=>r.eventId===e.id)){
      const duration=Math.min(15,Math.floor((e.end-now)/60000));
@@ -62,9 +61,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
       if(next)await run(attempt,actor,'publish',{roundId:next.id},now);
      }
     }
-    if(next?.status==='published'&&next.start<=now){
-     await run(attempt,actor,'start',{roundId:next.id,at:now,monthly:true,elo:true},now);started=true;
-    }
+    started=advanceScheduledCourts(attempt,event,now);
    }
   }catch{
    // Availability can change after publication (late arrivals, stopped players,

@@ -16,11 +16,11 @@ function fixture(){
 }
 
 test('planned swaps and bench choices ignore current occupancy while real starts still reject busy players',()=>{
- for(const status of ['draft','published'] as const){
-  const {s,e,ids,round,match,current}=fixture();round.status=status;match.status=status;
+ for(const status of ['draft','published','playing'] as const){
+  const {s,e,ids,round,match,current}=fixture();round.status=status;match.status=status==='playing'?'published':status;
   const original=structuredClone(current);assert.ok(roundBenchIds(s,e,round).includes(ids[4]));
   swapRoundPlayers(s,round,ids[0],ids[4],now);
-  assert.equal(match.a[0],ids[4]);assert.equal(round.status,status);assert.equal(match.status,status);assert.deepEqual(current,original);
+  assert.equal(match.a[0],ids[4]);assert.equal(round.status,status);assert.equal(match.status,status==='playing'?'published':status);assert.deepEqual(current,original);
   assert.throws(()=>validateRound(s,e.id,round.start,round.duration,[match]),/正在比赛/,'starting uses the original live-occupancy check');
   current.status='complete';assert.doesNotThrow(()=>validateRound(s,e.id,round.start,round.duration,[match]));
  }

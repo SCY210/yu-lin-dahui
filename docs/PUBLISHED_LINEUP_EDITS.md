@@ -1,7 +1,7 @@
 # Published lineup edits
 
-Activity creators and administrators can exchange two players in a draft or
-published round before the affected matches start or receive scores. The
+Activity creators and administrators can exchange two players in a draft,
+published or partly started round before the affected matches start or receive scores. The
 exchange can involve two courts or an on-court player and a bench player.
 Publishing is preserved; the organizer does not need to recreate the schedule.
 

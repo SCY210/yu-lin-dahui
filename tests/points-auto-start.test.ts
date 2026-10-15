@@ -35,8 +35,8 @@ test('published planned slots start in order only after prior scores; drafts nev
  await apply(s,a,'publishPoints',{eventId:e.id},now);assert.equal(await startDuePointsSessions(s,now,apply),true);
  const first=s.rounds[0].id;assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.equal(await startDuePointsSessions(s,now+16*minute,apply),false,'do not interrupt existing courts');
  for(const m of s.matches.filter(m=>m.roundId===first))await apply(s,a,'score',{matchId:m.id,a:21,b:19},now+16*minute);
- const history=structuredClone(s.matches.filter(m=>m.roundId===first));assert.equal(await startDuePointsSessions(s,now+17*minute,apply),true);
- assert.deepEqual(s.matches.filter(m=>m.roundId===first),history);assert.ok(s.matches.filter(m=>m.roundId!==first).every(m=>m.status==='playing'&&m.start===now+17*minute));
+ const history=structuredClone(s.matches.filter(m=>m.roundId===first));assert.equal(await startDuePointsSessions(s,now+17*minute,apply),false,'scoring already advanced the ready courts in the write transaction');
+ assert.deepEqual(s.matches.filter(m=>m.roundId===first),history);assert.ok(s.matches.filter(m=>m.roundId!==first).every(m=>m.status==='playing'&&m.start===now+16*minute));
 });
 test('future, ended, deleted, draft, cancelled, practice and tournament activities never auto-start or replay',async()=>{
  for(const kind of ['future','window-future','ended','clock-ended','deleted','draft','cancelled','practice','tournament']){

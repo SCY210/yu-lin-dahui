@@ -14,6 +14,7 @@ import {assertFullProfileEditable} from './profile-permissions';
 import { markRanked } from './all-ranked';
 import {canEnableEventRanking,eventRankingEnabled,changeEventRanking} from './event-ranking';
 import { applyLivePlay, finishLiveMatch } from './live-play';
+import {advanceScheduledCourts,reconcileScoredRound} from './scheduled-courts';
 import {applyScheduling} from './scheduling-commands';
 import {applyLiveLineup} from './live-lineup';
 import {applyNoShow} from './no-show';
@@ -449,7 +450,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'lock': {
             const p = command.payload;
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
-            if (!['draft','published'].includes(round(m.roundId).status)||!pendingMatchLineup(m))
+            if (!['draft','published','playing'].includes(round(m.roundId).status)||!pendingMatchLineup(m))
                 fail('只可锁定或解锁尚未开始、未录分的分组');
             m.locked = p.locked;
             break;
@@ -559,11 +560,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             m.status = 'complete';
             m.enteredBy = a.id;
             markRanked(m,matchEvent);
-            if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
-                r.status = 'complete';
+            reconcileScoredRound(s,r,now);
             replayRating(s, now);
             if (firstCompletion && !unstarted && m.earlyScoreAt===undefined)
                 finishLiveMatch(s, matchEvent, m, now);
+            if(firstCompletion&&m.earlyScoreAt===undefined)advanceScheduledCourts(s,matchEvent,now);
             break;
         }
         case 'matchScoring': {
@@ -583,12 +584,13 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             assertTournamentScore(s,event(m.eventId),m,0,0,true);
             const wasPlaying = m.status === 'playing';
             m.status = p.status;
+            if(wasPlaying)m.end=now;
             const r = round(m.roundId);
-            if (s.matches.filter(x => x.roundId === r.id).every(x => ['complete', 'cancelled', 'forfeit'].includes(x.status)))
-                r.status = 'complete';
+            reconcileScoredRound(s,r,now);
             replayRating(s, now);
             if (wasPlaying)
                 finishLiveMatch(s, event(m.eventId), m, now);
+            if(wasPlaying)advanceScheduledCourts(s,event(m.eventId),now);
             break;
         }
         case 'cost': {
