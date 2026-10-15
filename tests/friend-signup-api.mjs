@@ -28,7 +28,7 @@ try{
  await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
  const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:options.revision??(await api.load()).revision})}));
- const fresh=name=>({...acceptedActivityNotice,mode:'new',name,bookingId:'court',arrival:start,departure:end,note:''});
+ const fresh=name=>({...acceptedActivityNotice,mode:'new',gender:'male',name,bookingId:'court',arrival:start,departure:end,note:''});
  signIn(null);assert.equal((await post(fresh('No login'))).status,401);
  signIn('member');assert.equal((await post(fresh('Wrong origin'),crypto.randomUUID(),{origin:'https://attacker.example'})).status,403);
  assert.equal((await post(fresh('Wrong actor'),crypto.randomUUID(),{actor:'other'})).status,409);

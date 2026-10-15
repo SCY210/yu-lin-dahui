@@ -33,7 +33,7 @@ try{
  const view=async()=>{const response=await api.GET(new Request(origin+'/api/club'));assert.equal(response.status,200);return response.json()};
  const court=(playerId='p2')=>({bookingId:'c',playerId,arrival:start,departure:end,note:''});
  const legacy=(playerId='p2')=>({eventId:'legacy',playerId,arrival:start,departure:end,note:''});
- const guest=()=>({mode:'new',name:'Fictional visitor',bookingId:'c',arrival:start,departure:end,note:''});
+ const guest=()=>({mode:'new',gender:'male',name:'Fictional visitor',bookingId:'c',arrival:start,departure:end,note:''});
  const row=(state,playerId='p2',eventId='e')=>state.registrations.find(r=>r.playerId===playerId&&r.eventId===eventId);
  signIn('member');
  for(const [action,payload] of [['register',legacy()],['courtRegister',court()],['friendSignup',guest()]]){

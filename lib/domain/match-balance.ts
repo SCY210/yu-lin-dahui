@@ -3,7 +3,7 @@
  * 80-point cost, as does reusing the same group of players: modest strength
  * differences must not force the same game or four-player cohort forever.
  * Ranking points never enter this calculation. The only profile field used is a declared gender, and only to avoid
- * a pair of much stronger men facing a woman (`genderMismatches`), which outranks every other preference.
+ * a pair of men facing a pair of women or a much weaker woman (`genderMismatches`), which outranks every other preference.
  */
 export const BALANCE_TOLERANCE = 40;
 export type BalanceCost = { mismatches:number; worstExcess:number; totalExcess:number; variety:number; rematches:number; cohorts:number };

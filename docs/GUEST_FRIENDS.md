@@ -12,6 +12,7 @@ A friend is any player without an account of their own whose owner is another me
 - In `replayRealmScores` the friend's score is set to their level at the time of each match. The friend is never updated, never counts games, and never receives season points.
 - Members who play with or against a friend are rated as usual, against that fixed level. Leaderboards already list members only.
 - Grouping and live rotation read `player.rating`, which equals the friend's current level after the replay. The gender rule in `docs/GENDER_BALANCE.md` uses the same value.
+- A new friend must also be given a gender (male or female, `guestGender`), which doubles pairing needs (`docs/GENDER_BALANCE.md`). The same people can change it later with the `guestGender` command; it only affects line-ups generated afterwards.
 - The registrant who brought the friend, an administrator, or the organiser of an activity the friend joined can change the level (`guestLevel`). Each change is stored with its time in `guestLevels` and applies from then on; earlier games keep the level the friend had then.
 
 ## Display
