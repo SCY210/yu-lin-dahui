@@ -29,5 +29,6 @@ try{
  assert.ok(text(ui.toJSON()).includes('本轮阵容已更新'));assert.ok(!ui.root.findAllByType('button').some(b=>b.props['data-selected']));
  await click('p2');assert.equal(writes.length,0,'the second click after a remote update starts a fresh selection rather than submitting the old one');
  await click('p1');assert.equal(writes.length,1);assert.equal(writes[0][1].p1,'p2');assert.deepEqual(writes[0][1].expectedLineup,[{id:'match',a:['p4','p1'],b:['p2','p3']}]);
+ ctx.data={...data,events:[{...e,schedulingMode:'planned'}],matches:[{...match,status:'playing',start:now,locked:true}],rounds:[{...data.rounds[0],status:'playing'}]};await act(()=>ui.update(React.createElement(EventRounds,props())));await click('p0');assert.equal(ui.root.findByProps({'data-player':'p0'}).props['data-selected'],true);await click('p1');assert.equal(writes.length,2,'unscored automatic-start and old locked metadata do not interrupt a two-click planned swap');
  console.log('PASS published round sync UI: remote lineup invalidation, visible notice, cleared highlight and a fresh two-click snapshot');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=old}

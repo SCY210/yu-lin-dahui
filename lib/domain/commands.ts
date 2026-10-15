@@ -404,39 +404,21 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (s.rounds.some(r => r.eventId === e.id && r.pointsSlot !== undefined && ['draft', 'published', 'playing'].includes(r.status)))
                 fail('已有预排积分赛，请按赛程完成或取消预排轮次，再逐轮生成');
             const old = s.rounds.find(x => x.eventId === e.id && x.status === 'draft');
-            const locked = s.matches.filter(m => m.roundId === old?.id && m.status==='draft' && m.locked);
-            validateRound(s, e.id, p.at, p.duration, locked);
             const eligible = readyIds(s, e.id, p.at, p.duration);
             if (old) {
                 s.matches = s.matches.filter(m => m.roundId !== old.id);
                 s.rounds = s.rounds.filter(r => r.id !== old.id);
             }
-            const copy = structuredClone(s);
-            copy.matches.push(...locked.map(m => ({ ...m, status: 'playing' as const })));
-            let courts: {
-                courtId: string;
-                a: string[];
-                b: string[];
-            }[] = [];
-            try {
-                const fixed = e.pointsChoice?.selectedMode === 'fixed';
-                const teams = fixed ? (e.pointsChoice?.teams ?? fixedPartnerTeams(copy, e)) : undefined;
-                courts = teams ? proposeFixed(copy, e, p.at, p.duration, p.seed, teams).courts : propose(copy, e, p.at, p.duration, p.seed).courts;
-                if (fixed)
-                    e.pointsChoice!.teams = teams;
-            }
-            catch (error) {
-                if (!locked.length)
-                    throw error;
-            }
-            const playing = [...locked.flatMap(m => [...m.a, ...m.b]), ...courts.flatMap(m => [...m.a, ...m.b])];
+            const copy = structuredClone(s), fixed = e.pointsChoice?.selectedMode === 'fixed';
+            const teams = fixed ? (e.pointsChoice?.teams ?? fixedPartnerTeams(copy, e)) : undefined;
+            const courts = teams ? proposeFixed(copy, e, p.at, p.duration, p.seed, teams).courts : propose(copy, e, p.at, p.duration, p.seed).courts;
+            if (fixed) e.pointsChoice!.teams = teams;
+            const playing = courts.flatMap(m => [...m.a, ...m.b]);
             const r = { id: old?.id ?? id(), eventId: e.id, start: p.at, duration: p.duration, status: 'draft' as const, eligible, rest: eligible.filter(id => !playing.includes(id)), seed: p.seed };
             s.rounds.push(r);
-            for (const m of locked)
-                s.matches.push({ ...m, roundId: r.id });
             for (const m of courts)
                 s.matches.push({ ...m, id: id(), eventId: e.id, roundId: r.id, status: 'draft', start: null, end: null, scoreA: null, scoreB: null, monthly: true, elo: true, locked: false, enteredBy: null, games: [] });
-            for (const m of s.matches.filter(m => m.roundId === r.id && !m.locked))
+            for (const m of s.matches.filter(m => m.roundId === r.id))
                 decorateMatch(s, e, m);
             e.schedulingMode='round';
             break;
@@ -448,19 +430,14 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             break;
         }
         case 'lock': {
-            const p = command.payload;
-            const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
-            if (!['draft','published','playing'].includes(round(m.roundId).status)||!pendingMatchLineup(m))
-                fail('只可锁定或解锁尚未开始、未录分的分组');
-            m.locked = p.locked;
-            break;
+            fail('分组锁定功能已取消，未录分的预排对局可直接换人');
         }
         case 'moveCourt': {
             const p = command.payload;
             const m = s.matches.find(x => x.id === p.matchId) ?? fail('比赛不存在');
             const r = round(m.roundId);
-            if (r.status !== 'draft' || m.locked)
-                fail('仅可修改未锁定草稿');
+            if (r.status !== 'draft')
+                fail('仅可修改草稿场地');
             m.courtId = p.courtId;
             validateRound(s, m.eventId, r.start, r.duration, s.matches.filter(x => x.roundId === r.id));
             break;

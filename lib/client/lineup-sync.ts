@@ -1,4 +1,4 @@
-import {roundLineupSnapshot,type RoundLineup} from '../domain/round-lineup';
+import {editableMatchLineup,roundLineupSnapshot,type RoundLineup} from '../domain/round-lineup';
 import type {Event,Match,Round} from '../domain/types';
 
 type LineupData={matches:Match[];rounds:Round[];events:Event[]};
@@ -16,14 +16,14 @@ export function liveLineupFormChanged(form:LineupForm|null,data:Pick<LineupData,
  return desired.some(id=>busy.has(id));
 }
 export type RoundSelection={roundId:string;playerId:string;lineup:RoundLineup};
-export function currentRoundSelection(selected:RoundSelection|null,data:Pick<LineupData,'matches'|'rounds'>){
+export function currentRoundSelection(selected:RoundSelection|null,data:Pick<LineupData,'matches'|'rounds'>,planned=false){
  if(!selected)return null;
  const round=data.rounds.find(r=>r.id===selected.roundId);
  if(!round||!['draft','published','playing'].includes(round.status))return null;
  const matches=data.matches.filter(m=>m.roundId===round.id);
  if(JSON.stringify(roundLineupSnapshot(matches))!==JSON.stringify(selected.lineup))return null;
  const assigned=matches.find(m=>m.a.includes(selected.playerId)||m.b.includes(selected.playerId));
- if(assigned&&(assigned.locked||!['draft','published'].includes(assigned.status)||assigned.start!==null||assigned.games.length||assigned.scoreA!==null||assigned.scoreB!==null))return null;
+ if(assigned&&!editableMatchLineup(assigned,planned||round.pointsSlot!==undefined))return null;
  return selected;
 }
 /** Fast collaboration polling includes published/planned rounds, not just live mode. */

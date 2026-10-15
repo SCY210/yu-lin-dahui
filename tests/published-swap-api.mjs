@@ -40,7 +40,10 @@ try{
  user('member2');await reject('score',{matchId:'m0',a:21,b:19,reason:'Old score dialog',expectedA:['p0','p1'],expectedB:['p2','p3']},409);user('member9');await reject('swap',first,409);await reject('swap',swap(stored,'p1','p10'));await reject('swap',swap(stored,'p1','p11'));await reject('swap',swap(stored,'p8','p12'));
  // Guests can replace a published member without creating a permanent profile.
  stored=await accept('swap',swap(stored,'p9','p12'));assert.ok(stored.matches.find(m=>m.id==='m0').a.includes('p12'));stored=await accept('swap',swap(stored,'p12','p9'));
- stored=await accept('lock',{matchId:'m1',locked:true});await reject('swap',swap(stored,'p1','p5'));stored=await accept('lock',{matchId:'m1',locked:false});stored=await accept('swap',swap(stored,'p1','p5'));assert.ok(stored.matches.find(m=>m.id==='m0').a.includes('p5'));assert.ok(stored.matches.find(m=>m.id==='m1').a.includes('p1'));
+ await reject('lock',{matchId:'m1',locked:true});await reject('lock',{matchId:'m1',locked:false});
+ const legacyPlaying=structuredClone(stored),legacyMatch=legacyPlaying.matches.find(m=>m.id==='m1');legacyMatch.locked=true;legacyMatch.status='playing';legacyMatch.start=start;legacyPlaying.rounds.find(r=>r.id==='round').status='playing';await api.save(legacyPlaying,'legacy-playing-lock-fixture',stored);stored=await api.load();
+ stored=await accept('swap',swap(stored,'p1','p5'));assert.ok(stored.matches.find(m=>m.id==='m0').a.includes('p5'));assert.ok(stored.matches.find(m=>m.id==='m1').a.includes('p1'));assert.equal(stored.matches.find(m=>m.id==='m1').locked,false);assert.equal(stored.matches.find(m=>m.id==='m1').status,'playing');
+ user('member1');await reject('score',{matchId:'m1',a:21,b:19,expectedA:['p4','p5'],expectedB:['p6','p7'],reason:'Stale playing-score dialog'},409);user('member9');
  // Racing edits use one revision; a stale selection cannot silently move the new lineup.
  const revision=stored.revision,one=swap(stored,'p9','p8'),two=swap(stored,'p9','p12');const race=await Promise.all([post('swap',one,{revision}),post('swap',two,{revision})]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);stored=await api.load();
  const replacement=stored.matches.find(m=>m.id==='m0').a.find(id=>id==='p8'||id==='p12');stored=await accept('swap',swap(stored,replacement,'p9'));
@@ -64,5 +67,5 @@ try{
  const timed=structuredClone(stored),late=timed.registrations.find(r=>r.playerId==='p9');late.arrival=e.start+3600000;late.departure=e.start+5400000;await api.save(timed,'outside-planned-window-fixture',stored);stored=await api.load();
  const beforeLate=structuredClone(stored.matches.find(m=>m.id==='busy-now'));stored=await accept('swap',{roundId:'later-round',p1:'p4',p2:'p9',expectedLineup:api.roundLineupSnapshot(stored.matches.filter(m=>m.roundId==='later-round'))});
  assert.ok(stored.matches.find(m=>m.id==='later').a.includes('p9'),'planned swap accepts a confirmed player outside the estimated time window');assert.deepEqual(stored.matches.find(m=>m.id==='busy-now'),beforeLate);
- console.log('PASS published swaps: authority, signup windows, currently playing future assignees, guests, locks, stale/racing edits, rollback, unchanged current games and scored lineup protection');
+ console.log('PASS published swaps: authority, signup windows, currently playing future assignees, guests, retired locks, unscored playing substitutions, stale/racing edits, rollback, unchanged current games and scored lineup protection');
 }finally{db.close();delete globalThis.__publishedSwapTest}

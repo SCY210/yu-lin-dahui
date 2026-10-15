@@ -21,14 +21,16 @@ test('live editor closes when displayed teams change, finish or disappear, but u
  assert.equal(liveLineupFormChanged({...form,values:{...form.values,incomingId:'p4'}},{matches:[match,{...match,id:'other',a:['p4','p5']}]}),true,'a selected replacement claimed by another court invalidates the editor');
  assert.equal(liveLineupFormChanged(form,{matches:[match],events:[event]}),true,'switching off live play invalidates the live editor');
 });
-test('a two-click round selection is invalidated by changed teams, locks or its started match',()=>{
+test('two-click selection protects changed/scored teams but ignores retired locks and planned start metadata',()=>{
  const m={...match,status:'published' as const,start:null},r={...round,status:'published' as const};
  const selected={roundId:'r',playerId:'p0',lineup:roundLineupSnapshot([m])};
  assert.equal(currentRoundSelection(selected,{matches:[m],rounds:[r]}),selected);
  assert.equal(currentRoundSelection(selected,{matches:[{...m,a:['p4','p1']}],rounds:[r]}),null);
- assert.equal(currentRoundSelection(selected,{matches:[{...m,locked:true}],rounds:[r]}),null);
+ assert.equal(currentRoundSelection(selected,{matches:[{...m,locked:true}],rounds:[r]}),selected);
  assert.equal(currentRoundSelection(selected,{matches:[m],rounds:[round]}),selected,'a pending court can be edited while another court in its round plays');
  assert.equal(currentRoundSelection(selected,{matches:[match],rounds:[round]}),null);
+ assert.equal(currentRoundSelection(selected,{matches:[{...match,locked:true}],rounds:[round]},true),selected,'an unscored planned selection survives automatic start and old lock metadata');
+ assert.equal(currentRoundSelection(selected,{matches:[{...match,status:'complete',games:[{a:21,b:19}],scoreA:21,scoreB:19}],rounds:[round]},true),null);
 });
 test('planned and round-by-round match views poll quickly without speeding unrelated pages',()=>{
  const data={matches:[match],rounds:[round],events:[event]};

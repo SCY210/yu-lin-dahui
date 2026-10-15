@@ -59,7 +59,7 @@ test('普通创建者完整管理报名、出勤、排场、比赛结果和费�
  }
  await apply(s,member,'generate',{eventId:'own',at:start,duration:20,seed:12},start);
  const r=s.rounds[0],m=s.matches[0];
- await apply(s,member,'lock',{matchId:m.id,locked:true},start);await apply(s,member,'lock',{matchId:m.id,locked:false},start);
+ await assert.rejects(()=>apply(s,member,'lock',{matchId:m.id,locked:true},start),/锁定功能已取消/);await assert.rejects(()=>apply(s,member,'lock',{matchId:m.id,locked:false},start),/锁定功能已取消/);
  await apply(s,member,'swap',{roundId:r.id,p1:'self',p2:'other'},start);await apply(s,member,'publish',{roundId:r.id},start);
  await apply(s,member,'start',{roundId:r.id,at:start,monthly:true,elo:true},start);
  await apply(s,member,'score',{matchId:m.id,a:21,b:19,end:start+20*60000,reason:'活动创建者确认'},start+20*60000);assert.equal(m.enteredBy,member.id);assert.equal(m.monthly,false);assert.equal(m.elo,false);

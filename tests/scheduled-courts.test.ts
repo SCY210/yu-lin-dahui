@@ -73,14 +73,14 @@ test('single courts and fixed doubles preserve published teams, flags and once-o
  }
 });
 
-test('a partly started round still permits pending-court edits but protects its playing court',async()=>{
+test('all unscored planned courts remain editable while recorded courts stay protected',async()=>{
  const s=fixture(),next=s.matches.find(m=>m.id==='m11')!,ids=s.players.slice(8).map(p=>p.id);next.a=ids.slice(0,2);next.b=ids.slice(2);
  await apply(s,s.accounts[0],'score',{matchId:'m00',a:21,b:17},now+minute);
  assert.equal(s.rounds[1].status,'playing');assert.equal(next.status,'published');
  await apply(s,s.accounts[0],'swap',{roundId:'round1',p1:ids[0],p2:ids[2]},now+minute);
  assert.equal(next.a[0],ids[2]);assert.equal(next.b[0],ids[0]);
- await apply(s,s.accounts[0],'lock',{matchId:next.id,locked:true},now+minute);assert.equal(next.locked,true);
- await assert.rejects(()=>apply(s,s.accounts[0],'swap',{roundId:'round1',p1:s.players[0].id,p2:ids[0]},now+minute),/已开始或已录分/);
+ await assert.rejects(()=>apply(s,s.accounts[0],'lock',{matchId:next.id,locked:true},now+minute),/锁定功能已取消/);assert.equal(next.locked,false);
+ await assert.doesNotReject(()=>apply(s,s.accounts[0],'swap',{roundId:'round1',p1:s.players[0].id,p2:ids[0]},now+minute));assert.ok(s.matches.find(m=>m.id==='m10')!.a.includes(ids[0]));const recorded=structuredClone(s.matches[0]);await assert.rejects(()=>apply(s,s.accounts[0],'swap',{roundId:'round0',p1:s.players[0].id,p2:ids[1]},now+minute),/已录分或已结束/);assert.deepEqual(s.matches[0],recorded);
 });
 
 test('future forfeits expire the conditional validator exactly when the next court may start',async()=>{

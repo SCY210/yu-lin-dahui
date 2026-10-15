@@ -9,6 +9,11 @@ export type RoundLineup=Array<{id:string;a:string[];b:string[]}>;
 export function pendingMatchLineup(m:Pick<Match,'status'|'start'|'games'|'scoreA'|'scoreB'>){
  return ['draft','published'].includes(m.status)&&m.start===null&&!m.games.length&&m.scoreA===null&&m.scoreB===null;
 }
+/** A planned lineup stays editable until a result is recorded, even when the
+ * automatic court scheduler has assigned its legacy playing/start metadata. */
+export function editableMatchLineup(m:Pick<Match,'status'|'start'|'games'|'scoreA'|'scoreB'>,planned=false){
+ return planned?['draft','published','playing'].includes(m.status)&&!m.games.length&&m.scoreA===null&&m.scoreB===null:pendingMatchLineup(m);
+}
 export function roundLineupSnapshot(matches:Pick<Match,'id'|'a'|'b'|'status'>[]):RoundLineup{
  return matches.filter(m=>m.status!=='cancelled').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((a,b)=>a.id.localeCompare(b.id));
 }
@@ -32,22 +37,22 @@ export function roundBenchIds(s:State,e:Event,r:Round,now=r.start){
 export function swapRoundPlayers(s:State,r:Round,p1:string,p2:string,now:number,expected?:RoundLineup){
  const e=s.events.find(e=>e.id===r.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单轮交换成员，请在开打前重新分配搭档');
- if(!['draft','published','playing'].includes(r.status))fail('只可调整尚未开始的对局');
- if(!isPlannedLineup(e,r)&&['draft','ended','cancelled'].includes(eventStatusAt(e,now)))fail('活动未开放或已经结束，不能调整排场');
+ const planned=isPlannedLineup(e,r);
+ if(!['draft','published','playing'].includes(r.status))fail('只可调整未录分的对局');
+ if(!planned&&['draft','ended','cancelled'].includes(eventStatusAt(e,now)))fail('活动未开放或已经结束，不能调整排场');
  const matches=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled');
  if(expected&&JSON.stringify(roundLineupSnapshot(expected.map(m=>({...m,status:'published'}))))!==JSON.stringify(roundLineupSnapshot(matches)))fail('409: 本轮人员已更新，请重新选择要交换的球友');
  if(p1===p2)fail('请选择两位不同的球友');
  const has=(m:Match,id:string)=>m.a.includes(id)||m.b.includes(id),touched=matches.filter(m=>has(m,p1)||has(m,p2));
  if(!touched.length)fail('请选择至少一位本轮已排上场的球友');
- if(touched.some(m=>!pendingMatchLineup(m)))fail('已开始或已录分的对局不能换人');
- if(touched.some(m=>m.locked))fail('请先解除锁定');
+ if(touched.some(m=>!editableMatchLineup(m,planned)))fail(planned?'已录分或已结束的对局不能换人':'只可调整尚未开始且未录分的对局');
  const ready=roundAvailableIds(s,e,r,now),known=new Set([...ready,...matches.flatMap(m=>[...m.a,...m.b])]);
  if(!known.has(p1)||!known.has(p2))fail('选手不在本轮可用名单');
  const swap=(id:string)=>id===p1?p2:id===p2?p1:id;
- const next=touched.map(m=>({...structuredClone(m),a:m.a.map(swap),b:m.b.map(swap)}));
+ const next=touched.map(m=>({...structuredClone(m),a:m.a.map(swap),b:m.b.map(swap),locked:false}));
  const all=matches.map(m=>next.find(n=>n.id===m.id)??m),ids=all.flatMap(m=>[...m.a,...m.b]);
  if(new Set(ids).size!==ids.length)fail('同一轮有重复选手');
- if(isPlannedLineup(e,r)){
+ if(planned){
   for(const m of next){
    const booking=s.bookings.find(b=>b.id===m.courtId&&b.eventId===e.id),venue=booking?.venue??e.venue;
    if(!booking||[...m.a,...m.b].some(id=>!s.registrations.some(reg=>reg.eventId===e.id&&reg.playerId===id&&reg.status==='confirmed'&&venueParticipation(s,e,reg).some(span=>span.venue===venue))))fail('请选择已正式报名该球馆的球友');

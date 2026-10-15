@@ -40,10 +40,10 @@ test('accepting a planned future arrival never starts that player outside their 
  swapRoundPlayers(s,round,ids[1],ids[8],now);assert.equal(advanceScheduledCourts(s,e,round.start),false);
  assert.equal(match.status,'published');assert.equal(advanceScheduledCourts(s,e,reg.arrival),true);assert.equal(match.status,'playing');
 });
-test('waiting-list people are excluded, and started/scored matches remain protected atomically',()=>{
+test('waiting-list people are excluded; unscored legacy playing/locked plans can change and scored facts remain protected',()=>{
  const {s,e,ids,round,match}=fixture();s.registrations.find(r=>r.playerId===ids[8])!.status='waitlist';assert.ok(!roundBenchIds(s,e,round).includes(ids[8]));
  const before=structuredClone(s);assert.throws(()=>swapRoundPlayers(s,round,ids[1],ids[8],now));assert.deepEqual(s,before);
- match.status='playing';match.start=now;assert.throws(()=>swapRoundPlayers(s,round,ids[1],ids[2],now),/已开始或已录分/);
+ match.status='playing';match.start=now;round.status='playing';match.locked=true;assert.doesNotThrow(()=>swapRoundPlayers(s,round,ids[1],ids[2],now));assert.equal(match.locked,false);assert.equal(match.status,'playing');assert.equal(match.start,now);
  match.status='complete';match.games=[{a:21,b:18}];match.scoreA=21;match.scoreB=18;
- assert.throws(()=>swapRoundPlayers(s,round,ids[1],ids[2],now),/已开始或已录分/);
+ assert.throws(()=>swapRoundPlayers(s,round,ids[1],ids[2],now),/已录分或已结束/);
 });

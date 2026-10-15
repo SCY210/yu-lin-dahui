@@ -8,8 +8,10 @@ Legacy activities infer their mode from enabled live play, existing planned roun
 
 Planned round headings show the round number and status without an estimated start time. Stored timestamps, round ordering and scheduling behavior are preserved; planning forms and the other modes retain their time controls.
 
-Planned mode restores multi-round creation, draft swaps/court changes/locks, batch publishing, ordered starts, rest rosters, profiles and score entry. After all current games finish, the host can plan remaining time after the current clock without replacing completed games. One-round mode exposes generation only after current games and pending rounds are resolved. Live mode retains independent score-triggered advancement, bench priority, manual lineup correction and voluntary rest. Selecting live mode does not start games; the host explicitly starts live scheduling during the activity.
+Planned mode restores multi-round creation, draft swaps/court changes, batch publishing, ordered starts, rest rosters, profiles and score entry. After all current games finish, the host can plan remaining time after the current clock without replacing completed games. One-round mode exposes generation only after current games and pending rounds are resolved. Live mode retains independent score-triggered advancement, bench priority, manual lineup correction and voluntary rest. Selecting live mode does not start games; the host explicitly starts live scheduling during the activity.
 
 After games have finished, remaining-time replanning keeps the confirmed partner mode; existing fixed teams are reused rather than reassigned from changed ratings.
 
 Cancelled arrangements remain available in a read-only archive in all modes. Removing the last pending round does not unexpectedly change the inferred mode of a legacy activity.
+
+Planned lineups remain editable until a score is stored, including legacy automatically started records. Their public state is pending score or ended; scheduler metadata does not block substitutions. Group locking is retired, and old stored lock flags do not restrict edits or generation.

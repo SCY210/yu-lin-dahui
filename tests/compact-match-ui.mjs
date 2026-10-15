@@ -18,10 +18,13 @@ s.matches=[m];const profiles=[],swaps=[],ctx={data:{...s,me:s.accounts[0],social
 const html=props=>renderToStaticMarkup(React.createElement(MatchCard,{m,ctx,...props}));
 assert.equal((html({interactive:true}).match(/group-player-swap/g)??[]).length,4);
 assert.ok(html({interactive:true}).includes('title="非常长的横向球友昵称 Test Name"'));
-assert.equal((html({interactive:true,m:{...m,locked:true}}).match(/group-player-swap/g)??[]).length,0,'locked lineups remain protected');
+assert.equal((html({interactive:true,m:{...m,locked:true}}).match(/group-player-swap/g)??[]).length,4,'retired lock flags cannot prevent lineup edits');
 const completed={...m,status:'complete',start:now-60000,end:now,scoreA:21,scoreB:18,games:[{a:21,b:18}]};
 const result=html({m:completed});assert.ok(result.includes('is-complete'));assert.ok(result.includes('已完成'));assert.ok(result.includes('A 队 · 胜'));assert.ok(result.includes('比分 21 比 18'));assert.ok(result.includes('修正比分'));
 assert.ok(!html({m:completed,ctx:{...ctx,readOnly:true}}).includes('修正比分'),'read-only result cards cannot correct scores');
+const plannedCtx={...ctx,data:{...ctx.data,events:[{...e,schedulingMode:'planned'}],rounds:[{id:'r',eventId:'e',pointsSlot:1,status:'playing',start:now,duration:15}]}};
+const unscoredPlaying=html({interactive:true,m:{...m,status:'playing',start:now,locked:true},ctx:plannedCtx});assert.equal((unscoredPlaying.match(/group-player-swap/g)??[]).length,4);assert.ok(unscoredPlaying.includes('待录分'));assert.ok(!/已锁定|锁定分组|解锁|进行中/.test(unscoredPlaying));assert.ok(html({m:completed,ctx:plannedCtx}).includes('已结束'));
+
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 try{await act(()=>{ui=renderer.create(React.createElement(GroupPlayer,{id:'p0',ctx,interactive:true,selected:'p0',onSelect:id=>swaps.push(id)}))});
 const buttons=ui.root.findAllByType('button');assert.equal(buttons[1].props['aria-pressed'],true);await act(()=>buttons[0].props.onClick());await act(()=>buttons[1].props.onClick());assert.deepEqual(profiles,['p0']);assert.deepEqual(swaps,['p0']);
@@ -31,4 +34,4 @@ await act(()=>ui.update(React.createElement(GroupPlayer,{id:'p0',ctx:{...ctx,bus
 const cards=html({interactive:true})+html({interactive:true,m:{...m,id:'m2',courtId:'c2',a:['p4','p5'],b:['p6','p7']}});
 const styles=['globals.css','wuxia-theme.css','group-player.css','points-attendance.css','match-no-show.css','disclosure.css','event-live-play.css','event-scheduling.css','compact-matches.css'].map(file=>readFileSync('app/'+file,'utf8')).join('\n').replace(/@import[^;]+;/g,'');
 writeFileSync('.test-output/compact-match-fixture.html',`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{--border:#ddd;--card:#fff;--surface:#fff;--primary:#5444b4;--muted-foreground:#666;--accent:#eee}*{box-sizing:border-box}body{margin:0} ${styles}</style><div class="shell"><div class="event-scheduling"><details class="app-disclosure" open><summary>第 1 轮 · 已发布</summary><div class="app-disclosure-content"><div class="courts-grid">${cards}</div></div></details></div></div>`);
-console.log('PASS compact match UI: full accessible names, separate profile/swap actions, selected/busy/locked protection, completed winner/score and read-only correction guards');
+console.log('PASS compact match UI: full accessible names, separate profile/swap actions, selected/busy protection and ignored legacy locks, completed winner/score and read-only correction guards');
