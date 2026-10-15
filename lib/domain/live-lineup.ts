@@ -8,16 +8,51 @@ import {livePresentIds,liveResting} from './live-play';
 import {decorateMatch} from './play';
 import {fail,type State,type Event,type Match,type Account} from './types';
 const id=z.string().min(1).max(100),team=z.array(id).min(1).max(2);
-const schemas={liveLineup:z.object({matchId:id,a:team,b:team,expectedA:team,expectedB:team})};
+const lineup=z.array(z.object({id,a:team,b:team})).max(64);
+const schemas={liveLineup:z.object({matchId:id,a:team,b:team,expectedA:team,expectedB:team}),liveSwap:z.object({eventId:id,p1:id,p2:id,expectedLineup:lineup})};
 /** Candidates belong to this venue and signup window, are not on another court, and are not taking a break. */
 export function liveLineupCandidates(s:State,e:Event,m:Match,now:number){
  const busy=new Set(s.matches.filter(x=>x.id!==m.id&&x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  const current=new Set([...m.a,...m.b]),venue=s.bookings.find(b=>b.id===m.courtId)?.venue??e.venue;
  return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&(!liveResting(e,id,venue)||current.has(id)));
 }
+/** The unscored games currently on court, in the same snapshot form as a planned round (round-lineup.ts). */
+export function liveLineupSnapshot(s:Pick<State,'matches'>,eventId:string){
+ return s.matches.filter(m=>m.eventId===eventId&&m.status==='playing').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((x,y)=>x.id.localeCompare(y.id));
+}
+const unscored=(m:Match)=>m.start!==null&&!m.games.length&&m.scoreA===null&&m.scoreB===null;
+/** The same interaction as a planned round: two players trade places. Partners on one court, a player on court and
+ * one waiting, or players on two courts. Every touched game is validated as a whole before anything is stored. */
+function swapLivePlayers(s:State,a:Account,p:{eventId:string;p1:string;p2:string;expectedLineup:{id:string;a:string[];b:string[]}[]},now:number){
+ const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
+ if(!e.livePlay?.enabled)fail('只能在实时排场中交换当前上场人员');
+ if(['draft','ended','cancelled'].includes(eventStatusAt(e,now))||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
+ if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单局交换成员');
+ const expected=[...p.expectedLineup].map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((x,y)=>x.id.localeCompare(y.id));
+ if(JSON.stringify(expected)!==JSON.stringify(liveLineupSnapshot(s,e.id)))fail('409: 上场人员已更新，请重新选择要交换的球友');
+ if(p.p1===p.p2)fail('请选择两位不同的球友');
+ const current=s.matches.filter(m=>m.eventId===e.id&&m.status==='playing'),has=(m:Match,id:string)=>m.a.includes(id)||m.b.includes(id);
+ const touched=current.filter(m=>has(m,p.p1)||has(m,p.p2));
+ if(!touched.length)fail('请选择至少一位正在场上的球友');
+ if(touched.some(m=>!unscored(m)))fail('已录分的对局不能换人');
+ const swap=(id:string)=>id===p.p1?p.p2:id===p.p2?p.p1:id;
+ const next=touched.map(m=>({...m,a:m.a.map(swap),b:m.b.map(swap)})),view={...s,matches:s.matches.map(m=>next.find(n=>n.id===m.id)??m)};
+ for(const m of next){
+  const selected=[...m.a,...m.b];if(new Set(selected).size!==selected.length)fail('同一球友不能占两个位置');
+  // Who already stood on this court is judged by the lineup before the swap, so a player on a break stays off.
+  const allowed=new Set(liveLineupCandidates(view,e,touched.find(x=>x.id===m.id)!,now));
+  if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查报名时段和轮休状态');
+ }
+ const before=touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}));
+ for(const m of next){const original=touched.find(x=>x.id===m.id)!;original.a=m.a;original.b=m.b;decorateMatch(s,e,original)}
+ const playing=new Set(current.flatMap(m=>[...m.a,...m.b])),rest=livePresentIds(s,e,now).filter(id=>!playing.has(id));
+ for(const m of touched){const r=s.rounds.find(r=>r.id===m.roundId);if(r){r.eligible=[...new Set([...r.eligible,...m.a,...m.b])];r.rest=rest}}
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'liveSwap',reason:'交换实时排场上场人员',changes:{eventId:e.id,p1:p.p1,p2:p.p2,before,after:touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}))}});
+}
 /** Explicit correction of the current lineup; never completes a game or changes another court. */
 export async function applyLiveLineup(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
+ if(command.action==='liveSwap'){authorizeEventAction(s,a,action,command.payload);swapLivePlayers(s,a,command.payload,now);return true}
  const p=command.payload;authorizeEventAction(s,a,action,p);
  const m=s.matches.find(m=>m.id===p.matchId)??fail('对局不存在');
  const e=s.events.find(e=>e.id===m.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');

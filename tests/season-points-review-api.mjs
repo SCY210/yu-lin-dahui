@@ -20,6 +20,8 @@ try{
  const oldEvent={id:'old',creatorId:'owner',title:'Old fixture',start:at-3600000,end:at+60000,venue:'Fixture',address:'',capacity:4,signupDeadline:at,cancelDeadline:at-86400000,note:'',status:'ended',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
  const current={...oldEvent,id:'current',title:'Current fixture',schedulingMode:'planned',pointsSession:{startedAt:now-60000,attendance:[],waiting:[]},start:now-60000,end:now+3600000,status:'open'};s.events=[oldEvent,current];
  for(const e of s.events)s.bookings.push({id:e.id+'-court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:0});
+ // The current activity's schedule was withdrawn, so the clock has nothing to plan.
+ s.rounds.push({id:'withdrawn',eventId:current.id,start:current.start,duration:15,status:'cancelled',eligible:[],rest:[],seed:1,pointsSlot:1});
  s.rounds.push({id:'old-round',eventId:oldEvent.id,start:at-60000,duration:1,status:'complete',eligible:s.players.map(p=>p.id),rest:[],seed:1});
  s.matches.push({id:'old-match',eventId:oldEvent.id,roundId:'old-round',courtId:'old-court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:at-60000,end:at,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'owner'});
  for(const [i,p]of s.players.entries())s.registrations.push({id:'r'+i,eventId:current.id,playerId:p.id,sequence:i,status:'confirmed',arrival:current.start,departure:current.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});

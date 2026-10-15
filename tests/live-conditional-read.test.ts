@@ -33,6 +33,9 @@ const scenarios:{name:string;setup:(s:State,start:number)=>Promise<void>}[]=[
   const e=s.events[0],a=s.accounts[0],at=start-30*minute;e.schedulingMode='round';s.registrations[2].arrival=start+50*minute+4321;
   await apply(s,a,'planPoints',{eventId:e.id,at:start,pointsMinutes:180,roundMinutes:15,seed:1,pairing:'rotate'},at);await apply(s,a,'publishPoints',{eventId:e.id},at);
  }},
+ {name:'the default planned schedule, planned on the clock once enough players have arrived',setup:async(s,start)=>{
+  delete s.events[0].schedulingMode;s.registrations.forEach((r,i)=>{if(i>=2)r.arrival=start+(25+i*3)*minute+i*777});
+ }},
  {name:'per-court signups with staggered arrivals and a promoted waitlist',setup:async(s,start)=>{
   s.bookings[1].start=start+90*minute;
   s.registrations.forEach((r,i)=>{

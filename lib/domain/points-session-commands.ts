@@ -4,6 +4,7 @@ import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction,canManageEvent} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import {eventFormat} from './match-format';
+import {automaticPlanInput} from './points-window';
 import {schedulingMode,pendingSchedulingIds} from './scheduling';
 import {pointsSession} from './points-attendance';
 import {livePresentIds,liveResting,liveAppearances} from './live-play';
@@ -62,8 +63,16 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
     if(p.expectedMode==='live')await run(work,a,'liveStart',{eventId:e.id},now);
     else{
      let r=work.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).sort((a,b)=>a.start-b.start)[0];
-     if(!r){if(p.expectedMode==='planned')fail('请先预排赛程，再开始积分赛');const duration=Math.min(15,Math.floor((e.end-now)/60000));if(duration<5)fail('剩余活动时间不足5分钟');await run(work,a,'generate',{eventId:e.id,at:now,duration,seed:1},now);r=work.rounds.find(r=>r.eventId===e.id&&r.status==='draft')!}
-     if(now<r.start)fail('尚未到预排赛程的开始时间');
+     let planned=false;
+     if(!r&&p.expectedMode==='planned'){
+      // Starting a planned activity that nobody planned plans the rest of it first, as the clock would.
+      const plan=automaticPlanInput(e,eventFormat(e)==='singles',now)??fail('剩余活动时间不足5分钟');
+      await run(work,a,'planPoints',plan,now);await run(work,a,'publishPoints',{eventId:e.id},now);
+      r=work.rounds.filter(r=>r.eventId===e.id&&['draft','published'].includes(r.status)).sort((a,b)=>a.start-b.start)[0];planned=!!r;
+     }
+     if(!r){const duration=Math.min(15,Math.floor((e.end-now)/60000));if(duration<5)fail('剩余活动时间不足5分钟');await run(work,a,'generate',{eventId:e.id,at:now,duration,seed:1},now);r=work.rounds.find(r=>r.eventId===e.id&&r.status==='draft')!}
+     // A schedule planned just now starts at the next minute; pressing start begins its first round at once.
+     if(!planned&&now<r.start)fail('尚未到预排赛程的开始时间');
      if(r.status==='draft')await run(work,a,'publish',{roundId:r.id},now);
      await run(work,a,'start',{roundId:r.id,at:now,monthly:true,elo:true},now);
     }

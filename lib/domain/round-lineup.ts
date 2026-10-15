@@ -14,6 +14,10 @@ export function pendingMatchLineup(m:Pick<Match,'status'|'start'|'games'|'scoreA
 export function editableMatchLineup(m:Pick<Match,'status'|'start'|'games'|'scoreA'|'scoreB'>,planned=false){
  return planned?['draft','published','playing'].includes(m.status)&&!m.games.length&&m.scoreA===null&&m.scoreB===null:pendingMatchLineup(m);
 }
+/** A current live game can be swapped like a planned one until its score is recorded (liveSwap). */
+export function editableLiveLineup(e:Pick<Event,'livePlay'>|undefined,r:Pick<Round,'live'>|undefined,m:Pick<Match,'status'|'start'|'games'|'scoreA'|'scoreB'>){
+ return !!e?.livePlay?.enabled&&!!r?.live&&m.status==='playing'&&m.start!==null&&!m.games.length&&m.scoreA===null&&m.scoreB===null;
+}
 export function roundLineupSnapshot(matches:Pick<Match,'id'|'a'|'b'|'status'>[]):RoundLineup{
  return matches.filter(m=>m.status!=='cancelled').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((a,b)=>a.id.localeCompare(b.id));
 }

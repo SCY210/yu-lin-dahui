@@ -1,7 +1,9 @@
 import type {Event,State} from './types';
 export type SchedulingMode='planned'|'round'|'live';
 export const schedulingLabels:Record<SchedulingMode,string>={planned:'预排赛程',round:'每轮打完再生成下一轮',live:'实时排场'};
-/** Infer old activities from their actual rounds instead of treating every activity as live. */
+/** Infer old activities from their actual rounds. An activity with no arrangement yet defaults to the planned schedule
+ * (the clock plans and publishes it when the activity starts, lib/domain/points-auto-start.ts). One-round mode is
+ * retired for new choices; activities already using it keep it until they end. */
 export function schedulingMode(s:Pick<State,'rounds'>,e:Event):SchedulingMode{
  if(e.livePlay?.enabled)return 'live';
  if(e.schedulingMode)return e.schedulingMode;
@@ -10,7 +12,7 @@ export function schedulingMode(s:Pick<State,'rounds'>,e:Event):SchedulingMode{
  if(rounds.some(r=>!r.live))return 'round';
  if(all.some(r=>r.pointsSlot!==undefined))return 'planned';
  if(all.some(r=>!r.live))return 'round';
- return 'live';
+ return all.length?'live':'planned';
 }
 export function pendingSchedulingIds(s:Pick<State,'matches'>,eventId:string){return s.matches.filter(m=>m.eventId===eventId&&['draft','published'].includes(m.status)).map(m=>m.id).sort()}
 /** Never delete historical records or cancel a game that has already started. */
