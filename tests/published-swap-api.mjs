@@ -61,5 +61,8 @@ try{
  stored=await accept('swap',{roundId:'later-round',p1:'p0',p2:'p4',expectedLineup:api.roundLineupSnapshot(stored.matches.filter(m=>m.roundId==='later-round'))});
  assert.ok(stored.matches.find(m=>m.id==='later').a.includes('p4'));assert.deepEqual(stored.matches.find(m=>m.id==='busy-now'),unchangedCurrent);
  assert.deepEqual(stored.matches.find(m=>m.id==='m0'),frozen,'planning a later round cannot alter a recorded result');
+ const timed=structuredClone(stored),late=timed.registrations.find(r=>r.playerId==='p9');late.arrival=e.start+3600000;late.departure=e.start+5400000;await api.save(timed,'outside-planned-window-fixture',stored);stored=await api.load();
+ const beforeLate=structuredClone(stored.matches.find(m=>m.id==='busy-now'));stored=await accept('swap',{roundId:'later-round',p1:'p4',p2:'p9',expectedLineup:api.roundLineupSnapshot(stored.matches.filter(m=>m.roundId==='later-round'))});
+ assert.ok(stored.matches.find(m=>m.id==='later').a.includes('p9'),'planned swap accepts a confirmed player outside the estimated time window');assert.deepEqual(stored.matches.find(m=>m.id==='busy-now'),beforeLate);
  console.log('PASS published swaps: authority, signup windows, currently playing future assignees, guests, locks, stale/racing edits, rollback, unchanged current games and scored lineup protection');
 }finally{db.close();delete globalThis.__publishedSwapTest}

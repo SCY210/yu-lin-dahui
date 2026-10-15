@@ -6,7 +6,7 @@ import {useState} from 'react';
 import {Check,Shuffle,CalendarDays} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
 import type {Event,Match,Round,State} from '../lib/domain/types';
-import {pendingMatchLineup,roundBenchIds,roundLineupSnapshot,type RoundLineup} from '../lib/domain/round-lineup';
+import {isPlannedLineup,pendingMatchLineup,roundBenchIds,roundLineupSnapshot,type RoundLineup} from '../lib/domain/round-lineup';
 import type {Field} from './form-fields';
 import {dt,epoch,hm,labels,halfTimed,number,choice} from './form-fields';
 import {ceilHalfHour} from '../lib/time-planning';
@@ -68,11 +68,11 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
   {selected&&!currentSelected&&<p className="connection-note" role="status">本轮阵容已更新，请重新选择要交换的两位球友。</p>}
   {!rounds.length&&<p className="empty">{mode==='planned'?'正式接龙后即可预排赛程。':'正式接龙后可生成第一轮。'}</p>}
   {playerId&&!rounds.some(r=>data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)))&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
-  {rounds.map((r,index)=>{const allMatches=data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId));if(playerId&&!allMatches.length)return null;const matches:Match[]=allMatches.filter(m=>m.status!=='cancelled'),withdrawn=allMatches.filter(m=>m.status==='cancelled'),changeable=editable&&['draft','published','playing'].includes(r.status)&&!fixed,rest=changeable?roundBenchIds(data as unknown as State,e,r,now):r.rest;return <Disclosure key={r.id+':'+r.status} className={'round-disclosure is-'+r.status} defaultOpen={!!playerId||r.status==='playing'||r.id===next?.id} label={'第 '+(index+1)+' 轮 · '+labels[r.status]+' · '+hm(r.start)}>
+  {rounds.map((r,index)=>{const allMatches=data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId));if(playerId&&!allMatches.length)return null;const matches:Match[]=allMatches.filter(m=>m.status!=='cancelled'),withdrawn=allMatches.filter(m=>m.status==='cancelled'),changeable=manager&&(active||isPlannedLineup(e,r))&&['draft','published','playing'].includes(r.status)&&!fixed,rest=changeable?roundBenchIds(data as unknown as State,e,r,now):r.rest;return <Disclosure key={r.id+':'+r.status} className={'round-disclosure is-'+r.status} defaultOpen={!!playerId||r.status==='playing'||r.id===next?.id} label={'第 '+(index+1)+' 轮 · '+labels[r.status]+' · '+hm(r.start)}>
 
    <p className="hint">{data.matches.filter(m=>m.roundId===r.id&&['complete','forfeit','cancelled'].includes(m.status)).length}/{data.matches.filter(m=>m.roundId===r.id).length} 场已结束 · {data.matches.filter(m=>m.roundId===r.id&&m.status==='playing').length} 场进行中</p>
    <div className="courts-grid">{matches.map(m=><MatchCard key={m.id} m={m} ctx={ctx} interactive={changeable&&pendingMatchLineup(m)} selected={currentSelected?.roundId===r.id?currentSelected.playerId:''} onSelect={id=>swap(r,id)}/>)}</div>
-   <details className="round-lineup-help"><summary>{r.live?'实时对局记录':'预计 '+r.duration+' 分钟'}{changeable?' · 换人说明':' · 说明'}</summary><p className="hint">{r.live?'实时对局记录':'预计 '+r.duration+' 分钟'}{changeable?' · 点击两位球友旁的交换图标换人，也可与场下成员交换；已录分对局保持不变。':''}</p></details>
+   <details className="round-lineup-help"><summary>{r.live?'实时对局记录':'预计 '+r.duration+' 分钟'}{changeable?' · 换人说明':' · 说明'}</summary><p className="hint">{r.live?'实时对局记录':'预计 '+r.duration+' 分钟'}{changeable?' · 点击两位球友旁的交换图标换人，也可与场下成员交换；预排换人不限制操作时间或预计参加时段，实际开打时再核对到场与空闲状态。':''}</p></details>
    {withdrawn.length>0&&<Disclosure label={'已撤销对局 · '+withdrawn.length}>{withdrawn.map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</Disclosure>}
    <div className="rest"><strong>本轮轮休 · {rest.length} 人</strong><div className="actions">{rest.map(id=><GroupPlayer key={id} id={id} ctx={ctx} interactive={changeable} selected={currentSelected?.roundId===r.id?currentSelected.playerId:''} onSelect={id=>swap(r,id)}/>)}</div></div>
    <Disclosure label="上场与等待机会">{r.eligible.map(id=>{const prior=rounds.filter(x=>['published','playing','complete'].includes(x.status)&&x.eligible.includes(id)),played=prior.filter(x=>data.matches.some(m=>m.roundId===x.id&&m.status!=='cancelled'&&[...m.a,...m.b].includes(id)&&(!m.noShow?.length||m.noShow.includes(id))));return <div className="row small-line" key={id}><span>{name(id)}</span><span>{played.length}/{prior.length} 轮上场</span></div>})}</Disclosure>
