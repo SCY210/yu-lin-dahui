@@ -38,6 +38,12 @@ test('restored planned simulation uses current per-court score continuation and 
  assert.equal(d.state.matches.find(m=>m.id===first.id)!.status,'playing','command copies never mutate the previous document');
 });
 
+test('the current event ranking switch changes only the isolated simulation event',async()=>{
+ const d=createSimulation(now);const next=await changeSimulation(d,'eventRanking',{eventId:'sim-event',ranked:false,expectedRanked:true},request(),now);
+ assert.equal(next.state.events[0].ranked,false);assert.equal(d.state.events[0].ranked,undefined);
+ await assert.rejects(()=>changeSimulation(next,'eventRanking',{eventId:'real-event',ranked:true,expectedRanked:false},request(),now),/不存在/);
+});
+
 test('real member snapshots preserve names, avatars, gender and replayed strength with isolated identities',async()=>{
  const club=emptyState();for(let i=0;i<14;i++){const id='real-'+i;club.accounts.push({id:'account-'+i,email:'private@example.test',role:'member',playerId:id});club.players.push({id,ownerId:'account-'+i,name:'真实球友 '+i,enabled:i!==0,initialRating:2000,rating:2000,ratedGames:20,ratingReason:'private note',avatarId:'avatar-'+i,profile:{gender:i%2?'female':'male',years:5,hand:'left',preference:'mixed',style:'private style',equipment:'private equipment'}})}
  club.players.unshift({...club.players[1],id:'invited',name:'代报朋友'});
