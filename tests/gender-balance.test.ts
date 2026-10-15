@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {propose} from '../lib/domain/grouping';
 import {apply} from '../lib/domain/commands';
-import {genderMismatches,genderGapPoints} from '../lib/domain/gender-balance';
+import {genderMismatches,genderGapPoints,womenPairGapPoints} from '../lib/domain/gender-balance';
 import {emptyState,type Event,type Player} from '../lib/domain/types';
 
 const start=Date.parse('2026-10-07T12:00:00Z');
@@ -64,4 +64,33 @@ test('live rotation pairs the next four the same way',async()=>{
  await apply(s,s.accounts[0],'liveStart',{eventId:e.id},start);
  const m=s.matches.find(m=>m.status==='playing')!;
  assert.equal(menPairAgainstWoman(s,m),0);
+});
+
+test('two men never face two women unless both women are at least two realms stronger',()=>{
+ assert.equal(womenPairGapPoints,300);
+ const {s}=fixture([[1000,'male'],[1000],[1000,'female'],[1100,'female'],[1300,'female'],[1299,'female'],[1300,'female']]);
+ const r=rating(s);
+ assert.equal(genderMismatches(s,['A','B'],['C','D'],r),2,'even ratings: men against women counts both women');
+ assert.equal(genderMismatches(s,['C','D'],['A','B'],r),2,'the side does not matter');
+ assert.equal(genderMismatches(s,['A','B'],['E','F'],r),2,'one woman is 299 above the men');
+ assert.equal(genderMismatches(s,['A','B'],['E','G'],r),0,'both women 300 above both men may play them');
+ assert.equal(genderMismatches(s,['A','C'],['B','D'],r),0,'two mixed pairs are fine');
+});
+
+test('two men and two women of similar level are always split into mixed pairs',async()=>{
+ // Ignoring gender, men against women is perfectly even (1100 against 1100); each mixed split is 100 apart.
+ const specs:Spec[]=[[1200,'male'],[1000,'male'],[1100,'female'],[1100,'female']];
+ const {s,e}=fixture(specs),plain=structuredClone(s);plain.players.forEach(p=>delete p.profile!.gender);
+ const even=propose(plain,e,start,15,1).courts[0];assert.ok([even.a,even.b].some(team=>team.includes('A')&&team.includes('B')),'without the rule the men would be paired');
+ const mixed=(m:{a:string[];b:string[]})=>[m.a,m.b].every(team=>team.some(id=>['C','D'].includes(id))&&team.some(id=>['A','B'].includes(id)));
+ for(let seed=1;seed<=20;seed++)assert.ok(mixed(propose(s,e,start,15,seed).courts[0]),'round and planned grouping, seed '+seed);
+ const live=fixture(specs);await apply(live.s,live.s.accounts[0],'liveStart',{eventId:live.e.id},start);
+ assert.ok(mixed(live.s.matches.find(m=>m.status==='playing')!),'live rotation');
+});
+
+test('a friend counts with the gender given at signup',async()=>{
+ const {s,e}=fixture([[1200,'male'],[1000,'male'],[1100,'female'],[1100]]);
+ const friend=s.players.find(p=>p.id==='D')!;delete friend.profile;friend.guestEventId=e.id;friend.guestGender='female';
+ const mixed=(m:{a:string[];b:string[]})=>[m.a,m.b].every(team=>team.some(id=>['C','D'].includes(id)));
+ for(let seed=1;seed<=10;seed++)assert.ok(mixed(propose(s,e,start,15,seed).courts[0]),'seed '+seed);
 });

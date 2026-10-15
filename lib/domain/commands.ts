@@ -53,7 +53,7 @@ const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isEventAction(action) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isEventAction(action) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
