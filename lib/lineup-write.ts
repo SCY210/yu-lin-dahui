@@ -5,5 +5,5 @@ export function canRebaseLineupWrite(action:string,payload:unknown){
  const value=payload as Record<string,unknown>;
  return action==='liveLineup'?Array.isArray(value.expectedA)&&Array.isArray(value.expectedB)
   :action==='score'?Array.isArray(value.expectedA)&&Array.isArray(value.expectedB)&&Array.isArray(value.expectedGames)
-  :action==='swap'&&Array.isArray(value.expectedLineup);
+  :['swap','liveSwap'].includes(action)&&Array.isArray(value.expectedLineup);
 }

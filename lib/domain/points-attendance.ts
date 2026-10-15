@@ -1,7 +1,8 @@
 import {z} from 'zod';
 import {eventRankingEnabled} from './event-ranking';
 import type {Event,State} from './types';
-export type PointsSession={startedAt?:number;attendance:{playerId:string;late:boolean;available:boolean;at:number}[];waiting:{matchId:string;replacement:'player'|'group';playerId:string}[]};
+/** autoPlanKey: the signups and courts of the last automatic planning attempt (lib/domain/points-auto-start.ts). */
+export type PointsSession={startedAt?:number;autoPlanKey?:string;attendance:{playerId:string;late:boolean;available:boolean;at:number}[];waiting:{matchId:string;replacement:'player'|'group';playerId:string}[]};
 export const pointsSession=():PointsSession=>({attendance:[],waiting:[]});
 export const awaitingArrival=(e:Pick<Event,'pointsSession'>,playerId:string)=>!!e.pointsSession?.attendance.some(row=>row.playerId===playerId&&row.late&&!row.available);
 /** An ordinary start/refill can resolve a waiting court without using its retry button. */

@@ -14,6 +14,7 @@ export async function applyScheduling(s:State,a:Account,action:string,input:unkn
  const before=schedulingMode(s,e),pending=pendingSchedulingIds(s,e.id);
  if(before!==p.expectedMode||JSON.stringify(pending)!==JSON.stringify([...p.expectedPendingIds].sort()))fail('409: 排场安排已更新，请刷新后重新确认切换');
  if(before===p.mode)return true;
+ if(p.mode==='round')fail('逐轮安排已停用，请选择预排赛程或实时排场');
  const cancelledMatchIds=cancelPendingScheduling(s,e.id);
  if(e.livePlay){e.livePlay.enabled=false;e.livePlay.paused=false}
  e.schedulingMode=p.mode;

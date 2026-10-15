@@ -163,7 +163,7 @@ export default function ClubApp(){
    if(d.actorMismatch){await refresh();throw new Error(d.error)}
    if(r.status===409){
     readValidator.current=null;await refresh();
-    if(['liveLineup','swap'].includes(action)){
+    if(['liveLineup','swap','liveSwap'].includes(action)){
      setForm((current:Form|null)=>current===submittedForm?null:current);
      throw new Error(d.error||'阵容已更新，已同步最新阵容，请重新选择。');
     }
