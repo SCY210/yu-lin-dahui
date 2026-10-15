@@ -1,8 +1,6 @@
 # Administrator scheduling simulation
 
-Activities offers a simulation entry exclusively to administrators, including the
-club owner. Every API request checks the authenticated account's stored role;
-conditional writes check it again. Ordinary members cannot access the sandbox.
+Activities offers a simulation entry to the club owner, administrators and authorized member testers. Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox.
 
 Initialization snapshots up to twelve enabled, account-backed club members in
 stored roster order, with two courts and confirmed simulated registrations.
@@ -42,3 +40,9 @@ fixtures; they never connect to production data.
 ## Current scheduler
 
 The sandbox uses the current production domain commands, including per-court continuation through published rounds, overlapping in-progress rounds and planned edits without a time gate. Real club polling pauses while the simulation is open; the sandbox polls only its own protected endpoint. Regular score operations never reload the real club history. Initialization and reset read real members once to create fresh snapshots.
+
+## Tester access
+
+The owner may grant or revoke a member's independent `simulationTester` capability through the audited `simulationAccess` command. Testers retain the `member` role and all existing real-club data visibility, event permissions and account restrictions. They gain no real points, rating, account, role, export or group-management authority. No display name or client-supplied role grants access.
+
+The sandbox entry and route use the server-projected capability. Every sandbox read, initialization and mutation checks the stored account, and the conditional write rechecks admin/tester authorization. Revocation invalidates reads and writes immediately; ordinary member projection never exposes administrator account lists or audit history. Administrators and authorized testers share the same isolated sandbox with revision conflict protection. Specific grants are production account data and are never committed as public name or account-ID lists.
