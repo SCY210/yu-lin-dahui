@@ -7,7 +7,7 @@ import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
 import {emptyTournament,assertTournamentScore} from './tournament';
-import {automaticEventTitle,eventFormat,isPractice} from './match-format';
+import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
 import {assertFullProfileEditable} from './profile-permissions';
@@ -45,7 +45,7 @@ import { applyPointsChoice } from './points-choice';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
 import { decorateMatch } from './play';
 import {canEnterUnstartedScore,scoreEntryStart} from './score-entry';
-import {pendingMatchLineup,swapRoundPlayers} from './round-lineup';
+import {isPlannedLineup,pendingMatchLineup,swapRoundPlayers} from './round-lineup';
 import { findVenue } from '../venues';
 import { authorizeEventAction, isEventAction, canManageEvent } from './permissions';
 import { businessTimestamp as time } from './timestamp';
@@ -522,8 +522,17 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(p.expectedGames&&scoreConflict(s,m,p.expectedGames,p.games ?? [{ a: p.a, b: p.b }])==='same')return null;
             if (!unstarted && (!['playing', 'complete'].includes(m.status) || m.start === null))
                 fail('请先确认发布分组，再录入比分');
-            const start=scoreEntryStart(m,s);
-            if(unstarted)validateRound(s,m.eventId,start,0,[m]);
+            const firstCompletion = m.status !== 'complete',planned=isPlannedLineup(matchEvent,r)&&!r.live&&!matchEvent.tournament;
+            let start=scoreEntryStart(m,s);
+            if(planned&&firstCompletion)start=Math.max(matchEvent.start,Math.min(start,matchEvent.end-1,p.end===undefined&&now>=matchEvent.start?Math.max(matchEvent.start,now-1):Infinity));
+            if(unstarted){
+                if(!planned)validateRound(s,m.eventId,start,0,[m]);
+                else {
+                    const ids=[...m.a,...m.b],size=teamSize(matchEvent);
+                    if(m.a.length!==size||m.b.length!==size||new Set(ids).size!==ids.length||ids.some(id=>!s.players.some(player=>player.id===id)))fail('已发布的分组不完整，请核对参赛人员');
+                    if(ids.some(id=>matchEvent.matchingStopped?.includes(id)))fail('分组包含已选择不再上场的球友，请调整阵容或恢复排场');
+                }
+            }
             const rules = s.seasons.find(x => x.id === month(start))?.rules ?? s.settings.rules;
             const games = p.games ?? [{ a: p.a, b: p.b }];
             if (round(m.roundId).live && games.length !== 1)
@@ -543,12 +552,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                     fail('三局两胜须有一方赢两局');
             }
             assertTournamentScore(s,event(m.eventId),m,games.length>1?games.filter(g=>g.a>g.b).length:games[0].a,games.length>1?games.filter(g=>g.b>g.a).length:games[0].b);
-            const firstCompletion = m.status !== 'complete';
             if (p.end === undefined || (matchEvent.livePlay?.enabled && firstCompletion))
                 p.end = m.end ?? Math.min(matchEvent.end, Math.max(now, start + 1));
             if (p.end <= start || p.end > matchEvent.end)
                 fail('结束时间必须晚于开赛且在活动时间内');
-            if(unstarted){
+            if(unstarted||planned&&firstCompletion&&m.start!==start){
                 m.start=start;
                 if(!s.seasons.some(season=>season.id===month(start)))s.seasons.push({id:month(start),rules:{...rules},version:1});
             }

@@ -1,20 +1,13 @@
-# Early score entry
+# Planned score entry without a clock gate
 
-An activity's signed-up accounts can enter results for published matches without
-starting the activity or waiting for the scheduled round. Existing score
-permissions still apply; unpublished drafts and cancelled/deleted activities
-cannot use this path. Only confirmed, valid lineups may receive a result.
+Signed-up accounts and activity managers can enter results for published matches without waiting for the scheduled round. A pending court retains its score button when another court has already changed the round to in progress. Existing score permissions still apply; unpublished drafts, cancelled/deleted activities, malformed teams and invalid final scores remain protected.
 
-The server retains the scheduled round, event, court, and participation times.
-For a result entered before its scheduled start, it records `earlyScoreAt` from
-the server clock. This makes the saved result count in live season points
-immediately, in the scheduled activity period. Ordinary future-dated records
-without that server marker remain excluded. Realms retain their existing
-settlement-after-activity policy.
+Recording a confirmed planned result is not a new start request. It does not revalidate arrival/departure, the estimated slot or current court occupancy. Those checks still govern actual automatic starts. This also covers late result entry after the activity has ended.
 
-Score corrections preserve the first entry marker and replay the result rather
-than counting another game. Saving a published result does not start the points
-session or trigger a live scheduling advance. Request deduplication, optimistic
-concurrency, and transaction rollback use the existing score API.
+During an ongoing activity, a first entry without an explicit historical end records the completion at the server clock. If the estimated start is still in the future, its score start is bounded just before completion rather than keeping a future completion time. The score and any ready next published court are committed together, using normal per-court continuation. The round remains in progress until all courts finish.
 
-Regression coverage: `tests/early-score-api.mjs`.
+Before the activity itself begins, scheduled attribution and the server-recorded earlyScoreAt marker remain in use; saving a future result does not start a future activity. Explicit valid historical timestamps retain their existing behavior. Recorded timestamps stay inside the activity, including outdated estimated slots beyond its end. Score corrections preserve the original facts and do not start another next match.
+
+Idempotent requests, lineup snapshots, concurrent-score conflict checks, valid best-of-three results and SQL rollback remain in force. Tests use isolated fixtures and never record production scores.
+
+Regression coverage: tests/planned-score-clock.test.ts, tests/early-score-api.mjs and the existing per-court/concurrent score suites.
