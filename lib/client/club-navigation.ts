@@ -1,15 +1,14 @@
-export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders'|'treasure';
+export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders'|'simulation'|'treasure';
 export type EventTab = 'overview'|'signup'|'rounds'|'fees'|'social';
 export type SocialTab = 'players'|'network'|'challenges'|'funny';
 export type ClubRoute = {page:ClubPage; eventId:string; tab:EventTab; playerId:string; socialTab:SocialTab};
 export const homeRoute:ClubRoute = {page:'home',eventId:'',tab:'overview',playerId:'',socialTab:'players'};
-const pages = new Set(['home','events','ranking','me','social','admin','reminders','treasure']);
+const pages = new Set(['home','events','ranking','me','social','admin','reminders','simulation','treasure']);
 const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';
 
 export function normalizeRoute(value:Partial<Record<keyof ClubRoute,unknown>>):ClubRoute {
- if(value.page==='simulation')return {...homeRoute,page:'events'};
  const page:ClubPage = typeof value.page==='string'&&pages.has(value.page)?value.page as ClubPage:'home';
  return {page,eventId:page==='events'?safeId(value.eventId):'',tab:page==='events'&&typeof value.tab==='string'&&eventTabs.has(value.tab)?value.tab as EventTab:'overview',playerId:page==='social'?safeId(value.playerId):'',socialTab:page==='social'&&typeof value.socialTab==='string'&&socialTabs.has(value.socialTab)?value.socialTab as SocialTab:'players'};
 }

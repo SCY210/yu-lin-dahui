@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ClubNavigation,clubRouteUrl,homeRoute,normalizeRoute,readClubRoute,type NavigationPort} from '../lib/client/club-navigation';
-test('retired simulation links resolve to activities without carrying real event or player IDs',()=>{const route=readClubRoute('https://club.example/?page=simulation&event=real&player=real&tab=fees');assert.deepEqual(route,{...homeRoute,page:'events'});assert.equal(clubRouteUrl('https://club.example/',route),'/?page=events');const b=browser('https://club.example/?page=simulation');assert.equal(b.navigation.route.page,'events');assert.equal(b.port.href(),'https://club.example/?page=events');b.navigation.navigate({page:'ranking'});b.back();assert.equal(b.navigation.route.page,'events')});
+test('simulation links are restored without carrying real event or player IDs',()=>{const route=readClubRoute('https://club.example/?page=simulation&event=real&player=real&tab=fees');assert.deepEqual(route,{...homeRoute,page:'simulation'});assert.equal(clubRouteUrl('https://club.example/',route),'/?page=simulation');const b=browser('https://club.example/?page=simulation');assert.equal(b.navigation.route.page,'simulation');assert.equal(b.port.href(),'https://club.example/?page=simulation');b.navigation.navigate({page:'ranking'});b.back();assert.equal(b.navigation.route.page,'simulation')});
 
 test('malformed route values and browser history markers cannot become trusted navigation state',()=>{
  assert.deepEqual(normalizeRoute({page:42,eventId:{id:'private'},tab:['fees']}),homeRoute);

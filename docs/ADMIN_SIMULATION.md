@@ -1,15 +1,44 @@
-# Retired administrator simulation
+# Administrator scheduling simulation
 
-The administrator scheduling simulation has been removed from the activity list,
-client navigation and production bundles. Old `?page=simulation` links and history
-entries resolve to the activity list without carrying event or player identifiers.
+Activities offers a simulation entry exclusively to administrators, including the
+club owner. Every API request checks the authenticated account's stored role;
+conditional writes check it again. Ordinary members cannot access the sandbox.
 
-The retired `/api/simulation` endpoint returns HTTP 410 for reads and writes. It
-does not load authentication, club state or D1, and cannot initialize, reset or
-update a simulation. The old three-second simulation poller is no longer shipped.
-Existing isolated settings snapshots are left untouched and are not read or
-exposed by the retired endpoint. Real activities and results are unchanged.
+Initialization snapshots up to twelve enabled, account-backed club members in
+stored roster order, with two courts and confirmed simulated registrations.
+Proxy-only friends and disabled profiles are excluded. A smaller club uses its
+actual available roster without inventing additional players; an empty roster
+returns an error. The UI displays the actual participant count.
 
-Scheduler, automatic-start and conditional-read regressions use the fictional
-graph in `tests/helpers/scheduling-fixture.ts`. Production modules never import
-that helper; these tests continue to run locally against synthetic data.
+Only names, avatar references, declared gender, current settled strength and club
+scoring rules are copied. No real account IDs, contact details, historical games,
+season points or private profile text are copied. Sandbox accounts, players and
+activity records have separate IDs. Existing authenticated avatar reads remain
+read-only. Strength is seeded with rating-only audit entries in the sandbox so
+normal rating replays preserve the starting snapshot after simulated scoring.
+
+The dedicated settings row (admin-simulation-v1) now stores document version 2.
+Opening an old version-1 fictional fixture replaces only that test graph with a
+fresh member snapshot, using a version/revision conditional update. Concurrent
+initialization cannot overwrite a newer simulation. Reopening a non-expired version 2 preserves
+shared administrator progress. Reopening an expired simulation creates a fresh
+member snapshot with a conditional revision update. Reset clears test results and takes a fresh club
+snapshot. The activity lasts six hours; both courts use the current time window.
+One-click 90-minute preplanning and all three scheduling modes remain available.
+
+The actual scheduling, score, absence, lateness and rotation commands run entirely
+inside this graph. They never write the club settings row, real accounts, players,
+activities, rankings, expenses, commit revision or notification queues. Ordinary
+club reads and exports do not include the simulation settings row. No schema
+migration is required. Profiles, fees, account management, uploads and real
+notifications remain unavailable in the sandbox.
+
+Optimistic revisions and bounded request receipts prevent duplicate scoring and
+stale resets. Responses are not cached. Real score-reminder dialogs and notification
+prompts are suppressed. Account changes remount the view, and permission failures
+clear the displayed simulation. Tests use in-memory SQLite and synthetic member
+fixtures; they never connect to production data.
+
+## Current scheduler
+
+The sandbox uses the current production domain commands, including per-court continuation through published rounds, overlapping in-progress rounds and planned edits without a time gate. Real club polling pauses while the simulation is open; the sandbox polls only its own protected endpoint. Regular score operations never reload the real club history. Initialization and reset read real members once to create fresh snapshots.
