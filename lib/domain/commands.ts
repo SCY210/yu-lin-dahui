@@ -80,7 +80,7 @@ const schemas = {
     feePayeeRemove: z.object({ payeeId: pid, reason }),
     settle: z.object({ eventId: pid, confirmed: z.boolean(), reason }),
     blockedWords: blockedWordsInput,
-    settings: z.object({ name: text, invite: z.string().max(100).refine(v => v === '' || v.length >= 8, '邀请码至少8位，或留空保留'), rules: rulesSchema }), rating: z.object({ playerId: pid, value: z.number().min(0).max(4000).optional(), enabled: z.boolean(), reason }), role: z.object({ accountId: pid, role: z.enum(['admin', 'member']), reason }),
+    settings: z.object({ name: text, invite: z.string().max(100).refine(v => v === '' || v.length >= 8, '邀请码至少8位，或留空保留'), rules: rulesSchema }), rating: z.object({ playerId: pid, value: z.number().min(0).max(4000).optional(), enabled: z.boolean(), reason }), role: z.object({ accountId: pid, role: z.enum(['admin', 'member']), reason }), simulationAccess: z.object({ accountId: pid, enabled: z.boolean(), reason }).strict(),
     historyPreview: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema }), historyRules: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema, reason }),
 };
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
@@ -699,6 +699,15 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             pl.ratingReason = p.reason;
             pl.enabled = p.enabled;
             replayRating(s, now);
+            break;
+        }
+        case 'simulationAccess': {
+            const p = command.payload;
+            if (!isClubOwner(s, a)) fail('403: 只有群主可以调整测试员权限');
+            const target = s.accounts.find(account => account.id === p.accountId) ?? fail('账号不存在');
+            if (target.id === clubOwnerId(s)) fail('群主已具备模拟权限，无需设置测试员');
+            if (target.role !== 'member') fail('测试员权限仅用于普通成员，管理员已具备模拟权限');
+            if (p.enabled) target.simulationTester = true; else delete target.simulationTester;
             break;
         }
         case 'role': {

@@ -1,6 +1,6 @@
 import type {PointsSession} from './points-attendance';
 import type {Tournament} from './tournament';
-export type Account={id:string;email:string;role:'admin'|'member';playerId:string;/** Extra-point notices already acknowledged (lib/domain/bonus-notices.ts). */bonusSeen?:string[]};
+export type Account={id:string;email:string;role:'admin'|'member';playerId:string;/** Sandbox-only permission; never grants real administrator authority. */simulationTester?:boolean;/** Extra-point notices already acknowledged (lib/domain/bonus-notices.ts). */bonusSeen?:string[]};
 import type {ProfileGender} from '../player-profile-options';
 /** cultivationBase: legacy weekly-v2 offset, retained but no longer used. */
 /** guestEventId identifies a minimal activity participant, never a reusable member profile. */
