@@ -19,7 +19,7 @@ export type RoundSelection={roundId:string;playerId:string;lineup:RoundLineup};
 export function currentRoundSelection(selected:RoundSelection|null,data:Pick<LineupData,'matches'|'rounds'>){
  if(!selected)return null;
  const round=data.rounds.find(r=>r.id===selected.roundId);
- if(!round||!['draft','published'].includes(round.status))return null;
+ if(!round||!['draft','published','playing'].includes(round.status))return null;
  const matches=data.matches.filter(m=>m.roundId===round.id);
  if(JSON.stringify(roundLineupSnapshot(matches))!==JSON.stringify(selected.lineup))return null;
  const assigned=matches.find(m=>m.a.includes(selected.playerId)||m.b.includes(selected.playerId));
