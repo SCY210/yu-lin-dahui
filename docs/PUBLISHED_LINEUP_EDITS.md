@@ -7,8 +7,11 @@ Publishing is preserved; the organizer does not need to recreate the schedule.
 
 The bench is derived from current confirmed participation and the round's venue
 and full time window. Later signups and temporary guests can therefore enter a
-previously published round. Waitlisted, unavailable, disabled, wrong-venue, and
-busy players cannot be inserted. Each person occupies at most one position.
+previously published round. Waitlisted, unavailable, disabled and wrong-venue
+players cannot be inserted. A player currently playing another match can still
+be assigned to an unstarted planned round: current court occupancy is not future
+availability. The start action independently rechecks live occupancy and rejects
+double-booking. Each person occupies at most one position within the edited round.
 
 Locked pending matches must be unlocked first. Started, scored, forfeited, or
 cancelled matches cannot be changed through this flow. When one match of a

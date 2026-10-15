@@ -50,5 +50,16 @@ try{
  user('member2');stored=await accept('score',{matchId:'m0',a:21,b:19,reason:'Actual result after substitution'});const frozen=structuredClone(stored.matches.find(m=>m.id==='m0'));
  user('owner');await reject('swap',swap(stored,'p9','p8'));await reject('lock',{matchId:'m0',locked:true});stored=await accept('swap',swap(stored,'p4','p8'));assert.deepEqual(stored.matches.find(m=>m.id==='m0'),frozen);
  const response=await api.GET(new Request(origin+'/api/club?month='+api.month(start)+'&year='+api.month(start).slice(0,4)));assert.equal(response.status,200);const view=await response.json();assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='p9').games,1);assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='p0').games,0);assert.equal(view.quarterlyLeaderboard.find(r=>r.playerId==='p9').points,3);
- console.log('PASS published swaps: creator/admin authority, later signups/guests, bench/other court exchange, published status, unchanged future rounds, lock/unlock, stale/racing edits, SQL/domain rollback and scored lineup protection with correct points');
+ // Current occupancy must not prevent editing a different unstarted planned round.
+ const previous=await api.load(),busy=structuredClone(previous);
+ busy.events.push({...e,id:'ongoing',start:now-60000,end:now+3600000,ranked:false});
+ busy.bookings.push({...busy.bookings[0],id:'ongoing-court',eventId:'ongoing',start:now-60000,end:now+3600000});
+ busy.rounds.push({...busy.rounds[0],id:'ongoing-round',eventId:'ongoing',start:now,status:'playing',pointsSlot:undefined});
+ busy.matches.push({...busy.matches[0],id:'busy-now',eventId:'ongoing',roundId:'ongoing-round',courtId:'ongoing-court',a:['p0','p1'],b:['p4','p8'],status:'playing',start:now,end:null,games:[],scoreA:null,scoreB:null,enteredBy:null,monthly:false,elo:false});
+ await api.save(busy,'busy-now-fixture',previous);await api.loadClubState();stored=await api.load();
+ const unchangedCurrent=structuredClone(stored.matches.find(m=>m.id==='busy-now'));
+ stored=await accept('swap',{roundId:'later-round',p1:'p0',p2:'p4',expectedLineup:api.roundLineupSnapshot(stored.matches.filter(m=>m.roundId==='later-round'))});
+ assert.ok(stored.matches.find(m=>m.id==='later').a.includes('p4'));assert.deepEqual(stored.matches.find(m=>m.id==='busy-now'),unchangedCurrent);
+ assert.deepEqual(stored.matches.find(m=>m.id==='m0'),frozen,'planning a later round cannot alter a recorded result');
+ console.log('PASS published swaps: authority, signup windows, currently playing future assignees, guests, locks, stale/racing edits, rollback, unchanged current games and scored lineup protection');
 }finally{db.close();delete globalThis.__publishedSwapTest}
