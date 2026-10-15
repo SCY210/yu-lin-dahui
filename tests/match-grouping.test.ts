@@ -36,11 +36,38 @@ test('equal-level players still change partners and seeded results are reproduci
  assert.deepEqual(next,propose(s,e,start+120000,15,17));
  assert.ok([next.courts[0].a,next.courts[0].b].every(t=>!(t.includes('A')&&t.includes('B'))&&!(t.includes('C')&&t.includes('D'))));
 });
+test('a modest strength difference no longer forces the identical planned matchup',()=>{
+ const {s,e}=fixture([1100,1050,1000,950]);s.matches.push(match('previous',['A','D'],['B','C']));
+ for(let seed=1;seed<=20;seed++){
+  const next=propose(s,e,start+120000,15,seed).courts[0];
+  assert.ok(![next.a,next.b].some(t=>t.includes('A')&&t.includes('D')));
+  assert.ok(gap(s,next)<=100);
+ }
+});
+test('planned singles and fixed doubles avoid exact rematches among close opponents',()=>{
+ const singles=fixture([1000,1020,1040,1060]);singles.e.matchFormat='singles';
+ singles.s.bookings.push({...singles.s.bookings[0],id:'court-1',name:'1'});
+ singles.s.matches.push(match('old1',['A'],['B']),match('old2',['C'],['D']));
+ const next=propose(singles.s,singles.e,start+120000,15,7);
+ assert.ok(next.courts.every(m=>![['A','B'],['C','D']].some(t=>[...m.a,...m.b].every(id=>t.includes(id)))));
+ const {s,e}=fixture([1000,1000,1020,1020,1040,1040,1060,1060]);
+ const teams=[['A','B'],['C','D'],['E','F'],['G','H']];
+ s.matches.push(match('old1',teams[0],teams[1]),match('old2',teams[2],teams[3]));
+ const fixed=proposeFixed(s,e,start+120000,15,7,teams);
+ assert.ok(fixed.courts.every(m=>!((m.a.includes('A')&&m.b.includes('C'))||(m.b.includes('A')&&m.a.includes('C')))));
+ assert.ok(fixed.courts.flatMap(m=>[m.a,m.b]).every(t=>teams.some(original=>original.every(id=>t.includes(id)))));
+});
 test('several courts are balanced without duplicates or losing the resting players',()=>{
  const {s,e}=fixture([1600,1400,1200,1000,1500,1300,1100,900,1000,1000]);
  const next=propose(s,e,start,15,7),playing=next.courts.flatMap(m=>[...m.a,...m.b]);
  assert.equal(new Set(playing).size,8);assert.equal(next.rest.length,2);
  assert.ok(next.courts.every(m=>gap(s,m)<=BALANCE_TOLERANCE));
+});
+test('planned courts change the four-player groups even if the partners were changed',()=>{
+ const {s,e}=fixture(Array(8).fill(1000));
+ s.matches.push(match('old1',['A','B'],['C','D']),match('old2',['E','F'],['G','H']));
+ const old=[new Set(['A','B','C','D']),new Set(['E','F','G','H'])];
+ for(let seed=1;seed<=10;seed++)assert.ok(propose(s,e,start+120000,15,seed).courts.every(m=>!old.some(group=>[...m.a,...m.b].every(id=>group.has(id)))));
 });
 test('self-declared years, a non-female gender and a retired level field do not influence Elo or grouping',async()=>{
  const {s,e}=fixture();s.matches.push(match('rated',['A','D'],['B','C']));replayRating(s);

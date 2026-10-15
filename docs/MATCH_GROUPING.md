@@ -12,14 +12,36 @@ solely because of this change.
 
 Fair-turn debt, availability, locked matches, arena holders and venue boundaries
 still determine eligibility and who plays. Among eligible selections the
-optimizer compares the worst and total average-Elo gap above a 40-point
-tolerance, then partner/opponent variety. A 40-point gap means about 56/44
+optimizer compares gender mismatches first, then the worst average-Elo gap above
+a 40-point tolerance with a bounded 80-point cost for an exact rematch and
+another 80-point cost for reusing the same four players. It then compares total
+gap, historical cohort/rematch counts and partner/opponent variety. A 40-point gap means about 56/44
 expected win probability under the existing Elo model; this is a preference,
 not a guarantee. Each ordinary court checks all three pairings. A seeded local
 search also exchanges players between compatible courts; it does not guarantee
 a global optimum. Fixed partners stay together and use the same balance
 priority when matching opposing teams. With unequal players, repeating a
 partner can be necessary for a fair contest, including individual rotation.
+
+History is indexed once per scheduling operation, including published plans
+when planning future rounds. Cancelled drafts and no-show forfeits do not count
+as played encounters. Team order, side reversal and court changes do not hide
+a repeat. Within otherwise comparable choices, meeting someone new gets priority
+whether that person is a partner or an opponent.
+
+Live scheduling also searches equally entitled waiting players instead of always
+taking the same signup-order cohort. Bench priority remains the starting queue;
+breaking a repeated cohort or introducing a new contact can exchange one waiting
+position with a willing just-finished player (one complete team for fixed pairs).
+Only when the free pool consists of exactly two court-sized groups may that
+substitute be one appearance ahead. Such exchanges require the resulting spread
+to stay within two appearances, including games still in progress. Rest requests,
+busy players, venue eligibility and fixed partners remain hard constraints.
+This prevents the permanent three-group cycle with 12 players on two courts.
+Limited attendance, fixed partners, strength gaps and rest preferences can still
+make some repetition unavoidable; the search does not promise every possible
+encounter in a fixed number of games. Already published lineups are preserved;
+the new policy applies when generating new matches.
 
 The optional profile `gender` accepts `male`, `female`, `other`, `undisclosed`.
 Old records show “不愿透露” without a migration; old clients omitting the field
@@ -34,6 +56,9 @@ matches and fixed partners.
 Validation: `tests/match-grouping.test.ts` covers balance versus repetition,
 multiple courts, deterministic variety, fixed teams, profile persistence and
 permissions, and independence of Elo/grouping from profile declarations.
+`tests/live-play.test.ts` additionally exercises a long 12-player/two-court run
+with full roster exposure, bounded appearances and no overlapping players;
+`tests/match-history.test.ts` checks canonical identities and excluded history.
 
 Verified on Node 24: all 415 unit tests and the existing API checks pass;
 TypeScript and the production build pass. Browser checks cover opening a profile

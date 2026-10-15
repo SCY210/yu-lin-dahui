@@ -1,6 +1,7 @@
 import {propose} from './grouping';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
+import {matchHistory} from './match-history';
 import {venueParticipation,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
 import {eventFormat} from './match-format';
@@ -30,10 +31,9 @@ export function proposeFixed(s:State,e:Event,at:number,duration:number,seed:numb
  for(const court of base.courts){const pool=available.filter(t=>t.every(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,court.courtId,id,at,at+duration*60000)));if(pool.length<2)continue;const chosen=pool.slice(0,2);chosen.flat().forEach(id=>used.add(id));selected.push(...chosen);courts.push(court)}
  const count=courts.length;if(!count)fail('本时段完整固定搭档不足两队；请检查参加时间或改用每轮换搭档');
  const rating=(t:string[])=>t.reduce((sum,id)=>sum+(s.players.find(p=>p.id===id)?.rating??1000),0)/2;
- const history=s.matches.filter(m=>m.eventId===e.id&&!['draft','cancelled'].includes(m.status));
- const same=(a:string[],b:string[])=>a.every(id=>b.includes(id));
+ const history=matchHistory(s,e.id);
  const playerRating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000;
- const penalty=(list:string[][])=>{let variety=0,mismatches=0;const gaps:number[]=[];for(let i=0;i<list.length;i+=2){mismatches+=genderMismatches(s,list[i],list[i+1],playerRating);if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(list[i])-rating(list[i+1])));variety+=history.filter(m=>(same(m.a,list[i])&&same(m.b,list[i+1]))||(same(m.b,list[i])&&same(m.a,list[i+1]))).length*150}return balanceCost(gaps,variety,mismatches)};
+ const penalty=(list:string[][])=>{let variety=0,mismatches=0,cohorts=0;const gaps:number[]=[];for(let i=0;i<list.length;i+=2){mismatches+=genderMismatches(s,list[i],list[i+1],playerRating);if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(list[i])-rating(list[i+1])));variety+=history.rematches(list[i],list[i+1]);cohorts+=history.cohorts([...list[i],...list[i+1]])}return balanceCost(gaps,variety*150,mismatches,variety,cohorts)};
  let rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  let best=[...selected],bestCost=penalty(best);
  for(let i=0;i<180;i++){const next=[...best],a=Math.floor(rand()*next.length),b=Math.floor(rand()*next.length);[next[a],next[b]]=[next[b],next[a]];const cost=penalty(next);if(compareBalance(cost,bestCost)<0||(compareBalance(cost,bestCost)===0&&rand()<0.1)){best=next;bestCost=cost}}

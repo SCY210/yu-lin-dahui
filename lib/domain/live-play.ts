@@ -8,6 +8,7 @@ import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
+import {matchHistory} from './match-history';
 import {authorizeEventAction,canManageEvent} from './permissions';
 import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
@@ -46,18 +47,18 @@ export function hasEmptyLiveCourt(s:Pick<State,'bookings'|'matches'>,e:Event,now
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }
-function pair(s:State,e:Event,ids:string[]){
- if(eventFormat(e)==='singles')return {a:[ids[0]],b:[ids[1]]};
- const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000;
- const recent=s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&!['draft','cancelled'].includes(m.status));
+function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number){
+ const size=eventFormat(e)==='singles'?1:2;
  const cost=(order:string[])=>{
-  const a=order.slice(0,2),b=order.slice(2);
-  const repeats=recent.reduce((n,m)=>n+[a,b].filter(t=>[m.a,m.b].some(team=>t.every(id=>team.includes(id)))).length,0);
-  return balanceCost([Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2)],repeats,genderMismatches(s,a,b,rating));
+  const a=order.slice(0,size),b=order.slice(size);
+  const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
+  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0);
  };
- let best=ids;
- for(const candidate of [[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]])if(compareBalance(cost(candidate),cost(best))<0)best=candidate;
- return {a:best.slice(0,2),b:best.slice(2)};
+ let best=ids,bestCost=cost(ids);
+ if(size===2)for(const candidate of [[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]){
+  const next=cost(candidate);if(compareBalance(next,bestCost)<0){best=candidate;bestCost=next}
+ }
+ return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
 }
 
 /** The score and its replacement matches are saved in the same state transaction.
@@ -69,8 +70,15 @@ export function fillLiveCourts(s:State,e:Event,now:number){
  const courts=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now)
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  const handled=new Set<string>();
- const lastTurn=(id:string)=>Math.max(0,...s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&[...m.a,...m.b].includes(id)).map(m=>m.start!));
- const fairOrder=(a:string,b:string)=>liveAppearances(s,e.id,a)-liveAppearances(s,e.id,b)||lastTurn(a)-lastTurn(b)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
+ const history=matchHistory(s,e.id,true),ratings=new Map(s.players.map(p=>[p.id,p.rating]));
+ const rating=(id:string)=>ratings.get(id)??1000;
+ const counts=new Map<string,number>(),lastTurns=new Map<string,number>();
+ for(const m of s.matches)if(m.eventId===e.id&&m.start!==null)for(const id of [...m.a,...m.b]){
+  lastTurns.set(id,Math.max(lastTurns.get(id)??0,m.start));
+  if(['playing','complete','forfeit'].includes(m.status)&&(!m.noShow?.length||m.noShow.includes(id)))counts.set(id,(counts.get(id)??0)+1);
+ }
+ const appearances=(id:string)=>counts.get(id)??0;
+ const fairOrder=(a:string,b:string)=>appearances(a)-appearances(b)||(lastTurns.get(a)??0)-(lastTurns.get(b)??0)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
  for(const court of courts){
   const key=physical(s,e,court.id),venue=court.venue??e.venue;
   if(handled.has(key))continue;handled.add(key);
@@ -82,21 +90,57 @@ export function fillLiveCourts(s:State,e:Event,now:number){
    .sort((a,b)=>(b.end??b.start!)-(a.end??a.start!)||b.start!-a.start!||a.id.localeCompare(b.id))[0];
   const justFinished=new Set(previous?[...previous.a,...previous.b]:[]);
   const order=(a:string,b:string)=>Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
+  // Exchange equal game counts. Prefer the bench, but allow one position (one
+  // complete team in fixed mode) to mix with the last court when that breaks a
+  // repeated cohort. Otherwise 12 players on two courts form three permanent groups.
+  const sameTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&appearances(a)===appearances(b);
+  // A court may be one game ahead of another. Permit at most that one-game
+  // difference when breaking a cohort, with a two-game bound including matches
+  // currently in progress. Lower-count waiting players retain queue priority.
+  const canMix=(from:string,to:string)=>appearances(to)>=appearances(from)&&appearances(to)<=appearances(from)+(pool.length===courtPlayers(e)*2?1:0);
+  const fairMix=(ids:string[])=>{
+   const selected=new Set(ids),after=present.map(id=>appearances(id)+(selected.has(id)?1:0));
+   return Math.max(...after)-Math.min(...after)<=2;
+  };
   const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,now,now+1)).sort(order);
   let teams:{a:string[];b:string[]}|undefined;
   if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
    const candidates=fixed.filter(team=>team.length===2&&team.every(id=>pool.includes(id)))
-    .sort((a,b)=>Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(id=>liveAppearances(s,e.id,id)))-Math.max(...b.map(id=>liveAppearances(s,e.id,id)))||order(a[0],b[0]));
-   if(candidates.length>=2)teams={a:candidates[0],b:candidates[1]};
-  }else if(pool.length>=courtPlayers(e))teams=pair(s,e,pool.slice(0,courtPlayers(e)));
+    .sort((a,b)=>Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(appearances))-Math.max(...b.map(appearances))||order(a[0],b[0]));
+   if(candidates.length>=2){
+    let chosen=candidates.slice(0,2);
+    const cost=(ts:string[][])=>balanceCost([Math.abs(ts[0].reduce((n,id)=>n+rating(id),0)-ts[1].reduce((n,id)=>n+rating(id),0))/2],history.variety(ts[0],ts[1],0),genderMismatches(s,ts[0],ts[1],rating),history.rematches(ts[0],ts[1]),history.cohorts(ts.flat()));
+    let bestCost=cost(chosen);
+    for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
+     if(chosen.includes(candidate)||chosen[i].some((id,j)=>!canMix(id,candidate[j])))continue;
+     const next=[...chosen];next[i]=candidate;const nextCost=cost(next);
+     const samePriority=chosen[i].every((id,j)=>sameTurn(id,candidate[j]));
+     if(!samePriority&&((nextCost.cohorts>=bestCost.cohorts&&history.unmet(next.flat())<=history.unmet(chosen.flat()))||!next.some(t=>t.every(id=>!justFinished.has(id)))||!fairMix(next.flat())))continue;
+     if(compareBalance(nextCost,bestCost)<0){chosen=next;bestCost=nextCost}
+    }
+    teams={a:chosen[0],b:chosen[1]};
+   }
+  }else if(pool.length>=courtPlayers(e)){
+   let chosen=pair(s,e,pool.slice(0,courtPlayers(e)),history,rating);
+   const minimumBench=Math.min(pool.filter(id=>!justFinished.has(id)).length,courtPlayers(e)-1);
+   for(let pass=0;pass<2;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
+    const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!canMix(replaced,candidate))continue;
+    ids[i]=candidate;const next=pair(s,e,ids,history,rating);
+    if(!sameTurn(replaced,candidate)&&((next.cost.cohorts>=chosen.cost.cohorts&&history.unmet(ids)<=history.unmet([...chosen.a,...chosen.b]))||ids.filter(id=>!justFinished.has(id)).length<minimumBench||!fairMix(ids)))continue;
+    if(compareBalance(next.cost,chosen.cost)<0)chosen=next;
+   }
+   teams={a:chosen.a,b:chosen.b};
+  }
   if(!teams)continue;
   const participants=[...teams.a,...teams.b];participants.forEach(id=>busy.add(id));
   const sequence=1+s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&m.status!=='cancelled'&&physical(s,e,m.courtId)===key).length;
   const roundId=crypto.randomUUID();
   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
-  decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);clearFilledPointsWaiting(s,e);
+  decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);history.add(match);
+  for(const id of participants){counts.set(id,appearances(id)+1);lastTurns.set(id,now)}
+  clearFilledPointsWaiting(s,e);
   const season=month(now);if(!s.seasons.some(p=>p.id===season))s.seasons.push({id:season,rules:{...s.settings.rules},version:1});
  }
 }

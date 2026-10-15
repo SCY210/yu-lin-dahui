@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {liveAppearances,liveResting} from '../lib/domain/live-play';
+import {matchupKey} from '../lib/domain/match-history';
 import {emptyState,type Event} from '../lib/domain/types';
 
 const now=Date.parse('2026-10-10T15:00:00Z');
@@ -43,7 +44,7 @@ test('不连续上场跳过下一局，再下一局恢复候选且偏好仍保�
  const second=active(s)[0];assert.ok([...second.a,...second.b].every(id=>!firstPlayers.includes(id)));
  assert.ok(firstPlayers.every(id=>liveResting(e,id)));
  await score(s,second.id,now+120000);
- assert.deepEqual(new Set([...active(s)[0].a,...active(s)[0].b]),new Set(firstPlayers));
+ assert.ok([...active(s)[0].a,...active(s)[0].b].filter(id=>firstPlayers.includes(id)).length>=3,'the waiting group returns, with one equal-count substitution allowed to break the cohort');
  assert.ok(firstPlayers.every(id=>!liveResting(e,id)));
  assert.equal(e.livePlay!.preferences.filter(p=>p.avoidConsecutive).length,4);
 });
@@ -125,12 +126,15 @@ test('未来活动不启动且不留下部分配置，既有完成结果保留',
 });
 
 const participants=(m:{a:string[];b:string[]})=>new Set([...m.a,...m.b]);
-test('two courts with staggered finishes: the waiting four replace the just-finished four even at equal counts',async()=>{
+test('two courts with staggered finishes: waiting players get priority while equal-count cohorts can mix',async()=>{
  const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
  const [first,second]=[...active(s)];const waiting=participants(second);
  await score(s,second.id,now+60000);
  await score(s,first.id,now+90000);
- assert.deepEqual(participants(active(s).find(m=>m.courtId===first.courtId)!),waiting);
+ const next=participants(active(s).find(m=>m.courtId===first.courtId)!);
+ assert.equal([...next].filter(id=>waiting.has(id)).length,3);
+ assert.equal([...next].filter(id=>participants(first).has(id)).length,1);
+ assert.ok(![...next].some(id=>participants(active(s).find(m=>m.courtId!==first.courtId)!).has(id)));
 });
 for(const fixed of [false,true])test(`bench priority beats smaller game counts; fixed partners: ${fixed}`,async()=>{
  const {s,e,owner}=fixture(12,2);
@@ -147,4 +151,41 @@ test('two waiting players get both places before willing just-finished players f
  const playingIds=new Set(active(s).flatMap(m=>[...m.a,...m.b]));const waiting=s.players.filter(p=>!playingIds.has(p.id)).map(p=>p.id);
  await score(s,first.id,now+60000);const next=active(s).find(m=>m.courtId===first.courtId)!;
  assert.ok(waiting.every(id=>participants(next).has(id)));assert.equal([...participants(next)].filter(id=>participants(first).has(id)).length,2);
+});
+
+test('live doubles rotate all three matchups before repeating and never immediately repeat at equal strength',async()=>{
+ const {s,e,owner}=fixture(4);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const seen:string[]=[];
+ for(let turn=0;turn<10;turn++){
+  const m=active(s)[0],key=matchupKey(m.a,m.b);
+  if(turn)assert.notEqual(key,seen.at(-1));
+  seen.push(key);await score(s,m.id,now+(turn+1)*60000);
+ }
+ assert.equal(new Set(seen.slice(0,3)).size,3);
+});
+for(const format of ['singles','rotate','fixed'] as const)test(`equally entitled waiting players can mix cohorts to avoid a rematch: ${format}`,async()=>{
+ const size=format==='singles'?2:4,{s,e,owner}=fixture(size*3,1);
+ if(format==='singles')e.matchFormat='singles';
+ if(format==='fixed')e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:Array.from({length:6},(_,i)=>s.players.slice(i*2,i*2+2).map(p=>p.id))};
+ const oldKeys=new Set<string>();
+ for(let group=0;group<3;group++){
+  const ids=s.players.slice(group*size,(group+1)*size).map(p=>p.id),a=ids.slice(0,size/2),b=ids.slice(size/2);
+  oldKeys.add(matchupKey(a,b));
+  s.matches.push({id:'old'+group,eventId:e.id,roundId:'past'+group,courtId:'court0',a,b,start:now-(6-group)*60000,end:now-(5-group)*60000,status:'complete',scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:owner.id,games:[{a:21,b:19}]});
+ }
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const next=active(s)[0];assert.ok(!oldKeys.has(matchupKey(next.a,next.b)));
+ assert.ok([...next.a,...next.b].filter(id=>!s.players.slice(size*2).some(p=>p.id===id)).length>=(format==='rotate'?3:size),'waiting players retain priority while one position may introduce a new contact');
+ if(format==='fixed')assert.ok([next.a,next.b].every(t=>e.pointsChoice!.teams!.some(original=>original.every(id=>t.includes(id)))));
+});
+test('12 players on two staggered courts meet the whole roster instead of cycling three four-player groups',async()=>{
+ const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ for(let turn=0;turn<48;turn++)for(const m of [...active(s)]){
+  await score(s,m.id,now+(turn+1)*60000);
+  const counts=s.players.map(p=>liveAppearances(s,e.id,p.id));assert.ok(Math.max(...counts)-Math.min(...counts)<=2,'including games still in progress');
+ }
+ const contacts=new Map(s.players.map(p=>[p.id,new Set<string>()]));
+ for(const m of s.matches)for(const id of [...m.a,...m.b])for(const other of [...m.a,...m.b])if(id!==other)contacts.get(id)!.add(other);
+ assert.ok([...contacts.values()].every(ids=>ids.size===11),JSON.stringify([...contacts].map(([id,ids])=>[id,ids.size])));
+ const counts=s.players.map(p=>liveAppearances(s,e.id,p.id));assert.ok(Math.max(...counts)-Math.min(...counts)<=2);
 });

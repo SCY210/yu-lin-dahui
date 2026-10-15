@@ -3,6 +3,7 @@ import {awaitingArrival} from './points-attendance';
 import {arenaStatus} from './social';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
+import {matchHistory} from './match-history';
 import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
@@ -16,12 +17,22 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});const picked=new Set<string>(),usedCourts:typeof courts=[];let selected:string[]=[];
  for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&canUse(court.id,id));if(pool.length<4)continue;const chosen=pool.slice(0,4);chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
  courts=usedCourts;if(!courts.length)fail('本时段同球馆正式球友不足4人，无法安排双打');let fixed=0;let arenaLosers:string[]=[];if(e.playMode==='arena'&&arenaCourt){const arena=arenaStatus(s,e.id);const holders=arena.holders.filter(id=>eligible.includes(id)&&canUse(arenaCourt.id,id));if(holders.length===2){const latest=s.matches.find(m=>m.id===arena.matchId)!;const losers=[...latest.a,...latest.b].filter(id=>!holders.includes(id));arenaLosers=losers;const challengers=eligible.filter(id=>!holders.includes(id)&&!losers.includes(id)&&canUse(arenaCourt.id,id)).slice(0,2);if(challengers.length<2)fail('擂台需要两名新的接擂球友；请等待更多正式球友参加或切回公平轮转');const pinned=[...holders,...challengers];const used=new Set(pinned);selected=[...pinned];for(const court of courts.slice(1)){const pool=eligible.filter(id=>!used.has(id)&&canUse(court.id,id)).slice(0,4);pool.forEach(id=>used.add(id));selected.push(...pool)}fixed=2}}const rest=eligible.filter(id=>!selected.includes(id));
- const rating=(id:string)=>s.players.find(p=>p.id===id)!.rating;const history=s.matches.filter(m=>m.eventId===e.id&&m.status!=='draft'&&m.status!=='cancelled');
+ const rating=(id:string)=>s.players.find(p=>p.id===id)!.rating;const history=matchHistory(s,e.id);
  const cohortValues=new Map(eligible.map(id=>[id,s.registrations.find(r=>r.eventId===e.id&&r.playerId===id)?.bookingSignups?.find(x=>x.status==='confirmed'&&x.arrival<=at&&x.departure>=at+duration*60000)?.bookingId]));
  const cohort=(id:string)=>cohortValues.get(id);
  const mixedCohorts=new Set(eligible.map(cohort).filter(Boolean)).size>1;
- const lastPartner=new Map<string,string>();for(const m of [...history].sort((a,b)=>(a.start??s.rounds.find(r=>r.id===a.roundId)?.start??0)-(b.start??s.rounds.find(r=>r.id===b.roundId)?.start??0)||a.id.localeCompare(b.id))){for(const t of [m.a,m.b]){lastPartner.set(t[0],t[1]);lastPartner.set(t[1],t[0])}}const penalty=(list:string[])=>{
-  let variety=0,mismatches=0;const gaps:number[]=[];
+ const costCache=new Map<string,ReturnType<typeof balanceCost>>();
+ const positions=new Map(eligible.map((id,i)=>[id,i]));
+ const penalty=(list:string[])=>{
+  // Compact local indices are unambiguous and avoid repeatedly serializing IDs
+  // in the seeded search. Court order stays in the key for venue constraints.
+  let key='';for(let i=0;i<list.length;i+=4){
+   const [a,b,c,d]=list.slice(i,i+4).map(id=>positions.get(id)!);
+   const left=Math.min(a,b)+','+Math.max(a,b),right=Math.min(c,d)+','+Math.max(c,d);
+   key+=(left<right?left+'/'+right:right+'/'+left)+';';
+  }
+  const cached=costCache.get(key);if(cached)return cached;
+  let variety=0,mismatches=0,rematches=0,cohorts=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
    mismatches+=genderMismatches(s,a,b,rating);
@@ -29,15 +40,12 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
    gaps.push(Math.abs((rating(a[0])+rating(a[1])-rating(b[0])-rating(b[1]))/2));
    if(mixedCohorts&&cohort(a[0])&&[...a,...b].every(id=>cohort(id)===cohort(a[0])))variety+=90;
    for(const team of [a,b]){
-    if(lastPartner.get(team[0])===team[1]||lastPartner.get(team[1])===team[0])variety+=e.playMode==='koc'?1800:350;
     if(['mentor','carry'].includes(e.identityMode??''))variety-=Math.abs(rating(team[0])-rating(team[1]))*.6;
    }
-   for(const m of history){
-    for(const team of [a,b])if([m.a,m.b].some(t=>team.every(id=>t.includes(id))))variety+=75;
-    for(const x of a)for(const y of b)if((m.a.includes(x)&&m.b.includes(y))||(m.b.includes(x)&&m.a.includes(y)))variety+=12;
-   }
+   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b]);
+   variety+=history.variety(a,b,e.playMode==='koc'?1800:350);
   }
-  return balanceCost(gaps,variety,mismatches);
+  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts);costCache.set(key,result);return result;
  };
  // Check all three pairings on each court, including the unchanged one.
  // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.
@@ -83,8 +91,8 @@ function proposeSingles(s:State,e:Event,at:number,duration:number,seed:number){
  const canUse=(i:number,id:string)=>bookingAllowsPlayer(s,e.id,courts[i].id,id,at,end);
  for(const b of bookings){const pool=eligible.filter(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,b.id,id,at,end));if(pool.length<2)continue;const pair=pool.slice(0,2);pair.forEach(id=>used.add(id));selected.push(...pair);courts.push(b)}
  if(!courts.length)fail('本时段同球馆正式球友不足2人，无法安排单打');
- const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000,history=s.matches.filter(m=>m.eventId===e.id&&!['draft','cancelled'].includes(m.status));
- const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));repeats+=history.filter(m=>(m.a.includes(a)&&m.b.includes(b))||(m.b.includes(a)&&m.a.includes(b))).length*75}return balanceCost(gaps,repeats)};
+ const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000,history=matchHistory(s,e.id);
+ const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));repeats+=history.rematches([a],[b])}return balanceCost(gaps,repeats*75,0,repeats)};
  let best=[...selected],cost=penalty(best),rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  for(let n=0;n<180;n++){const next=[...best],i=Math.floor(rand()*next.length),j=Math.floor(rand()*next.length);[next[i],next[j]]=[next[j],next[i]];const nextCost=penalty(next);if(compareBalance(nextCost,cost)<0){best=next;cost=nextCost}}
  return {eligible,rest:eligible.filter(id=>!used.has(id)),courts:courts.map((court,i)=>({courtId:court.id,a:[best[i*2]],b:[best[i*2+1]]})),stats:Object.fromEntries(eligible.map(id=>[id,debt(id)])),penalty:cost.variety,balance:cost};
