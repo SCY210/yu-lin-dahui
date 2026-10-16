@@ -5,6 +5,7 @@ import {signupClosesAt} from '../lib/domain/event-lifecycle';
 import {guestNote} from '../lib/client/guests';
 import {bookingCapacity,bookingRows} from '../lib/domain/booking-signups';
 import {bookingCents} from '../lib/domain/money';
+import {feeMembers} from '../lib/domain/fee-transfers';
 import {findVenue,googleMapsUrl} from '../lib/venues';
 import {plannedEpoch,plannedInterval} from '../lib/time-planning';
 import {dt,fmt,hm,euro,text,halfTimed,choice,money,number,why} from './ui';
@@ -32,7 +33,7 @@ export default function EventCourtSignup({e,ctx,rules}:any){
  const count=regs.filter((r:any)=>r.status==='confirmed').length;
  const bookingForm=(b?:any)=>{
   const plan=plannedInterval(b?.start??e.start,b?.end??e.end);
-  open(b?'修改场地与时段':'添加场地与时段',b?'bookingEdit':'booking',{...(b?{bookingId:b.id}:{eventId:e.id}),name:b?.name??`${courts.length+1}号场`,venue:b?.venue??e.venue,address:b?.address??e.address,navigationUrl:b?.mapUrl??e.mapUrl,navigationVenue:b?.venue??e.venue,start:dt(plan.start),end:dt(plan.end),pricing:b?.pricing??'hourly',cents:b?.cents??690,signupCapacity:b?bookingCapacity(b,e):Math.min(e.capacity,8),reason:b?'调整场地时段':'新增场地时段'},[text('name','场地名称'),{key:'venue',label:'球馆',type:'venue'},halfTimed('start','开始'),halfTimed('end','结束'),number('signupCapacity','本场接龙人数上限'),choice('pricing','计价方式',[['hourly','每小时'],['total','时段总价']]),money('cents','价格 · 欧元'),why],(v:any)=>({...v,start:plannedEpoch(v.start,plan.start),end:plannedEpoch(v.end,plan.end)}),'每个场地时段独立接龙与候补。新增时段超出活动时间时，会自动扩展活动起止时间。');
+  open(b?'修改场地与时段':'添加场地与时段',b?'bookingEdit':'booking',{...(b?{bookingId:b.id}:{eventId:e.id}),name:b?.name??`${courts.length+1}号场`,venue:b?.venue??e.venue,address:b?.address??e.address,navigationUrl:b?.mapUrl??e.mapUrl,navigationVenue:b?.venue??e.venue,start:dt(plan.start),end:dt(plan.end),pricing:b?.pricing??'hourly',cents:b?.cents??690,signupCapacity:b?bookingCapacity(b,e):Math.min(e.capacity,8),advancedBy:b?.advancedBy??'',reason:b?'调整场地时段':'新增场地时段'},[text('name','场地名称'),{key:'venue',label:'球馆',type:'venue'},halfTimed('start','开始'),halfTimed('end','结束'),number('signupCapacity','本场接龙人数上限'),choice('pricing','计价方式',[['hourly','每小时'],['total','时段总价']]),money('cents','价格 · 欧元'),{...choice('advancedBy','谁约的（场费由他垫付）',feeMembers(data.players)),optional:!e.feeAdvances&&!b?.advancedBy},why],(v:Record<string,unknown>)=>({...v,start:plannedEpoch(String(v.start),plan.start),end:plannedEpoch(String(v.end),plan.end),...(v.advancedBy?{}:{advancedBy:undefined})}),'每个场地时段独立接龙与候补。新增时段超出活动时间时，会自动扩展活动起止时间。');
  };
  const register=(b:CourtView,playerId=data.me.playerId)=>{
   const r=data.registrations.find((r:any)=>r.eventId===e.id&&r.playerId===playerId),row=r?.bookingSignups?.find((x:any)=>x.bookingId===b.id&&x.status!=='cancelled'),plan=plannedInterval(b.start,b.end);
