@@ -41,7 +41,7 @@ export function unpaidFeeReminders(s:State,bill:Settlement,key:string,now=Date.n
  if(!e||!bill.confirmed||['draft','cancelled'].includes(e.status))return [];
  return [...billsByContact(s,bill,unpaidBills(s,bill))].map(([accountId,g])=>({kind:'fees' as const,eventId:e.id,tab:'fees' as const,expires:now+86400000,createdAt:now,accountIds:[accountId],settlementId:bill.id,settlementVersion:bill.version,due:true,proxyPlayerIds:g.friends.map(b=>b.playerId),
   id:`fees-due:${e.id}:${bill.id}:${key}:${accountId}`,title:'费用提醒：还未付款',
-  body:`${e.title}的分摊还未标记付款：${[g.own?'你自己':'',g.friends.length?'你代报名的 '+friendList(s,g.friends):''].filter(Boolean).join('、')}。付款后请在费用页点“标记已付款”。`.slice(0,250)}));
+  body:`${e.title}的分摊还未标记付款：${[g.own?'你自己':'',g.friends.length?'你代报名的 '+friendList(s,g.friends):''].filter(Boolean).join('、')}。${bill.transfers?'转账后请在费用页把对应的转账标记为已转。':'付款后请在费用页点“标记已付款”。'}`.slice(0,250)}));
 }
 export function remindersForChange(next:State,previous:State,actor:string,key:string,now=Date.now()):Reminder[]{
  const result:Reminder[]=[],before=new Map(previous.events.map(e=>[e.id,e]));

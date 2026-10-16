@@ -1,0 +1,10 @@
+.fee-transfers{display:grid;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);min-width:0}
+.fee-transfers h3{margin:0}
+.fee-advances{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;font-size:13px}
+.fee-transfer-list{display:grid;gap:6px;min-width:0}
+.fee-transfer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:6px 10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;min-width:0}
+.fee-transfer.is-paid{opacity:.75}
+.fee-transfer-people{display:flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
+.fee-transfer>button{grid-column:1/-1;justify-self:end}
+.fee-transfer-others summary{cursor:pointer;font-size:13px;color:var(--muted-foreground)}
+.fee-transfer-others .fee-transfer-list{margin-top:6px}

@@ -53,17 +53,17 @@ const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isEventAction(action) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isEventAction(action) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
-    event: z.object({ ranked:z.boolean().optional(), tournament:z.boolean().optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional() })).min(1).max(20) }),
+    event: z.object({ ranked:z.boolean().optional(), tournament:z.boolean().optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), advancedBy: pid })).min(1).max(20), practiceBallBy: pid.optional() }),
     eventStatus: z.object({ eventId: pid, status: z.enum(['draft', 'open', 'locked', 'live', 'ended', 'cancelled']) }),
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
     eventRanking: z.object({eventId:pid,ranked:z.boolean(),expectedRanked:z.boolean()}),
     eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).optional(), practiceShuttleCents:cents.optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
-    booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), reason }),
+    booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), reason }),
     register: z.object({ ...activityAcknowledgementInput, eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
     moveQueue: z.object({ eventId: pid, playerId: pid, beforePlayerId: pid, reason }),
     attendance: z.object({ eventId: pid, playerId: pid, at: time, state: z.enum(['ready', 'paused', 'left']) }),
@@ -71,11 +71,12 @@ const schemas = {
     generate: z.object({ eventId: pid, usePointsWindow: z.boolean().optional(), at: time, duration: z.number().int().min(5).max(90), seed: z.number().int().min(1).max(2147483647) }),
     swap: z.object({ roundId: pid, p1: pid, p2: pid, expectedLineup:z.array(z.object({id:pid,a:z.array(pid).min(1).max(2),b:z.array(pid).min(1).max(2)})).max(500).optional() }), moveCourt: z.object({ matchId: pid, courtId: pid }), lock: z.object({ matchId: pid, locked: z.boolean() }), publish: z.object({ roundId: pid }), start: z.object({ roundId: pid, at: time, monthly: z.boolean(), elo: z.boolean(), friendly: z.boolean().optional() }), cancelRound: z.object({ roundId: pid, reason }),
     score: z.object({ matchId: pid, expectedA:z.array(pid).min(1).max(2).optional(), expectedB:z.array(pid).min(1).max(2).optional(), expectedGames:scoreGames.max(3).optional(), a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150), end: time.optional(), reason, games: z.array(z.object({ a: z.number().int().min(0).max(150), b: z.number().int().min(0).max(150) })).min(1).max(3).optional() }), void: z.object({ matchId: pid, reason, status: z.enum(['cancelled', 'forfeit']) }), matchScoring: z.object({ matchId: pid, monthly: z.boolean(), elo: z.boolean(), reason }),
-    cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100).default(1), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), reason }),
+    cost: z.object({ eventId: pid, type: z.enum(['ball', 'other']), name: text, pricing: z.enum(['tube', 'unit', 'total']), cents, tubeCount: z.number().int().min(1).max(100).default(1), used: z.number().int().min(0).max(10000), start: time.nullable(), end: time.nullable(), bearer: z.enum(['members', 'subsidy']), advancedBy: pid.optional(), reason }),
+    feeAdvance: z.object({ eventId: pid, itemId: pid, advancedBy: pid, reason }),
     costOverride: z.object({ costId: pid, reason, segments: z.array(z.object({ start: time, end: time, cents })).min(1).max(100) }),
     bookingBearer: z.object({ bookingId: pid, bearer: z.enum(['members', 'subsidy']), reason }), deleteCost: z.object({ costId: pid, reason }), modes: z.object({ eventId: pid, courtMode: mode, ballMode: mode, reason }),
     exemption: z.object({ eventId: pid, playerId: pid, type: z.enum(['court', 'ball']), mode: z.enum(['none', 'redistribute', 'subsidy']), reason }),
-    feeRecipient: z.object({ eventId: pid, name: z.string().trim().min(1).max(80), phone: z.string().trim().min(5).max(40).regex(/^\+?[\d ()-]+$/, '电话号码只可包含数字、区号及常用分隔符').refine(v => v.replace(/\D/g, '').length >= 5 && v.replace(/\D/g, '').length <= 20, '请检查电话号码'), reason }),
+    feeRecipient: z.object({ eventId: pid, playerId: pid, name: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().min(5).max(40).regex(/^\+?[\d ()-]+$/, '电话号码只可包含数字、区号及常用分隔符').refine(v => v.replace(/\D/g, '').length >= 5 && v.replace(/\D/g, '').length <= 20, '请检查电话号码'), reason }),
     notifyFees: z.object({ eventId: pid, settlementId: pid, reason }),
     feePayeeRemove: z.object({ payeeId: pid, reason }),
     settle: z.object({ eventId: pid, confirmed: z.boolean(), reason }),
@@ -162,17 +163,23 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('请检查活动起止时间');
             for (const b of p.bookings)
                 checkBooking(p, b);
+            for (const b of p.bookings)
+                assertAdvancer(s, b.advancedBy, '请为每个场地时段选择约场的球友');
+            if ((p.practiceBallCount ?? 0) > 0)
+                assertAdvancer(s, p.practiceBallBy, '请选择练球用球是谁的');
             if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有群主和管理员可以开启积分赛');
             if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
-            const { bookings, practiceShuttleCents, practiceBallCount, tournament, ...details } = p;
+            const { bookings, practiceShuttleCents, practiceBallCount, practiceBallBy, tournament, ...details } = p;
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
             if(tournament){e.tournament=emptyTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
+            // New activities record who advanced every court slot and expense (docs/FEE_ADVANCES.md).
+            e.feeAdvances = true;
             s.events.push(e);
-            if(isPractice(e)&&(practiceBallCount??0)>0)s.costs.push({id:id(),eventId:e.id,type:'ball',name:'练球用球',pricing:'unit',cents:e.practiceShuttleCents!,tubeCount:1,used:practiceBallCount!,start:null,end:null,bearer:'members'});
+            if(isPractice(e)&&(practiceBallCount??0)>0)s.costs.push({id:id(),eventId:e.id,type:'ball',name:'练球用球',pricing:'unit',cents:e.practiceShuttleCents!,tubeCount:1,used:practiceBallCount!,start:null,end:null,bearer:'members',advancedBy:practiceBallBy});
             for (const b of bookings)
                 s.bookings.push({ ...b, signupCapacity: b.signupCapacity ?? e.capacity, id: id(), eventId: e.id });
             break;
@@ -233,6 +240,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('结束必须晚于开始');
             if (s.bookings.filter(b => b.eventId === e.id).length >= 100)
                 fail('每次活动最多100个场地时段');
+            if (e.feeAdvances || p.advancedBy)
+                assertAdvancer(s, p.advancedBy, '请选择这个场地时段是谁约的');
             if (s.bookings.some(b => b.eventId === e.id && b.name === p.name && (b.venue ?? e.venue) === (p.venue ?? e.venue) && b.start < p.end && b.end > p.start))
                 fail('同一场地预约时段不能重叠');
             s.bookings.push({ ...p, signupCapacity: p.signupCapacity ?? e.capacity, id: id() });
@@ -250,6 +259,10 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const e = event(b.eventId);
             if (p.end <= p.start)
                 fail('结束必须晚于开始');
+            if (e.feeAdvances || p.advancedBy)
+                assertAdvancer(s, p.advancedBy ?? b.advancedBy, '请选择这个场地时段是谁约的');
+            if (p.advancedBy)
+                b.advancedBy = p.advancedBy;
             const slots = bookingRows(s, b.id);
             if ((p.signupCapacity ?? b.signupCapacity ?? e.capacity) < slots.filter(x => x.status === 'confirmed').length)
                 fail('上限不能低于本场正式人数');
@@ -587,6 +600,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('费用时段无效');
             if (p.type === 'ball' && p.pricing !== 'unit')
                 fail('耗球请按单颗价格和消耗颗数录入；如仍看到按筒计价，请刷新页面后重试');
+            if (e.feeAdvances || p.advancedBy)
+                assertAdvancer(s, p.advancedBy, p.type === 'ball' ? '请选择这些球是谁的' : '请选择这笔费用是谁付的');
             s.costs.push({ ...p, ...(p.type === 'ball' ? {tubeCount: 1} : {}), id: id() });
             break;
         }
@@ -604,6 +619,14 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             c.overrides = sorted;
             calculateSettlement(s, e, now);
+            break;
+        }
+        case 'feeAdvance': {
+            // Fill in or correct who advanced a court slot or expense, also on an activity created before this was required.
+            const p = command.payload;
+            const item = s.bookings.find(b => b.id === p.itemId && b.eventId === p.eventId) ?? s.costs.find(c => c.id === p.itemId && c.eventId === p.eventId) ?? fail('场地时段或费用项目不存在');
+            assertAdvancer(s, p.advancedBy, '请选择一位有账号的球友');
+            item.advancedBy = p.advancedBy;
             break;
         }
         case 'bookingBearer': {
@@ -632,10 +655,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'feeRecipient': {
             const p = command.payload;
-            event(p.eventId).feeRecipient = { name: p.name, phone: p.phone };
+            // The recipient is a member, so the transfers they pass on appear on their home page (docs/FEE_ADVANCES.md).
+            const recipient = s.players.find(x => x.id === p.playerId && x.enabled && s.accounts.some(a => a.playerId === x.id)) ?? fail('请从有账号的球友中选择收款人');
+            event(p.eventId).feeRecipient = { name: recipient.name, phone: p.phone, playerId: recipient.id };
             // Every recipient used becomes a saved payee (matched by phone digits), newest first, at most 20.
             const digits = (phone: string) => phone.replace(/\D/g, ''), saved = s.settings.feePayees ?? [], known = saved.find(x => digits(x.phone) === digits(p.phone));
-            s.settings.feePayees = [{ id: known?.id ?? id(), name: p.name, phone: p.phone, createdBy: known?.createdBy ?? a.id, usedAt: now }, ...saved.filter(x => x !== known)].slice(0, 20);
+            s.settings.feePayees = [{ id: known?.id ?? id(), name: recipient.name, phone: p.phone, playerId: recipient.id, createdBy: known?.createdBy ?? a.id, usedAt: now }, ...saved.filter(x => x !== known)].slice(0, 20);
             break;
         }
         case 'feePayeeRemove': {
@@ -669,6 +694,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const result = p.confirmed ? calculateSettlement(s, e, now) : calculateSettlementPreview(s, e, now);
             if (p.confirmed && result.unallocated)
                 fail('仍有待分配费用，请通过费用承担设置指定群补贴或核对参加时间');
+            if (p.confirmed && e.feeAdvances && !result.transfers)
+                fail('请先为每个场地时段和费用填写垫付人，再确认分摊');
             const latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
             if (p.confirmed && latest && sameSettlement(result, latest))
                 return null;
@@ -748,6 +775,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if (action === 'grantPoints' && p.rating)
         replayRating(s, now);
     return null;
+}
+/** An advancer is an enabled member with an account: they receive the transfers that repay them. */
+function assertAdvancer(s: State, playerId: string | undefined, message: string) {
+    if (!playerId || !s.players.some(p => p.id === playerId && p.enabled && s.accounts.some(a => a.playerId === p.id)))
+        fail(message);
 }
 function checkBooking(e: {
     start: number;

@@ -16,7 +16,7 @@ function fixture(singles=false,count=8){
 }
 test('competition creation keeps ordinary forms and practice intact',async()=>{
  const {s,a}=fixture(),form=newEventForm(now,true);assert.equal(form.title,'创建比赛');assert.ok(!form.fields.find(f=>f.key==='matchFormat')!.options!.some(o=>o[0]==='practice'));
- const payload=form.convert!({...form.values,venue:'Fixture venue'});await apply(s,a,form.action,payload,now);assert.equal(s.events[1].tournament!.phase,'setup');assert.match(s.events[1].title,/双打比赛$/);assert.equal(s.events[1].pointsPlan,undefined);
+ const payload=form.convert!({...form.values,courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),venue:'Fixture venue'});await apply(s,a,form.action,payload,now);assert.equal(s.events[1].tournament!.phase,'setup');assert.match(s.events[1].title,/双打比赛$/);assert.equal(s.events[1].pointsPlan,undefined);
  const ordinary=newEventForm(now);assert.equal(ordinary.values.tournament,false);assert.ok(ordinary.fields[0].options!.some(o=>o[0]==='practice'));
  await assert.rejects(()=>apply(s,a,'event',{...payload,matchFormat:'practice',note:'Practice'},now),/只能选择/);
 });

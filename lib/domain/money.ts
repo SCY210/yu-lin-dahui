@@ -1,6 +1,8 @@
 import {equalFeeAmounts} from './equal-fees';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {courtSpans} from './booking-signups';
+import {feeAdvances,planTransfers} from './fee-transfers';
+import {clubOwnerId} from './ownership';
 import {fail,type State,type Event,type Settlement,type Mode,type Exemption} from './types';
 type Q={n:bigint;d:bigint};
 const q=(n:number|bigint,d:number|bigint=1):Q=>({n:BigInt(n),d:BigInt(d)});
@@ -24,7 +26,7 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  for(const b of s.bookings.filter(b=>b.eventId===e.id))for(const a of courtSpans(s,e,b))points.push(a.start,Math.min(a.end,now));
  const cuts=[...new Set(points)].filter(t=>t>=e.start&&t<=e.end).sort((a,b)=>a-b);
  const active=(a:number,b:number)=>ids.filter(id=>spans.some(x=>x.playerId===id&&x.start<b&&x.end>a));
- const distribute=(name:string,type:'court'|'ball'|'other',amount:number,start:number,end:number,mode:Mode,estimated:boolean,bearer='members',bookingId?:string)=>{
+ const distribute=(name:string,type:'court'|'ball'|'other',amount:number,start:number,end:number,mode:Mode,estimated:boolean,bearer='members',bookingId:string|undefined,item:string)=>{
   const scoped=usesAutomaticAttendance(e)&&(s.registrations.some(r=>r.eventId===e.id&&r.bookingSignups)||s.attendance.some(a=>a.eventId===e.id&&a.bookingId));
   const booking=bookingId&&scoped?s.bookings.find(b=>b.id===bookingId):undefined;
   const scope=booking&&usesAutomaticAttendance(e)?courtSpans(s,e,booking).map(a=>({...a,end:Math.min(a.end,now)})).filter(a=>a.end>a.start):spans;
@@ -34,21 +36,35 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
   total+=amount;const segmentWeights:Record<string,number>={};const intervals:{key:string;start:number;end:number;members:string[]}[]=[];
   if(mode==='interval'){for(let i=0;i<cuts.length-1;i++){const a=Math.max(cuts[i],start),b=Math.min(cuts[i+1],end);if(b>a){const members=scopedActive(a,b);const key=String(i);segmentWeights[key]=b-a;intervals.push({key,start:a,end:b,members})}}}
   else{intervals.push({key:'all',start,end,members:booking?scopeIds:ids});segmentWeights.all=1}
-  const amounts=allocate(amount,segmentWeights); if(!intervals.length){unallocated+=amount;detail.push({name,type,start,end,cents:amount,shares:{},subsidy:0,unallocated:amount,estimated});return}
+  const amounts=allocate(amount,segmentWeights); if(!intervals.length){unallocated+=amount;detail.push({item,name,type,start,end,cents:amount,shares:{},subsidy:0,unallocated:amount,estimated});return}
   for(const seg of intervals){const cents=amounts[seg.key]??0;const weights:Record<string,number>={};const ex=(id:string):Exemption=>{const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===id);return type==='court'?r?.courtExempt??{mode:'none',reason:''}:type==='ball'?r?.ballExempt??{mode:'none',reason:''}:{mode:'none',reason:''}};
    for(const id of seg.members){if(ex(id).mode==='redistribute')continue;const w=mode==='duration'?(booking?scopedMinutes(id):Math.round(minutes(id)*60000)):1;const key=ex(id).mode==='subsidy'?'@subsidy':id;weights[key]=(weights[key]??0)+w}
    const shares=bearer==='subsidy'?{'@subsidy':cents}:allocate(cents,weights);const sub=shares['@subsidy']??0;delete shares['@subsidy'];const missing=cents-sub-Object.values(shares).reduce((a,b)=>a+b,0);subsidy+=sub;unallocated+=missing;
    for(const [id,n]of Object.entries(shares)){const bill=bills.find(b=>b.playerId===id)!;bill[type]+=n;bill.total+=n}
-   detail.push({name,type,start:seg.start,end:seg.end,cents,shares,subsidy:sub,unallocated:missing,estimated});
+   detail.push({item,name,type,start:seg.start,end:seg.end,cents,shares,subsidy:sub,unallocated:missing,estimated});
   }
  };
- for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members',b.id);
- for(const c of s.costs.filter(c=>c.eventId===e.id)){const amount=c.type==='ball'?ballCents(c):c.cents;if(c.overrides?.length){if(c.overrides.reduce((a,x)=>a+x.cents,0)!==amount)fail('球费时段调整合计必须等于总球费');for(const o of c.overrides)distribute(c.name,c.type==='ball'?'ball':'other',o.cents,o.start,o.end,e.ballMode,false,c.bearer)}
-  else if(c.start!==null&&c.end!==null)distribute(c.name,c.type==='ball'?'ball':'other',amount,c.start,c.end,c.type==='ball'?e.ballMode:'equal',false,c.bearer);
-  else if(c.type==='ball'&&e.ballMode==='interval'){const weights:Record<string,number>={};const segs:{key:string;start:number;end:number}[]=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];const courts=s.bookings.filter(x=>x.eventId===e.id&&x.start<=a&&x.end>=b).length;if(active(a,b).length&&courts){weights[String(i)]=(b-a)*courts;segs.push({key:String(i),start:a,end:b})}}const parts=allocate(amount,weights);if(!segs.length)distribute(c.name,'ball',amount,e.start,e.end,e.ballMode,true,c.bearer);else for(const seg of segs)distribute(c.name,'ball',parts[seg.key],seg.start,seg.end,e.ballMode,true,c.bearer)}
-  else distribute(c.name,c.type==='ball'?'ball':'other',amount,e.start,e.end,c.type==='ball'?e.ballMode:'equal',c.type==='ball',c.bearer);
+ for(const b of s.bookings.filter(b=>b.eventId===e.id))distribute(b.name,'court',bookingCents(b),b.start,b.end,e.courtMode,false,b.bearer??'members',b.id,b.id);
+ for(const c of s.costs.filter(c=>c.eventId===e.id)){const amount=c.type==='ball'?ballCents(c):c.cents;if(c.overrides?.length){if(c.overrides.reduce((a,x)=>a+x.cents,0)!==amount)fail('球费时段调整合计必须等于总球费');for(const o of c.overrides)distribute(c.name,c.type==='ball'?'ball':'other',o.cents,o.start,o.end,e.ballMode,false,c.bearer,undefined,c.id)}
+  else if(c.start!==null&&c.end!==null)distribute(c.name,c.type==='ball'?'ball':'other',amount,c.start,c.end,c.type==='ball'?e.ballMode:'equal',false,c.bearer,undefined,c.id);
+  else if(c.type==='ball'&&e.ballMode==='interval'){const weights:Record<string,number>={};const segs:{key:string;start:number;end:number}[]=[];for(let i=0;i<cuts.length-1;i++){const a=cuts[i],b=cuts[i+1];const courts=s.bookings.filter(x=>x.eventId===e.id&&x.start<=a&&x.end>=b).length;if(active(a,b).length&&courts){weights[String(i)]=(b-a)*courts;segs.push({key:String(i),start:a,end:b})}}const parts=allocate(amount,weights);if(!segs.length)distribute(c.name,'ball',amount,e.start,e.end,e.ballMode,true,c.bearer,undefined,c.id);else for(const seg of segs)distribute(c.name,'ball',parts[seg.key],seg.start,seg.end,e.ballMode,true,c.bearer,undefined,c.id)}
+  else distribute(c.name,c.type==='ball'?'ball':'other',amount,e.start,e.end,c.type==='ball'?e.ballMode:'equal',c.type==='ball',c.bearer,undefined,c.id);
  }
- if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');return equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate);
+ if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');
+ return withFeeTransfers(s,e,equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate));
+}
+/** When every court slot and expense records who advanced it, the split also says who transfers what to whom
+ * (lib/domain/fee-transfers.ts). The collector is the activity's fee recipient when that is a member. */
+function withFeeTransfers<T extends Pick<Settlement,'bills'|'detail'|'subsidy'|'unallocated'>>(s:State,e:Event,result:T):T&Pick<Settlement,'advances'|'transfers'|'collector'>{
+ const items=[...s.bookings.filter(b=>b.eventId===e.id),...s.costs.filter(c=>c.eventId===e.id)];
+ const advances=feeAdvances(items,result.detail,result.unallocated);if(!advances)return result;
+ const owner=s.accounts.find(a=>a.id===clubOwnerId(s))?.playerId??null,recipient=e.feeRecipient?.playerId;
+ const collector=recipient&&s.accounts.some(a=>a.playerId===recipient)?recipient:undefined;
+ // A friend registered by a member owes through that member, so transfers only run between members.
+ const payer=(id:string)=>{if(s.accounts.some(a=>a.playerId===id))return id;const host=s.accounts.find(a=>a.id===s.players.find(p=>p.id===id)?.ownerId);return host&&s.players.some(p=>p.id===host.playerId&&p.enabled)?host.playerId:id};
+ const owed=result.bills.map(b=>({playerId:payer(b.playerId),total:b.total}));
+ const transfers=planTransfers(owed,advances,result.subsidy,owner,collector);if(!transfers)return result;
+ return {...result,advances,transfers,...(collector?{collector}:{})};
 }
 
 

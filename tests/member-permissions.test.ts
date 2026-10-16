@@ -24,7 +24,7 @@ function fixture(){
  }
  return s;
 }
-const eventPayload={title:'普通成员新活动',start,end,venue:'测试',address:'',capacity:4,signupDeadline:start,cancelDeadline:start,note:'',status:'draft',bookings:[{name:'一号场',start,end,pricing:'hourly',cents:1000}]};
+const eventPayload={title:'普通成员新活动',start,end,venue:'测试',address:'',capacity:4,signupDeadline:start,cancelDeadline:start,note:'',status:'draft',bookings:[{advancedBy:'self',name:'一号场',start,end,pricing:'hourly',cents:1000}]};
 test('普通账号创建活动，创建者身份由服务端记录且不能伪造',async()=>{
  const s=fixture();await apply(s,member,'event',{...eventPayload,creatorId:'admin'},start);
  const e=s.events.at(-1)!;assert.equal(e.creatorId,member.id);assert.equal(e.status,'draft');assert.equal(s.bookings.at(-1)!.eventId,e.id);
