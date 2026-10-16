@@ -76,3 +76,20 @@ test('legacy check-in attendance keeps a running activity on full refresh',()=>{
  const s=createSimulation(base).state,e=s.events[0];e.attendanceMode='manual';
  assert.equal(clubViewValidUntil(s,s.accounts[1],e.start+30*minute),e.start+30*minute);
 });
+
+test('a cached planned view expires exactly when the two-hour attendance phase switches',async()=>{
+ const s=createSimulation(base).state,e=s.events[0],a=s.accounts[0],cut=e.start+120*minute+1234;
+ e.schedulingMode='planned';e.end=e.start+240*minute;s.bookings.forEach(b=>b.end=e.end);
+ s.registrations.forEach((r,i)=>{r.departure=i<4?cut:e.end;if(i>=8)r.arrival=cut});
+ await apply(s,a,'planPoints',{eventId:e.id,at:e.start,pointsMinutes:240,roundMinutes:15,seed:1,pairing:'rotate'},e.start-1);
+ await apply(s,a,'publishPoints',{eventId:e.id},e.start-1);
+ await startDuePointsSessions(s,cut-1,apply);
+ assert.equal(clubViewValidUntil(s,a,cut-1),cut);
+ assert.equal(await startDuePointsSessions(structuredClone(s),cut-1,apply),false);
+ const ongoing=structuredClone(s.matches.filter(m=>m.status==='playing'));
+ assert.equal(await startDuePointsSessions(s,cut,apply),true);
+ assert.equal(s.audits.filter(a=>a.action==='pointsPhaseAdvance').length,1);
+ for(const m of ongoing)assert.deepEqual(s.matches.find(row=>row.id===m.id),m,'clock expiry does not end an actual game');
+ assert.ok(s.matches.some(m=>m.status==='cancelled'),'untouched earlier-phase lineups were retired');
+ assert.equal(await startDuePointsSessions(s,cut+1,apply),false);
+});

@@ -57,6 +57,8 @@ function liveBoundaries(s:State,e:Event,boundary:(at:number)=>void,now:number){
  boundary(window.start);boundary(window.end);
  for(const r of s.rounds)if(r.eventId===e.id){boundary(r.start);boundary(r.start+r.duration*minute)}
  // Courts and players count for a round only while they remain for its whole length.
+ // These same arrival/departure/booking cuts switch confirmed planned phases:
+ // expire the validator at the cut even when an earlier court is still playing.
  for(const b of s.bookings)if(b.eventId===e.id){cuts.push(b.start,b.end);boundary(b.end-round+1)}
  for(const r of s.registrations)if(r.eventId===e.id)for(const span of registrationSpans(s,e,r)){cuts.push(span.start,span.end??e.end);boundary((span.end??e.end)-round+1)}
  for(const at of cuts){

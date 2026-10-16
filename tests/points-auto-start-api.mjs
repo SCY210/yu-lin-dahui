@@ -15,5 +15,20 @@ try{
  assert.equal(saved.revision,before.revision+1,'exactly one committed server transition');assert.equal(saved.rounds.length,2);assert.equal(saved.matches.length,2);assert.ok(saved.matches.every(m=>m.status==='playing'));assert.equal(saved.audits.filter(a=>a.action==='pointsAutoStart').length,1);assert.equal(new Set(saved.matches.map(m=>m.id)).size,2);
  assert.ok(reads.every(s=>s.revision===saved.revision&&s.matches.length===2),'racing read retries against committed revision');
  const again=await api.loadClubState();assert.equal(again.revision,saved.revision);assert.deepEqual(again.matches,saved.matches);
+ const now=Date.now(),phase=api.createSimulation(now).state,e=phase.events[0],cut=now-1000;
+ e.start=now-2*3600000;e.end=now+2*3600000;e.schedulingMode='planned';e.pointsPlan={start:e.start,end:e.end,roundMinutes:15};e.pointsSession={startedAt:e.start,attendance:[],waiting:[]};
+ phase.bookings.forEach(b=>{b.start=e.start;b.end=e.end});phase.registrations.forEach((r,i)=>{r.arrival=i>=10?cut:e.start;r.departure=i===8||i===9?cut:e.end;r.registeredAt=e.start-86400000});
+ const ids=phase.players.map(p=>p.id);
+ for(let n=0;n<2;n++){
+  const round={id:'phase-round-'+n,eventId:e.id,start:n?cut:e.start,duration:15,status:'published',eligible:ids,rest:[],seed:n+1,pointsSlot:n+1};phase.rounds.push(round);
+  for(let c=0;c<2;c++){const selected=c?[ids[2],ids[3],ids[4],ids[5]]:[ids[0],ids[1],ids[n?10:8],ids[n?11:9]];phase.matches.push({id:'phase-match-'+n+c,eventId:e.id,roundId:round.id,courtId:phase.bookings[c].id,a:selected.slice(0,2),b:selected.slice(2),status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[],monthly:true,elo:true,locked:false,enteredBy:null})}
+ }
+ phase.revision=again.revision;await api.save(phase,'phase-fixture',again);const phaseBefore=await api.load();
+ const phaseReads=await Promise.all([api.loadClubState(),api.loadClubState()]),phaseSaved=await api.load();
+ assert.equal(phaseSaved.revision,phaseBefore.revision+1);assert.equal(phaseSaved.audits.filter(a=>a.action==='pointsPhaseAdvance').length,1);
+ assert.ok(phaseSaved.matches.filter(m=>m.roundId==='phase-round-0').every(m=>m.status==='cancelled'&&m.start===null&&m.scoreA===null));
+ assert.ok(phaseSaved.matches.filter(m=>m.roundId==='phase-round-1').every(m=>m.status==='playing'));assert.equal(phaseSaved.matches.length,4);
+ assert.ok(phaseReads.every(s=>s.revision===phaseSaved.revision));assert.equal((await api.loadClubState()).revision,phaseSaved.revision);
  console.log('PASS due points start: concurrent SQLite-backed maintenance reads commit two courts once; retries see authoritative revision and repeated reads are idempotent.');
+ console.log('PASS planned phase switch: racing reads atomically retire unstarted expired courts and start the confirmed next phase once without forfeits or duplicate games.');
 }finally{database.close();delete globalThis.__pointsClock}

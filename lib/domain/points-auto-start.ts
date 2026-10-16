@@ -5,7 +5,7 @@ import {pointsSession} from './points-attendance';
 import {automaticPlanInput,pointsWindow} from './points-window';
 import {schedulingMode} from './scheduling';
 import {fillLiveCourts,hasEmptyLiveCourt,livePresentIds} from './live-play';
-import {advanceScheduledCourts,readyScheduledMatches} from './scheduled-courts';
+import {advanceScheduledCourts,scheduledCourtProgress} from './scheduled-courts';
 import type {State,Account,Round,Event} from './types';
 
 type Runner=(s:State,a:Account,action:string,input:unknown,now:number)=>Promise<unknown>;
@@ -34,7 +34,8 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
     if(original.livePlay?.paused||(original.livePlay?.enabled&&!hasEmptyLiveCourt(s,original,now)))continue;
    }else{
     const rounds=s.rounds.filter(r=>r.eventId===original.id);
-    if(!readyScheduledMatches(s,original,now).length&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000)&&(planKey===null||planKey===original.pointsSession.autoPlanKey))continue;
+    const progress=scheduledCourtProgress(s,original,now);
+    if(!progress.ready.length&&!progress.expired.length&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000)&&(planKey===null||planKey===original.pointsSession.autoPlanKey))continue;
    }
   }
   const work=structuredClone(s),e=work.events.find(e=>e.id===original.id)!;

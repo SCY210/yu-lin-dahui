@@ -25,3 +25,30 @@ After games have finished, remaining-time replanning keeps the confirmed partner
 Cancelled arrangements remain available in a read-only archive in all modes. Removing the last pending round does not unexpectedly change the inferred mode of a legacy activity.
 
 Planned lineups remain editable until a score is stored, including legacy automatically started records. Their public state is pending score or ended; scheduler metadata does not block substitutions. Group locking is retired, and old stored lock flags do not restrict edits or generation.
+
+## Attendance phase transitions
+
+The backend advances confirmed planned schedules by actual server time at signup
+arrival/departure and court-booking boundaries. At a boundary such as 13:00, it
+retires only published, unstarted matches from earlier attendance phases and
+continues with the confirmed next phase. This also retires an earlier-phase
+match whose four players happen to attend all day; it must not hold up the new
+phase. Skipped matches are cancelled without scores, forfeits or point penalties,
+and the transition is audited once as `pointsPhaseAdvance`.
+Expiration requires a confirmed successor phase. Without one, a final lineup
+manually changed to include a later arrival remains pending until that person
+can play; the clock does not discard the host's last confirmed adjustment.
+
+A game already in progress continues. Its court and players remain occupied;
+other free courts can enter the new phase immediately, and its next match starts
+after the current score releases the court. Future phases cannot start early
+just because the preceding courts scored quickly. Draft confirmation, historical
+results, manual score entry, signup windows and fee allocation are preserved.
+No frontend changes or production-data rewrite are needed for existing confirmed
+plans. The normal server read/write maintenance commits the transition atomically,
+and conditional-read validators expire at the same attendance/booking boundary.
+
+Coverage: `tests/planned-phase-transition.test.ts`,
+`tests/live-conditional-read.test.ts` and `tests/points-auto-start-api.mjs` include
+partial rounds, exact clock boundaries, actual games crossing the boundary,
+unavailable next players and concurrent SQLite-backed maintenance reads.
