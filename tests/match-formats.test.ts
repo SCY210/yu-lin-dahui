@@ -14,7 +14,7 @@ const now=Date.parse('2030-10-08T12:00:00Z');
 async function fixture(format:'singles'|'doubles'='singles',count=6,courts=1){
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='a0';
  for(let i=0;i<count;i++){s.accounts.push({id:'a'+i,email:'',role:i?'member':'admin',playerId:'p'+i});s.players.push({id:'p'+i,ownerId:'a'+i,name:'Player '+i,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''})}
- await apply(s,s.accounts[0],'event',{matchFormat:format,start:now-60000,end:now+3600000,venue:'Fixture venue',address:'',capacity:16,cancelDeadline:now-86400000,note:'',status:'open',bookings:Array.from({length:courts},(_,i)=>({name:'Court '+i,start:now-60000,end:now+3600000,pricing:'hourly',cents:690}))},now-120000);
+ await apply(s,s.accounts[0],'event',{matchFormat:format,start:now-60000,end:now+3600000,venue:'Fixture venue',address:'',capacity:16,cancelDeadline:now-86400000,note:'',status:'open',bookings:Array.from({length:courts},(_,i)=>({advancedBy:'p0',name:'Court '+i,start:now-60000,end:now+3600000,pricing:'hourly',cents:690}))},now-120000);
  const e=s.events[0];for(const p of s.players)await apply(s,s.accounts[0],'register',{...acceptedActivityNotice,eventId:e.id,playerId:p.id,arrival:e.start,departure:e.end,note:''},now-120000);
  return {s,e,owner:s.accounts[0]};
 }

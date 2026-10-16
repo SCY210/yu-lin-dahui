@@ -81,7 +81,7 @@ test('默认参加活动无需签退；活动结束后可以确认分摊，结�
 });
 
 test('新创建活动自动启用正式报名默认参加',async()=>{
- const {s}=fixture();await apply(s,s.accounts[0],'event',{title:'新活动',start,end,venue:'测试球馆',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'open',bookings:[{name:'一号场',start,end,pricing:'hourly',cents:1200}]},start-hour);
+ const {s}=fixture();await apply(s,s.accounts[0],'event',{title:'新活动',start,end,venue:'测试球馆',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'open',bookings:[{advancedBy:s.accounts[0].playerId,name:'一号场',start,end,pricing:'hourly',cents:1200}]},start-hour);
  assert.equal(s.events.at(-1)!.attendanceMode,'automatic');
 });
 

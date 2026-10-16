@@ -50,7 +50,7 @@ test('取消截止后、报名截止前仍可报名，未开放或已结束的�
 
 test('创建及编辑活动不再需要填写报名截止时间',async()=>{
  const {s,e}=fixture();
- await apply(s,s.accounts[0],'event',{title:'无报名截止活动',start,end,venue:'模拟球馆',address:'',capacity:4,cancelDeadline:start-24*hour,note:'',status:'open',bookings:[{name:'测试场地',start,end,pricing:'total',cents:0}]},early);
+ await apply(s,s.accounts[0],'event',{title:'无报名截止活动',start,end,venue:'模拟球馆',address:'',capacity:4,cancelDeadline:start-24*hour,note:'',status:'open',bookings:[{advancedBy:s.accounts[0].playerId,name:'测试场地',start,end,pricing:'total',cents:0}]},early);
  const created=s.events.at(-1)!;assert.equal(created.title,'无报名截止活动');
  await apply(s,s.accounts[0],'eventEdit',{eventId:created.id,title:'编辑无截止活动',venue:e.venue,address:'',capacity:4,cancelDeadline:start-24*hour,note:'',reason:'修改标题'},early);
  assert.equal(created.title,'编辑无截止活动');assert.equal(created.cancelDeadline,start-24*hour);

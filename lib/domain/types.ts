@@ -12,8 +12,9 @@ export type ShuttlePlan={options:ShuttleOption[];votes:ShuttleVote[];votingOpen:
 export type PointsChoice={votes:{id:string;voterId:string;playerId:string;mode:'rotate'|'fixed';at:number}[];votingOpen:boolean;selectedMode?:'rotate'|'fixed';teams?:string[][]};
 export type PointsPlan={start:number;end:number;roundMinutes:number;seed?:number;generatedAt?:number};
 export type LivePlay={enabled:boolean;paused:boolean;preferences:{playerId:string;avoidConsecutive:boolean}[];completions:{venue:string;count:number}[];rest:{playerId:string;venue:string;after:number}[]};
-export type Event={ranked?:boolean;matchingStopped?:string[];noShowHold?:string[];pointsSession?:PointsSession;tournament?:Tournament;schedulingMode?:'planned'|'round'|'live';automaticTitle?:boolean;matchFormat?:'singles'|'doubles'|'practice';practiceShuttleCents?:number;feeRecipient?:{name:string;phone:string};livePlay?:LivePlay;pointsChoice?:PointsChoice;pointsPlan?:PointsPlan;shuttlePlan?:ShuttlePlan;id:string;title:string;start:number;end:number;venue:string;address:string;capacity:number;signupDeadline:number;cancelDeadline:number;note:string;status:'draft'|'open'|'locked'|'live'|'ended'|'cancelled';courtMode:Mode;ballMode:Mode;creatorId?:string;deletedAt?:number;deletedBy?:string;mergedInto?:string;attendanceMode?:'automatic'|'manual';playMode?:'balanced'|'arena'|'koc';identityMode?:'off'|'cp'|'mentor'|'carry';arenaCourtId?:string;handicap?:boolean};
-export type Booking={id:string;eventId:string;name:string;start:number;end:number;pricing:'hourly'|'total';cents:number;bearer?:'members'|'subsidy';signupCapacity?:number;venue?:string;address?:string};
+export type Event={ranked?:boolean;matchingStopped?:string[];noShowHold?:string[];pointsSession?:PointsSession;tournament?:Tournament;schedulingMode?:'planned'|'round'|'live';automaticTitle?:boolean;matchFormat?:'singles'|'doubles'|'practice';practiceShuttleCents?:number;feeAdvances?:boolean;feeRecipient?:{name:string;phone:string;playerId?:string};livePlay?:LivePlay;pointsChoice?:PointsChoice;pointsPlan?:PointsPlan;shuttlePlan?:ShuttlePlan;id:string;title:string;start:number;end:number;venue:string;address:string;capacity:number;signupDeadline:number;cancelDeadline:number;note:string;status:'draft'|'open'|'locked'|'live'|'ended'|'cancelled';courtMode:Mode;ballMode:Mode;creatorId?:string;deletedAt?:number;deletedBy?:string;mergedInto?:string;attendanceMode?:'automatic'|'manual';playMode?:'balanced'|'arena'|'koc';identityMode?:'off'|'cp'|'mentor'|'carry';arenaCourtId?:string;handicap?:boolean};
+/** advancedBy: the member who booked and paid for the court slot (docs/FEE_ADVANCES.md). */
+export type Booking={advancedBy?:string;id:string;eventId:string;name:string;start:number;end:number;pricing:'hourly'|'total';cents:number;bearer?:'members'|'subsidy';signupCapacity?:number;venue?:string;address?:string};
 export type BookingSignup={bookingId:string;status:'confirmed'|'waitlist'|'cancelled';sequence:number;arrival:number;departure:number;note:string;cancelRequested:boolean;registeredAt:number;joinedAsWaitlist:boolean;promotedAt?:number};
 export type AccountNoticeReceipt={id:string;accountId:string;playerId:string;version:string;contentHash:string;contentSnapshot:string;acceptedAt:number;method:'explicit-account-confirmation'};
 export type ActivityAcknowledgement={id:string;eventId:string;bookingId?:string;playerId:string;version:string;at:number;actorId:string;kind:'self'|'proxy'};
@@ -27,10 +28,15 @@ export type TagVote={eventId?:string;id:string;voterId:string;playerId:string;ta
 export type AwardVote={id:string;eventId:string;voterId:string;playerId:string;category:'mvp'|'defense'|'net'|'effort';at:number};
 export type Photo={id:string;eventId:string|null;matchId:string|null;playerIds:string[];ownerId:string;caption:string;created:number;key:string;type:string;size:number;kind:'avatar'|'photo'|'racket'};
 export type Mode='equal'|'duration'|'interval';
-export type Cost={id:string;eventId:string;type:'ball'|'other';name:string;pricing:'tube'|'unit'|'total';cents:number;tubeCount:number;used:number;start:number|null;end:number|null;bearer:'members'|'subsidy';overrides?:{start:number;end:number;cents:number}[]};
+/** advancedBy: the member who bought the balls or paid the expense. */
+export type Cost={advancedBy?:string;id:string;eventId:string;type:'ball'|'other';name:string;pricing:'tube'|'unit'|'total';cents:number;tubeCount:number;used:number;start:number|null;end:number|null;bearer:'members'|'subsidy';overrides?:{start:number;end:number;cents:number}[]};
 export type Bill={playerId:string;court:number;ball:number;other:number;total:number;minutes:number};
-export type Settlement={expenseTotal?:number;roundingDifference?:number;id:string;eventId:string;version:number;created:number;reason:string;confirmed:boolean;total:number;subsidy:number;unallocated:number;bills:Bill[];detail:{type?:'court'|'ball'|'other';roundingDifference?:number;name:string;start:number;end:number;cents:number;shares:Record<string,number>;subsidy:number;unallocated:number;estimated:boolean}[]};
-export type Payment={id:string;eventId:string;playerId:string;cents:number;method:string;at:number;reason:string;actor:string};
+export type Settlement={expenseTotal?:number;roundingDifference?:number;id:string;eventId:string;version:number;created:number;reason:string;confirmed:boolean;total:number;subsidy:number;unallocated:number;bills:Bill[];/** advances/transfers/collector: the fee-advance settlement of this version (lib/domain/fee-transfers.ts); absent
+ * when some court or expense has no recorded advancer, in which case bills are paid as before. */
+advances?:{playerId:string;cents:number}[];transfers?:{from:string;to:string;cents:number}[];collector?:string;
+detail:{item?:string;type?:'court'|'ball'|'other';roundingDifference?:number;name:string;start:number;end:number;cents:number;shares:Record<string,number>;subsidy:number;unallocated:number;estimated:boolean}[]};
+/** to: for a transfer between members (fee advances), the player who received it; playerId is the payer. */
+export type Payment={to?:string;id:string;eventId:string;playerId:string;cents:number;method:string;at:number;reason:string;actor:string};
 export type Rules={win:number;loss:number;minimum:number;cap:number;target:number;ceiling:number;lead:number;k:number;algorithm:string};
 export type Season={id:string;rules:Rules;version?:number};
 export type RatingChange={id:string;matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string;k:number};
@@ -38,7 +44,7 @@ export type Audit={id:string;at:number;actor:string;action:string;reason:string;
 export type AutomaticCoinPolicy={version:'win-points-v1';activatedAt:number;excludedEventIds:string[]};
 export type Settings={automaticCoins?:AutomaticCoinPolicy;rankedEventsVersion?:'admins-v1';name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[];progressionVersion?:'weekly-v2';realmVersion?:'elo-v1';rankingVersion?:'signed-v1';scoringPolicy?:'all-ranked-v1';strengthVersion?:'realm-elo-v2';feePayees?:FeePayee[]}
 /** A saved transfer recipient, offered when setting an activity's fee recipient; newest use first. */
-export type FeePayee={id:string;name:string;phone:string;createdBy:string;usedAt:number};
+export type FeePayee={playerId?:string;id:string;name:string;phone:string;createdBy:string;usedAt:number};
 export type ProfileRestrictions={genderOnlyPlayerIds:string[]};
 export type TreasureProduct={id:string;name:string;description:string;price:number;stock:number;kind:'physical'|'digital';active:boolean;created:number;updated:number;version?:number};
 export type TreasureLedger={id:string;playerId:string;delta:number;balance:number;sequence?:number;kind:'grant'|'redeem'|'refund'|'automatic_reward'|'automatic_correction';reason:string;actor:string;at:number;requestId:string;orderId?:string};

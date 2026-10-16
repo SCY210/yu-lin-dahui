@@ -1,5 +1,7 @@
 # Fee payments and reminders
 
+Splits of activities that record who booked each court and bought each expense are settled by transfers between members instead; see [Fee advances](FEE_ADVANCES.md). The rest of this page describes paying a whole bill.
+
 ## Proxy-registered friends
 
 A friend registered by a member who has no account of their own cannot receive notices. Their fee notice goes to the

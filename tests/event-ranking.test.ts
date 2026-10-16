@@ -10,7 +10,7 @@ import {attendancePointAdjustments} from '../lib/domain/points-attendance';
 import {enableAllRanked} from '../lib/domain/all-ranked';
 
 const now=Date.parse('2030-10-08T12:00:00Z');
-const input={matchFormat:'doubles',start:now-60000,end:now+3600000,venue:'Fictional venue',address:'',capacity:16,cancelDeadline:now-86400000,note:'',status:'open',bookings:[{name:'Court 1',start:now-60000,end:now+3600000,pricing:'hourly',cents:690}]};
+const input={matchFormat:'doubles',start:now-60000,end:now+3600000,venue:'Fictional venue',address:'',capacity:16,cancelDeadline:now-86400000,note:'',status:'open',bookings:[{advancedBy:'p-owner',name:'Court 1',start:now-60000,end:now+3600000,pricing:'hourly',cents:690}]};
 async function fixture(creator='host',extra={}){
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=['owner','admin','host','member','bench1','bench2'].map(id=>({id,email:'',role:id==='owner'||id==='admin'?'admin':'member',playerId:'p-'+id}));

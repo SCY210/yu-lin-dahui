@@ -3,6 +3,7 @@ import VenueField from './venue-field';
 import Disclosure from './disclosure';
 import HalfHourDateTime from './half-hour-date-time';
 import PriceStepper from './price-stepper';
+import CourtBookingsField,{type CourtRow} from './court-bookings-field';
 import {madridDateTime,madridEpoch,shiftActivityTimes} from '../lib/time-planning';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';
@@ -20,10 +21,13 @@ export function Forms({form,setForm,busy,action,danger,setDanger}:any){
   if(current.action!=='event')return {...current,values:{...current.values,...values}};
   let activityStart=current.activityStart??current.values.start;
   const next=shiftActivityTimes(current.values,values,activityStart);
+  // A single court slot follows the activity end it was created with.
+  const rows=next.courts as CourtRow[]|undefined;
+  if(typeof values.end==='string'&&!('courts' in values)&&rows?.length===1&&rows[0].end===current.values.end)next.courts=[{...rows[0],end:values.end}];
   try{if(typeof next.start==='string'){madridEpoch(next.start);activityStart=next.start}}catch{/* Keep the last valid start while the date is cleared. */}
   return {...current,values:next,activityStart};
  });
- const renderField=(f:Field)=><label key={f.key}>
+ const renderField=(f:Field)=>f.type==='court-bookings'?<div className="form-field-group" key={f.key}><span>{f.label}</span><CourtBookingsField rows={form.values[f.key]} members={f.options??[]} onChange={rows=>updateValues({[f.key]:rows})}/></div>:<label key={f.key}>
  {f.type==='checkbox'?<span className="check-label"><Checkbox checked={form.values[f.key]} onCheckedChange={v=>updateValues({[f.key]:v===true})}/>{f.label}</span>:<><span>{f.label}</span>
  {f.type==='textarea'?<textarea rows={4} maxLength={2000} required={f.required??false} value={form.values[f.key]??''} onChange={ev=>updateValues({[f.key]:ev.target.value})}/>:f.type==='price-stepper'?<PriceStepper value={form.values[f.key]} label={f.label} step={typeof f.step==='number'?f.step:undefined} min={f.min} max={f.max} onChange={value=>updateValues({[f.key]:value})}/>:f.type==='half-hour'?<HalfHourDateTime value={form.values[f.key]??''} label={f.label} optional={f.optional} onChange={value=>updateValues({[f.key]:value})}/>:f.type==='venue'?<VenueField value={form.values[f.key]??''} address={form.values.address??''} mapUrl={form.values[f.key]===form.values.navigationVenue?form.values.navigationUrl:undefined} onChange={(venue,address)=>updateValues({[f.key]:venue,address})}/>:f.type==='select'?<select className="pick native-form-select" value={form.values[f.key]??''} required={!f.optional} onChange={ev=>updateValues({[f.key]:ev.target.value})}>{!form.values[f.key]&&<option value="" disabled>请选择{f.label}</option>}{f.options?.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>:<input type={f.type==='money'?'number':f.type??'text'} required={!f.optional&&!['note','address'].includes(f.key)} step={f.type==='money'?'0.01':f.type==='number'?(f.step??1):undefined} min={f.min} max={f.max} value={f.type==='money'?(form.values[f.key]===''||form.values[f.key]==null?'':form.values[f.key]/100):form.values[f.key]??''} onChange={ev=>{const v=ev.target.value;updateValues({[f.key]:f.type==='money'?(v===''?'':Math.round(Number(v)*100)):f.type==='number'?(v===''?'':Number(v)):v})}}/>}
  </>}</label>;

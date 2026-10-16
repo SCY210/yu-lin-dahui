@@ -7,7 +7,7 @@ import {businessTimestamp,MAX_BUSINESS_TIMESTAMP} from '../lib/domain/timestamp'
 import {madridDateTime,plannedEpoch} from '../lib/time-planning';
 
 const start=Date.parse('2026-10-05T14:30:00Z'),hour=3600000;
-function eventInput(at=start,end=at+hour){return {title:'安全测试活动',start:at,end,venue:'测试球馆',address:'',capacity:4,signupDeadline:at,cancelDeadline:at,note:'',status:'open',bookings:[{name:'1号场',start:at,end,pricing:'hourly',cents:1200}]}}
+function eventInput(at=start,end=at+hour){return {title:'安全测试活动',start:at,end,venue:'测试球馆',address:'',capacity:4,signupDeadline:at,cancelDeadline:at,note:'',status:'open',bookings:[{advancedBy:'test-player',name:'1号场',start:at,end,pricing:'hourly',cents:1200}]}}
 function fixture(){
  const s=emptyState(),actor={id:'test-admin',email:'',role:'admin' as const,playerId:'test-player'};
  s.accounts.push(actor);s.players.push({id:actor.playerId,ownerId:actor.id,name:'测试球友',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'测试'});

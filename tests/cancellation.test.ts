@@ -36,6 +36,6 @@ test('创建者和管理员可处理超过截止的取消申请，释放名额�
  for(const role of ['creator','admin'] as const){const f=fixture();await f.cancel(undefined,undefined,cutoff+1);await f.cancel(f[role],'self',cutoff+2);assert.equal(f.s.registrations[0].status,'cancelled');assert.equal(f.s.registrations[0].cancelRequested,false);assert.equal(f.s.registrations[1].status,'confirmed')}
 });
 test('创建和编辑时服务器强制固定取消截止，客户端不能伪造',async()=>{
- const {s,e,member,creator}=fixture();await apply(s,member,'event',{title:'新活动',start,end:e.end,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'open',bookings:[{name:'1号场',start,end:e.end,pricing:'hourly',cents:690}]},cutoff-1);assert.equal(s.events.at(-1)!.cancelDeadline,cutoff);
+ const {s,e,member,creator}=fixture();await apply(s,member,'event',{title:'新活动',start,end:e.end,venue:'测试',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'open',bookings:[{advancedBy:member.playerId,name:'1号场',start,end:e.end,pricing:'hourly',cents:690}]},cutoff-1);assert.equal(s.events.at(-1)!.cancelDeadline,cutoff);
  await apply(s,creator,'eventEdit',{eventId:e.id,title:e.title,venue:e.venue,address:'',capacity:1,signupDeadline:start,cancelDeadline:start+60000,note:'',reason:'编辑活动'},cutoff-1);assert.equal(e.cancelDeadline,cutoff);
 });

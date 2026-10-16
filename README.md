@@ -112,7 +112,7 @@ Complete the real operator information and privacy decisions in [legal readiness
 - [Social features and game modes](docs/SOCIAL_FEATURES.md)
 - [Player pages](docs/PLAYER_PAGES.md) and [profiles/equipment](docs/PLAYER_PROFILES.md)
 - [Ranking](docs/RANKING.md), [singles ranking](docs/SINGLES_RANKING.md), [realm rating and realms](docs/REALM_PROGRESSION.md) and [podium](docs/RANKING_PODIUM.md)
-- [Cost sharing](docs/UPDATE_FEES.md)
+- [Cost sharing](docs/UPDATE_FEES.md) and [fee advances](docs/FEE_ADVANCES.md)
 - [Venues and map links](docs/VENUES.md)
 - [Feature guides](docs/FEATURE_GUIDES.md)
 - [Mobile navigation](docs/MOBILE_BACK_NAVIGATION.md)
