@@ -26,6 +26,19 @@ deduplicated against the confirmation notice), at most once every six hours per 
 disabled when everyone has paid, and the server refuses the request in that case. Reminders respect the fee confirmation
 notification preference and are cancelled if a newer version is confirmed before delivery. Delivery rechecks current payments and proxy ownership: fully paid recipients receive nothing, and partially paid proxy groups name only friends who still owe.
 
+## Automatic reminders
+
+The hourly Cloudflare cron (`build/sites-worker.ts`, `lib/fee-reminder-sweep.ts`) reminds unpaid players without anyone pressing the button:
+
+- 24, 48 and 72 hours after a split is confirmed, every account that still has an unpaid bill of its own or of a proxied friend gets the same personal reminder as the manual button. Paying stops further reminders; a fully paid split drops out.
+- 24 hours after the third reminder, if any bill is still unpaid, the owner and administrators are told once, with the names of those who still owe. An administrator without a bill of their own still receives this push.
+- Reminders are only sent between 09:00 and 21:59 Madrid time. A reminder that falls due at night waits for the morning. If the cron misses several steps, it sends one reminder, never a burst.
+- Only the latest confirmed version counts. A newer version starts its own schedule, and the replaced version is forgotten. Splits confirmed more than seven days ago, and deleted or cancelled activities, are not reminded automatically.
+- Progress per settlement version is stored in the `fee-reminder-sweep-v1` settings row. It is committed in the same batch as the notices, so a retried tick never sends a step twice. Pushes queued by the cron are delivered by the cron itself, without waiting for a visit.
+- An idle tick runs one small query, and outside reminder hours none at all. A tick with work reads only recent settlements, their events and payments, and the accounts and players, never the whole club.
+
+The manual "Remind unpaid (N)" button is unchanged and independent: organisers can still remind at any time, at most once every six hours per version.
+
 ## Saved payees
 
 Every transfer recipient saved for an activity is kept in the club settings as a saved payee (matched by the digits
