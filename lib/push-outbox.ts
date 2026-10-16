@@ -47,7 +47,9 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     if(notice?.kind==='awards')relevant=relevant&&(event.status==='ended'||event.end<=Date.now());
     if(notice?.kind==='fees'){
      const latest=(await db.prepare('SELECT payload FROM settlements WHERE event_id=? ORDER BY version DESC').bind(event.id).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload)).find(b=>b.confirmed);
-     relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id||(notice.proxyPlayerIds??[]).includes(b.playerId));
+     // The overdue notice goes to the owner and administrators, who need not have a bill of their own.
+     if(notice.overdue)relevant=relevant&&!!latest&&latest.id===notice.settlementId&&account.role==='admin';
+     else relevant=relevant&&!!latest&&(notice.settlementId?latest.id===notice.settlementId:notice.id.endsWith(':fees:'+latest.id))&&latest.bills.some((b:{playerId:string})=>b.playerId===player.id||(notice.proxyPlayerIds??[]).includes(b.playerId));
      // Recheck paid status and proxy ownership when a delayed/retried reminder is actually sent.
      if(relevant&&notice.due){
       const ids=[...new Set([player.id,...(notice.proxyPlayerIds??[])])],slots=ids.map(()=>'?').join(',');

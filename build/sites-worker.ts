@@ -9,12 +9,16 @@ import { hostingRequest } from "../lib/hosting-request";
 import { operatorExport } from "../lib/operator-export";
 import {legacySiteRedirect} from '../lib/legacy-redirect';
 import {runCoinRewardSweep} from '../lib/coin-reward-sweep';
+import {runFeeReminderSweep} from '../lib/fee-reminder-sweep';
 import {loadClubState} from '../lib/club-maintenance';
 
 export default {
-  async scheduled(_controller:ScheduledController,env:Cloudflare.Env){
+  async scheduled(_controller:ScheduledController,env:Cloudflare.Env,ctx:ExecutionContext){
     if(!env.DB||env.YULIN_HOSTING_PROVIDER!=='cloudflare'||env.YULIN_RELEASE_CHANNEL!=='private')return;
-    await runCoinRewardSweep({db:env.DB,now:Date.now(),settle:loadClubState});
+    // Each hourly job runs even if the other fails; reminders queued here are delivered without waiting for a visit.
+    const jobs=await Promise.allSettled([runCoinRewardSweep({db:env.DB,now:Date.now(),settle:loadClubState}),runFeeReminderSweep({db:env.DB,now:Date.now()})]);
+    for(const job of jobs)if(job.status==='rejected')console.warn('Scheduled job deferred');
+    ctx.waitUntil(flushPushOutbox(env).catch(()=>{console.warn('Push delivery deferred')}));
   },
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     const moved=legacySiteRedirect(request,(env as Cloudflare.Env&{CLUB_REDIRECT_ORIGIN?:string}).CLUB_REDIRECT_ORIGIN);
