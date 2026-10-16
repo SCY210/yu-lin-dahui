@@ -1,9 +1,11 @@
 import {eventStatusAt} from './event-lifecycle';
-import {isPractice} from './match-format';
+import {courtPlayers,eventFormat,isPractice} from './match-format';
 import {pointsWindow} from './points-window';
-import {validateRound} from './grouping';
+import {readyIds,validateRound} from './grouping';
 import {isPlannedLineup,pendingMatchLineup} from './round-lineup';
-import {registrationSpans} from './booking-signups';
+import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
+import {fillPlannedGap,type PlannedGap} from './planned-gap';
+import {livePresentIds} from './live-play';
 import {markRanked} from './all-ranked';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {month,type Event,type Match,type Round,type State} from './types';
@@ -14,10 +16,10 @@ const order=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefin
 /** Find only the first unfinished match on each physical court. A later round
  * may overlap an earlier one, but neither a court nor a player can play twice.
  * Read-only, so unchanged polls do not clone or rewrite the club. */
-export function scheduledCourtProgress(s:State,e:Event,now:number):{ready:Match[];expired:Match[]}{
+export function scheduledCourtProgress(s:State,e:Event,now:number):{ready:Match[];expired:Match[];gap?:PlannedGap}{
  const empty={ready:[],expired:[]};
  if(e.livePlay?.enabled||e.tournament||isPractice(e)||e.deletedAt!==undefined||['draft','ended','cancelled'].includes(eventStatusAt(e,now))||now<Math.max(e.start,pointsWindow(e).start)||now>=e.end)return empty;
- const rounds=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled').sort(order);
+ const rounds=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled');
  if(!rounds.some(r=>['published','playing'].includes(r.status)))return empty;
  // Attendance/court phases, not estimated individual match durations, control
  // the switch. An unfinished game may continue beyond its players' phase.
@@ -30,8 +32,11 @@ export function scheduledCourtProgress(s:State,e:Event,now:number):{ready:Match[
   const end=cuts.find(t=>t>r.start)??e.end,start=cuts.findLast(t=>t<=r.start)??e.start;
   return [r.id,{start,end}] as const;
  }));
+ // Gap rounds are appended with stable new slot IDs, but run before later
+ // attendance phases even when those phases have smaller original slot IDs.
+ rounds.sort((a,b)=>(phases.get(a.id)?.start??a.start)-(phases.get(b.id)?.start??b.start)||order(a,b));
  const bookings=new Map(s.bookings.map(b=>[b.id,b])),events=new Map(s.events.map(x=>[x.id,x]));
- const court=(m:Match)=>{const b=bookings.get(m.courtId);return b?JSON.stringify([(b.venue??events.get(m.eventId)?.venue??'').trim().toLowerCase(),b.name.trim().toLowerCase()]):m.courtId};
+ const court=(m:Pick<Match,'eventId'|'courtId'>)=>{const b=bookings.get(m.courtId);return b?JSON.stringify([(b.venue??events.get(m.eventId)?.venue??'').trim().toLowerCase(),b.name.trim().toLowerCase()]):m.courtId};
  const byRound=new Map<string,Match[]>(),busyPlayers=new Set<string>(),busyCourts=new Set<string>();
  for(const m of s.matches){
   if(m.eventId===e.id){const rows=byRound.get(m.roundId)??[];rows.push(m);byRound.set(m.roundId,rows)}
@@ -62,6 +67,28 @@ export function scheduledCourtProgress(s:State,e:Event,now:number):{ready:Match[
   try{validateRound(s,e.id,now,0,[m])}catch{continue}
   ready.push(m);busyCourts.add(key);ids.forEach(id=>busyPlayers.add(id));
  }
+ if(!ready.length&&e.playMode!=='arena'){
+  const currentStart=cuts.findLast(t=>t<=now)??e.start,currentEnd=cuts.find(t=>t>now)??e.end;
+  const future=rounds.filter(r=>(phases.get(r.id)?.start??-Infinity)>now);
+  const confirmedFuture=future.some(r=>['published','playing'].includes(r.status)&&(byRound.get(r.id)??[]).some(m=>m.status==='published'&&pendingMatchLineup(m)));
+  const current=rounds.filter(r=>{const p=phases.get(r.id);return p&&p.start===currentStart});
+  const pending=current.some(r=>(byRound.get(r.id)??[]).some(m=>pendingMatchLineup(m)));
+  const played=current.some(r=>(byRound.get(r.id)??[]).some(m=>['complete','forfeit'].includes(m.status)&&m.start!==null&&m.end!==null&&m.end<=now));
+  const until=Math.min(currentEnd,pointsWindow(e).end,e.end),duration=Math.min(e.pointsPlan?.roundMinutes??15,60,Math.floor((until-now)/60000));
+  if(confirmedFuture&&!pending&&played&&duration>=5){
+   const reserved=new Set(s.matches.filter(m=>m.end!==null&&m.end>now&&terminal(m)).map(court));
+   const free=[...bookings.values()].filter(b=>b.eventId===e.id&&b.start<=now&&b.end>=now+duration*60000&&!busyCourts.has(court({eventId:e.id,courtId:b.id}))&&!reserved.has(court({eventId:e.id,courtId:b.id})));
+   if(!free.length)return {ready,expired};
+   const present=new Set(livePresentIds(s,e,now));
+   const ids=readyIds(s,e.id,now,duration).filter(id=>present.has(id)),needed=courtPlayers(e);
+   const usable=free.filter(b=>{
+    const eligible=new Set(ids.filter(id=>bookingAllowsPlayer(s,e.id,b.id,id,now,now+duration*60000)));
+    if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed')return (e.pointsChoice.teams??[]).filter(t=>t.length===2&&t.every(id=>eligible.has(id))).length>=2;
+    return eligible.size>=needed;
+   });
+   if(usable.length)return {ready,expired,gap:{duration,until,courtIds:usable.map(b=>b.id),futureRoundIds:future.map(r=>r.id),playerIds:ids}};
+  }
+ }
  return {ready,expired};
 }
 export function readyScheduledMatches(s:State,e:Event,now:number):Match[]{return scheduledCourtProgress(s,e,now).ready}
@@ -69,7 +96,7 @@ export function readyScheduledMatches(s:State,e:Event,now:number):Match[]{return
 /** Persist the next courts in the same transaction as scoring (and recover due
  * courts on reads after arrivals/bookings change). Current-phase lineups stay intact. */
 export function advanceScheduledCourts(s:State,e:Event,now:number){
- const {ready:matches,expired}=scheduledCourtProgress(s,e,now);if(!matches.length&&!expired.length)return false;
+ const {ready:matches,expired,gap}=scheduledCourtProgress(s,e,now);if(!matches.length&&!expired.length&&!gap)return false;
  const rounds=new Map(s.rounds.map(r=>[r.id,r]));
  if(expired.length){
   const affected=new Set(expired.map(m=>m.roundId));expired.forEach(m=>m.status='cancelled');
@@ -91,7 +118,8 @@ export function advanceScheduledCourts(s:State,e:Event,now:number){
   clearFilledPointsWaiting(s,e);
   s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-courts',action:'pointsAutoAdvance',reason:'场地与球员空闲，自动开始已发布的下一场',changes:{eventId:e.id,matchIds:matches.map(m=>m.id)}});
  }
- return true;
+ const filled=gap?fillPlannedGap(s,e,now,gap):false;
+ return !!matches.length||!!expired.length||filled;
 }
 
 /** Scoring one court never finishes the other courts in its round. Future

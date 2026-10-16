@@ -52,3 +52,29 @@ Coverage: `tests/planned-phase-transition.test.ts`,
 `tests/live-conditional-read.test.ts` and `tests/points-auto-start-api.mjs` include
 partial rounds, exact clock boundaries, actual games crossing the boundary,
 unavailable next players and concurrent SQLite-backed maintenance reads.
+
+## Finishing a phase early
+
+When the current phase's confirmed queue has finished but the next confirmed
+phase has not begun, the backend fills free courts with new games from the
+currently available signup pool. It reuses fair-turn, venue, gender/strength and
+fixed-partner grouping; future published matches are excluded from the proposal's
+played history. Actual busy players and physical courts remain unavailable.
+Each extra game starts immediately and its estimated duration is limited by the
+current attendance/booking phase and points window. At least five whole minutes
+must remain. A game still in progress at the boundary finishes normally.
+
+Extra rounds receive new slot IDs without renumbering historical or future
+rounds. Backend ordering uses attendance phase first, then original slot order,
+so repeated gap games do not block behind the later phase's earlier slot IDs.
+Future confirmed lineups stay intact. Current drafts/pending games, an intentionally
+cancelled phase, insufficient players, and a future phase awaiting confirmation
+do not trigger gap filling. Once the entire confirmed schedule is exhausted,
+the existing explicit append action remains available while the activity has time.
+
+`pointsGapFill` audits the new games. Score-triggered advancement and read
+maintenance use the same transaction; concurrent reads commit only one set of
+games. `tests/planned-gap.test.ts` and `tests/points-auto-start-api.mjs` cover
+continued play, two simultaneous courts, phase ordering, singles/fixed pairs,
+cross-activity occupancy, exact cutoffs and request races. Frontend code is
+unchanged.

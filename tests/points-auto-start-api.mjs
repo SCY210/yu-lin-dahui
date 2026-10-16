@@ -29,6 +29,16 @@ try{
  assert.ok(phaseSaved.matches.filter(m=>m.roundId==='phase-round-0').every(m=>m.status==='cancelled'&&m.start===null&&m.scoreA===null));
  assert.ok(phaseSaved.matches.filter(m=>m.roundId==='phase-round-1').every(m=>m.status==='playing'));assert.equal(phaseSaved.matches.length,4);
  assert.ok(phaseReads.every(s=>s.revision===phaseSaved.revision));assert.equal((await api.loadClubState()).revision,phaseSaved.revision);
+ const gapFixture=structuredClone(phaseSaved),gapNow=Date.now(),gapCut=gapNow+30*60000,ge=gapFixture.events[0];ge.end=gapNow+90*60000;ge.pointsPlan.end=ge.end;
+ gapFixture.bookings.forEach(b=>b.end=ge.end);gapFixture.registrations.forEach((r,i)=>{r.arrival=i>=10?gapCut:ge.start;r.departure=i===8||i===9?gapCut:ge.end});
+ gapFixture.rounds[0].status='complete';gapFixture.rounds[1].status='published';gapFixture.rounds[1].start=gapCut;
+ gapFixture.matches.forEach(m=>{if(m.roundId==='phase-round-0')Object.assign(m,{status:'complete',start:ge.start,end:gapNow-60000,scoreA:21,scoreB:19,games:[{a:21,b:19}]});else Object.assign(m,{status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[]})});
+ const nextPhase=structuredClone(gapFixture.matches.filter(m=>m.roundId==='phase-round-1'));await api.save(gapFixture,'gap-fixture',phaseSaved);const gapBefore=await api.load();
+ const gapReads=await Promise.all([api.loadClubState(),api.loadClubState()]),gapSaved=await api.load();
+ assert.equal(gapSaved.revision,gapBefore.revision+1);assert.equal(gapSaved.audits.filter(a=>a.action==='pointsGapFill').length,1);assert.equal(gapSaved.matches.length,6);assert.equal(gapSaved.rounds.length,3);
+ assert.equal(gapSaved.matches.filter(m=>m.status==='playing').length,2);assert.ok(gapSaved.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b]).every(id=>!ids.slice(10).includes(id)));
+ assert.deepEqual(gapSaved.matches.filter(m=>m.roundId==='phase-round-1'),nextPhase);assert.ok(gapReads.every(s=>s.revision===gapSaved.revision));assert.equal((await api.loadClubState()).revision,gapSaved.revision);
  console.log('PASS due points start: concurrent SQLite-backed maintenance reads commit two courts once; retries see authoritative revision and repeated reads are idempotent.');
  console.log('PASS planned phase switch: racing reads atomically retire unstarted expired courts and start the confirmed next phase once without forfeits or duplicate games.');
+ console.log('PASS planned gap fill: concurrent maintenance creates two current-player games exactly once and preserves confirmed future lineups.');
 }finally{database.close();delete globalThis.__pointsClock}

@@ -55,6 +55,8 @@ export function createClubReadCache(limit=256){
 function liveBoundaries(s:State,e:Event,boundary:(at:number)=>void,now:number){
  const round=(e.pointsPlan?.roundMinutes??15)*minute,window=pointsWindow(e),cuts=[e.start,e.end];
  boundary(window.start);boundary(window.end);
+ // Automatic gap games need five whole minutes before the phase/window ends.
+ boundary(window.end-5*minute+1);
  for(const r of s.rounds)if(r.eventId===e.id){boundary(r.start);boundary(r.start+r.duration*minute)}
  // Courts and players count for a round only while they remain for its whole length.
  // These same arrival/departure/booking cuts switch confirmed planned phases:
@@ -63,6 +65,7 @@ function liveBoundaries(s:State,e:Event,boundary:(at:number)=>void,now:number){
  for(const r of s.registrations)if(r.eventId===e.id)for(const span of registrationSpans(s,e,r)){cuts.push(span.start,span.end??e.end);boundary((span.end??e.end)-round+1)}
  for(const at of cuts){
   boundary(at);
+  boundary(at-5*minute+1);
   // The remaining rounds of the current attendance/court phase (pointsRoundWindows) drop by one each time fewer than
   // five minutes are left beyond a whole number of rounds before the phase ends.
   for(let k=0;k<=48&&at-(k*round+5*minute)>now;k++)boundary(at-(k*round+5*minute));

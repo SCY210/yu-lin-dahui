@@ -93,3 +93,9 @@ test('a cached planned view expires exactly when the two-hour attendance phase s
  assert.ok(s.matches.some(m=>m.status==='cancelled'),'untouched earlier-phase lineups were retired');
  assert.equal(await startDuePointsSessions(s,cut+1,apply),false);
 });
+
+test('the five-whole-minute cutoff for automatic gap games is a registered clock boundary',()=>{
+ const s=createSimulation(base).state,e=s.events[0],cut=e.start+120*minute+1234;
+ e.schedulingMode='planned';e.pointsPlan={start:e.start,end:cut,roundMinutes:15};
+ assert.equal(clubViewValidUntil(s,s.accounts[0],cut-5*minute),cut-5*minute+1);
+});

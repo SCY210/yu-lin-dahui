@@ -35,7 +35,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
    }else{
     const rounds=s.rounds.filter(r=>r.eventId===original.id);
     const progress=scheduledCourtProgress(s,original,now);
-    if(!progress.ready.length&&!progress.expired.length&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000)&&(planKey===null||planKey===original.pointsSession.autoPlanKey))continue;
+    if(!progress.ready.length&&!progress.expired.length&&!progress.gap&&!(mode==='round'&&!rounds.length&&original.end-now>=5*60000)&&(planKey===null||planKey===original.pointsSession.autoPlanKey))continue;
    }
   }
   const work=structuredClone(s),e=work.events.find(e=>e.id===original.id)!;
