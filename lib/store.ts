@@ -46,7 +46,15 @@ export async function loadWithRestore(options:{incremental?:boolean}={}): Promis
         const restore=()=>{
             const state=emptyState();state.revision=snapshot.revision;
             const settings=snapshot.rows('settings')[0];if(settings)state.settings=storedSettings(settings.payload);
-            for(const name of names)assignRecords(state,name,snapshot.rows(name));
+            for(const name of names){
+                // Maintenance replaces derived rating history before reading it. Decode only if a caller
+                // actually needs the stored rows (including the independent rollback snapshot).
+                if(name==='ratingChanges')Object.defineProperty(state,name,{enumerable:true,configurable:true,
+                    get(){const value=snapshot.rows(name).map(row=>storedRecord(name,row));Object.defineProperty(state,name,{value,writable:true,enumerable:true,configurable:true});return value},
+                    set(value:State['ratingChanges']){Object.defineProperty(state,name,{value,writable:true,enumerable:true,configurable:true})},
+                });
+                else assignRecords(state,name,snapshot.rows(name));
+            }
             const policy=profileRestrictionsFromConfig(env.PROFILE_GENDER_ONLY_PLAYER_IDS);if(policy)state.profileRestrictions=policy;
             return state;
         };

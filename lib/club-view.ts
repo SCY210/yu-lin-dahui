@@ -10,7 +10,7 @@ import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
 import {month,type State,type Account} from './domain/types';
 import {activeAvatarStreaks} from './domain/season-points';
-import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard,replayRating} from './domain/ranking';
+import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard} from './domain/ranking';
 import {realmLedger,visibleRealm,type RealmSnapshot} from './domain/realm-rating';
 import {cancellationView} from './domain/cancellations';
 import {visibleActivityAcknowledgements} from './domain/activity-acknowledgement';
@@ -21,7 +21,7 @@ import {guestIds,guestHostName,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlementPreview} from './domain/money';
 import {socialHistoryParts,socialSnapshot} from './domain/social';
-import {sharedClubValue,sharedViewValidUntil} from './club-view-shared';
+import {sharedClubValue,sharedViewValidUntil,sharedRealmLedger} from './club-view-shared';
 import {rotationPlan} from './domain/play';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
@@ -42,7 +42,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  // Realms, 修为 and strength labels settle per activity, while ranking points stay live.
  const guests=guestIds(history);
  const quarter=rankingQuarter(period);
- const computeShared=()=>{const ledger=realmLedger(history,now);return {ledger,monthly:activityId?[]:leaderboard(history,period,now,ledger),quarterly:activityId?[]:quarterlyLeaderboard(history,quarter,now,ledger),annual:activityId?[]:annualLeaderboard(history,year,now,ledger),singlesQuarterly:activityId?[]:singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual:activityId?[]:singlesAnnualLeaderboard(history,year,now,ledger),socialParts:activityId?{stats:[],funny:[],annual:[]}:socialHistoryParts(history,period,year,ledger.snapshot)}};
+ const computeShared=()=>{const ledger=shared?sharedRealmLedger(history,now):realmLedger(history,now);return {ledger,monthly:activityId?[]:leaderboard(history,period,now,ledger),quarterly:activityId?[]:quarterlyLeaderboard(history,quarter,now,ledger),annual:activityId?[]:annualLeaderboard(history,year,now,ledger),singlesQuarterly:activityId?[]:singlesQuarterlyLeaderboard(history,quarter,now,ledger),singlesAnnual:activityId?[]:singlesAnnualLeaderboard(history,year,now,ledger),socialParts:activityId?{stats:[],funny:[],annual:[]}:socialHistoryParts(history,period,year,ledger.snapshot)}};
  const {ledger,monthly,quarterly,annual,singlesQuarterly,singlesAnnual,socialParts}=shared?sharedClubValue((activityId?'activity|':'')+shared.revision+'|'+period+'|'+year,now,()=>sharedViewValidUntil(history,now),computeShared):computeShared();
  const historicalMatches=new Map(history.matches.map(m=>[m.id,m]));
  const visibleHistory=new Set(history.events.filter(e=>admin||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
@@ -55,9 +55,9 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const {achievements,avatarStreaks}=shared?sharedClubValue(shared.revision+'|'+visibility,now,()=>sharedViewValidUntil(history,now),computeVisible):computeVisible();
  const noStreak={singles:0,doubles:0};
  const members=new Set(history.accounts.map(account=>account.playerId));
- // The admin rating replay is the same for every admin; share it like the boards.
- const replayHistory=()=>replayRating(structuredClone(history),now);
- const ratingHistory=!admin||activityId?[]:shared?sharedClubValue(shared.revision+'|rating-history',now,()=>sharedViewValidUntil(history,now),replayHistory):replayHistory();
+ // Normal screens never consume a per-game rating replay. The explicit history preview still returns it,
+ // and authorized exports retain all stored history. Keep the field for older client contracts.
+ const ratingHistory=[] as State['ratingChanges'];
  const mergedEventTargets=Object.fromEntries(s.events.filter(e=>e.deletedAt!==undefined&&e.mergedInto&&s.events.some(t=>t.id===e.mergedInto&&t.deletedAt===undefined)).map(e=>[e.id,e.mergedInto]));
  const deletedEvents=s.events.filter(e=>e.deletedAt!==undefined&&canRecoverEvent(s,a,e)).map(e=>({id:e.id,title:e.title,start:e.start,end:e.end,deletedAt:e.deletedAt,...(e.mergedInto?{mergedInto:e.mergedInto}:{})}));
  s.events=s.events.filter(e=>e.deletedAt===undefined);
@@ -97,6 +97,6 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
   // Only what paid status needs: who, for which activity, how much.
   payments:s.payments.map(({eventId,playerId,cents})=>({eventId,playerId,cents})),
-  audits:admin&&!activityId?privateEventState(history,a).audits:[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId,a)==='full',canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
+  audits:admin&&!activityId?privateEventState(history,a).audits.slice(-50):[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId,a)==='full',canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
  },s.settings.blockedWords??[]);
 }

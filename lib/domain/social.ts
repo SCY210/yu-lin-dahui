@@ -30,5 +30,9 @@ export function personality(s:State,year:number,now=Date.now()){
 /** Every finished match list is filtered and sorted once and shared by the helpers below (they used to redo it per
  * player and per activity). Outputs are unchanged. */
 /** The parts computed from the full history only, the same for every viewer (the club view shares them per revision). */
-export function socialHistoryParts(history:State,period:string,year:number,realms:ReturnType<typeof realmSnapshot>){const all=finished(history);return {stats:history.players.map(p=>playerStats(history,p.id,realms.get(p.id),all)),funny:funnyStats(history,period,all),annual:history.players.map(p=>({playerId:p.id,...annual(history,p.id,year,all)}))}}
+export function socialHistoryParts(history:State,period:string,year:number,realms:ReturnType<typeof realmSnapshot>){
+ const all=finished(history),byPlayer=new Map<string,Match[]>();
+ for(const match of all)for(const id of new Set([...match.a,...match.b])){const rows=byPlayer.get(id);if(rows)rows.push(match);else byPlayer.set(id,[match])}
+ return {stats:history.players.map(p=>playerStats(history,p.id,realms.get(p.id),byPlayer.get(p.id)??[])),funny:funnyStats(history,period,all),annual:history.players.map(p=>({playerId:p.id,...annual(history,p.id,year,byPlayer.get(p.id)??[])}))};
+}
 export function socialSnapshot(s:State,period:string,year:number,now=Date.now(),history=s,realms=realmSnapshot(history,now),parts=socialHistoryParts(history,period,year,realms)){const growth=realms,level=(team:string[])=>teamRealmLabel(team.map(id=>growth.get(id)??{score:realmPolicy.start,placement:true}));const own=finished(s);return {stats:parts.stats,funny:parts.funny,personality:personality(s,year,now),annual:parts.annual,arenas:Object.fromEntries(s.events.map(e=>[e.id,arenaStatus(s,e.id,own)])),courtBoards:Object.fromEntries(s.events.map(e=>[e.id,courtLeaderboard(s,e.id,own)])),matchLevels:Object.fromEntries(s.matches.map(m=>[m.id,{a:level(m.a),b:level(m.b)}]))}}

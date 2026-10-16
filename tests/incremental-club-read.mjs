@@ -49,6 +49,16 @@ try{
  queries=[];await equal();assert.ok(queries.some(q=>q==='SELECT id,payload FROM events'),'expired cursor falls back to a full transaction');
  const simultaneous=await Promise.all(Array.from({length:20},()=>api.loadWithRestore({incremental:true})));
  for(const result of simultaneous)assert.deepEqual(result.state,await api.load());
+ // Rating history may be overwritten by maintenance without parsing it; exports/rollback still decode it,
+ // detect invalid persisted rows and never share mutable arrays across callers or snapshots.
+ sql.prepare('INSERT INTO ratingChanges(id,payload) VALUES(?,?)').run('derived','invalid-json');
+ const deferred=await api.loadWithRestore({incremental:true});
+ deferred.state.ratingChanges=[];assert.deepEqual(deferred.state.ratingChanges,[]);
+ assert.throws(()=>deferred.restore().ratingChanges,/Invalid persisted payload/);
+ sql.prepare('UPDATE ratingChanges SET payload=? WHERE id=?').run(JSON.stringify({id:'derived',delta:3}),'derived');
+ const decoded=await equal();decoded.state.ratingChanges[0].delta=99;
+ assert.equal(decoded.restore().ratingChanges[0].delta,3);await equal();
+ sql.prepare('DELETE FROM ratingChanges WHERE id=?').run('derived');await equal();
  sqlitedb.injectFailure(q=>q.includes('FROM club_changes'));await assert.rejects(api.loadWithRestore({incremental:true}));sqlitedb.injectFailure(null);await equal();
  // Both cursor seeks and retention use the integer primary key, never a full change-feed scan.
  const plan=sql.prepare('EXPLAIN QUERY PLAN SELECT seq,table_name,row_id,payload FROM club_changes WHERE seq>? ORDER BY seq LIMIT ?').all(10,4097);

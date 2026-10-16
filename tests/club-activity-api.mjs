@@ -28,6 +28,9 @@ try{
  s.matches.push({...template,id:'secret',eventId:'private'});
  for(let i=0;i<600;i++)s.audits.push({id:'audit-'+i,at:now-1,actor:a.id,action:'fixture',reason:'Fictional historical row '.repeat(20)});
  const full=await read(),fullToken=full.headers.get('ETag'),fullText=await full.text();assert.equal(full.status,200);
+ const fullData=JSON.parse(fullText);assert.deepEqual(fullData.audits,s.audits.slice(-50),'ordinary reads retain exactly the 50 rows rendered by management');assert.deepEqual(fullData.ratingHistory,[],'unused per-game replay is absent from ordinary reads');
+ const exported=await GET(new Request('https://example.invalid/api/club?export=1'));
+ assert.equal(exported.status,200);assert.equal((await exported.json()).audits.length,s.audits.length,'authorized exports retain the entire history');
  const scoped=await read(e.id,fullToken),scopedText=await scoped.text(),part=JSON.parse(scopedText);assert.equal(scoped.status,200);assert.equal(part.activityScope,e.id);
  assert.ok(scopedText.length<fullText.length*.4);assert.deepEqual(part.audits,[]);assert.ok(part.matches.every(m=>m.eventId===e.id||m.status==='playing'));
  let token=scoped.headers.get('ETag');const loads=fixture.loads;now+=3000;assert.equal((await read(e.id,token)).status,304);assert.equal(fixture.loads,loads);

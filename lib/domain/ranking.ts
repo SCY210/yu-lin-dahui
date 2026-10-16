@@ -20,7 +20,7 @@ export function validScore(a:number,b:number,r:Rules=defaultRules){if(!Number.is
  * read it; singles never move it, the owner's 修为 grants do. For doubles-only players it equals their 修为. Owner-set initial ratings and
  * season K values no longer change it. */
 export const strengthAlgorithm='realm-elo-v2';
-export function replayRating(s:State,now=Date.now()){
+export function replayRating(s:Pick<State,'players'|'matches'|'events'|'accounts'|'audits'|'ratingChanges'>,now=Date.now()){
  const {rows,games}=replayRealmScores(s,m=>isDoublesMatch(m)&&isRatedMatch(m,now),()=>true,realmPolicy.doubles,now,ratingAdjustments(s));
  for(const p of s.players){const r=rows.get(p.id)!;p.rating=r.score;p.ratedGames=r.games}
  const changes=games.map(g=>({id:g.matchId+':'+g.gameIndex+':'+g.playerId,matchId:g.matchId,playerId:g.playerId,before:g.before,after:g.after,delta:g.delta,algorithm:strengthAlgorithm,k:g.k}));

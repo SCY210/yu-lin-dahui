@@ -1,7 +1,9 @@
 export const HALF_HOUR=30*60*1000;
 export const halfHourTimes=Array.from({length:48},(_,i)=>`${String(Math.floor(i/2)).padStart(2,'0')}:${i%2?'30':'00'}`);
 export const isHalfHourTime=(time:string)=>/^(?:[01]\d|2[0-3]):(?:00|30)$/.test(time);
-export const madridDateTime=(t:number)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(t).replace(' ','T');
+// Creating an ICU formatter for every court/registration dominated rotation-plan reads.
+const madridFormatter=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+export const madridDateTime=(t:number)=>madridFormatter.format(t).replace(' ','T');
 export function madridEpoch(v:string){const target=Date.parse(v+'Z');if(!Number.isFinite(target))throw new Error('时间无效');let t=target;for(let i=0;i<3;i++)t-=Date.parse(madridDateTime(t)+'Z')-target;if(madridDateTime(t)!==v)throw new Error('该时间在马德里夏令时切换期间不存在');return t}
 export function ceilHalfHour(t:number){if(!Number.isFinite(t))throw new Error('时间无效');return Math.ceil(t/HALF_HOUR)*HALF_HOUR}
 export function plannedEpoch(value:string,original:number){return madridDateTime(original)===value?original:madridEpoch(value)}

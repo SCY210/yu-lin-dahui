@@ -4,7 +4,7 @@ The club runs on Cloudflare's free Workers plan, which stops a request after 10 
 
 ## Where the time went
 
-Measured on a fictional club with 22 players, 30 activities and 600 matches (`club()` in `tests/performance.test.ts`):
+Measured on a fictional club with 22 players, 30 activities and 600 matches (`club()` in `tests/helpers/performance-fixture.ts`):
 
 | Work per club read | Before | After |
 | --- | --- | --- |
@@ -56,6 +56,10 @@ The measured rehearsal returned 1,153,440 rows. Adding a reserve of 20 indexed r
 The generated `.test-output/incremental-club-capacity.json` records the assumptions and counts. Local Node handler timings are not Cloudflare CPU measurements. Validate the deployed revision and invocation metrics separately; do not describe a small post-release sample as proof of a three-hour production load test.
 
 ## Merge requirements
+
+The later [CPU read investigation](CPU_READ_INVESTIGATION.md) documents the
+confirmed request paths, local profiling, lightweight application entry,
+bounded ordinary audit responses and reproducible three-hour handler rehearsal.
 
 ## Activity responses and adaptive polling
 

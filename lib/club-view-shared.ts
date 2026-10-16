@@ -40,8 +40,17 @@ export function sharedRealmLedger(s:State,now:number){return sharedClubValue('co
 
 /** Same effect as mergeStrengthRating once the migration marker is set (it returns null): the clock-driven 修为
  * refresh of every player and the rating change list, computed once per revision and validity window. */
+function strengthResult(state:State,now:number){
+ return sharedClubValue('strength|'+state.revision,now,()=>sharedViewValidUntil(state,now),()=>{
+  // replayRating only mutates players and replaces ratingChanges. Do not clone/parse the entire
+  // club (especially audits and old derived history) to get an independent replay.
+  const work={players:state.players.map(p=>({...p})),matches:state.matches,events:state.events,accounts:state.accounts,audits:state.audits,ratingChanges:[] as State['ratingChanges']};
+  replayRating(work,now);
+  return {players:new Map(work.players.map(p=>[p.id,{rating:p.rating,ratedGames:p.ratedGames}])),changes:work.ratingChanges};
+ });
+}
 export function refreshStrength(state:State,now:number){
- const result=sharedClubValue('strength|'+state.revision,now,()=>sharedViewValidUntil(state,now),()=>{replayRating(state,now);return {players:new Map(state.players.map(p=>[p.id,{rating:p.rating,ratedGames:p.ratedGames}])),changes:state.ratingChanges.map(change=>({...change}))}});
+ const result=strengthResult(state,now);
  for(const p of state.players){const r=result.players.get(p.id);if(r){p.rating=r.rating;p.ratedGames=r.ratedGames}}
  state.ratingChanges=result.changes.map(change=>({...change}));
  return null;
