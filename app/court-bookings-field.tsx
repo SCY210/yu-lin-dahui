@@ -33,6 +33,6 @@ export default function CourtBookingsField({rows,members,onChange}:{rows:CourtRo
    <div className="actions">{middle(row)&&<button type="button" className="ghost" onClick={()=>split(i,middle(row)!)}>拆成两段（不同的人约的）</button>}{rows.length>1&&<button type="button" className="ghost danger" onClick={()=>onChange(rows.filter((_,j)=>j!==i))}>删除这个时段</button>}</div>
   </fieldset>)}
   <button type="button" className="secondary" onClick={add}><Plus size={16} aria-hidden="true"/> 添加另一片场地</button>
-  <small className="hint">同一场地由不同的人连续预约，拆开填写约场人后会自动合并为一个接龙，不重复计算人数上限；另一片场地请使用不同名称。每段垫付的场费仍分别结算。</small>
+  <small className="hint">同一片场地由不同的人分时段约的（比如 4 小时由两个人各约 2 小时），点“拆成两段”再分别选约场人，活动页里仍是一个场地接龙；同时约了两片场地，用“添加另一片场地”。活动结束后，约场的人垫付的场费会从大家的分摊里还给他。</small>
  </div>;
 }

@@ -5,8 +5,10 @@ Members book courts and buy balls themselves; a member can book at most two hour
 ## Recording who advanced what
 
 - Creating an activity lists its court slots: court name, start, end and **who booked it**, all required. Slots booked by different members, or two courts at the same time, are separate rows: a slot can be split in two at its middle half hour (for example a four-hour court booked by two members for two hours each), and another court is added at the same time as the first slot. Rows move with the activity start. A practice activity with balls also names whose balls they are.
+- **One court booked in turn stays one slot** (`lib/domain/booking-advancers.ts`). Rows of the same court, venue and price that follow each other without a gap are saved as one court slot, so the activity page shows one sign-up list for it, with its whole time and each booker's part. The later bookers are stored as `handovers` (`{at, advancedBy}`, inside the slot and in time order). A slot added later on the activity page right before or after the same court extends that slot the same way. Rows with a gap, another court or another price stay separate.
+- Moving a slot's start or end drops handovers outside it; the part covering the new start keeps its booker.
 - Balls and other expenses added on the fees page name who bought or paid them, required on new activities.
-- Organisers can set or correct the advancer of any court slot or expense from its row on the fees page (`feeAdvance`). This also fills in activities created before advancers existed.
+- Organisers can set or correct the advancer of any court slot or expense from its row on the fees page (`feeAdvance`). This also fills in activities created before advancers existed. A slot booked in turn has one button per part; the request names the part by its start (`at`).
 - An advancer is an enabled member with an account. Friends registered by a member cannot advance.
 - New activities carry `feeAdvances: true`; their split cannot be confirmed until every item with a cost has an advancer. Older activities keep the old way of paying until every advancer is filled in. Their next confirmation then uses transfers, and already confirmed versions are never rewritten.
 - The two-hour booking limit is not checked by the app.
@@ -15,7 +17,7 @@ Members book courts and buy balls themselves; a member can book at most two hour
 
 Shares are calculated exactly as before. Then, at confirmation:
 
-1. Each advancer is repaid, for every item they advanced, the members' shares of that item plus its club-subsidised part. Equal-share rounding goes to the advancer, so the totals balance to the cent.
+1. Each advancer is repaid, for every item they advanced, the members' shares of that item plus its club-subsidised part. Equal-share rounding goes to the advancer, so the totals balance to the cent. On a slot booked in turn, every fee line is split between the bookers by how much of the line falls in each one's part; handover times are interval cut points, so in interval mode every line belongs to one booker.
 2. A friend's share is owed by the member who registered them, so only members transfer, and never to themselves.
 3. The owner owes the club-subsidised parts (subsidised courts or expenses, and subsidy exemptions).
 4. Each person's net is what they advanced minus what they owe. An advancer whose advance covers their own share owes nothing and shows as paid at once; if their share is larger, they pay the difference.
@@ -34,4 +36,4 @@ The advances, the transfers and the collector are stored with the confirmed vers
 
 ## Verification
 
-`tests/fee-advances.test.ts` covers the worked example (two bookers, a ball buyer and a proxied friend), collector mode, the owner's subsidy, transfer marking permissions and kept marks, required advancers on new activities, the old way for older ones, and a randomised balance check of the transfer planner. UI and API tests cover the creation form, the fees page and recipient selection.
+`tests/court-handovers.test.ts` covers joining rows of one court, repayment by part in every split mode, handover validation, slots added later, moved slots and per-part correction. `tests/fee-advances.test.ts` covers the worked example (two bookers, a ball buyer and a proxied friend), collector mode, the owner's subsidy, transfer marking permissions and kept marks, required advancers on new activities, the old way for older ones, and a randomised balance check of the transfer planner. UI and API tests cover the creation form, the fees page and recipient selection.

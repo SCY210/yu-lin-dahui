@@ -18,7 +18,7 @@ export function repairEventDate(s:State,plan:EventDateRepair,now:number){
  const snapshot={event:structuredClone(original),bookings:rows(s.bookings),registrations:rows(s.registrations),rounds:rows(s.rounds),matches:rows(s.matches),attendance:rows(s.attendance),costs:rows(s.costs),settlements:rows(s.settlements)};
  e.start=plan.toStart;e.end=plan.toEnd;e.signupDeadline+=delta;e.cancelDeadline+=delta;
  if(e.pointsPlan)e.pointsPlan={...e.pointsPlan,start:e.pointsPlan.start+delta,end:e.pointsPlan.end+delta};
- for(const b of rows(work.bookings)){b.start+=delta;b.end+=delta}
+ for(const b of rows(work.bookings)){b.start+=delta;b.end+=delta;for(const h of b.handovers??[])h.at+=delta}
  for(const r of rows(work.registrations)){r.arrival+=delta;r.departure+=delta;for(const slot of r.bookingSignups??[]){slot.arrival+=delta;slot.departure+=delta}}
  for(const r of rows(work.rounds))r.start+=delta;
  for(const m of rows(work.matches)){m.start=time(m.start);m.end=time(m.end)}

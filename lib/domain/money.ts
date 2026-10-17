@@ -21,7 +21,7 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  const ids=[...new Set(spans.map(a=>a.playerId))].sort(); const minutes=(id:string)=>spans.filter(a=>a.playerId===id).reduce((t,a)=>t+(a.end-a.start)/60000,0);
  const bills=ids.map(playerId=>({playerId,court:0,ball:0,other:0,total:0,minutes:minutes(playerId)}));
  const detail:Settlement['detail']=[];let total=0,subsidy=0,unallocated=0;
- const points=[e.start,e.end,...spans.flatMap(a=>[a.start,a.end]),...s.bookings.filter(b=>b.eventId===e.id).flatMap(b=>[b.start,b.end])];
+ const points=[e.start,e.end,...spans.flatMap(a=>[a.start,a.end]),...s.bookings.filter(b=>b.eventId===e.id).flatMap(b=>[b.start,b.end,...(b.handovers??[]).map(h=>h.at)])];
  for(const c of s.costs.filter(c=>c.eventId===e.id)){if(c.start!==null&&c.end!==null)points.push(c.start,c.end);for(const o of c.overrides??[])points.push(o.start,o.end)}
  for(const b of s.bookings.filter(b=>b.eventId===e.id))for(const a of courtSpans(s,e,b))points.push(a.start,Math.min(a.end,now));
  const cuts=[...new Set(points)].filter(t=>t>=e.start&&t<=e.end).sort((a,b)=>a-b);
