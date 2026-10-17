@@ -6,6 +6,7 @@ import {parseDomainCommand} from './command-contract';
 import {eventStatusAt} from './event-lifecycle';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
+import {maxConsecutiveRounds} from './grouping';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
@@ -27,6 +28,19 @@ const playing=(m:Match)=>m.status==='playing';
 const physical=(s:Pick<State,'bookings'>,e:Event,courtId:string)=>{
  const b=s.bookings.find(b=>b.id===courtId);return JSON.stringify([b?.venue??e.venue,b?.name??courtId]);
 };
+/** Live games each player has played in a row. A player rests when a game starts at the venue while they are not on
+ * court; otherwise their next game continues the run (docs/MATCH_GROUPING.md, at most three rounds in a row). */
+export function liveStreaks(s:Pick<State,'matches'>,eventId:string){
+ const games=s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status)).sort((a,b)=>a.start!-b.start!||a.id.localeCompare(b.id));
+ const onCourt=(id:string,at:number)=>games.some(m=>m.start!<=at&&(m.end===null?m.status==='playing':m.end>at)&&(m.a.includes(id)||m.b.includes(id)));
+ const streaks=new Map<string,number>();
+ for(const m of games){
+  const players=new Set([...m.a,...m.b]);
+  for(const [id] of streaks)if(!players.has(id)&&!onCourt(id,m.start!))streaks.set(id,0);
+  for(const id of players)streaks.set(id,(streaks.get(id)??0)+1);
+ }
+ return streaks;
+}
 export function liveAppearances(s:Pick<State,'matches'>,eventId:string,playerId:string){
  return s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status)&&[...m.a,...m.b].includes(playerId)&&(!m.noShow?.length||m.noShow.includes(playerId))).length;
 }
@@ -87,6 +101,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   if(['playing','complete','forfeit'].includes(m.status)&&(!m.noShow?.length||m.noShow.includes(id)))counts.set(id,(counts.get(id)??0)+1);
  }
  const appearances=(id:string)=>counts.get(id)??0;
+ // After three games in a row a player goes to the back of the queue, so they rest whenever someone else can play.
+ const streaks=liveStreaks(s,e.id),tired=(id:string)=>(streaks.get(id)??0)>=maxConsecutiveRounds;
  const fairOrder=(a:string,b:string)=>appearances(a)-appearances(b)||(lastTurns.get(a)??0)-(lastTurns.get(b)??0)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
  for(const court of courts){
   const key=physical(s,e,court.id),venue=court.venue??e.venue;
@@ -100,7 +116,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
    .sort((a,b)=>(b.end??b.start!)-(a.end??a.start!)||b.start!-a.start!||a.id.localeCompare(b.id))[0];
   if(previous&&!manual)continue;
   const justFinished=new Set(previous?[...previous.a,...previous.b]:[]);
-  const order=(a:string,b:string)=>Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
+  const order=(a:string,b:string)=>Number(tired(a))-Number(tired(b))||Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
   // Exchange equal game counts. Prefer the bench, but allow one position (one
   // complete team in fixed mode) to mix with the last court when that breaks a
   // repeated cohort. Otherwise 12 players on two courts form three permanent groups.
@@ -124,7 +140,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     const cost=(ts:string[][])=>balanceCost([Math.abs(ts[0].reduce((n,id)=>n+rating(id),0)-ts[1].reduce((n,id)=>n+rating(id),0))/2],history.variety(ts[0],ts[1],0),genderMismatches(s,ts[0],ts[1],rating),history.rematches(ts[0],ts[1]),history.cohorts(ts.flat()));
     let bestCost=cost(chosen);
     for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
-     if(chosen.includes(candidate)||chosen[i].some((id,j)=>!canMix(id,candidate[j])))continue;
+     if(chosen.includes(candidate)||chosen[i].some((id,j)=>!canMix(id,candidate[j]))||candidate.some(tired)&&!chosen[i].some(tired))continue;
      const next=[...chosen];next[i]=candidate;const nextCost=cost(next);
      const samePriority=chosen[i].every((id,j)=>sameTurn(id,candidate[j]));
      if(!samePriority&&((nextCost.cohorts>=bestCost.cohorts&&history.unmet(next.flat())<=history.unmet(chosen.flat()))||!next.some(t=>t.every(id=>!justFinished.has(id)))||!fairMix(next.flat())))continue;
@@ -136,7 +152,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
    let chosen=pair(s,e,pool.slice(0,courtPlayers(e)),history,rating);
    const minimumBench=Math.min(pool.filter(id=>!justFinished.has(id)).length,courtPlayers(e)-1);
    for(let pass=0;pass<2;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
-    const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!canMix(replaced,candidate))continue;
+    const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!canMix(replaced,candidate)||tired(candidate)&&!tired(replaced))continue;
     ids[i]=candidate;const next=pair(s,e,ids,history,rating);
     if(!sameTurn(replaced,candidate)&&((next.cost.cohorts>=chosen.cost.cohorts&&history.unmet(ids)<=history.unmet([...chosen.a,...chosen.b]))||ids.filter(id=>!justFinished.has(id)).length<minimumBench||!fairMix(ids)))continue;
     if(compareBalance(next.cost,chosen.cost)<0)chosen=next;

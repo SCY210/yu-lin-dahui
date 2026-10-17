@@ -71,6 +71,18 @@ files from ignored local test folders.
 
 A player who played each of the latest three rounds of an activity (`tiredPlayers`, `maxConsecutiveRounds` in `lib/domain/grouping.ts`) is chosen last for the next round in round, planned and gap-filling generation, for doubles, singles and fixed teams. So they rest whenever somebody else can take the place. Courts are never left short only for this rule: when the remaining players cannot fill every court, tired players still play. The rule can therefore only be met when at least a quarter of the players rest each round; with 10 players on two courts some must play a fourth round.
 
+Live play applies the same limit to games (`liveStreaks` in `lib/domain/live-play.ts`). A player rests when a game starts at the venue while they are not on court. After three games in a row they go to the back of the queue, and a cohort-breaking swap never brings in a tired player for a rested one.
+
+## Mixing everyone on few courts
+
+The fair-turn order (games owed, then rounds waited) often leaves ties, and ties used to fall back to list order. With one court and 8 players that formed two fixed groups of four that only played each other. The search now also swaps a resting player in for a selected one when the two are interchangeable for fair turns (`sameTurn` in `lib/domain/grouping.ts`):
+
+- the same number of games owed and the same three-round rest;
+- waiting at most one round apart;
+- the incoming player's run of rounds in a row stays at two or less, unless the replaced player's run is as long.
+
+A swap is kept only when it improves the pairing cost, which penalises repeated groups of four, partners and opponents. Game counts stay equal; occasionally someone waits two rounds while another plays two in a row. Among equal turns, the player with the longer run rests first. Singles use the same rule. `tests/court-mixing.test.ts` checks one court with 8 and 12 players, singles with 4 players, and the live three-game limit.
+
 ## Nobody on two courts at once
 
 Within one round nobody appears on two courts, and nobody plays two games at the same time:
