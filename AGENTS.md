@@ -1,5 +1,11 @@
 # Project collaboration requirements
 
+## Primary production destination (owner instruction, 2026-10-18)
+
+- Cloudflare is the primary site: https://yu-lin-dahui.chenyueshanxd.workers.dev/. New approved PRs and feature updates publish through the controlled private Cloudflare workflow.
+- The Sites-to-Cloudflare business-data copy was a one-time migration. Do not assume ongoing synchronization or overwrite either database during a code release.
+- The separate Sites deployment remains a secondary entry. Do not automatically publish PRs to it, change its audience, or add redirects without an explicit owner request.
+
 ## Significant updates must be synchronized to GitHub
 
 - The canonical repository is [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui).
