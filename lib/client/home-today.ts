@@ -1,11 +1,11 @@
 import type {Account,AwardVote,Booking,Event,Match,Registration,Round,State} from '../domain/types';
 import {eventStatusAt,signupClosesAt} from '../domain/event-lifecycle';
-import {canCastAwardVote} from '../domain/activity-voting';
+import {awardVotingHours,canCastAwardVote} from '../domain/activity-voting';
 import {homeLiveMatches} from './home-live-matches';
 import {pendingScores} from './score-reminder';
 
-/** How long a finished activity stays on the home page (and keeps prompting for the MVP vote). */
-export const recentlyEndedHours=5;
+/** How long a finished activity stays on the home page: as long as its MVP vote is open (24 hours). */
+export const recentlyEndedHours=awardVotingHours;
 /** Signup reminders start this long before the deadline. */
 export const signupSoonHours=24;
 /** A waitlist promotion is announced on the home page for this long. */

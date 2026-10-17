@@ -20,7 +20,9 @@ function fixture(count=8,courts=1){
  return {s,e,owner:s.accounts[0]};
 }
 const active=(s:ReturnType<typeof emptyState>)=>s.matches.filter(m=>m.status==='playing');
-const score=(s:ReturnType<typeof emptyState>,matchId:string,at=now+60000)=>apply(s,s.accounts[1],'score',{matchId,a:21,b:19,reason:'本局结束'},at);
+// A finished court waits for 开始组队 (liveNext); these tests press it right away, keeping the same players if nobody else can play.
+const nextGame=(s:ReturnType<typeof emptyState>,courtId:string,at:number)=>apply(s,s.accounts[1],'liveNext',{eventId:s.events[0].id,courtId,allowSame:true},at).catch(()=>{});
+const score=async(s:ReturnType<typeof emptyState>,matchId:string,at=now+60000)=>{const court=s.matches.find(m=>m.id===matchId)!.courtId,result=await apply(s,s.accounts[1],'score',{matchId,a:21,b:19,reason:'本局结束'},at);await nextGame(s,court,at);return result};
 
 test('各场独立推进，录分后自动开下一局且不重复安排正在打的人',async()=>{
  const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
@@ -55,6 +57,7 @@ test('没有替补就等待，球友可在休息好后主动准备，不强迫�
  await apply(s,owner,'liveStart',{eventId:e.id},now);await score(s,active(s)[0].id);
  assert.equal(active(s).length,0);assert.equal(s.matches.length,1);
  for(const a of s.accounts)await apply(s,a,'liveReady',{eventId:e.id,playerId:a.playerId},now+120000);
+ assert.equal(active(s).length,0,'a court that has had a game waits for 开始组队');await nextGame(s,s.matches[0].courtId,now+120000);
  assert.equal(active(s).length,1);assert.ok(e.livePlay!.preferences.every(p=>p.avoidConsecutive));
 });
 
@@ -109,7 +112,8 @@ test('同一真实场地不会被重复使用；暂停允许录分但不继续�
  await apply(s,owner,'liveStart',{eventId:e.id},now);assert.equal(active(s).length,1);
  await apply(s,owner,'livePause',{eventId:e.id,paused:true},now);
  await score(s,active(s)[0].id);assert.equal(active(s).length,0);
- await apply(s,owner,'livePause',{eventId:e.id,paused:false},now+120000);assert.equal(active(s).length,1);
+ await apply(s,owner,'livePause',{eventId:e.id,paused:false},now+120000);assert.equal(active(s).length,0,'the finished court waits for 开始组队');
+ await nextGame(s,s.bookings[0].id,now+120000);assert.equal(active(s).length,1);
 });
 
 test('纠正已完成比分不重复推进，实时对局不接受三局结果',async()=>{

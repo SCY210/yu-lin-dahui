@@ -22,6 +22,8 @@ try{
  const origin='https://club.example',user=id=>fixture.user={userId:id,displayName:id,method:'password'};
  const request=async(action,payload,requestId=crypto.randomUUID())=>({action,payload,requestId,revision:(await api.loadClubState()).revision});
  const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
+ // A scored court waits until a player or the organiser starts the next game (docs/LIVE_PLAY.md).
+ const nextGame=async()=>{const body=await request('liveNext',{eventId:event.id,courtId:'court'});assert.equal((await post(body)).status,200);assert.equal((await post(body)).status,200)};
  user('member1');assert.equal((await post(await request('liveStart',{eventId:event.id,role:'admin'}))).status,403);
  assert.equal((await post(await request('livePreference',{eventId:event.id,playerId:'p0',avoidConsecutive:true}))).status,403);
  user('member8');assert.equal((await post(await request('livePreference',{eventId:event.id,playerId:'p8',avoidConsecutive:true}))).status,400);
@@ -29,15 +31,16 @@ try{
  const begin=await request('liveStart',{eventId:event.id});assert.equal((await post(begin)).status,200);assert.equal((await post(begin)).status,200);
  let stored=await api.load();assert.equal(stored.matches.length,1);assert.equal(stored.matches[0].status,'playing');assert.equal(stored.events[0].livePlay.preferences.length,4);
  user('member4');const first=await request('score',{matchId:stored.matches[0].id,a:21,b:19,reason:'Finish without a time input'});assert.equal((await post(first)).status,200);assert.equal((await post(first)).status,200);
+ stored=await api.load();assert.equal(stored.matches.length,1,'no next game until someone starts it');assert.ok(stored.matches.every(m=>m.status!=='playing'));await nextGame();
  stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.matches[0].status,'complete');assert.equal(stored.matches[1].status,'playing');assert.deepEqual(new Set([...stored.matches[1].a,...stored.matches[1].b]),new Set(['p4','p5','p6','p7']));assert.equal(stored.events[0].livePlay.rest.length,4);
  const view=await (await api.GET(new Request(origin+'/api/club?month='+api.month(now)+'&year='+new Date(now).getUTCFullYear()))).json();assert.ok(view.matches.some(m=>m.status==='playing'));assert.equal(view.events[0].livePlay.rest.length,4);
  const correction=await request('score',{matchId:stored.matches[0].id,a:19,b:21,reason:'Correct result'});assert.equal((await post(correction)).status,200);stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.events[0].livePlay.completions[0].count,1);
  const before=structuredClone(stored),next=await request('score',{matchId:stored.matches[1].id,a:21,b:19,reason:'Storage rollback'}),batch=fixture.env.DB.batch;
  fixture.env.DB.batch=async list=>{sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw new Error('injected storage failure')}finally{sql.exec('ROLLBACK')}};
  assert.equal((await post(next)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),before);
- assert.equal((await post(next)).status,200);stored=await api.load();assert.equal(stored.matches.length,3);assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);assert.equal(stored.events[0].livePlay.completions[0].count,2);
+ assert.equal((await post(next)).status,200);await nextGame();stored=await api.load();assert.equal(stored.matches.length,3);assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);assert.equal(stored.events[0].livePlay.completions[0].count,2);
  const current=stored.matches.find(m=>m.status==='playing'),a=await request('score',{matchId:current.id,a:21,b:19,reason:'Concurrent A'}),b={...a,requestId:crypto.randomUUID(),payload:{...a.payload,a:19,b:21,reason:'Concurrent B'}};
- assert.deepEqual((await Promise.all([post(a),post(b)])).map(r=>r.status).sort(),[200,409]);stored=await api.load();assert.equal(stored.matches.length,4);assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
+ assert.deepEqual((await Promise.all([post(a),post(b)])).map(r=>r.status).sort(),[200,409]);await nextGame();stored=await api.load();assert.equal(stored.matches.length,4);assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
  const lineupMatch=stored.matches.find(m=>m.status==='playing'),lineupPayload={matchId:lineupMatch.id,a:[...lineupMatch.b],b:[...lineupMatch.a],expectedA:[...lineupMatch.a],expectedB:[...lineupMatch.b]};
  user('member4');assert.equal((await post(await request('liveLineup',lineupPayload))).status,403);user('owner');const lineupWrite=await request('liveLineup',lineupPayload),lineupBefore=await api.load();
  const realBatch=fixture.env.DB.batch;fixture.env.DB.batch=async()=>{throw new Error('lineup write failure')};assert.equal((await post(lineupWrite)).status,503);fixture.env.DB.batch=realBatch;assert.deepEqual(await api.load(),lineupBefore);
@@ -49,5 +52,5 @@ try{
  fixture.env.DB.batch=async()=>{throw new Error('switch rollback')};assert.equal((await post(switchWrite)).status,503);fixture.env.DB.batch=originalModeBatch;assert.deepEqual(await api.load(),modeBefore);assert.equal((await post(switchWrite)).status,200);assert.equal((await post(switchWrite)).status,200);stored=await api.load();assert.deepEqual(stored.matches,activeBeforeMode);assert.equal(stored.events[0].schedulingMode,'planned');assert.equal(stored.events[0].livePlay.enabled,false);assert.equal(stored.audits.filter(a=>a.action==='schedulingMode').length,1);assert.equal((await post(await request('schedulingMode',switchPayload))).status,409);
  const running=stored.matches.find(m=>m.status==='playing'),countBeforeFinish=stored.matches.length;assert.equal((await post(await request('score',{matchId:running.id,a:21,b:19}))).status,200);stored=await api.load();assert.equal(stored.matches.length,countBeforeFinish);assert.ok(stored.matches.every(m=>m.status!=='playing'));
  console.log('PASS scheduling switch API: creator/admin authority, rollback, idempotence, preserved current games and history, stale-mode refusal and disabled live advancement');
- console.log('PASS live-play API: stored preferences, permissions, no time inputs, atomic score/next-game save, request idempotence, correction without advancing, SQLite rollback and concurrent scoring conflict');
+ console.log('PASS live-play API: stored preferences, permissions, no time inputs, atomic score save, next game started on request, request idempotence, correction without advancing, SQLite rollback and concurrent scoring conflict');
 }finally{sql.close();delete globalThis.__livePlayApiTest}

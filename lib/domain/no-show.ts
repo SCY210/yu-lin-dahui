@@ -46,7 +46,8 @@ export async function applyNoShow(s:State,a:Account,action:string,input:unknown,
   // Withdraw only unscored attempts; nobody else loses a game or a rotation turn.
   for(const refill of refills){refill.status='cancelled';refill.end=now;const round=s.rounds.find(r=>r.id===refill.roundId);if(round&&s.matches.filter(x=>x.roundId===round.id).every(x=>x.status==='cancelled'))round.status='cancelled'}
   replayRating(s,now);
-  fillLiveCourts(s,e,now);
+  // A no-show is a replacement, not a finished game: refill these courts at once instead of waiting for 开始组队.
+  for(const courtId of new Set([m.courtId,...refills.map(x=>x.courtId)]))fillLiveCourts(s,e,now,{courtId,allowSame:true});
   s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'比赛开始后选手没到场，判负',changes:{eventId:e.id,matchId:m.id,absent,cancelledRefills:refills.map(m=>m.id)}});
   return true;
  }

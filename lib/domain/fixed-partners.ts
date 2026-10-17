@@ -1,4 +1,4 @@
-import {propose} from './grouping';
+import {propose,tiredPlayers} from './grouping';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
@@ -26,7 +26,9 @@ export function proposeFixed(s:State,e:Event,at:number,duration:number,seed:numb
  if(available.length<2)fail('本轮完整到场的固定搭档不足两队，请检查参加时间或改用轮换搭档');
  const debt=(team:string[])=>team.reduce((sum,id)=>sum+(base.stats[id]?.deficit??0),0)/2;
  const wait=(team:string[])=>Math.min(...team.map(id=>base.stats[id]?.wait??0));
- available.sort((a,b)=>debt(b)-debt(a)||wait(b)-wait(a)||a.join(':').localeCompare(b.join(':')));
+ // A team with a player who played the last three rounds rests whenever another team can play.
+ const tired=tiredPlayers(s,e.id),rests=(team:string[])=>Number(team.some(id=>tired.has(id)));
+ available.sort((a,b)=>rests(a)-rests(b)||debt(b)-debt(a)||wait(b)-wait(a)||a.join(':').localeCompare(b.join(':')));
  const selected:string[][]=[],used=new Set<string>(),courts:typeof base.courts=[];
  for(const court of base.courts){const pool=available.filter(t=>t.every(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,court.courtId,id,at,at+duration*60000)));if(pool.length<2)continue;const chosen=pool.slice(0,2);chosen.flat().forEach(id=>used.add(id));selected.push(...chosen);courts.push(court)}
  const count=courts.length;if(!count)fail('本时段完整固定搭档不足两队；请检查参加时间或改用每轮换搭档');

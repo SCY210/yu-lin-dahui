@@ -31,7 +31,7 @@ try{
  for(let i=0;i<2;i++)await send('livePreference',{eventId:single.id,playerId:'p'+i,avoidConsecutive:true});
  await send('liveStart',{eventId:single.id});stored=await api.load();const first=stored.matches[0];assert.equal(first.a.length,1);assert.equal(first.b.length,1);
  user('member5');assert.equal((await post(await command('score',{matchId:first.id,a:21,b:19}))).status,403);
- user('member1');const score=await command('score',{matchId:first.id,a:21,b:19});assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);stored=await api.load();assert.equal(stored.matches.length,2);assert.deepEqual(new Set([...stored.matches[1].a,...stored.matches[1].b]),new Set(['p2','p3']));
+ user('member1');const score=await command('score',{matchId:first.id,a:21,b:19});assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);await send('liveNext',{eventId:single.id,courtId:first.courtId});stored=await api.load();assert.equal(stored.matches.length,2);assert.deepEqual(new Set([...stored.matches[1].a,...stored.matches[1].b]),new Set(['p2','p3']));
  const visible=await view();assert.equal(visible.singlesQuarterlyLeaderboard.length,2);assert.ok(visible.quarterlyLeaderboard.every(r=>r.games===0&&r.points===0));assert.ok(visible.singlesQuarterlyLeaderboard.some(r=>r.points===3));
  await send('score',{matchId:first.id,a:19,b:21,reason:''});stored=await api.load();assert.equal(stored.matches.length,2);assert.equal(stored.audits.at(-1).reason,'常规修改');assert.ok(stored.players.every(p=>p.rating===1000));
  const before=structuredClone(stored),second=stored.matches.find(m=>m.status==='playing'),request=await command('score',{matchId:second.id,a:21,b:19}),batch=fixture.env.DB.batch;
