@@ -44,3 +44,6 @@
 .event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing{border-color:var(--border);border-left:1px solid var(--border);background:var(--card);animation:none}
 .event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing>summary{color:inherit}.event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing>summary::after{display:none}
 .event-scheduling.is-ended .compact-match.is-playing{border-top-color:var(--border)}.event-scheduling.is-ended .compact-match.is-playing .match-status{color:var(--muted-foreground);background:transparent;border-color:var(--border)}.event-scheduling.is-ended .compact-match.is-playing .match-status::before{display:none}
+/* One court fills the row instead of leaving half of it empty; on wide screens three courts share one row. */
+.event-scheduling .courts-grid>:only-child{grid-column:1/-1;width:100%;max-width:560px}
+@media(min-width:1000px){.event-scheduling .courts-grid:has(>:nth-child(3):last-child),.event-scheduling .courts-grid:has(>:nth-child(5)){grid-template-columns:repeat(3,minmax(0,1fr))}}

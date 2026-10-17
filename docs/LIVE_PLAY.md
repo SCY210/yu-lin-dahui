@@ -18,6 +18,8 @@ A court that has finished a game no longer starts the next one by itself. It wai
 
 Courts that have not had a game yet still start on their own: at the start of the activity, when a court slot opens, or when players arrive. The organiser starting live play, or arranging free courts, fills every free court. A no-show refills its court at once, because it replaces a player rather than finishing a game. A waiting court is not work for the read-time clock (`hasEmptyLiveCourt`).
 
+Courts keep their place on the page: they are listed by venue and court number (court 1, court 2, court 10), and a court that finished a game shows its waiting card in the same position instead of moving behind the courts still playing. One court fills the row; on wide screens three courts share one row (`tests/live-court-order-ui.mjs`).
+
 After the activity has ended by the clock, unscored games are no longer shown as live: the page reads "activity ended" with the number of unscored games, and the live controls are closed.
 
 ## Bench priority
