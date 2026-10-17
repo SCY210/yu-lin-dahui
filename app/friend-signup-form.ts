@@ -5,6 +5,7 @@ import {canManageEvent} from '../lib/domain/permissions';
 import {plannedInterval,plannedEpoch} from '../lib/time-planning';
 import {choice,text,halfTimed,hm,type Field} from './form-fields';
 import {guestLevels,defaultGuestLevel} from '../lib/domain/guests';
+import {continuousCourts} from '../lib/domain/continuous-courts';
 
 type Data=Pick<ClubData,'me'|'players'|'bookings'>;
 type Court=Data['bookings'][number];
@@ -12,8 +13,8 @@ type Values={bookingId:string;mode:'new'|'existing';name:string;gender:''|'male'
 export function friendSignupForm(e:Event,data:Data,now:number,court?:Court,preferExisting=false){
  const manager=canManageEvent(data.me,e);
  if(['ended','cancelled'].includes(e.status)||(!manager&&(e.status!=='open'||signupClosed(e,now))))return null;
- const courts=data.bookings.filter(b=>b.eventId===e.id&&b.end>now).sort((a,b)=>a.start-b.start||a.name.localeCompare(b.name));
- const selected=court?courts.find(b=>b.id===court.id):courts[0];if(!selected)return null;
+ const courts=continuousCourts(e,data.bookings).filter(b=>b.end>now);
+ const selected=court?courts.find(b=>b.segments.some(x=>x.id===court.id)):courts[0];if(!selected)return null;
  const friends=data.players.filter(p=>p.enabled&&p.id!==data.me.playerId&&(!p.guestEventId||p.guestEventId===e.id)&&(manager||p.ownerId===data.me.id));
  const values:Values={bookingId:selected.id,mode:preferExisting&&friends.length?'existing':'new',name:'',gender:'',guestLevel:String(defaultGuestLevel),playerId:friends[0]?.id??'',arrival:'',departure:'',note:''};
  const fields:Field[]=[];
@@ -25,7 +26,7 @@ export function friendSignupForm(e:Event,data:Data,now:number,court?:Court,prefe
  const convert=(v:Values)=>{
   const b=courts.find(b=>b.id===v.bookingId);if(!b)throw new Error('所选场地已不可报名，请重新选择');
   const plan=plannedInterval(b.start,b.end);
-  const times={bookingId:b.id,arrival:v.arrival?plannedEpoch(v.arrival,plan.start):plan.start,departure:v.departure?plannedEpoch(v.departure,plan.end):plan.end,note:v.note??''};
+  const times={bookingId:b.id,continuousCourt:true,arrival:v.arrival?plannedEpoch(v.arrival,plan.start):plan.start,departure:v.departure?plannedEpoch(v.departure,plan.end):plan.end,note:v.note??''};
   if(v.mode==='new'&&!v.gender)throw new Error('请选择朋友性别，用于分队');
   return v.mode==='existing'?{...times,mode:'existing' as const,playerId:v.playerId}:{...times,mode:'new' as const,name:v.name,gender:v.gender as 'male'|'female',guestLevel:Number(v.guestLevel)||defaultGuestLevel};
  };

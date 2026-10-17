@@ -10,13 +10,36 @@ import { canManageEvent } from './permissions';
 import { cancellationNeedsApproval } from './cancellation';
 import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
+import {continuousCourts} from './continuous-courts';
 const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
-    courtRegister: z.object({ ...activityAcknowledgementInput, bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
-    courtCancel: z.object({ bookingId: id, playerId: id, reason }),
-    courtMoveQueue: z.object({ bookingId: id, playerId: id, beforePlayerId: id, reason }),
+    courtRegister: z.object({ ...activityAcknowledgementInput, continuousCourt:z.boolean().optional(), bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
+    courtCancel: z.object({ continuousCourt:z.boolean().optional(), bookingId: id, playerId: id, reason }),
+    courtMoveQueue: z.object({ continuousCourt:z.boolean().optional(), bookingId: id, playerId: id, beforePlayerId: id, reason }),
 };
 export async function applyCourtSignup(s: State, a: Account, action: string, input: unknown, now: number) {
+ const command=parseDomainCommand(schemas,action,input);if(!command)return false;
+ const p=command.payload;if(!p.continuousCourt)return applyCourtSignupSingle(s,a,action,input,now);
+ const booking=s.bookings.find(b=>b.id===p.bookingId)??fail('场地时段不存在'),event=s.events.find(e=>e.id===booking.eventId)??fail('活动不存在');
+ const group=continuousCourts(event,s.bookings).find(g=>g.segments.some(b=>b.id===booking.id))!;
+ if(command.action==='courtRegister'&&(command.payload.arrival<group.start||command.payload.departure>group.end||command.payload.departure<=command.payload.arrival))fail('参加时间必须在所选场地时段内');
+ const work=structuredClone(s),registration=work.registrations.find(r=>r.eventId===event.id&&r.playerId===p.playerId);
+ let applied=false;
+ for(const segment of group.segments){
+  const row=registration?.bookingSignups?.find(x=>x.bookingId===segment.id&&x.status!=='cancelled');
+  if(command.action==='courtRegister'){
+   const payload=command.payload,start=Math.max(payload.arrival,segment.start),end=Math.min(payload.departure,segment.end);
+   if(end<=start){if(row){if(row.status==='confirmed'&&cancellationNeedsApproval({...event,start:segment.start},now,canManageEvent(a,event)))fail('已过自由取消时间，缩短时段请先申请取消或联系活动创建者');await applyCourtSignupSingle(work,a,'courtCancel',{bookingId:segment.id,playerId:p.playerId,reason:'调整连续场地参加时段'},now);applied=true}continue}
+   if(!canManageEvent(a,event)&&segment.end<=now&&row&&row.arrival===start&&row.departure===end&&row.note===payload.note)continue;
+   await applyCourtSignupSingle(work,a,action,{...payload,continuousCourt:false,bookingId:segment.id,arrival:start,departure:end},now);applied=true;
+  }else if(row){
+   if(command.action==='courtMoveQueue'&&!work.registrations.some(r=>r.eventId===event.id&&r.playerId===command.payload.beforePlayerId&&r.bookingSignups?.some(x=>x.bookingId===segment.id&&x.status==='waitlist')))continue;
+   await applyCourtSignupSingle(work,a,action,{...p,continuousCourt:false,bookingId:segment.id},now);applied=true;
+  }
+ }
+ if(!applied)fail('未找到该场地报名');Object.assign(s,work);return true;
+}
+async function applyCourtSignupSingle(s: State, a: Account, action: string, input: unknown, now: number) {
     const command = parseDomainCommand(schemas, action, input);
     if (!command)
         return false;

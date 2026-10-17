@@ -6,7 +6,7 @@ export function newEventForm(now:number,tournament=false,canRank=false,members:s
  return {title:tournament?'创建比赛':'创建活动',action:'event',values:{tournament,ranking:canRank?'ranked':'ordinary',matchFormat:'doubles',venue:'',address:'',start:dt(start),end:dt(end),capacity:16,cancelDeadline:dt(start-86400000),note:'',status:'open',courts:[{name:'1号场',start:dt(start),end:dt(end),advancedBy:''}],courtPrice:6.9,practiceShuttleCents:200,practiceBallCount:0,practiceBallBy:''},
  fields:[choice('matchFormat','活动类型',tournament?[['doubles','双打 · 固定搭档'],['singles','单打 · 每方1人']]:[['doubles','双打 · 每方2人'],['singles','单打 · 每方1人'],['practice','练球 · 专项练习']]),
   ...(canRank?[choice('ranking','单打 / 双打计分（练球不计分）',[['ranked','积分赛 · 计入积分与修为'],['ordinary','普通活动 · 不计积分与修为']])]:[]),
-  {key:'venue',label:'球馆',type:'venue'},halfTimed('start','开始'),halfTimed('end','结束'),number('capacity','接龙人数上限'),
+  {key:'venue',label:'球馆',type:'venue'},halfTimed('start','开始'),halfTimed('end','结束'),number('capacity','每片场地接龙人数上限'),
   {key:'courts',label:'场地时段与约场人',type:'court-bookings',options:members},
   {key:'courtPrice',label:'每小时场地价格 · 欧元',type:'price-stepper',step:0.1,min:0},
   {...text('note','活动说明 / 具体练习内容'),type:'textarea',optional:true,requiredWhen:practice},
