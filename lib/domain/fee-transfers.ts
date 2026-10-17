@@ -1,4 +1,5 @@
-import type {Payment,Settlement} from './types';
+import {bookingParts} from './booking-advancers';
+import type {Handover,Payment,Settlement} from './types';
 
 /** Fee advances (docs/FEE_ADVANCES.md). Members book courts and buy balls themselves, so a confirmed split is settled
  * by transfers between members instead of everyone paying one recipient: each person's net is what they advanced minus
@@ -9,21 +10,33 @@ type Line=Settlement['detail'][number];
 /** Payment method of a marked transfer; its `to` names the receiver. */
 export const transferPayment='transfer';
 
+type AdvanceItem={id:string;advancedBy?:string;start?:number|null;end?:number|null;handovers?:Handover[]};
+/** Splits cents by weight exactly: floors first, then the largest remainders get the cents left, earlier parts on ties. */
+function splitCents(cents:number,weights:number[]){
+ const sum=weights.reduce((a,b)=>a+b,0);if(!sum)return weights.map((_,i)=>i?0:cents);
+ const parts=weights.map(w=>Math.floor(cents*w/sum));let left=cents-parts.reduce((a,b)=>a+b,0);
+ for(const [,i] of weights.map((w,i)=>[cents*w%sum,i]).sort((a,b)=>b[0]-a[0]||a[1]-b[1])){if(left<=0)break;parts[i]++;left--}
+ return parts;
+}
 /** What each advancer is repaid: for every court slot or expense, the members' shares of its lines plus its subsidy.
- * Equal-share rounding therefore goes to the advancer and the totals balance exactly. Null while anything is still
+ * Equal-share rounding therefore goes to the advancer and the totals balance exactly. A court booked in turn repays each
+ * booker the part of every line that falls in their time (lib/domain/booking-advancers.ts). Null while anything is still
  * unallocated or an item with a cost has no advancer, so such a split is paid the old way. */
-export function feeAdvances(items:{id:string;advancedBy?:string}[],detail:Line[],unallocated:number):Advance[]|null{
+export function feeAdvances(items:AdvanceItem[],detail:Line[],unallocated:number):Advance[]|null{
  if(unallocated)return null;
- const repaid=new Map<string,number>();
+ const repaid=new Map<string,{advancedBy?:string;cents:number}>();
  for(const line of detail){
   if(!line.item)return null;
-  repaid.set(line.item,(repaid.get(line.item)??0)+Object.values(line.shares).reduce((sum,cents)=>sum+cents,0)+line.subsidy);
+  const cents=Object.values(line.shares).reduce((sum,c)=>sum+c,0)+line.subsidy,item=items.find(x=>x.id===line.item);
+  const parts=item?.handovers?.length&&typeof item.start==='number'&&typeof item.end==='number'?bookingParts({...item,start:item.start,end:item.end}):[{start:line.start,end:line.end,advancedBy:item?.advancedBy}];
+  const amounts=parts.length>1?splitCents(cents,parts.map(p=>Math.max(0,Math.min(p.end,line.end)-Math.max(p.start,line.start)))):[cents];
+  parts.forEach((p,i)=>{const key=line.item+'#'+i,row=repaid.get(key)??{advancedBy:p.advancedBy,cents:0};row.cents+=amounts[i];repaid.set(key,row)});
  }
  const by=new Map<string,number>();
- for(const [itemId,cents] of repaid){
+ for(const {advancedBy,cents} of repaid.values()){
   if(!cents)continue;
-  const advancer=items.find(item=>item.id===itemId)?.advancedBy;if(!advancer)return null;
-  by.set(advancer,(by.get(advancer)??0)+cents);
+  if(!advancedBy)return null;
+  by.set(advancedBy,(by.get(advancedBy)??0)+cents);
  }
  return [...by].map(([playerId,cents])=>({playerId,cents})).sort((a,b)=>a.playerId.localeCompare(b.playerId));
 }
