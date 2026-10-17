@@ -28,12 +28,13 @@ test('two singles players can start, score and correct without notes; rest is re
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:21,b:19},now+1000);assert.equal(first.status,'complete');assert.equal(s.matches.length,1);assert.ok(e.livePlay!.rest.some(r=>r.playerId==='p0'));
  const board=projectClubState(s,owner,'2030-10',2030,now+1000);assert.equal(board.singlesQuarterlyLeaderboard.length,2);assert.ok(board.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));assert.ok(board.singlesQuarterlyLeaderboard.some(r=>r.points===3));
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:19,b:21,reason:''},now+2000);assert.equal(s.matches.length,1);assert.equal(s.audits.at(-1)!.reason,'常规修改');
- await apply(s,owner,'liveReady',{eventId:e.id,playerId:'p0'},now+3000);assert.equal(s.matches.length,2);assert.equal(s.matches[1].status,'playing');
+ await apply(s,owner,'liveReady',{eventId:e.id,playerId:'p0'},now+3000);assert.equal(s.matches.length,1,'the court waits for 开始组队');
+ await apply(s,s.accounts[1],'liveNext',{eventId:e.id,courtId:first.courtId,allowSame:true},now+3000);assert.equal(s.matches.length,2);assert.equal(s.matches[1].status,'playing');
  assert.ok(s.players.every(p=>p.rating===1000),'Singles must not change doubles matchmaking Elo');
 });
 test('independent singles courts never double-book a player and keep appearances balanced',async()=>{
  const {s,e,owner}=await fixture('singles',6,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
- for(let i=0;i<12;i++){const active=s.matches.filter(m=>m.status==='playing');assert.equal(active.length,2);const ids=active.flatMap(m=>[...m.a,...m.b]);assert.equal(new Set(ids).size,4);assert.ok(active.every(m=>m.a.length===1&&m.b.length===1));await apply(s,owner,'score',{matchId:active[0].id,a:21,b:19},now+1000+i*1000)}
+ for(let i=0;i<12;i++){const active=s.matches.filter(m=>m.status==='playing');assert.equal(active.length,2);const ids=active.flatMap(m=>[...m.a,...m.b]);assert.equal(new Set(ids).size,4);assert.ok(active.every(m=>m.a.length===1&&m.b.length===1));await apply(s,owner,'score',{matchId:active[0].id,a:21,b:19},now+1000+i*1000);await apply(s,owner,'liveNext',{eventId:e.id,courtId:active[0].courtId},now+1000+i*1000)}
  const counts=s.players.map(p=>liveAppearances(s,e.id,p.id));assert.ok(Math.max(...counts)-Math.min(...counts)<=1,counts.join(','));
 });
 test('single-round and preplanned singles use two players per court with venue and duplicate checks',async()=>{

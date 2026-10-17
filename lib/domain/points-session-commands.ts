@@ -29,11 +29,13 @@ function replace(s:State,e:Event,m:Match,playerId:string,replacement:'player'|'g
  m.status='cancelled';if(m.start!==null)m.end=now;
  let teams:{a:string[];b:string[]}|undefined;
  if(replacement==='player'){
-  const busy=new Set(s.matches.filter(x=>x.status==='playing').flatMap(x=>[...x.a,...x.b])),original=new Set([...m.a,...m.b]),venue=court.venue??e.venue;
+  // Nobody plays on two courts at once or twice in one round: players of every other unfinished game of this round
+  // (planned games may still be waiting to start) are not available either.
+  const busy=new Set(s.matches.filter(x=>x.id!==m.id&&(x.status==='playing'||x.roundId===m.roundId&&x.status!=='cancelled')).flatMap(x=>[...x.a,...x.b])),original=new Set([...m.a,...m.b]),venue=court.venue??e.venue;
   const candidates=livePresentIds(s,e,now).filter(id=>(!original.has(id)||id===playerId&&e.pointsSession?.attendance.some(row=>row.playerId===playerId&&row.available))&&!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,now,now+1)).sort((a,b)=>liveAppearances(s,e.id,a)-liveAppearances(s,e.id,b)||Math.max(0,...s.matches.filter(m=>m.status==='complete'&&[...m.a,...m.b].includes(a)).map(m=>m.end??m.start??0))-Math.max(0,...s.matches.filter(m=>m.status==='complete'&&[...m.a,...m.b].includes(b)).map(m=>m.end??m.start??0))||a.localeCompare(b));
   if(candidates.length)teams={a:m.a.map(id=>id===playerId?candidates[0]:id),b:m.b.map(id=>id===playerId?candidates[0]:id)};
  }else{
-  const copy=structuredClone(s),out=new Set([...m.a,...m.b]);copy.players.forEach(p=>{if(out.has(p.id))p.enabled=false});copy.matches.push(...copy.bookings.filter(b=>b.id!==court.id).map(b=>({...structuredClone(m),id:'blocked:'+b.id,courtId:b.id,a:[],b:[],status:'playing' as const,start:now})));
+  const copy=structuredClone(s),out=new Set([...m.a,...m.b,...s.matches.filter(x=>x.id!==m.id&&x.roundId===m.roundId&&x.status!=='cancelled').flatMap(x=>[...x.a,...x.b])]);copy.players.forEach(p=>{if(out.has(p.id))p.enabled=false});copy.matches.push(...copy.bookings.filter(b=>b.id!==court.id).map(b=>({...structuredClone(m),id:'blocked:'+b.id,courtId:b.id,a:[],b:[],status:'playing' as const,start:now})));
   const venue=court.venue??e.venue;copy.players.forEach(p=>{if(liveResting(e,p.id,venue))p.enabled=false});
   try{teams=(e.pointsChoice?.selectedMode==='fixed'&&e.pointsChoice.teams?proposeFixed(copy,e,now,0,1,e.pointsChoice.teams):propose(copy,e,now,0,1)).courts[0]}catch{teams=undefined}
  }

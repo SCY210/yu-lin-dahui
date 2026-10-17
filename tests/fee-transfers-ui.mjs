@@ -38,10 +38,12 @@ try{
  assert.match(text(ui.toJSON()),/转给 小波 · €1\.20/);assert.doesNotMatch(text(ui.toJSON()),/转给 爱丽丝/,'a marked transfer disappears');
  await act(()=>button('标记已转')[0].props.onClick());assert.deepEqual(actions.pop(),['home',[{eventId:'e',settlementId:'v1',from:'p0',to:'p2'}]]);
  await mount(HomeUnpaid,{settlements:[settlement],payments:[],players,me:{id:'alice',playerId:'p1'},events:[e],onOpen:()=>{}});assert.equal(ui.toJSON(),null,'an advancer owes nothing');
- // Creation rows: add a slot after the last one, choose who booked it, remove it again.
- let rows=[{name:'1号场',start:'2026-11-05T19:00',end:'2026-11-05T21:00',advancedBy:''}];
+ // Creation rows: one court booked in turn is split into two slots; a second court runs at the same time.
+ let rows=[{name:'1号场',start:'2026-11-05T19:00',end:'2026-11-05T23:00',advancedBy:'p1'}];
  await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
- await act(()=>button('添加场地时段')[0].props.onClick());assert.deepEqual(rows[1],{name:'1号场',start:'2026-11-05T21:00',end:'2026-11-05T22:00',advancedBy:''});
+ await act(()=>button('拆成两段')[0].props.onClick());assert.deepEqual(rows,[{name:'1号场',start:'2026-11-05T19:00',end:'2026-11-05T21:00',advancedBy:'p1'},{name:'1号场',start:'2026-11-05T21:00',end:'2026-11-05T23:00',advancedBy:''}]);
+ await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
+ await act(()=>button('添加另一片场地')[0].props.onClick());assert.deepEqual(rows[2],{name:'2号场',start:'2026-11-05T19:00',end:'2026-11-05T21:00',advancedBy:''});rows=rows.slice(0,2);
  await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
  const selects=ui.root.findAll(n=>n.type==='select'&&n.props.required&&!String(n.props.className).includes('half-hour'));assert.equal(selects.length,2);
  await act(()=>selects[1].props.onChange({target:{value:'p2'}}));assert.equal(rows[1].advancedBy,'p2');

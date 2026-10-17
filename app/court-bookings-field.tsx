@@ -6,13 +6,19 @@ import './court-bookings-field.css';
 
 /** One booked court slot of a new activity and the member who booked (and pays) it (docs/FEE_ADVANCES.md). */
 export type CourtRow={name:string;start:string;end:string;advancedBy:string};
-const later=(value:string,ms:number)=>{try{return madridDateTime(madridEpoch(value)+ms)}catch{return value}};
+const halfHour=1800000;
+/** The half hour nearest the middle of a slot, or null when the slot is shorter than an hour or not a valid time. */
+function middle(row:CourtRow){try{const start=madridEpoch(row.start),end=madridEpoch(row.end);if(end-start<2*halfHour)return null;return madridDateTime(start+Math.round((end-start)/2/halfHour)*halfHour)}catch{return null}}
 
 /** Court slots of a new activity. Slots booked by different members, or two courts at the same time, are separate rows;
  * every row needs the member who booked it. */
 export default function CourtBookingsField({rows,members,onChange}:{rows:CourtRow[];members:string[][];onChange:(rows:CourtRow[])=>void}){
  const set=(index:number,patch:Partial<CourtRow>)=>onChange(rows.map((row,i)=>i===index?{...row,...patch}:row));
- const add=()=>{const last=rows.at(-1)!;onChange([...rows,{name:last.name,start:last.end,end:later(last.end,3600000),advancedBy:''}])};
+ // One court booked by two members in turn (each may book only two hours a day): split the slot where the second
+ // booking starts, then choose who booked each part.
+ const split=(index:number,at:string)=>onChange(rows.flatMap((row,i)=>i===index?[{...row,end:at},{...row,start:at,advancedBy:''}]:[row]));
+ // Another court at the same time as the first slot, numbered after the courts already listed.
+ const add=()=>{const first=rows[0],numbers=rows.map(r=>Number(/^(\d+)号场$/.exec(r.name.trim())?.[1]??0));onChange([...rows,{name:(Math.max(0,...numbers)+1)+'号场',start:first.start,end:first.end,advancedBy:''}])};
  return <div className="court-bookings">
   {rows.map((row,i)=><fieldset className="court-booking" key={i}>
    <legend>场地时段 {i+1}</legend>
@@ -24,9 +30,9 @@ export default function CourtBookingsField({rows,members,onChange}:{rows:CourtRo
    <label><span>谁约的（场费由他垫付）</span><select className="pick native-form-select" required value={row.advancedBy} onChange={ev=>set(i,{advancedBy:ev.target.value})}>
     {!row.advancedBy&&<option value="" disabled>请选择约场的球友</option>}{members.map(([id,name])=><option key={id} value={id}>{name}</option>)}
    </select></label>
-   {rows.length>1&&<button type="button" className="ghost danger" onClick={()=>onChange(rows.filter((_,j)=>j!==i))}>删除这个时段</button>}
+   <div className="actions">{middle(row)&&<button type="button" className="ghost" onClick={()=>split(i,middle(row)!)}>拆成两段（不同的人约的）</button>}{rows.length>1&&<button type="button" className="ghost danger" onClick={()=>onChange(rows.filter((_,j)=>j!==i))}>删除这个时段</button>}</div>
   </fieldset>)}
-  <button type="button" className="secondary" onClick={add}><Plus size={16} aria-hidden="true"/> 添加场地时段</button>
-  <small className="hint">不同的人约的时段分开填写，同一时间的两片场地也分开填写。活动结束后，约场的人垫付的场费会从大家的分摊里还给他。</small>
+  <button type="button" className="secondary" onClick={add}><Plus size={16} aria-hidden="true"/> 添加另一片场地</button>
+  <small className="hint">同一片场地由不同的人分时段约的（比如 4 小时由两个人各约 2 小时），点“拆成两段”再分别选约场人；同时约了两片场地，用“添加另一片场地”。活动结束后，约场的人垫付的场费会从大家的分摊里还给他。</small>
  </div>;
 }

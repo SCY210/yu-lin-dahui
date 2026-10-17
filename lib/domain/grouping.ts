@@ -9,12 +9,25 @@ import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
 import {eventFormat,teamSize,isPractice} from './match-format';
 export function readyIds(s:State,eventId:string,at:number,duration=0){const e=s.events.find(e=>e.id===eventId);if(!e)return [];const automatic=usesAutomaticAttendance(e);return [...new Set(attendanceForEvent(s,e).filter(a=>a.start<=at&&(automatic?(a.end??e.end)>at&&(a.end??e.end)>=at+duration*60000:a.end===null)&&a.state==='ready').map(a=>a.playerId))].filter(id=>!awaitingArrival(e,id)&&!e.noShowHold?.includes(id)&&!matchingStopped(e,id)&&(!automatic||s.registrations.some(r=>r.eventId===eventId&&r.playerId===id&&r.status==='confirmed'))&&s.players.some(p=>p.id===id&&p.enabled)&&!s.matches.some(m=>m.status==='playing'&&[...m.a,...m.b].includes(id)))}
+/** A player may play at most this many rounds of an activity in a row (docs/MATCH_GROUPING.md). */
+export const maxConsecutiveRounds=3;
+/** Players who played each of the latest maxConsecutiveRounds rounds of this activity. Grouping lets them rest the next
+ * round whenever somebody else can take the place, so a court is never left short only for this rule. */
+export function tiredPlayers(s:Pick<State,'rounds'|'matches'>,eventId:string){
+ const rounds=s.rounds.filter(r=>r.eventId===eventId&&['published','playing','complete'].includes(r.status)).sort((a,b)=>(a.pointsSlot??0)-(b.pointsSlot??0)||a.start-b.start||a.id.localeCompare(b.id)).slice(-maxConsecutiveRounds);
+ if(rounds.length<maxConsecutiveRounds)return new Set<string>();
+ const players=new Map(rounds.map(r=>[r.id,new Set<string>()]));
+ for(const m of s.matches)if(m.status!=='cancelled'&&players.has(m.roundId))for(const id of [...m.a,...m.b])if(!m.noShow?.length||m.noShow.includes(id))players.get(m.roundId)!.add(id);
+ const [first,...rest]=rounds.map(r=>players.get(r.id)!);
+ return new Set([...first].filter(id=>rest.every(round=>round.has(id))));
+}
 export function propose(s:State,e:Event,at:number,duration:number,seed:number){if(isPractice(e))fail('练球活动不生成比赛或积分');if(eventFormat(e)==='singles')return proposeSingles(s,e,at,duration,seed);const eligible=readyIds(s,e.id,at,duration);const bookings=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>=at+duration*60000&&!s.matches.some(m=>m.courtId===b.id&&m.status==='playing'));let courts=bookings.filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name&&(x.venue??e.venue)===(b.venue??e.venue))===i);const arenaName=s.bookings.find(x=>x.id===e.arenaCourtId)?.name;const arenaCourt=courts.find(b=>b.name===arenaName);if(e.playMode==='arena'&&arenaCourt)courts=[arenaCourt,...courts.filter(b=>b.name!==arenaName)];if(eligible.length<4)fail('目前可上场人数不足4人，无法生成双打');if(!courts.length)fail('预计比赛时段内没有完整可用的场地');
  const allowed=new Map(courts.map(b=>[b.id,new Set(eligible.filter(id=>bookingAllowsPlayer(s,e.id,b.id,id,at,at+duration*60000)))]));
  const canUse=(courtId:string,id:string)=>allowed.get(courtId)?.has(id)??false;
  const prior=s.rounds.filter(r=>r.eventId===e.id&&['published','playing','complete'].includes(r.status));
  const debt=(id:string)=>{let deficit=0,wait=0,games=0;for(const r of prior){if(!r.eligible.includes(id))continue;const ms=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled');const played=ms.some(m=>[...m.a,...m.b].includes(id)&&(!m.noShow?.length||m.noShow.includes(id)));deficit+=ms.length*4/r.eligible.length-(played?1:0);if(played){wait=0;games++}else wait++}return {deficit,wait,games}};
- eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});const picked=new Set<string>(),usedCourts:typeof courts=[];let selected:string[]=[];
+ const tired=tiredPlayers(s,e.id);
+ eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return Number(tired.has(a))-Number(tired.has(b))||y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});const picked=new Set<string>(),usedCourts:typeof courts=[];let selected:string[]=[];
  for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&canUse(court.id,id));if(pool.length<4)continue;const chosen=pool.slice(0,4);chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
  courts=usedCourts;if(!courts.length)fail('本时段同球馆正式球友不足4人，无法安排双打');let fixed=0;let arenaLosers:string[]=[];if(e.playMode==='arena'&&arenaCourt){const arena=arenaStatus(s,e.id);const holders=arena.holders.filter(id=>eligible.includes(id)&&canUse(arenaCourt.id,id));if(holders.length===2){const latest=s.matches.find(m=>m.id===arena.matchId)!;const losers=[...latest.a,...latest.b].filter(id=>!holders.includes(id));arenaLosers=losers;const challengers=eligible.filter(id=>!holders.includes(id)&&!losers.includes(id)&&canUse(arenaCourt.id,id)).slice(0,2);if(challengers.length<2)fail('擂台需要两名新的接擂球友；请等待更多正式球友参加或切回公平轮转');const pinned=[...holders,...challengers];const used=new Set(pinned);selected=[...pinned];for(const court of courts.slice(1)){const pool=eligible.filter(id=>!used.has(id)&&canUse(court.id,id)).slice(0,4);pool.forEach(id=>used.add(id));selected.push(...pool)}fixed=2}}const rest=eligible.filter(id=>!selected.includes(id));
  const rating=(id:string)=>s.players.find(p=>p.id===id)!.rating;const history=matchHistory(s,e.id);
@@ -86,7 +99,8 @@ function proposeSingles(s:State,e:Event,at:number,duration:number,seed:number){
  if(!bookings.length)fail('预计比赛时段内没有完整可用的场地');
  const prior=s.rounds.filter(r=>r.eventId===e.id&&['published','playing','complete'].includes(r.status));
  const debt=(id:string)=>{let deficit=0,wait=0,games=0;for(const r of prior){if(!r.eligible.includes(id))continue;const ms=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled'),played=ms.some(m=>[...m.a,...m.b].includes(id)&&(!m.noShow?.length||m.noShow.includes(id)));deficit+=ms.length*2/r.eligible.length-(played?1:0);if(played){wait=0;games++}else wait++}return {deficit,wait,games}};
- eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});
+ const tired=tiredPlayers(s,e.id);
+ eligible.sort((a,b)=>{const x=debt(a),y=debt(b);return Number(tired.has(a))-Number(tired.has(b))||y.deficit-x.deficit||y.wait-x.wait||a.localeCompare(b)});
  const selected:string[]=[],used=new Set<string>(),courts:typeof bookings=[];
  const canUse=(i:number,id:string)=>bookingAllowsPlayer(s,e.id,courts[i].id,id,at,end);
  for(const b of bookings){const pool=eligible.filter(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,b.id,id,at,end));if(pool.length<2)continue;const pair=pool.slice(0,2);pair.forEach(id=>used.add(id));selected.push(...pair);courts.push(b)}

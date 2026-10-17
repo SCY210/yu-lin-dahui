@@ -12,6 +12,14 @@ Visible activity pages refresh shared state every three seconds, retaining the e
 
 Validation includes multi-court progression, unique on-court participants, 14-player balanced rotation, fixed teams, missing substitutes, permissions, in-progress games at other events, score corrections, and actual handler/SQLite tests for persistence, request replay, rollback and concurrent scoring. New settings use existing JSON payloads and need no schema migration.
 
+## Starting the next game on a court
+
+A court that has finished a game no longer starts the next one by itself. It waits until someone presses the next-game button on the court (`liveNext`): anyone signed up for the activity, its organiser or an administrator. The selection below picks the waiting players first and fills up with the ones who just came off. If only the four (or two) players of the last game on that court are available, the request is refused, so they can wait for another court to finish and mix. The button then offers to keep the same players on purpose (`allowSame`).
+
+Courts that have not had a game yet still start on their own: at the start of the activity, when a court slot opens, or when players arrive. The organiser starting live play, or arranging free courts, fills every free court. A no-show refills its court at once, because it replaces a player rather than finishing a game. A waiting court is not work for the read-time clock (`hasEmptyLiveCourt`).
+
+After the activity has ended by the clock, unscored games are no longer shown as live: the page reads "activity ended" with the number of unscored games, and the live controls are closed.
+
 ## Bench priority
 
 When a court becomes free, available waiting players take precedence over that court's just-finished players. Fewer cumulative games or an earlier previous start must not bypass the bench. Game counts and waiting time balance players within each priority group; willing just-finished players fill only the remaining places. Fixed partners remain intact, and requested breaks, venue/attendance eligibility and other active courts still apply. The preceding court lineup is derived from stored matches, so pause/resume and write retries preserve this order. Existing games and results are unchanged; the next score advances with the corrected selection.

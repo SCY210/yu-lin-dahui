@@ -4,7 +4,7 @@ Members book courts and buy balls themselves; a member can book at most two hour
 
 ## Recording who advanced what
 
-- Creating an activity lists its court slots: court name, start, end and **who booked it**, all required. Slots booked by different members, or two courts at the same time, are separate rows. Rows move with the activity start. A practice activity with balls also names whose balls they are.
+- Creating an activity lists its court slots: court name, start, end and **who booked it**, all required. Slots booked by different members, or two courts at the same time, are separate rows: a slot can be split in two at its middle half hour (for example a four-hour court booked by two members for two hours each), and another court is added at the same time as the first slot. Rows move with the activity start. A practice activity with balls also names whose balls they are.
 - Balls and other expenses added on the fees page name who bought or paid them, required on new activities.
 - Organisers can set or correct the advancer of any court slot or expense from its row on the fees page (`feeAdvance`). This also fills in activities created before advancers existed.
 - An advancer is an enabled member with an account. Friends registered by a member cannot advance.

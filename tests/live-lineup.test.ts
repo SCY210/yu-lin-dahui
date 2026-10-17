@@ -19,7 +19,8 @@ test('creator can replace the current lineup, retaining the game and round; only
  await apply(s,s.accounts[1],'liveLineup',edit(m),now+1000);
  assert.deepEqual(m.a,['p4','p5']);assert.deepEqual(m.b,['p2','p3']);assert.equal(m.id,before.id);assert.equal(m.start,before.start);assert.equal(m.courtId,before.courtId);assert.equal(s.matches.length,count);assert.equal(m.status,'playing');assert.equal(liveAppearances(s,e.id,'p0'),0);assert.equal(liveAppearances(s,e.id,'p4'),1);
  assert.ok(s.rounds[0].rest.includes('p0'));assert.ok(!s.rounds[0].rest.includes('p4'));assert.deepEqual((s.audits.at(-1)!.changes as {before:unknown}).before,{a:before.a,b:before.b});
- await apply(s,s.accounts[0],'score',{matchId:m.id,a:21,b:19},now+60000);assert.equal(m.status,'complete');assert.deepEqual(m.a,['p4','p5']);assert.equal(s.matches.length,count+1);
+ await apply(s,s.accounts[0],'score',{matchId:m.id,a:21,b:19},now+60000);assert.equal(m.status,'complete');assert.deepEqual(m.a,['p4','p5']);assert.equal(s.matches.length,count,'the court waits for 开始组队');
+ await apply(s,s.accounts[0],'liveNext',{eventId:e.id,courtId:m.courtId},now+60000);assert.equal(s.matches.length,count+1);
 });
 test('ordinary members and spoofed event IDs do not grant lineup authority; rejected writes change nothing',async()=>{
  const {s,e}=fixture();await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);const before=structuredClone(s);

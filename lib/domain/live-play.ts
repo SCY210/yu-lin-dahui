@@ -9,7 +9,7 @@ import {fixedPartnerTeams} from './fixed-partners';
 import {balanceCost,compareBalance} from './match-balance';
 import {genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
-import {authorizeEventAction,canManageEvent} from './permissions';
+import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions';
 import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
@@ -21,6 +21,7 @@ const schemas={
  liveStart:z.object({eventId:id}),livePause:z.object({eventId:id,paused:z.boolean()}),
  livePreference:z.object({eventId:id,playerId:id,avoidConsecutive:z.boolean()}),
  liveReady:z.object({eventId:id,playerId:id}),
+ liveNext:z.object({eventId:id,courtId:id,allowSame:z.boolean().optional()}),
 };
 const playing=(m:Match)=>m.status==='playing';
 const physical=(s:Pick<State,'bookings'>,e:Event,courtId:string)=>{
@@ -41,8 +42,10 @@ export function liveResting(e:Event,playerId:string,venue?:string){
 }
 /** Cheap no-work guard for read maintenance; use the same physical-court identity as fillLiveCourts. */
 export function hasEmptyLiveCourt(s:Pick<State,'bookings'|'matches'>,e:Event,now:number){
- const busy=new Set(s.matches.filter(m=>m.eventId===e.id&&playing(m)).map(m=>physical(s,e,m.courtId)));
- return s.bookings.some(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busy.has(physical(s,e,b.id)));
+ const busy=new Set<string>(),used=new Set<string>();
+ for(const m of s.matches)if(m.eventId===e.id){if(playing(m))busy.add(physical(s,e,m.courtId));else if(m.start!==null&&!['draft','published'].includes(m.status))used.add(physical(s,e,m.courtId))}
+ // A court that has finished a game waits for 开始组队, so it is not work for the clock.
+ return s.bookings.some(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busy.has(physical(s,e,b.id))&&!used.has(physical(s,e,b.id)));
 }
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
@@ -61,11 +64,17 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
 }
 
-/** The score and its replacement matches are saved in the same state transaction.
- * Attendance/court times constrain availability internally; no duration is guessed. */
-export function fillLiveCourts(s:State,e:Event,now:number){
+/** Courts that have not had a game yet start on their own (activity start, a court slot opening, an arrival). A court
+ * that has finished a game waits until someone presses 开始组队 (liveNext, `next`), so the next game can mix the
+ * waiting players with the ones who just came off instead of the same four swapping teams. Attendance/court times
+ * constrain availability internally; no duration is guessed. Returns the started matches. */
+export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string;allowSame?:boolean}){
+ const started:Match[]=[];
  const config=e.livePlay;
- if(e.tournament||isPractice(e)||!config?.enabled||config.paused||e.deletedAt!==undefined||['draft','ended','cancelled'].includes(e.status)||now<e.start||now>=e.end)return;
+ if(e.tournament||isPractice(e)||!config?.enabled||config.paused||e.deletedAt!==undefined||['draft','ended','cancelled'].includes(e.status)||now<e.start||now>=e.end)return started;
+ // A manual request (liveNext for one court, or the organiser starting live play for every free court) also fills
+ // courts that have already had a game.
+ const target=next?.courtId?physical(s,e,next.courtId):null,manual=!!next;
  const present=livePresentIds(s,e,now),busy=new Set(s.matches.filter(playing).flatMap(m=>[...m.a,...m.b]));
  const courts=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now)
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
@@ -82,12 +91,14 @@ export function fillLiveCourts(s:State,e:Event,now:number){
  for(const court of courts){
   const key=physical(s,e,court.id),venue=court.venue??e.venue;
   if(handled.has(key))continue;handled.add(key);
+  if(target!==null&&key!==target)continue;
   if(s.matches.some(m=>m.eventId===e.id&&playing(m)&&physical(s,e,m.courtId)===key))continue;
   // Bench players get the next turn before this court's just-finished players,
   // even when the latter have fewer games or started their previous game earlier.
   // Derive this from stored matches so pause/resume and concurrent retries keep the same order.
   const previous=s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&!['playing','draft','published'].includes(m.status)&&physical(s,e,m.courtId)===key)
    .sort((a,b)=>(b.end??b.start!)-(a.end??a.start!)||b.start!-a.start!||a.id.localeCompare(b.id))[0];
+  if(previous&&!manual)continue;
   const justFinished=new Set(previous?[...previous.a,...previous.b]:[]);
   const order=(a:string,b:string)=>Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
   // Exchange equal game counts. Prefer the bench, but allow one position (one
@@ -133,16 +144,20 @@ export function fillLiveCourts(s:State,e:Event,now:number){
    teams={a:chosen.a,b:chosen.b};
   }
   if(!teams)continue;
-  const participants=[...teams.a,...teams.b];participants.forEach(id=>busy.add(id));
+  const participants=[...teams.a,...teams.b];
+  // Only the same four (or two) as the last game here: wait for another court to finish, unless asked to keep them.
+  if(previous&&target!==null&&!next?.allowSame&&participants.length===justFinished.size&&participants.every(id=>justFinished.has(id)))fail('409: 场下暂时没有可换的人，等另一片场地打完再组队；确实没人可换时可以选择继续原班人马');
+  participants.forEach(id=>busy.add(id));
   const sequence=1+s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&m.status!=='cancelled'&&physical(s,e,m.courtId)===key).length;
   const roundId=crypto.randomUUID();
   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
-  decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);history.add(match);
+  decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);history.add(match);started.push(match);
   for(const id of participants){counts.set(id,appearances(id)+1);lastTurns.set(id,now)}
   clearFilledPointsWaiting(s,e);
   const season=month(now);if(!s.seasons.some(p=>p.id===season))s.seasons.push({id:season,rules:{...s.settings.rules},version:1});
  }
+ return started;
 }
 
 /** A requested break lasts until a later-started match at the same venue finishes.
@@ -168,6 +183,15 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(e.tournament)fail('赛事请使用对战表安排比赛');
  if(isPractice(e))fail('练球活动不生成比赛或积分');
  const manager=canManageEvent(a,e)||canEnableEventRanking(s,a);
+ if(command.action==='liveNext'){
+  // Like score entry: anyone signed up for the activity, its organiser or an administrator.
+  if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
+  if(!e.livePlay?.enabled||e.livePlay.paused||now<e.start||now>=e.end)fail('实时排场未开启、已暂停或不在活动时间内');
+  const started=fillLiveCourts(s,e,now,{courtId:command.payload.courtId,allowSame:command.payload.allowSame});
+  if(!started.length)fail('这片场地正在比赛，或可上场的人数不足，暂时无法组队');
+  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'录分后开始组队',changes:{eventId:e.id,courtId:command.payload.courtId,matchIds:started.map(m=>m.id)}});
+  return true;
+ }
  if(command.action==='liveStart'||command.action==='livePause'){
   authorizeEventAction(s,a,command.action,p);
   if(!manager)fail('403: 只有活动创建者或管理员可以开始或暂停排场');
@@ -190,7 +214,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
   config.preferences.push({playerId:p.playerId,avoidConsecutive:p.avoidConsecutive});
   if(!p.avoidConsecutive)config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId);
  }else config.rest=config.rest.filter(rest=>rest.playerId!==command.payload.playerId);
- fillLiveCourts(s,e,now);
+ fillLiveCourts(s,e,now,command.action==='liveStart'?{allowSame:true}:undefined);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:action==='livePreference'?'调整连续上场意愿':action==='liveReady'?'轮休后准备上场':'实时公平排场',changes:p});
  return true;
 }

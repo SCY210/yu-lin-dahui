@@ -39,3 +39,8 @@
 @keyframes round-live-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
 @keyframes round-live-edge{0%,100%{border-left-color:#c0392b}50%{border-left-color:#e98b80}}
 @media(prefers-reduced-motion:reduce){.app-disclosure.round-disclosure.is-playing,.app-disclosure.round-disclosure.is-playing>summary::after{animation:none}}
+
+/* After the activity has ended (by the clock), unscored games are no longer shown as live. */
+.event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing{border-color:var(--border);border-left:1px solid var(--border);background:var(--card);animation:none}
+.event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing>summary{color:inherit}.event-scheduling.is-ended .app-disclosure.round-disclosure.is-playing>summary::after{display:none}
+.event-scheduling.is-ended .compact-match.is-playing{border-top-color:var(--border)}.event-scheduling.is-ended .compact-match.is-playing .match-status{color:var(--muted-foreground);background:transparent;border-color:var(--border)}.event-scheduling.is-ended .compact-match.is-playing .match-status::before{display:none}

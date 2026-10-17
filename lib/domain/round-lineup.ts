@@ -62,6 +62,10 @@ export function swapRoundPlayers(s:State,r:Round,p1:string,p2:string,now:number,
    if(!booking||[...m.a,...m.b].some(id=>!s.registrations.some(reg=>reg.eventId===e.id&&reg.playerId===id&&reg.status==='confirmed'&&venueParticipation(s,e,reg).some(span=>span.venue===venue))))fail('请选择已正式报名该球馆的球友');
   }
  }else validateRound(plannedAvailability(s),e.id,r.status==='playing'?now:r.start,r.status==='playing'?0:r.duration,next);
+ // A game already on court cannot take a player who is playing on another court right now (planned rounds overlap).
+ const elsewhere=new Set(s.matches.filter(x=>x.status==='playing'&&!next.some(n=>n.id===x.id)).flatMap(x=>[...x.a,...x.b]));
+ const incoming=(m:Match)=>{const before=matches.find(x=>x.id===m.id)!;return [...m.a,...m.b].filter(id=>!before.a.includes(id)&&!before.b.includes(id))};
+ if(next.some(m=>m.status==='playing'&&incoming(m).some(id=>elsewhere.has(id))))fail('这位球友正在另一片场地比赛，不能换到正在进行的对局');
  for(const m of next)decorateMatch(s,e,m);
  for(const m of next)Object.assign(matches.find(original=>original.id===m.id)!,m);
  r.eligible=[...new Set([...ready,...ids])];r.rest=ready.filter(id=>!ids.includes(id));

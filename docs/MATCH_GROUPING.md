@@ -66,3 +66,16 @@ from a draft match, all four gender options, saving a choice, and returning to
 the same activity/round. Lint passes for the new components and grouping domain
 files; repository-wide lint already reports existing `any` errors and generated
 files from ignored local test folders.
+
+## At most three rounds in a row
+
+A player who played each of the latest three rounds of an activity (`tiredPlayers`, `maxConsecutiveRounds` in `lib/domain/grouping.ts`) is chosen last for the next round in round, planned and gap-filling generation, for doubles, singles and fixed teams. So they rest whenever somebody else can take the place. Courts are never left short only for this rule: when the remaining players cannot fill every court, tired players still play. The rule can therefore only be met when at least a quarter of the players rest each round; with 10 players on two courts some must play a fourth round.
+
+## Nobody on two courts at once
+
+Within one round nobody appears on two courts, and nobody plays two games at the same time:
+
+- A late player's replacement is never taken from another court of the same round, even when that court has not started yet.
+- A swap into a game already on court refuses a player who is playing on another court.
+
+`tests/round-integrity.test.ts` checks both cases and runs random planned-schedule operations against the invariant.
