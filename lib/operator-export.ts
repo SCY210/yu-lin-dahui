@@ -6,7 +6,7 @@ export const exportTables = [
   'push_jobs', 'push_subscriptions', 'ratingChanges', 'registrations',
   'reminder_inbox', 'reminder_settings', 'rounds', 'seasons', 'settings',
   'settlements', 'tagVotes', 'treasureLedger', 'treasureOrders', 'treasureProducts', 'treasureRewardClaims',
-  'trial_credential_archive',
+  'trial_credential_archive', 'notification_devices', 'club_changes',
 ] as const;
 
 export interface ExportEnvironment {
