@@ -6,7 +6,7 @@ import {guestNote} from '../lib/client/guests';
 import {bookingCapacity,bookingRows} from '../lib/domain/booking-signups';
 import {bookingCents} from '../lib/domain/money';
 import {bookingParts} from '../lib/domain/booking-advancers';
-import {fitParts,partEpoch,type CourtPart} from './court-parts-model';
+import {fitParts,partEpoch,partsFit,type CourtPart} from './court-parts-model';
 import {feeMembers} from '../lib/domain/fee-transfers';
 import {findVenue,googleMapsUrl} from '../lib/venues';
 import {plannedEpoch,plannedInterval} from '../lib/time-planning';
@@ -41,6 +41,7 @@ export default function EventCourtSignup({e,ctx,rules}:any){
    // Each part's time and booker as they fit the slot; the first booker is the slot's, the others are handovers.
    const {parts:raw,...rest}=v as Record<string,unknown>&{parts:CourtPart[]},parts=fitParts(String(v.start),String(v.end),raw);
    if((e.feeAdvances||parts.some(p=>p.advancedBy))&&parts.some(p=>!p.advancedBy))throw new Error('请为每一段选择是谁约的');
+   if(!partsFit(String(v.start),String(v.end),parts))throw new Error('每人每次约 1–2 小时，请把每一段调到 1–2 小时');
    return {...rest,start:plannedEpoch(String(v.start),plan.start),end:plannedEpoch(String(v.end),plan.end),...(parts[0].advancedBy?{advancedBy:parts[0].advancedBy}:{}),handovers:parts.slice(1).map(p=>({at:partEpoch(p.start),advancedBy:p.advancedBy}))};
   },'每个场地时段独立接龙与候补。新增时段超出活动时间时，会自动扩展活动起止时间。');
  };

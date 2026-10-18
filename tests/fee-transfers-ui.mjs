@@ -38,27 +38,31 @@ try{
  assert.match(text(ui.toJSON()),/转给 小波 · €1\.20/);assert.doesNotMatch(text(ui.toJSON()),/转给 爱丽丝/,'a marked transfer disappears');
  await act(()=>button('标记已转')[0].props.onClick());assert.deepEqual(actions.pop(),['home',[{eventId:'e',settlementId:'v1',from:'p0',to:'p2'}]]);
  await mount(HomeUnpaid,{settlements:[settlement],payments:[],players,me:{id:'alice',playerId:'p1'},events:[e],onOpen:()=>{}});assert.equal(ui.toJSON(),null,'an advancer owes nothing');
- // Creation: a six-hour court booked in turn splits into two three-hour parts of the same court, shown to scale.
+ // Creation: a six-hour court is booked by members for 1–2 hours each, so it offers 3 to 6 parts, not 2.
  let rows=[{name:'1号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'p1'}];
  const members=[['p1','爱丽丝'],['p2','小波']],remount=()=>mount(CourtBookingsField,{rows,members,onChange:next=>{rows=next}});
  const pick=(label,value)=>act(()=>ui.root.find(n=>n.type==='select'&&n.props['aria-label']===label).props.onChange({target:{value}}));
- await remount();await act(()=>button('拆成两段')[0].props.onClick());
- assert.deepEqual(rows,[{name:'1号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'p1',handovers:[{at:'2026-11-05T15:00',advancedBy:''}]}]);
- await remount();const bar=text(ui.root.find(n=>n.props.className==='court-parts-bar').children);
- assert.match(bar,/12:00–15:00爱丽丝15:00–18:00待选择/);assert.match(text(ui.toJSON()),/第 2 段15:00–18:00 · 3 小时/);
- await pick('场地 1 第 2 段 约场人','p2');assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T15:00',advancedBy:'p2'}]);
- // Another split halves the longest part; deleting a part merges it into the one before.
- await remount();await act(()=>button('再拆一段')[0].props.onClick());assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T13:30','2026-11-05T15:00']);
- await remount();await act(()=>button('删除这一段')[0].props.onClick());assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T15:00',advancedBy:'p2'}]);
- // Shortening the court drops a part that no longer fits.
- await remount();await act(()=>ui.root.find(n=>n.props.label==='场地 1 结束').props.onChange('2026-11-05T15:00'));assert.deepEqual(rows[0].handovers,[]);
- rows[0]={...rows[0],end:'2026-11-05T18:00',handovers:[{at:'2026-11-05T15:00',advancedBy:'p2'}]};
+ const drag=(label,value)=>act(()=>ui.root.find(n=>n.type==='input'&&n.props['aria-label']===label).props.onChange({target:{value:String(value)}}));
+ await remount();assert.deepEqual(button('').filter(b=>/段$|一个人约/.test(text(b.children))).map(b=>text(b.children)),['一个人约','3 段','4 段','5 段','6 段']);
+ assert.match(text(ui.toJSON()),/6 小时至少要拆成 3 段/);
+ await act(()=>button('3 段')[0].props.onClick());
+ assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T14:00',advancedBy:''},{at:'2026-11-05T16:00',advancedBy:''}],'three parts of two hours');assert.equal(rows[0].advancedBy,'p1');
+ await remount();assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/12:00–14:00爱丽丝14:00–16:00待选择16:00–18:00待选择/);
+ // Three parts of two hours cannot move; with four parts a boundary moves by whole hours within 1–2 hour parts.
+ await drag('场地 1 第 1 段和第 2 段的分界',1);assert.equal(rows[0].handovers[0].at,'2026-11-05T14:00');
+ await act(()=>button('4 段')[0].props.onClick());assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T14:00','2026-11-05T15:00','2026-11-05T16:00']);
+ await remount();await drag('场地 1 第 1 段和第 2 段的分界',1);assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T13:00','2026-11-05T15:00','2026-11-05T16:00']);
+ await remount();await drag('场地 1 第 1 段和第 2 段的分界',0);assert.equal(rows[0].handovers[0].at,'2026-11-05T13:00','no part shorter than an hour');
+ await remount();assert.match(text(ui.toJSON()),/第 2 段13:00–15:00 · 2 小时/);
+ await pick('场地 1 第 2 段 约场人','p2');assert.equal(rows[0].handovers[0].advancedBy,'p2');
+ // Back to one booker; shortening the court keeps only parts that fit.
+ await remount();await act(()=>button('一个人约')[0].props.onClick());assert.deepEqual(rows[0].handovers,[]);
  await remount();await act(()=>button('添加另一片场地')[0].props.onClick());assert.deepEqual(rows[1],{name:'2号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'',handovers:[]});
  await remount();await act(()=>button('删除这片场地')[1].props.onClick());assert.equal(rows.length,1);
  // The activity page's court settings use the same parts editor.
- let parts=[{start:'2026-11-05T12:00',advancedBy:'p1'},{start:'2026-11-05T15:00',advancedBy:'p2'}];
- await mount(CourtParts,{start:'2026-11-05T12:00',end:'2026-11-05T18:00',parts,members,label:'设置',onChange:next=>{parts=next}});
- await act(()=>ui.root.find(n=>n.props.label==='设置 第 2 段开始').props.onChange('2026-11-05T16:00'));assert.equal(parts[1].start,'2026-11-05T16:00','a later part can start at another time');
- await act(()=>ui.root.find(n=>n.props.label==='设置 第 2 段开始').props.onChange('2026-11-05T12:00'));assert.equal(parts[1].start,'2026-11-05T16:00','but not before the part it follows');
+ let parts=[{start:'2026-11-05T15:00',advancedBy:'p1'},{start:'2026-11-05T17:00',advancedBy:'p2'}];
+ await mount(CourtParts,{start:'2026-11-05T15:00',end:'2026-11-05T19:00',parts,members,label:'设置',onChange:next=>{parts=next}});
+ assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/15:00–17:00爱丽丝17:00–19:00小波/);
+ await drag('设置 第 1 段和第 2 段的分界',3);assert.deepEqual(parts.map(p=>[p.start,p.advancedBy]),[['2026-11-05T15:00','p1'],['2026-11-05T17:00','p2']],'two parts of two hours stay put');
  console.log('PASS fee transfers UI: advances, own and folded transfers, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}

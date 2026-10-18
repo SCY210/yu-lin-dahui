@@ -1,14 +1,26 @@
 .court-parts{display:grid;gap:8px;min-width:0}
+.court-parts-count{display:grid;gap:6px;min-width:0}
+.court-parts-count>span{font-size:13px;color:var(--muted-foreground)}
+.court-parts-count>div{display:flex;flex-wrap:wrap;gap:6px}
+.court-parts-count button{min-height:36px;padding:0 12px;font-size:13px}
+.court-parts-track{position:relative;min-width:0}
 .court-parts-bar{display:flex;gap:3px;min-width:0;border-radius:10px;overflow:hidden}
-.court-parts-bar>span{display:grid;gap:1px;min-width:0;flex-basis:0;padding:6px 8px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--foreground)}
+.court-parts-bar>span{display:grid;gap:1px;min-width:0;flex-basis:0;padding:8px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--foreground)}
 .court-parts-bar>span:nth-child(even){background:color-mix(in srgb,var(--primary) 24%,transparent)}
 .court-parts-bar>span.is-empty{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted-foreground) 10%,transparent) 0 6px,transparent 6px 12px);outline:1px dashed var(--border);outline-offset:-1px}
 .court-parts-bar small{font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .court-parts-bar b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Boundary handles: transparent range inputs over the bar; only their thumbs take touches, so several can share it. */
+.court-parts-track>input.court-parts-handle{position:absolute;top:0;bottom:0;left:-7px;width:calc(100% + 14px);max-width:none;height:100%;min-height:0;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:none;appearance:none;-webkit-appearance:none;pointer-events:none}
+.court-parts-handle::-webkit-slider-runnable-track{height:100%;background:none}
+.court-parts-handle::-moz-range-track{height:100%;background:none}
+.court-parts-handle::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:14px;height:100%;min-height:44px;border-radius:7px;border:2px solid var(--background);background:var(--primary);box-shadow:0 1px 4px #0004;cursor:ew-resize}
+.court-parts-handle::-moz-range-thumb{pointer-events:auto;width:10px;height:40px;border-radius:8px;border:2px solid var(--background);background:var(--primary);cursor:ew-resize}
+.court-parts-handle:focus-visible::-webkit-slider-thumb{outline:3px solid color-mix(in srgb,var(--primary) 45%,transparent)}
+.court-parts-ticks{position:relative;height:16px;font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.court-parts-ticks>span{position:absolute;transform:translateX(-50%)}
 .court-part{display:grid;gap:6px;min-width:0;padding:8px 10px;border-left:3px solid color-mix(in srgb,var(--primary) 40%,transparent);border-radius:4px 10px 10px 4px;background:color-mix(in srgb,var(--muted) 45%,transparent)}
 .court-part-head{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:13px}
 .court-part-head span{color:var(--muted-foreground);font-variant-numeric:tabular-nums}
 .court-part-field{display:grid;gap:4px;min-width:0}
 .court-part-field>span{font-size:13px;color:var(--muted-foreground)}
-.court-part>button,.court-parts-split{justify-self:start}
-.court-parts-split{display:inline-flex;align-items:center;gap:6px}
