@@ -1,5 +1,6 @@
 import {ceilHalfHour} from '../lib/time-planning';
 import {mergeCourtSlots} from '../lib/domain/booking-advancers';
+import {fitParts,rowParts,type CourtRow} from './court-parts-model';
 import {dt,epoch,choice,halfTimed,number,text,money,type Form} from './form-fields';
 /** members: [playerId, name] of members with an account, who can book courts and buy balls. */
 export function newEventForm(now:number,tournament=false,canRank=false,members:string[][]=[]):Form{
@@ -16,11 +17,12 @@ export function newEventForm(now:number,tournament=false,canRank=false,members:s
   {...choice('practiceBallBy','练球用球是谁的（球费由他垫付）',members),when:practice},
   {...choice('status','状态',[['open','开放报名'],['draft','草稿']]),optional:true}],
  convert:v=>{const {courts,courtPrice,practiceShuttleCents,practiceBallCount,practiceBallBy,ranking,...rest}=v,start=epoch(v.start),end=epoch(v.end);
-  const rows=courts as {name:string;start:string;end:string;advancedBy:string}[];
-  if(rows.some(r=>!r.advancedBy))throw new Error('请为每个场地时段选择是谁约的');
+  // Each court's parts as they fit its time; every part needs the member who booked it.
+  const rows=(courts as CourtRow[]).map(r=>({...r,parts:fitParts(r.start,r.end,rowParts(r))}));
+  if(rows.some(r=>r.parts.some(p=>!p.advancedBy)))throw new Error('请为每个场地、每一段选择是谁约的');
   if(v.matchFormat==='practice'&&practiceBallCount>0&&!practiceBallBy)throw new Error('请选择练球用球是谁的');
   return {...rest,ranked:v.matchFormat!=='practice'&&canRank&&ranking==='ranked',start,end,cancelDeadline:epoch(v.cancelDeadline),...(v.matchFormat==='practice'?{practiceShuttleCents,practiceBallCount,...(practiceBallBy?{practiceBallBy}:{})}:{}),
    // Slots of one court that follow each other become one slot with one sign-up list; later bookers are handovers.
-   bookings:mergeCourtSlots(rows.map(r=>({name:r.name.trim()||'1号场',start:epoch(r.start),end:epoch(r.end),pricing:'hourly' as const,cents:Math.round(courtPrice*100),signupCapacity:v.capacity,advancedBy:r.advancedBy})),String(v.venue))}},
+   bookings:mergeCourtSlots(rows.map(r=>({name:r.name.trim()||'1号场',start:epoch(r.start),end:epoch(r.end),pricing:'hourly' as const,cents:Math.round(courtPrice*100),signupCapacity:v.capacity,advancedBy:r.parts[0].advancedBy,...(r.parts.length>1?{handovers:r.parts.slice(1).map(p=>({at:epoch(p.start),advancedBy:p.advancedBy}))}:{})})),String(v.venue))}},
  description:!canRank?'普通活动支持接龙、分组和录分，不计积分或修为；只有群主或管理员可以在开打前开启积分赛。练球请填写练习内容。':tournament?'先报名，再由创建者指定参赛队伍、抽签分组。小组循环赛结束后，按排名晋级淘汰赛。比赛名称自动生成。':'活动名称自动生成。单打与双打可选积分赛或普通活动，普通活动不计积分与修为；练球请填写具体练习内容，不计积分。球费按单颗价格 × 耗球数量记录，之后可在费用页补录。'};
 }

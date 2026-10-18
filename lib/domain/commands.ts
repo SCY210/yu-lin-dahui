@@ -64,7 +64,7 @@ const schemas = {
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
     eventRanking: z.object({eventId:pid,ranked:z.boolean(),expectedRanked:z.boolean()}),
     eventEdit: z.object({ eventId: pid, title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).optional(), practiceShuttleCents:cents.optional(), venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), reason }),
-    booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), reason }),
+    booking: z.object({ eventId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), handovers: z.array(z.object({ at: time, advancedBy: pid })).max(20).optional(), reason }), bookingEdit: z.object({ bookingId: pid, name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), venue: text.optional(), address: z.string().max(300).optional(), advancedBy: pid.optional(), handovers: z.array(z.object({ at: time, advancedBy: pid })).max(20).optional(), reason }),
     register: z.object({ ...activityAcknowledgementInput, eventId: pid, playerId: pid, arrival: time, departure: time, note: z.string().max(500) }), cancel: z.object({ eventId: pid, playerId: pid, reason }),
     moveQueue: z.object({ eventId: pid, playerId: pid, beforePlayerId: pid, reason }),
     attendance: z.object({ eventId: pid, playerId: pid, at: time, state: z.enum(['ready', 'paused', 'left']) }),
@@ -166,11 +166,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 checkBooking(p, b);
             for (const b of p.bookings) {
                 assertAdvancer(s, b.advancedBy, '请为每个场地时段选择约场的球友');
-                // A court booked in turn: each handover is inside the slot, in time order (docs/FEE_ADVANCES.md).
-                if ((b.handovers ?? []).some((h, i, list) => h.at <= (i ? list[i - 1].at : b.start) || h.at >= b.end))
-                    fail('约场交接时间必须在场地时段内');
-                for (const h of b.handovers ?? [])
-                    assertAdvancer(s, h.advancedBy, '请为每个场地时段选择约场的球友');
+                assertHandovers(s, b);
             }
             if ((p.practiceBallCount ?? 0) > 0)
                 assertAdvancer(s, p.practiceBallBy, '请选择练球用球是谁的');
@@ -249,6 +245,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('每次活动最多100个场地时段');
             if (e.feeAdvances || p.advancedBy)
                 assertAdvancer(s, p.advancedBy, '请选择这个场地时段是谁约的');
+            assertHandovers(s, p);
             if (s.bookings.some(b => b.eventId === e.id && b.name === p.name && (b.venue ?? e.venue) === (p.venue ?? e.venue) && b.start < p.end && b.end > p.start))
                 fail('同一场地预约时段不能重叠');
             // The same court right before or after an existing slot extends it, so it keeps one sign-up list; the new part's
@@ -258,7 +255,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const later = s.bookings.find(b => b.eventId === e.id && continuesCourt(p, b, e.venue) && own(b));
             const joined = earlier ?? later;
             if (joined) {
-                const parts = earlier ? [...bookingParts(joined), { start: p.start, end: p.end, advancedBy: p.advancedBy }] : [{ start: p.start, end: p.end, advancedBy: p.advancedBy }, ...bookingParts(joined)];
+                const parts = earlier ? [...bookingParts(joined), ...bookingParts(p)] : [...bookingParts(p), ...bookingParts(joined)];
                 joined.start = Math.min(joined.start, p.start);
                 joined.end = Math.max(joined.end, p.end);
                 joined.advancedBy = parts[0].advancedBy;
@@ -297,7 +294,16 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('同一场地预约时段不能重叠');
             if (s.matches.some(m => m.courtId === b.id && ['published', 'playing'].includes(m.status) && ((m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) < p.start || (m.start ?? s.rounds.find(r => r.id === m.roundId)!.start) + s.rounds.find(r => r.id === m.roundId)!.duration * 60000 > p.end)))
                 fail('调整时段与已发布或进行中的比赛冲突');
-            retimeBooking(b, p.start, p.end);
+            if (p.handovers) {
+                assertHandovers(s, p);
+                Object.assign(b, { start: p.start, end: p.end });
+                if (p.handovers.length)
+                    b.handovers = p.handovers;
+                else
+                    delete b.handovers;
+            }
+            else
+                retimeBooking(b, p.start, p.end);
             Object.assign(b, { name: p.name, pricing: p.pricing, cents: p.cents, ...(p.venue !== undefined ? { venue: p.venue, address: p.address ?? '' } : {}), ...(p.signupCapacity !== undefined ? { signupCapacity: p.signupCapacity } : {}) });
             const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
@@ -809,6 +815,13 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     return null;
 }
 /** An advancer is an enabled member with an account: they receive the transfers that repay them. */
+/** A court booked in turn: each handover is inside the slot, in time order, to a member (docs/FEE_ADVANCES.md). */
+function assertHandovers(s: State, b: { start: number; end: number; handovers?: { at: number; advancedBy: string }[] }) {
+    if ((b.handovers ?? []).some((h, i, list) => h.at <= (i ? list[i - 1].at : b.start) || h.at >= b.end))
+        fail('约场交接时间必须在场地时段内');
+    for (const h of b.handovers ?? [])
+        assertAdvancer(s, h.advancedBy, '请为每一段选择约场的球友');
+}
 function assertAdvancer(s: State, playerId: string | undefined, message: string) {
     if (!playerId || !s.players.some(p => p.id === playerId && p.enabled && s.accounts.some(a => a.playerId === p.id)))
         fail(message);

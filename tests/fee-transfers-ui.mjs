@@ -6,9 +6,9 @@ import {pathToFileURL} from 'node:url';
 import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
-writeFileSync('.test-output/fee-transfers-ui-entry.ts',"export {default as FeeTransfers} from '../app/fee-transfers';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as CourtBookingsField} from '../app/court-bookings-field';");
+writeFileSync('.test-output/fee-transfers-ui-entry.ts',"export {default as FeeTransfers} from '../app/fee-transfers';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as CourtBookingsField} from '../app/court-bookings-field';export {default as CourtParts} from '../app/court-parts';");
 await build({entryPoints:['.test-output/fee-transfers-ui-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/fee-transfers-ui.mjs',loader:{'.css':'empty'},external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner']});
-const {FeeTransfers,HomeUnpaid,CourtBookingsField}=await import(pathToFileURL(resolve('.test-output/fee-transfers-ui.mjs')).href);
+const {FeeTransfers,HomeUnpaid,CourtBookingsField,CourtParts}=await import(pathToFileURL(resolve('.test-output/fee-transfers-ui.mjs')).href);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');
 const mount=async(Component,props)=>{if(ui)await act(()=>ui.unmount());await act(()=>{ui=renderer.create(React.createElement(Component,props))})};
@@ -38,15 +38,27 @@ try{
  assert.match(text(ui.toJSON()),/转给 小波 · €1\.20/);assert.doesNotMatch(text(ui.toJSON()),/转给 爱丽丝/,'a marked transfer disappears');
  await act(()=>button('标记已转')[0].props.onClick());assert.deepEqual(actions.pop(),['home',[{eventId:'e',settlementId:'v1',from:'p0',to:'p2'}]]);
  await mount(HomeUnpaid,{settlements:[settlement],payments:[],players,me:{id:'alice',playerId:'p1'},events:[e],onOpen:()=>{}});assert.equal(ui.toJSON(),null,'an advancer owes nothing');
- // Creation rows: one court booked in turn is split into two slots; a second court runs at the same time.
- let rows=[{name:'1号场',start:'2026-11-05T19:00',end:'2026-11-05T23:00',advancedBy:'p1'}];
- await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
- await act(()=>button('拆成两段')[0].props.onClick());assert.deepEqual(rows,[{name:'1号场',start:'2026-11-05T19:00',end:'2026-11-05T21:00',advancedBy:'p1'},{name:'1号场',start:'2026-11-05T21:00',end:'2026-11-05T23:00',advancedBy:''}]);
- await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
- await act(()=>button('添加另一片场地')[0].props.onClick());assert.deepEqual(rows[2],{name:'2号场',start:'2026-11-05T19:00',end:'2026-11-05T21:00',advancedBy:''});rows=rows.slice(0,2);
- await mount(CourtBookingsField,{rows,members:[['p1','爱丽丝'],['p2','小波']],onChange:next=>{rows=next}});
- const selects=ui.root.findAll(n=>n.type==='select'&&n.props.required&&!String(n.props.className).includes('half-hour'));assert.equal(selects.length,2);
- await act(()=>selects[1].props.onChange({target:{value:'p2'}}));assert.equal(rows[1].advancedBy,'p2');
- await act(()=>button('删除这个时段')[0].props.onClick());assert.equal(rows.length,1);
- console.log('PASS fee transfers UI: advances, own and folded transfers, payer/receiver marking, collector phone, home open transfers and creation court slots');
+ // Creation: a six-hour court booked in turn splits into two three-hour parts of the same court, shown to scale.
+ let rows=[{name:'1号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'p1'}];
+ const members=[['p1','爱丽丝'],['p2','小波']],remount=()=>mount(CourtBookingsField,{rows,members,onChange:next=>{rows=next}});
+ const pick=(label,value)=>act(()=>ui.root.find(n=>n.type==='select'&&n.props['aria-label']===label).props.onChange({target:{value}}));
+ await remount();await act(()=>button('拆成两段')[0].props.onClick());
+ assert.deepEqual(rows,[{name:'1号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'p1',handovers:[{at:'2026-11-05T15:00',advancedBy:''}]}]);
+ await remount();const bar=text(ui.root.find(n=>n.props.className==='court-parts-bar').children);
+ assert.match(bar,/12:00–15:00爱丽丝15:00–18:00待选择/);assert.match(text(ui.toJSON()),/第 2 段15:00–18:00 · 3 小时/);
+ await pick('场地 1 第 2 段 约场人','p2');assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T15:00',advancedBy:'p2'}]);
+ // Another split halves the longest part; deleting a part merges it into the one before.
+ await remount();await act(()=>button('再拆一段')[0].props.onClick());assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T13:30','2026-11-05T15:00']);
+ await remount();await act(()=>button('删除这一段')[0].props.onClick());assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T15:00',advancedBy:'p2'}]);
+ // Shortening the court drops a part that no longer fits.
+ await remount();await act(()=>ui.root.find(n=>n.props.label==='场地 1 结束').props.onChange('2026-11-05T15:00'));assert.deepEqual(rows[0].handovers,[]);
+ rows[0]={...rows[0],end:'2026-11-05T18:00',handovers:[{at:'2026-11-05T15:00',advancedBy:'p2'}]};
+ await remount();await act(()=>button('添加另一片场地')[0].props.onClick());assert.deepEqual(rows[1],{name:'2号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'',handovers:[]});
+ await remount();await act(()=>button('删除这片场地')[1].props.onClick());assert.equal(rows.length,1);
+ // The activity page's court settings use the same parts editor.
+ let parts=[{start:'2026-11-05T12:00',advancedBy:'p1'},{start:'2026-11-05T15:00',advancedBy:'p2'}];
+ await mount(CourtParts,{start:'2026-11-05T12:00',end:'2026-11-05T18:00',parts,members,label:'设置',onChange:next=>{parts=next}});
+ await act(()=>ui.root.find(n=>n.props.label==='设置 第 2 段开始').props.onChange('2026-11-05T16:00'));assert.equal(parts[1].start,'2026-11-05T16:00','a later part can start at another time');
+ await act(()=>ui.root.find(n=>n.props.label==='设置 第 2 段开始').props.onChange('2026-11-05T12:00'));assert.equal(parts[1].start,'2026-11-05T16:00','but not before the part it follows');
+ console.log('PASS fee transfers UI: advances, own and folded transfers, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
