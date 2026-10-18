@@ -87,5 +87,5 @@ test('court settings and the creation form save each part with its own time and 
  const body=form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(2),advancedBy:'p2'},{at:local(4),advancedBy:'p1'}]}]}) as {bookings:{advancedBy:string;handovers?:{at:number;advancedBy:string}[]}[]};
  assert.deepEqual(body.bookings.map(x=>[x.advancedBy,x.handovers]),[['p1',[{at:start+2*hour,advancedBy:'p2'},{at:start+4*hour,advancedBy:'p1'}]]]);
  assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(2),advancedBy:''},{at:local(4),advancedBy:'p1'}]}]}),/每一段/);
- assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:'p2'}]}]}),/1–2 小时/,'three-hour parts are refused');
+ assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(2),advancedBy:'p2'},{at:local(2.5),advancedBy:'p1'}]}]}),/至少 1 小时/,'parts shorter than an hour are refused');
 });

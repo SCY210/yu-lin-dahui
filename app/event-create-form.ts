@@ -20,7 +20,7 @@ export function newEventForm(now:number,tournament=false,canRank=false,members:s
   // Each court's parts as they fit its time; every part needs the member who booked it.
   const rows=(courts as CourtRow[]).map(r=>({...r,parts:fitParts(r.start,r.end,rowParts(r))}));
   if(rows.some(r=>r.parts.some(p=>!p.advancedBy)))throw new Error('请为每个场地、每一段选择是谁约的');
-  if(rows.some(r=>!partsFit(r.start,r.end,r.parts)))throw new Error('每人每次约 1–2 小时，请把每一段调到 1–2 小时');
+  if(rows.some(r=>!partsFit(r.start,r.end,r.parts)))throw new Error('每一段至少 1 小时，请拖动分界点调整');
   if(v.matchFormat==='practice'&&practiceBallCount>0&&!practiceBallBy)throw new Error('请选择练球用球是谁的');
   return {...rest,ranked:v.matchFormat!=='practice'&&canRank&&ranking==='ranked',start,end,cancelDeadline:epoch(v.cancelDeadline),...(v.matchFormat==='practice'?{practiceShuttleCents,practiceBallCount,...(practiceBallBy?{practiceBallBy}:{})}:{}),
    // Slots of one court that follow each other become one slot with one sign-up list; later bookers are handovers.

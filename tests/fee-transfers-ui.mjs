@@ -38,18 +38,18 @@ try{
  assert.match(text(ui.toJSON()),/转给 小波 · €1\.20/);assert.doesNotMatch(text(ui.toJSON()),/转给 爱丽丝/,'a marked transfer disappears');
  await act(()=>button('标记已转')[0].props.onClick());assert.deepEqual(actions.pop(),['home',[{eventId:'e',settlementId:'v1',from:'p0',to:'p2'}]]);
  await mount(HomeUnpaid,{settlements:[settlement],payments:[],players,me:{id:'alice',playerId:'p1'},events:[e],onOpen:()=>{}});assert.equal(ui.toJSON(),null,'an advancer owes nothing');
- // Creation: a six-hour court is booked by members for 1–2 hours each, so it offers 3 to 6 parts, not 2.
+ // Creation: a six-hour court offers 2 to 6 parts; a new split prefers two-hour parts, and longer ones stay allowed.
  let rows=[{name:'1号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'p1'}];
  const members=[['p1','爱丽丝'],['p2','小波']],remount=()=>mount(CourtBookingsField,{rows,members,onChange:next=>{rows=next}});
  const pick=(label,value)=>act(()=>ui.root.find(n=>n.type==='select'&&n.props['aria-label']===label).props.onChange({target:{value}}));
  const drag=(label,value)=>act(()=>ui.root.find(n=>n.type==='input'&&n.props['aria-label']===label).props.onChange({target:{value:String(value)}}));
- await remount();assert.deepEqual(button('').filter(b=>/段$|一个人约/.test(text(b.children))).map(b=>text(b.children)),['一个人约','3 段','4 段','5 段','6 段']);
- assert.match(text(ui.toJSON()),/6 小时至少要拆成 3 段/);
+ await remount();assert.deepEqual(button('').filter(b=>/段$|一个人约/.test(text(b.children))).map(b=>text(b.children)),['一个人约','2 段','3 段','4 段','5 段','6 段']);
+ assert.doesNotMatch(text(ui.toJSON()),/至少要拆成|最多/,'no two-hour limit or reminder');
  await act(()=>button('3 段')[0].props.onClick());
  assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T14:00',advancedBy:''},{at:'2026-11-05T16:00',advancedBy:''}],'three parts of two hours');assert.equal(rows[0].advancedBy,'p1');
  await remount();assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/12:00–14:00爱丽丝14:00–16:00待选择16:00–18:00待选择/);
- // Three parts of two hours cannot move; with four parts a boundary moves by whole hours within 1–2 hour parts.
- await drag('场地 1 第 1 段和第 2 段的分界',1);assert.equal(rows[0].handovers[0].at,'2026-11-05T14:00');
+ // A boundary moves by whole hours; a part may grow beyond two hours but never below one.
+ await drag('场地 1 第 1 段和第 2 段的分界',1);assert.equal(rows[0].handovers[0].at,'2026-11-05T13:00');await remount();assert.match(text(ui.toJSON()),/第 2 段13:00–16:00 · 3 小时/);
  await act(()=>button('4 段')[0].props.onClick());assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T14:00','2026-11-05T15:00','2026-11-05T16:00']);
  await remount();await drag('场地 1 第 1 段和第 2 段的分界',1);assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T13:00','2026-11-05T15:00','2026-11-05T16:00']);
  await remount();await drag('场地 1 第 1 段和第 2 段的分界',0);assert.equal(rows[0].handovers[0].at,'2026-11-05T13:00','no part shorter than an hour');
@@ -63,6 +63,7 @@ try{
  let parts=[{start:'2026-11-05T15:00',advancedBy:'p1'},{start:'2026-11-05T17:00',advancedBy:'p2'}];
  await mount(CourtParts,{start:'2026-11-05T15:00',end:'2026-11-05T19:00',parts,members,label:'设置',onChange:next=>{parts=next}});
  assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/15:00–17:00爱丽丝17:00–19:00小波/);
- await drag('设置 第 1 段和第 2 段的分界',3);assert.deepEqual(parts.map(p=>[p.start,p.advancedBy]),[['2026-11-05T15:00','p1'],['2026-11-05T17:00','p2']],'two parts of two hours stay put');
+ await drag('设置 第 1 段和第 2 段的分界',3);assert.deepEqual(parts.map(p=>[p.start,p.advancedBy]),[['2026-11-05T15:00','p1'],['2026-11-05T18:00','p2']],'a three-hour part is allowed');
+ await mount(CourtParts,{start:'2026-11-05T15:00',end:'2026-11-05T19:00',parts,members,label:'设置',onChange:next=>{parts=next}});await drag('设置 第 1 段和第 2 段的分界',4);assert.equal(parts[1].start,'2026-11-05T18:00','the last part keeps an hour');
  console.log('PASS fee transfers UI: advances, own and folded transfers, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
