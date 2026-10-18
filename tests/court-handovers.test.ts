@@ -84,7 +84,8 @@ test('court settings and the creation form save each part with its own time and 
  // Creation: a row with parts becomes one court with handovers.
  const form=newEventForm(start-86400000,false,false,[['p1','alice'],['p2','bob']]);
  const local=(h:number)=>new Date(start+h*hour).toLocaleString('sv-SE',{timeZone:'Europe/Madrid'}).slice(0,16).replace(' ','T');
- const body=form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:'p2'}]}]}) as {bookings:{advancedBy:string;handovers?:{at:number;advancedBy:string}[]}[]};
- assert.deepEqual(body.bookings.map(x=>[x.advancedBy,x.handovers]),[['p1',[{at:start+3*hour,advancedBy:'p2'}]]]);
- assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:''}]}]}),/每一段/);
+ const body=form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(2),advancedBy:'p2'},{at:local(4),advancedBy:'p1'}]}]}) as {bookings:{advancedBy:string;handovers?:{at:number;advancedBy:string}[]}[]};
+ assert.deepEqual(body.bookings.map(x=>[x.advancedBy,x.handovers]),[['p1',[{at:start+2*hour,advancedBy:'p2'},{at:start+4*hour,advancedBy:'p1'}]]]);
+ assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(2),advancedBy:''},{at:local(4),advancedBy:'p1'}]}]}),/每一段/);
+ assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:'p2'}]}]}),/1–2 小时/,'three-hour parts are refused');
 });
