@@ -17,6 +17,10 @@ export function ballCents(c:{pricing:string;cents:number;tubeCount:number;used:n
 export function legacyTubeUnitCents(c:{pricing:string;cents:number;tubeCount:number}){return c.pricing==='tube'&&c.tubeCount>0&&c.cents%c.tubeCount===0?c.cents/c.tubeCount:null}
 export function bookingCents(b:{pricing:string;cents:number;start:number;end:number}){return b.pricing==='total'?b.cents:Math.round(b.cents*(b.end-b.start)/3600000)}
 export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,'id'|'version'|'created'|'reason'|'confirmed'>{
+ // Every lookup below reads only this activity's rows. Narrowing them once keeps the organiser's fee previews of all
+ // activities linear in the club's history instead of rescanning every activity's rows per player and segment.
+ const own=<T extends {eventId:string}>(rows:T[])=>rows.filter(row=>row.eventId===e.id);
+ s={...s,registrations:own(s.registrations),attendance:own(s.attendance),bookings:own(s.bookings),costs:own(s.costs)};
  const spans=attendanceForEvent(s,e).map(a=>({...a,end:Math.min(a.end??Math.min(now,e.end),e.end,...(usesAutomaticAttendance(e)?[now]:[])),start:Math.max(a.start,e.start)})).filter(a=>a.end>a.start);
  const ids=[...new Set(spans.map(a=>a.playerId))].sort(); const minutes=(id:string)=>spans.filter(a=>a.playerId===id).reduce((t,a)=>t+(a.end-a.start)/60000,0);
  const bills=ids.map(playerId=>({playerId,court:0,ball:0,other:0,total:0,minutes:minutes(playerId)}));

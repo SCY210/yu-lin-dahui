@@ -89,3 +89,7 @@ Other test files run in parallel, so CPU contention can slow any single run. Tim
 ## Plan limits
 
 These changes keep a normal session inside the free plan, but they cannot guarantee it: a much larger club, many simultaneous viewers on cold isolates, or a future feature can still exceed 10 ms. Workers Paid (USD 5 per month) raises the limit to 30 seconds of CPU per request. That decision belongs to the repository owner.
+
+## Fee previews scale with one activity
+
+Organisers and administrators receive a fee preview for every activity they manage on each full read (`drafts` in `lib/club-view.ts`). `calculateSettlement` used to look up exemptions, attendance, court signups and bookings in the rows of all activities, once per player and fee segment, so the cost grew with the square of the history. It now narrows those rows to the activity once. Projections of the performance fixture are byte-identical before and after for an owner, an activity creator and a member at two moments. With shared results the owner's full read took 12, 45, 271 and 996 ms for 30, 90, 300 and 600 activities before, and 8, 27, 119 and 343 ms after (local Node timings).
