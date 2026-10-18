@@ -72,3 +72,19 @@ test('moving a slot keeps the booker of each remaining part, and each part can b
  await apply(s,owner,'bookingEdit',{bookingId:b.id,name:b.name,start:start+2*hour,end,pricing:'hourly',cents:1200,reason:''},start-86400000);
  assert.equal(b.advancedBy,'p3');assert.equal(b.handovers,undefined,'the part before the new start is gone');
 });
+
+test('court settings and the creation form save each part with its own time and booker',async()=>{
+ const {s}=await fixture(),b=s.bookings[0];
+ // Settings: move the handover to 19:30 and add a third part from 20:30.
+ await apply(s,owner,'bookingEdit',{bookingId:b.id,name:b.name,start,end,pricing:'hourly',cents:1200,advancedBy:'p1',handovers:[{at:start+1.5*hour,advancedBy:'p2'},{at:start+2.5*hour,advancedBy:'p3'}],reason:''},start-86400000);
+ assert.deepEqual(bookingParts(b).map(p=>[(p.start-start)/hour,p.advancedBy]),[[0,'p1'],[1.5,'p2'],[2.5,'p3']]);
+ await assert.rejects(()=>apply(s,owner,'bookingEdit',{bookingId:b.id,name:b.name,start,end,pricing:'hourly',cents:1200,handovers:[{at:end,advancedBy:'p2'}],reason:''},start-86400000),/交接时间/);
+ await apply(s,owner,'bookingEdit',{bookingId:b.id,name:b.name,start,end,pricing:'hourly',cents:1200,advancedBy:'p2',handovers:[],reason:''},start-86400000);
+ assert.equal(b.advancedBy,'p2');assert.equal(b.handovers,undefined,'an empty list leaves one booker');
+ // Creation: a row with parts becomes one court with handovers.
+ const form=newEventForm(start-86400000,false,false,[['p1','alice'],['p2','bob']]);
+ const local=(h:number)=>new Date(start+h*hour).toLocaleString('sv-SE',{timeZone:'Europe/Madrid'}).slice(0,16).replace(' ','T');
+ const body=form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:'p2'}]}]}) as {bookings:{advancedBy:string;handovers?:{at:number;advancedBy:string}[]}[]};
+ assert.deepEqual(body.bookings.map(x=>[x.advancedBy,x.handovers]),[['p1',[{at:start+3*hour,advancedBy:'p2'}]]]);
+ assert.throws(()=>form.convert!({...form.values,venue:'虚构球馆',start:local(0),end:local(6),courts:[{name:'1号场',start:local(0),end:local(6),advancedBy:'p1',handovers:[{at:local(3),advancedBy:''}]}]}),/每一段/);
+});

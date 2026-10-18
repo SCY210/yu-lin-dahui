@@ -41,6 +41,6 @@ export function shiftActivityTimes<T extends Record<string,unknown>,U extends Re
   try{const value=values[key];if(typeof value!=='string')continue;next[key]=madridDateTime(madridEpoch(value)+newStart-previousStart)}catch{/* Preserve incomplete input. */}
  }
  // Court slots of a new activity move with its start.
- if(Array.isArray(values.courts)&&!('courts' in updates))next.courts=(values.courts as {start:string;end:string}[]).map(row=>{const moved={...row};for(const key of ['start','end'] as const){try{moved[key]=madridDateTime(madridEpoch(row[key])+newStart-previousStart)}catch{/* Preserve incomplete input. */}}return moved});
+ if(Array.isArray(values.courts)&&!('courts' in updates))next.courts=(values.courts as {start:string;end:string;handovers?:{at:string;advancedBy:string}[]}[]).map(row=>{const moved={...row},shift=(v:string)=>{try{return madridDateTime(madridEpoch(v)+newStart-previousStart)}catch{return v/* Preserve incomplete input. */}};for(const key of ['start','end'] as const)moved[key]=shift(row[key]);if(row.handovers)moved.handovers=row.handovers.map(h=>({...h,at:shift(h.at)}));return moved});
  return result();
 }
