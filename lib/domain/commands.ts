@@ -21,6 +21,7 @@ import {applyNoShow} from './no-show';
 import {applyBonusSeen} from './bonus-notices';
 import {scoreConflict,scoreGames} from './score-conflict';
 import {applyGuestLevel} from './guest-commands';
+import {applyGuestFriends} from './guest-friends';
 import {isGuest} from './guests';
 import { initialSignupDeadline, signupClosed, signupCloseHours, eventStatusAt } from './event-lifecycle';
 import { blockedWordsInput, normalizeBlockedWords, restoreMaskedEdits } from './blocked-words';
@@ -101,6 +102,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if (await applyBonusSeen(s, a, action, input))
         return null;
     if (await applyGuestLevel(s, a, action, input, now))
+        return null;
+    if (await applyGuestFriends(s, a, action, input, now))
         return null;
     if (await applyLivePlay(s, a, action, input, now))
         return null;

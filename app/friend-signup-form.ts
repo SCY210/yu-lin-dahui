@@ -5,7 +5,8 @@ import {canManageEvent} from '../lib/domain/permissions';
 import {plannedInterval,plannedEpoch} from '../lib/time-planning';
 import {choice,text,halfTimed,hm,type Field} from './form-fields';
 import {guestLevels,defaultGuestLevel} from '../lib/domain/guests';
-import {duplicateGuestMessage,guestAlreadySignedUp,guestNameKey} from '../lib/domain/guest-names';
+import {duplicateGuestMessage,guestAlreadySignedUp} from '../lib/domain/guest-names';
+import {friendKey} from '../lib/domain/guest-friend-key';
 
 type Data=Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
 type Court=Data['bookings'][number];
@@ -18,8 +19,8 @@ const isGuestView=(p:Person)=>!!(p.guest||p.guestEventId);
 function savedFriends(e:Event,data:Data,admin:boolean){
  const latest=new Map<string,Person>(),here=new Map<string,Person>();
  for(const p of data.players){
-  if(!p.enabled||!isGuestView(p)||(!admin&&p.ownerId!==data.me.id))continue;
-  const host=p.guestHostId??(p.ownerId===data.me.id?data.me.playerId:'guest:'+p.id),key=host+'|'+guestNameKey(p.name);latest.set(key,p);
+  if(!p.enabled||!isGuestView(p)||p.guestHidden||(!admin&&p.ownerId!==data.me.id))continue;
+  const key=friendKey(p,p.guestHostId??(p.ownerId===data.me.id?data.me.playerId:undefined));latest.set(key,p);
   if(p.guestEventId===e.id)here.set(key,p);
  }
  return [...latest].map(([key,p])=>({value:(here.has(key)?'existing:'+here.get(key)!.id:'saved:'+p.id),label:p.name+(here.has(key)?' · 已在本场，可报其他场地':'')+(admin&&p.guestHost&&p.guestHostId!==data.me.playerId?' · '+p.guestHost+'带来':'')})).sort((a,b)=>a.label.localeCompare(b.label,'zh-CN'));

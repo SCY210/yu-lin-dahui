@@ -1,0 +1,15 @@
+.guest-manager{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.guest-manager h3{margin:8px 0 0;font-size:15px}
+.guest-friend{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 0;border-bottom:1px solid var(--border)}
+.guest-friend .grow{min-width:0;flex:1}
+.guest-friend .grow strong{overflow-wrap:anywhere}
+.guest-friend .grow p{margin:2px 0 0;font-size:12px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.guest-friend .badge{display:inline-block;margin-left:6px;padding:1px 6px;font-size:11px;line-height:1.5;vertical-align:middle}
+.guest-friend-pick input{width:20px;height:20px}
+.guest-friend .actions{flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.guest-merge-bar{position:sticky;top:8px;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:var(--card);box-shadow:0 2px 10px #0002}
+.guest-merge-bar span{flex:1;font-size:13px}
+.guest-doubles,.guest-hidden{margin-top:8px}
+.guest-doubles summary,.guest-hidden summary{cursor:pointer;font-weight:600;font-size:14px;padding:6px 0}
+.guest-double{padding:6px 0 4px}
+.guest-double>strong{font-size:13px}

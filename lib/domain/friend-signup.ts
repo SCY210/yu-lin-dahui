@@ -30,7 +30,7 @@ export async function applyFriendSignup(s:State,a:Account,action:string,input:un
   const source=work.players.find(x=>x.id===p.sourcePlayerId&&isGuest(work,x.id))??fail('这位朋友不存在');
   if(source.ownerId!==a.id&&a.role!=='admin')fail('403: 只能选择自己带过的朋友');
   const level=latestGuestLevel(source);
-  playerId=crypto.randomUUID();work.players.push({id:playerId,ownerId:source.ownerId,name:source.name,guestEventId:booking.eventId,initialRating:level,rating:level,ratedGames:0,enabled:true,ratingReason:'本次活动临时来宾',...(source.guestGender?{guestGender:source.guestGender}:{}),guestLevels:[{at:0,level}]});
+  playerId=crypto.randomUUID();work.players.push({id:playerId,ownerId:source.ownerId,name:source.name,guestEventId:booking.eventId,initialRating:level,rating:level,ratedGames:0,enabled:true,ratingReason:'本次活动临时来宾',...(source.guestGender?{guestGender:source.guestGender}:{}),...(source.guestFriendId?{guestFriendId:source.guestFriendId}:{}),guestLevels:[{at:0,level}]});
  }else if(p.mode==='new'){
   playerId=crypto.randomUUID();work.players.push({id:playerId,ownerId:a.id,name:p.name,guestEventId:booking.eventId,initialRating:p.guestLevel??1000,rating:p.guestLevel??1000,ratedGames:0,enabled:true,ratingReason:'本次活动临时来宾',guestGender:p.gender,...(p.guestLevel?{guestLevels:[{at:0,level:p.guestLevel}]}:{})});
  }else{playerId=p.playerId;if(playerId===a.playerId)fail('请通过我的接龙修改本人报名')}

@@ -22,3 +22,13 @@ The form offers up to three sources:
 
 A friend already signed up for this activity is marked as already signed up here, and choosing them signs them up for another court. A guest whose nickname matches one already signed up for the activity (ignoring case and surrounding spaces) is refused, in the form and on the server, with a message pointing to signing up an existing friend for another court (`lib/domain/guest-names.ts`). Signing up a friend opens on My friends, then Club members, then New guest. `tests/friend-signup.test.ts` covers the duplicate refusal, reuse with copied details and ownership, the administrator view and the members-only list.
 
+## Managing recorded friends (`lib/domain/guest-friends.ts`, `app/guest-manager.tsx`)
+
+Every activity keeps its own guest record, so one friend is the group of records sharing a `guestFriendId`, or, before any merge, the same host and nickname (`friendKey` in `lib/domain/guest-friend-key.ts`). Group management, on the owner and admin page, lists recorded friends with their host, gender, level, number of activities and latest activity. Names that differ only by case, spaces or a trailing number are marked as likely duplicates. Only the owner and admins may use it (403 otherwise). History is never deleted.
+
+- **Merge** (`guestFriendMerge`): the selected friends become one friend. Every record gets the same `guestFriendId`, the chosen nickname and the chosen host, who must be one of their hosts. That host owes the friend's share in new activities and unconfirmed splits. Confirmed split versions are stored snapshots and stay as they were. Signups, matches and fees are otherwise untouched. Friends later copied through My friends keep the `guestFriendId`.
+- **Edit** (`guestFriendEdit`): nickname and gender change on every record. A new level is added to the latest record from now on; earlier games keep the level they had.
+- **Remove from the lists** (`guestFriendHide`): sets `guestHidden` on every record, so the friend is no longer offered under My friends or All guests. They can be restored from the folded list.
+- **Duplicate signups in one activity**: the same nickname signed up more than once for an activity (from before such signups were refused) is listed with the first signup kept. Cancelling a later one sends the normal court cancellation for each of its courts, with the usual release, waitlist promotion and fee archive.
+
+`tests/guest-friends.test.ts` covers permissions, merging with host choice and the projected friend list, copies keeping the group, editing and hiding. `tests/guest-manager-ui.mjs` covers grouping, duplicate marks, the merge form, edit, remove and restore, and cancelling a duplicate signup.
