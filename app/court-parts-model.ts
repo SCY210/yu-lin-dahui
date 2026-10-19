@@ -16,31 +16,29 @@ export function fitParts(start:string,end:string,parts:CourtPart[]):CourtPart[]{
  return [{...first,start},...later];
 }
 
-/** A member books at least one and at most two hours at a time, so each part of a court booked in turn lasts 1–2 hours.
- * Part boundaries sit on whole hours from the court's start; only the last part can end on a half hour. Positions below
- * are hours after the start: `bounds` lists where parts 2, 3, … begin. */
-export const minPartHours=1,maxPartHours=2;
-const fits=(hours:number)=>hours>=minPartHours-1e-9&&hours<=maxPartHours+1e-9;
-/** Whether a split court's parts each last 1–2 hours; one booker for the whole court is always allowed. */
+/** Each part of a court booked in turn lasts at least one hour. Members usually book up to two hours, so a new split
+ * prefers two-hour parts, but a longer part is allowed for the exceptions. Part boundaries sit on whole hours from the
+ * court's start; only the last part can end on a half hour. Positions below are hours after the start: `bounds` lists
+ * where parts 2, 3, … begin. */
+export const minPartHours=1,usualPartHours=2;
+/** Whether a split court's parts each last at least an hour; one booker for the whole court is always allowed. */
 export function partsFit(start:string,end:string,parts:CourtPart[]){const from=partEpoch(start),list=fitParts(start,end,parts);return list.length<2||validBounds((partEpoch(end)-from)/3600000,list.slice(1).map(p=>(partEpoch(p.start)-from)/3600000))}
-/** Every part of the court lasts 1–2 hours. */
-export function validBounds(total:number,bounds:number[]){return [0,...bounds,total].every((b,i,all)=>i===0||fits(b-all[i-1]))}
+/** Every part of the court lasts at least an hour. */
+export function validBounds(total:number,bounds:number[]){return [0,...bounds,total].every((b,i,all)=>i===0||b-all[i-1]>=minPartHours-1e-9)}
 /** The numbers of parts (2 or more) a court of `total` hours can be split into. */
-export function partCounts(total:number){
- const counts:number[]=[];
- for(let n=2;n*minPartHours<=total+1e-9;n++){const low=Math.max(n-1,Math.ceil(total-maxPartHours-1e-9)),high=Math.min(2*(n-1),Math.floor(total-minPartHours+1e-9));if(low<=high)counts.push(n)}
- return counts;
-}
-/** Starting split into `n` parts: one hour each, then the earliest parts grow to two hours until the last one fits. */
+export function partCounts(total:number){const counts:number[]=[];for(let n=2;n*minPartHours<=total+1e-9;n++)counts.push(n);return counts}
+/** Starting split into `n` parts: two-hour parts where the hours allow it (one hour each, the earliest growing to two
+ * until the last one fits), otherwise whole hours shared as evenly as possible. */
 export function evenBounds(total:number,n:number){
  const hours=Array.from({length:n-1},()=>minPartHours);
- for(let i=0;i<hours.length&&total-hours.reduce((a,b)=>a+b,0)>maxPartHours+1e-9;i++)hours[i]=maxPartHours;
+ if(n*usualPartHours>=total-1e-9)for(let i=0;i<hours.length&&total-hours.reduce((a,b)=>a+b,0)>usualPartHours+1e-9;i++)hours[i]=usualPartHours;
+ else hours.fill(Math.max(minPartHours,Math.floor(total/n+1e-9)));
  return hours.map((_,i)=>hours.slice(0,i+1).reduce((a,b)=>a+b,0));
 }
-/** Moves boundary `k` to the whole hour nearest `value`, as far as both neighbouring parts still last 1–2 hours. */
+/** Moves boundary `k` to the whole hour nearest `value`, as far as both neighbouring parts still last an hour. */
 export function moveBound(total:number,bounds:number[],k:number,value:number){
  const before=k?bounds[k-1]:0,after=k<bounds.length-1?bounds[k+1]:total;
- const low=Math.ceil(Math.max(before+minPartHours,after-maxPartHours)-1e-9),high=Math.floor(Math.min(before+maxPartHours,after-minPartHours)+1e-9);
+ const low=Math.ceil(before+minPartHours-1e-9),high=Math.floor(after-minPartHours+1e-9);
  if(low>high)return bounds;
  return bounds.map((b,i)=>i===k?Math.min(high,Math.max(low,Math.round(value))):b);
 }

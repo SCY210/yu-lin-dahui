@@ -10,6 +10,7 @@ import type {ClubData} from '../lib/contracts/club';
 import {projectClubState} from '../lib/club-view';
 import {calculateSettlementPreview} from '../lib/domain/money';
 import {feeContact} from '../lib/domain/fee-payments';
+import {guestLevels} from '../lib/domain/guests';
 
 const start=Date.parse('2026-11-01T15:00:00Z'),end=start+7200000,now=start-86400000;
 function fixture(){
@@ -39,13 +40,13 @@ test('existing mode reuses the friend; full capacity queues new friends and reje
 });
 test('header court selection uses that court default interval, not another court times',()=>{
  const {s,e,member}=fixture();s.bookings.push({...s.bookings[0],id:'later',name:'Later court',start:start+3600000,end:end+3600000});s.events[0].end=end+3600000;
- const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ const data={me:member,players:s.players,bookings:s.bookings,registrations:s.registrations} as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
  const form=friendSignupForm(e,data,now)!;assert.ok(form.fields.some(f=>f.key==='bookingId'));const payload=form.convert({...form.values,name:'Fictional later guest',gender:'female',bookingId:'later'});assert.equal(payload.arrival,start+3600000);assert.equal(payload.departure,end+3600000);
 });
 
 test('friend signup forms omit repeated notice consent for both new and existing participants',()=>{
  const {s,e,member}=fixture();s.players.push({...s.players[0],id:'owned-friend',name:'Fictional existing friend'});
- const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ const data={me:member,players:s.players,bookings:s.bookings,registrations:s.registrations} as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
  for(const existing of [false,true]){
   const form=friendSignupForm(e,data,now,data.bookings[0],existing)!;
   assert.ok(form.fields.every(f=>f.type!=='activity-notice'&&f.key!=='noticeAccepted'));
@@ -58,7 +59,7 @@ test('friend signup forms omit repeated notice consent for both new and existing
 
 test('all combined friend form entries close at the member signup deadline while managers retain access',()=>{
  const {s,e,member}=fixture();e.signupDeadline=e.start-7200000;
- const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ const data={me:member,players:s.players,bookings:s.bookings,registrations:s.registrations} as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
  assert.ok(friendSignupForm(e,data,e.signupDeadline-1));
  assert.equal(friendSignupForm(e,data,e.signupDeadline),null);
  assert.equal(friendSignupForm(e,data,e.signupDeadline,data.bookings[0],true),null);
@@ -85,7 +86,7 @@ test('guests cannot be reused in another activity; ordinary system profiles rema
  await assert.rejects(()=>apply(s,member,'friendSignup',{...acceptedActivityNotice,mode:'existing',playerId:guest.id,bookingId:'next-court',arrival:start,departure:end,note:''},now),/原活动/);
  await assert.rejects(()=>apply(s,member,'register',{...acceptedActivityNotice,eventId:next.id,playerId:guest.id,arrival:start,departure:end,note:''},now),/原活动/);assert.deepEqual(s,before);
  s.players.push({...s.players[0],id:'existing-system-friend',name:'Fictional existing system friend'});
- const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ const data={me:member,players:s.players,bookings:s.bookings,registrations:s.registrations} as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
  const fields=friendSignupForm(next,data,now)!.fields,options=fields.find(f=>f.key==='playerId')!.options!;
  assert.ok(!options.some(([id])=>id===guest.id));assert.ok(options.some(([id])=>id==='existing-system-friend'));
 });
@@ -114,10 +115,46 @@ test('a new friend must give a gender, and the registrant or an organiser can co
 
 test('the friend form asks for the gender of a new friend only',()=>{
  const {s,e,member}=fixture();s.players.push({...s.players[0],id:'owned-friend',name:'Fictional existing friend'});
- const data={me:member,players:s.players,bookings:s.bookings} as Pick<ClubData,'me'|'players'|'bookings'>;
+ const data={me:member,players:s.players,bookings:s.bookings,registrations:s.registrations} as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
  const form=friendSignupForm(e,data,now)!,gender=form.fields.find(f=>f.key==='gender')!;
  assert.deepEqual(gender.options,[['male','男'],['female','女']]);assert.deepEqual(gender.when,{key:'mode',value:'new'});assert.equal(form.values.gender,'');
  assert.throws(()=>form.convert({...form.values,name:'Fictional friend'}),/请选择朋友性别/);
  const created=form.convert({...form.values,name:'Fictional friend',gender:'male'});assert.ok(created.mode==='new'&&created.gender==='male');
  assert.ok(!('gender' in form.convert({...form.values,mode:'existing',playerId:'owned-friend'})));
+});
+
+/** A second activity a week later, with its own court, and a friend "aq" the member brought to the first one. */
+async function twoActivities(){
+ const f=fixture(),{s,member}=f,admin:Account={id:'admin',playerId:'admin-p',email:'',role:'admin'};s.accounts.push(admin);s.players.push({...s.players[0],id:'admin-p',name:'admin',ownerId:'admin'});
+ const level=guestLevels[2][0];
+ await apply(s,member,'friendSignup',{...acceptedActivityNotice,mode:'new',gender:'female',guestLevel:level,name:'aq',bookingId:'court',arrival:start,departure:end,note:''},now);
+ const week=7*86400000,e2:Event={...f.e,id:'event2',start:start+week,end:end+week,signupDeadline:end+week,capacity:8};s.events.push(e2);s.bookings.push({...s.bookings[0],id:'court2',eventId:'event2',start:start+week,end:end+week});
+ const data=(me:Account)=>({me,players:s.players,bookings:s.bookings,registrations:s.registrations}) as Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
+ return {...f,admin,e2,level,data,first:s.players.find(p=>p.name==='aq')!};
+}
+test('the same nickname cannot be added twice to one activity',async()=>{
+ const {s,e,member,data}=await twoActivities(),before=structuredClone(s);
+ await assert.rejects(()=>apply(s,member,'friendSignup',{...acceptedActivityNotice,mode:'new',gender:'male',name:' AQ ',bookingId:'court',arrival:start,departure:end,note:''},now),/已经在本场接龙了.*代朋友接龙/);
+ assert.deepEqual(s,before);
+ const form=friendSignupForm(e,data(member),now)!;assert.throws(()=>form.convert({...form.values,mode:'new',name:'aq',gender:'female'}),/已经在本场接龙了/);
+});
+test('my friends: a friend brought before is chosen again with their nickname, gender and level, still owed by the first host',async()=>{
+ const {s,e2,member,admin,data,level,first}=await twoActivities();
+ const mine=friendSignupForm(e2,data(member),now,undefined,true)!;
+ assert.deepEqual(mine.fields.find(f=>f.key==='mode')!.options!.map(o=>o[1]).slice(0,2),['新建临时来宾','我的朋友']);
+ assert.equal(mine.values.mode,'saved');const payload=mine.convert(mine.values);assert.deepEqual([payload.mode,'sourcePlayerId' in payload&&payload.sourcePlayerId],['saved',first.id]);
+ await apply(s,member,'friendSignup',{...acceptedActivityNotice,...payload},now);
+ const copy=s.players.at(-1)!;assert.deepEqual([copy.name,copy.guestGender,copy.rating,copy.ownerId,copy.guestEventId],['aq','female',level,member.id,'event2']);assert.notEqual(copy.id,first.id);
+ // Already here: the friend is offered for another court instead of a second copy.
+ const again=friendSignupForm(e2,data(member),now,undefined,true)!;assert.match(again.fields.find(f=>f.key==='saved')!.options![0][1],/已在本场/);assert.equal(again.convert(again.values).mode,'existing');
+ // Admins see every guest, labelled with who brought them; the first host still owes the share.
+ const adminForm=friendSignupForm(e2,data(admin),now,undefined,true)!;assert.equal(adminForm.fields.find(f=>f.key==='mode')!.options!.find(o=>o[0]==='saved')![1],'全部临时来宾');
+ assert.ok(adminForm.fields.find(f=>f.key==='saved')!.options!.some(o=>o[1].includes('member带来')));
+});
+test('members cannot reuse a friend someone else brought; 羽林同门 lists members only',async()=>{
+ const {s,e2,admin,first,data}=await twoActivities(),other=s.accounts.find(a=>a.id==='other')!;
+ await assert.rejects(()=>apply(s,other,'friendSignup',{...acceptedActivityNotice,mode:'saved',sourcePlayerId:first.id,bookingId:'court2',arrival:start+7*86400000,departure:end+7*86400000,note:''},now),/403/);
+ await apply(s,admin,'friendSignup',{...acceptedActivityNotice,mode:'saved',sourcePlayerId:first.id,bookingId:'court2',arrival:start+7*86400000,departure:end+7*86400000,note:''},now);assert.equal(s.players.at(-1)!.ownerId,'member','an admin adding a friend keeps the first host');
+ const form=friendSignupForm(e2,data(admin),now)!,members=form.fields.find(f=>f.key==='playerId')!.options!.map(o=>o[1]);
+ assert.ok(members.length&&members.every(n=>n!=='aq'),'no guests among 羽林同门');
 });

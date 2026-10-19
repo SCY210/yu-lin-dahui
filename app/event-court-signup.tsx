@@ -41,7 +41,7 @@ export default function EventCourtSignup({e,ctx,rules}:any){
    // Each part's time and booker as they fit the slot; the first booker is the slot's, the others are handovers.
    const {parts:raw,...rest}=v as Record<string,unknown>&{parts:CourtPart[]},parts=fitParts(String(v.start),String(v.end),raw);
    if((e.feeAdvances||parts.some(p=>p.advancedBy))&&parts.some(p=>!p.advancedBy))throw new Error('请为每一段选择是谁约的');
-   if(!partsFit(String(v.start),String(v.end),parts))throw new Error('每人每次约 1–2 小时，请把每一段调到 1–2 小时');
+   if(!partsFit(String(v.start),String(v.end),parts))throw new Error('每一段至少 1 小时，请拖动分界点调整');
    return {...rest,start:plannedEpoch(String(v.start),plan.start),end:plannedEpoch(String(v.end),plan.end),...(parts[0].advancedBy?{advancedBy:parts[0].advancedBy}:{}),handovers:parts.slice(1).map(p=>({at:partEpoch(p.start),advancedBy:p.advancedBy}))};
   },'每个场地时段独立接龙与候补。新增时段超出活动时间时，会自动扩展活动起止时间。');
  };

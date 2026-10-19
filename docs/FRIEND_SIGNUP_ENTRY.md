@@ -11,3 +11,14 @@ Guests still occupy one court slot, queue when full, take part in scheduling and
 Merging upcoming activities copies guest identities into the retained activity, preserving the original guest and signup in the recoverable source. Guest identities are never shared across unrelated activities.
 
 Verification covers scoped registration, profile-write rejection, excluded social/leaderboard summaries, court defaults and cutoff handling, fees and proxy ownership, persisted API results, request replay and rollback, plus activity-merge preservation. Fictional tests never change production rosters.
+
+## Choosing who to sign up (`app/friend-signup-form.ts`)
+
+The form offers up to three sources:
+
+- **New guest**: nickname, gender and level are entered once for this activity.
+- **My friends**: friends this member brought before, one entry per nickname. The owner and administrators see every guest instead (the option is then called All guests), each labelled with the member who brought them. Choosing one sends `mode: 'saved'` with the earlier guest as `sourcePlayerId`. The server copies the nickname, gender and latest level into a new guest of this activity, so each activity keeps its own records. The member who first brought the friend stays their `ownerId` and owes their share, even when an administrator adds them. Members can only reuse their own friends (403 otherwise).
+- **Club members** (named in the club's cultivation style): formal members only, never guests. Organisers can sign up any member; others only players they own.
+
+A friend already signed up for this activity is marked as already signed up here, and choosing them signs them up for another court. A guest whose nickname matches one already signed up for the activity (ignoring case and surrounding spaces) is refused, in the form and on the server, with a message pointing to signing up an existing friend for another court (`lib/domain/guest-names.ts`). Signing up a friend opens on My friends, then Club members, then New guest. `tests/friend-signup.test.ts` covers the duplicate refusal, reuse with copied details and ownership, the administrator view and the members-only list.
+
