@@ -23,7 +23,7 @@ export function promoteBooking(s:State,e:Event,b:Booking,now:number){
   row.status='confirmed';if(row.joinedAsWaitlist)row.promotedAt=now;syncRegistration(r);
  }
 }
-export function registrationSpans(s:State,e:Event,r:Registration,bookingId?:string):Attendance[]{
+export function registrationSpans(s:Pick<State,'bookings'>,e:Event,r:Registration,bookingId?:string):Attendance[]{
  if(r.bookingSignups){return r.bookingSignups.filter(x=>x.status==='confirmed'&&(!bookingId||x.bookingId===bookingId)).flatMap(x=>{
   const b=s.bookings.find(b=>b.id===x.bookingId&&b.eventId===e.id);if(!b)return [];
   return [{id:`automatic:${r.id}:${b.id}`,eventId:e.id,playerId:r.playerId,bookingId:b.id,start:Math.max(e.start,b.start,x.arrival,x.registeredAt,x.joinedAsWaitlist?(x.promotedAt??e.start):e.start),end:Math.min(e.end,b.end,x.departure),state:'ready' as const,source:'automatic' as const}];
