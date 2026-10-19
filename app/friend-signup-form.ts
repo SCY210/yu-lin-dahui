@@ -12,17 +12,17 @@ type Court=Data['bookings'][number];
 type Values={bookingId:string;mode:'new'|'saved'|'existing';name:string;gender:''|'male'|'female';guestLevel:string;saved:string;playerId:string;arrival:string;departure:string;note:string};
 type Person=Data['players'][number];
 const isGuestView=(p:Person)=>!!(p.guest||p.guestEventId);
-/** Friends brought before, one per member and nickname (the latest record), with this activity's guest when they are
- * already signed up here. Members see their own friends; the owner and admins see every guest. */
+/** Friends brought before, one per host and nickname (the latest record), with this activity's guest when they are
+ * already signed up here. Members see their own friends; the owner and admins see every guest. Other members' owners
+ * are hidden in the view, so guests are grouped and labelled by the projected host (`guestHostId`, `guestHost`). */
 function savedFriends(e:Event,data:Data,admin:boolean){
  const latest=new Map<string,Person>(),here=new Map<string,Person>();
  for(const p of data.players){
   if(!p.enabled||!isGuestView(p)||(!admin&&p.ownerId!==data.me.id))continue;
-  const key=p.ownerId+'|'+guestNameKey(p.name);latest.set(key,p);
+  const host=p.guestHostId??(p.ownerId===data.me.id?data.me.playerId:'guest:'+p.id),key=host+'|'+guestNameKey(p.name);latest.set(key,p);
   if(p.guestEventId===e.id)here.set(key,p);
  }
- const host=(ownerId:string)=>data.players.find(p=>p.ownerId===ownerId&&!isGuestView(p))?.name;
- return [...latest].map(([key,p])=>({value:(here.has(key)?'existing:'+here.get(key)!.id:'saved:'+p.id),label:p.name+(here.has(key)?' · 已在本场，可报其他场地':'')+(admin&&p.ownerId!==data.me.id&&host(p.ownerId)?' · '+host(p.ownerId)+'带来':'')})).sort((a,b)=>a.label.localeCompare(b.label,'zh-CN'));
+ return [...latest].map(([key,p])=>({value:(here.has(key)?'existing:'+here.get(key)!.id:'saved:'+p.id),label:p.name+(here.has(key)?' · 已在本场，可报其他场地':'')+(admin&&p.guestHost&&p.guestHostId!==data.me.playerId?' · '+p.guestHost+'带来':'')})).sort((a,b)=>a.label.localeCompare(b.label,'zh-CN'));
 }
 export function friendSignupForm(e:Event,data:Data,now:number,court?:Court,preferExisting=false){
  const manager=canManageEvent(data.me,e);
