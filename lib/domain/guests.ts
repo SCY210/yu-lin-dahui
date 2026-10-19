@@ -23,6 +23,8 @@ export function guestRatings(s:GuestState){
  return new Map(s.players.filter(p=>guests.has(p.id)).map(p=>[p.id,(at?:number)=>guestLevelAt(p,at)]));
 }
 /** The member who brought this friend, for "X 的朋友". */
+/** The player id of the member who brought a guest, so a viewer can group guests by host without seeing owners. */
+export function guestHostPlayerId(s:Pick<State,'players'|'accounts'>,playerId:string){const owner=s.players.find(p=>p.id===playerId)?.ownerId;return s.accounts.find(a=>a.id===owner)?.playerId}
 export function guestHostName(s:Pick<State,'players'|'accounts'>,playerId:string){
  const owner=s.players.find(p=>p.id===playerId)?.ownerId,host=s.accounts.find(a=>a.id===owner);
  return host?s.players.find(p=>p.id===host.playerId)?.name:undefined;

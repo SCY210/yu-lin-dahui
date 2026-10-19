@@ -147,9 +147,8 @@ test('my friends: a friend brought before is chosen again with their nickname, g
  const copy=s.players.at(-1)!;assert.deepEqual([copy.name,copy.guestGender,copy.rating,copy.ownerId,copy.guestEventId],['aq','female',level,member.id,'event2']);assert.notEqual(copy.id,first.id);
  // Already here: the friend is offered for another court instead of a second copy.
  const again=friendSignupForm(e2,data(member),now,undefined,true)!;assert.match(again.fields.find(f=>f.key==='saved')!.options![0][1],/已在本场/);assert.equal(again.convert(again.values).mode,'existing');
- // Admins see every guest, labelled with who brought them; the first host still owes the share.
+ // Admins see every guest (their labels come from the projected view, tested below).
  const adminForm=friendSignupForm(e2,data(admin),now,undefined,true)!;assert.equal(adminForm.fields.find(f=>f.key==='mode')!.options!.find(o=>o[0]==='saved')![1],'全部临时来宾');
- assert.ok(adminForm.fields.find(f=>f.key==='saved')!.options!.some(o=>o[1].includes('member带来')));
 });
 test('members cannot reuse a friend someone else brought; 羽林同门 lists members only',async()=>{
  const {s,e2,admin,first,data}=await twoActivities(),other=s.accounts.find(a=>a.id==='other')!;
@@ -157,4 +156,14 @@ test('members cannot reuse a friend someone else brought; 羽林同门 lists mem
  await apply(s,admin,'friendSignup',{...acceptedActivityNotice,mode:'saved',sourcePlayerId:first.id,bookingId:'court2',arrival:start+7*86400000,departure:end+7*86400000,note:''},now);assert.equal(s.players.at(-1)!.ownerId,'member','an admin adding a friend keeps the first host');
  const form=friendSignupForm(e2,data(admin),now)!,members=form.fields.find(f=>f.key==='playerId')!.options!.map(o=>o[1]);
  assert.ok(members.length&&members.every(n=>n!=='aq'),'no guests among 羽林同门');
+});
+test('in the real view admins see each host\'s friends separately, labelled with who brought them',async()=>{
+ const {s,e2,admin}=await twoActivities(),other=s.accounts.find(a=>a.id==='other')!;
+ // Another member brings their own "aq" to the second activity; the views hide other members' owners.
+ await apply(s,other,'friendSignup',{...acceptedActivityNotice,mode:'new',gender:'male',name:'aq',bookingId:'court2',arrival:start+7*86400000,departure:end+7*86400000,note:''},now);
+ const view=projectClubState(s,admin,'2026-11',2026,now) as unknown as ClubData,event=view.events.find(x=>x.id===e2.id)! as unknown as Event;
+ assert.ok(view.players.filter(p=>p.guest).every(p=>p.ownerId===''),'owners stay hidden');
+ const form=friendSignupForm(event,{me:view.me,players:view.players,bookings:view.bookings,registrations:view.registrations},now,undefined,true)!;
+ const labels=form.fields.find(f=>f.key==='saved')!.options!.map(o=>o[1]).sort();
+ assert.deepEqual(labels,['aq · member带来','aq · 已在本场，可报其他场地 · other带来']);
 });
