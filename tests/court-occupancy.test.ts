@@ -3,8 +3,17 @@ import assert from 'node:assert/strict';
 import {courtOccupancy,occupancyDuration} from '../lib/client/court-occupancy';
 import {createSimulation} from '../lib/admin-simulation';
 import {calculateSettlementPreview} from '../lib/domain/money';
+import {projectClubState} from '../lib/club-view';
 
 const hour=3600000,now=Date.parse('2030-10-10T10:00:00Z');
+test('server grants occupancy visibility only to the recorded creator, without administrator or owner overrides',()=>{
+ const {s,e}=fixture(),owner=s.accounts[0],creator=s.accounts[1],member=s.accounts[2];
+ e.creatorId=creator.id;
+ for(const [account,visible]of [[creator,true],[member,false],[owner,false],[{...member,role:'admin' as const},false]] as const){
+  const view=projectClubState(s,account,'2030-10',2030,now);assert.equal(view.events[0].canViewCourtOccupancy,visible);
+ }
+ delete e.creatorId;assert.equal(projectClubState(s,owner,'2030-10',2030,now).events[0].canViewCourtOccupancy,false);
+});
 function fixture(){
  const s=createSimulation(now).state,e=s.events[0];e.start=now;e.end=now+4*hour;
  for(const b of s.bookings){b.start=e.start;b.end=e.end}

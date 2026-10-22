@@ -26,8 +26,18 @@ try{
  assert.match(text(ui.toJSON()),/全程有人接龙/);assert.equal(ui.root.findAllByType('button').filter(b=>b.props['aria-pressed']).length,2);
  await act(()=>ui.unmount());ui=null;
  const data=simulationView(doc,now-hour).data;
- await act(()=>{ui=renderer.create(React.createElement(Signup,{e,ctx:{data,name:names,busy:false,open(){},openProfile(){}},rules:data.settings.rules}))});
+ await act(()=>{ui=renderer.create(React.createElement(Signup,{e:data.events[0],ctx:{data,name:names,busy:false,open(){},openProfile(){}},rules:data.settings.rules}))});
  assert.equal(ui.root.findAll(n=>n.type==='section'&&n.props['aria-label']==='场地时间占用').length,1,'activity signup includes the real coverage component');
  assert.match(text(ui.toJSON()),/候补不计入，不代表实际对局/);
+ // Use real server projections: being an admin or the club owner is not an exception.
+ const signupCount=()=>ui.root.findAll(n=>n.type==='section'&&n.props['aria-label']==='场地时间占用').length;
+ for(const [creator,viewer,visible]of [['other','admin',false],['other','member',false],['self','member',true],['missing','admin',false]]){
+  const document=structuredClone(doc),account=document.state.accounts[0];account.role=viewer;
+  document.state.events[0].creatorId=creator==='missing'?undefined:creator==='self'?account.id:'another-account';
+  const projected=simulationView(document,now-hour).data;
+  await act(()=>ui.update(React.createElement(Signup,{e:projected.events[0],ctx:{data:projected,name:names,busy:false,open(){},openProfile(){}},rules:projected.settings.rules})));
+  assert.equal(signupCount(),Number(visible),creator+' / '+viewer);
+  assert.match(text(ui.toJSON()),/场地接龙/,'other members retain normal signups');
+ }
  console.log('PASS court occupancy UI: real signup integration, per-court empty periods, accessible interactive rosters and updated signups');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=prior.window;globalThis.document=prior.document;globalThis.IS_REACT_ACT_ENVIRONMENT=prior.act}

@@ -1,6 +1,8 @@
 # Court signup coverage
 
-The activity signup page includes a timeline for each booked court. It shows confirmed signup counts, empty intervals and their duration, and whether each interval has enough players for singles (two) or doubles (four). Practice requires one participant for the coverage display. Selecting an interval lists its players. Empty time is summed separately for each court.
+Only the activity creator sees the court-coverage section on the activity signup page. The server derives `canViewCourtOccupancy` for each event from its stored creator and the authenticated account; an administrator or club owner who did not create that activity gets no override. Legacy activities with no creator do not display it. Normal signup lists and signup permissions are unchanged.
+
+The section includes a timeline for each booked court. It shows confirmed signup counts, empty intervals and their duration, and whether each interval has enough players for singles (two) or doubles (four). Practice requires one participant for the coverage display. Selecting an interval lists its players. Empty time is summed separately for each court.
 
 This is planned signup coverage, not evidence of matches played, actual attendance or a financial settlement. Waitlisted and cancelled court signups do not fill gaps. Registration and waitlist-promotion times are respected. Court-specific signups stay on their court; legacy activity-wide signups cover overlapping court bookings. The display reuses `registrationSpans`, handles adjacent intervals without false gaps, and counts a player only once when legacy rows overlap.
 
