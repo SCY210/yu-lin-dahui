@@ -60,6 +60,19 @@ dependencies when needed, tests, builds, applies required migrations and publish
 Conflicts, integrity failures, stale main, failed checks or unavailable metadata
 stop publication. Never resolve conflicts by replacing the private tree.
 
+Cloud build merges are temporary: the build checkout cannot push its merge back
+to the private source repository. After an authorized manual conflict resolution,
+validate the protected integration and synchronize the resulting merge through
+the approved private push hook, after verifying the destination is still private.
+Otherwise each new build starts from the old private base and encounters the same
+conflict again. Do not grant cloud builds additional push permissions to work
+around this boundary.
+
+Keep shared homepage cards on separate JSX source lines from the welcome/theme
+section. A card addition should not edit the same giant line as private welcome
+presentation. Formatting can reduce unrelated merge conflicts; actual competing
+edits to one feature still require review.
+
 Keep public-repository production builds disabled or disconnected. Only the
 private source build may use the production deployment token. Disable previews
 for that build and never execute a shared/review checkout deployment command.
