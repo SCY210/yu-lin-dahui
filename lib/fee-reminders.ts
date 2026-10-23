@@ -2,21 +2,18 @@ import type {State} from './domain/types';
 import {feeContact,unpaidBills} from './domain/fee-payments';
 import {clubOwnerId} from './domain/ownership';
 import {unpaidFeeReminders,type Reminder} from './reminder-contract';
+import {automaticFeeReminders,reminderHours} from './fee-reminder-schedule';
+export {automaticFeeReminders,reminderHours};
 
 /** Automatic unpaid-fee reminders (docs/FEE_PAYMENTS.md). The hourly cron reminds everyone who still owes 24, 48 and
  * 72 hours after a split is confirmed, then tells the owner and administrators once, 24 hours after the third reminder,
  * if bills are still unpaid. Organisers can still remind by hand at any time. */
 export const feeReminderSweepKey='fee-reminder-sweep-v1';
-export const automaticFeeReminders=3;
 const hour=3600000,day=24*hour;
 /** Only recent splits: the whole sequence takes four days; older unpaid bills are left to the organisers. */
 export const feeReminderLookback=7*day;
 /** Progress per confirmed settlement version: reminders sent and whether the owner was told. */
 export type FeeReminderProgress=Record<string,{sent:number;escalated?:boolean}>;
-
-const madridHour=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hourCycle:'h23'});
-/** Reminders go out between 09:00 and 21:59 in Madrid; one that falls due at night waits for the morning. */
-export function reminderHours(now:number){const h=Number(madridHour.format(now));return h>=9&&h<22}
 
 const owners=(s:Pick<State,'settings'|'accounts'>)=>[...new Set([clubOwnerId(s as State),...s.accounts.filter(a=>a.role==='admin').map(a=>a.id)])].filter(id=>s.accounts.some(a=>a.id===id));
 

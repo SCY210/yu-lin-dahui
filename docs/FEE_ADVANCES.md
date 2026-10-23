@@ -34,7 +34,7 @@ The advances, the transfers and the collector are stored with the confirmed vers
 - A person counts as paid once all their transfers are marked; unpaid reminders, the reminder button count and "My page" use this.
 - Marks are stored per payer and receiver (`payments` rows with `to`), so a later version keeps them, and a raised amount shows as unpaid again.
 - Marking a whole bill (`feePaid`) is refused on a version settled by transfers.
-- The fees page shows what each advancer advanced, the viewer's own transfers with mark buttons, and everyone else's transfers. The home page lists each transfer the member still has to make and can mark them all.
+- The fees page shows what each advancer advanced, the viewer's own transfers with mark buttons, and everyone else's transfers. The home page lists each transfer the member still has to make and can mark them all. It also lists the transfers the member is still waiting for, which they can mark as received ([Fee payments](FEE_PAYMENTS.md#where-members-see-unpaid-fees)).
 
 ## Verification
 

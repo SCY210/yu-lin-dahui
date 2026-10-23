@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {dueFeeReminders,reminderHours,type FeeReminderProgress} from '../lib/fee-reminders';
+import {feeOverdueAt} from '../lib/fee-reminder-schedule';
 import {emptyState,type Account,type State} from '../lib/domain/types';
 
 // Confirmed at 10:00 in Madrid (CEST), so every 24-hour step falls inside reminder hours.
@@ -69,4 +70,13 @@ test('a newer confirmed version starts its own reminder schedule',()=>{
  assert.deepEqual(sweep(s,progress,confirmed+2*day),[],'v2 is only 18 hours old');
  const next=sweep(s,progress,confirmed+30*hour+day);assert.ok(next.length&&next.every(n=>n.settlementId==='v2'));
  assert.deepEqual(Object.keys(progress.value),['v2'],'the replaced version is forgotten');
+});
+
+test('the home page marks a split overdue at the same hourly tick that tells the owner and administrators',()=>{
+ // 10:00, 10:37 and 22:30 in Madrid: on the hour, between ticks, and with every step falling due at night.
+ for(const created of [confirmed,confirmed+37*60000,Date.parse('2026-10-20T20:30:00Z')]){
+  const s=fixture(created),progress={value:{}};let told:number|undefined;
+  for(let tick=Math.ceil(created/hour)*hour;tick<created+6*day&&told===undefined;tick+=hour)if(sweep(s,progress,tick).some(n=>n.overdue))told=tick;
+  assert.equal(feeOverdueAt(created),told,new Date(created).toISOString());
+ }
 });

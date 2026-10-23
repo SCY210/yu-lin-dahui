@@ -41,6 +41,8 @@ The hourly Cloudflare cron (`build/sites-worker.ts`, `lib/fee-reminder-sweep.ts`
 
 The manual "Remind unpaid (N)" button is unchanged and independent: organisers can still remind at any time, at most once every six hours per version.
 
+`lib/fee-reminder-schedule.ts` holds the reminder hours and computes the tick that tells the owner (`feeOverdueAt`). The server sweep and the app share it, so the home page marks a split overdue at the same moment the owner and administrators are told (`tests/fee-reminders.test.ts` checks this against the sweep).
+
 ## Saved payees
 
 Every transfer recipient saved for an activity is kept in the club settings as a saved payee (matched by the digits
@@ -56,6 +58,15 @@ activities. The member view receives each payee's name, phone and whether the vi
   notice at the top lists each activity, whose bill it is and the amount, and opens the activity's fees tab. It
   disappears once every bill is marked paid. Only the latest confirmed version of each visible activity counts
   (`lib/client/my-fees.ts`, covered by `tests/my-fees.test.ts`). A newer confirmed split that removes a member also removes their older bill from My page.
+- Home page, for the receiver: on splits settled by transfers ([Fee advances](FEE_ADVANCES.md)), a member who booked a
+  court, bought balls or collects the fees sees a "waiting for payment" card as soon as the split is confirmed. It lists, per activity, who
+  has not marked a transfer to them and how much. Once the automatic reminders are over, each such payer gets a red
+  "reminded 3 times, still unpaid" tag. "Mark received" marks the activity's transfers as received. Splits paid the old way are not
+  listed, because their recipient is only a name and phone number, not linked to an account.
+- Home page, for the owner and administrators: from the moment they are told (above), a "still unpaid after 3 reminders" card lists every
+  visible activity that still has unpaid people, oldest first, with each payer and what they still owe. It covers both
+  ways of paying and stays until everyone has paid. Tapping an activity opens its fees tab to remind again or mark
+  payments. Cancelled and draft activities are left out (`app/home-fees-owed.tsx`, `tests/home-fees-reminders-ui.mjs`).
 
 ## Reminder button
 

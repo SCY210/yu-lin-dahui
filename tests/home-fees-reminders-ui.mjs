@@ -7,9 +7,9 @@ import {pathToFileURL} from 'node:url';
 import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
-writeFileSync('.test-output/home-fee-entry.ts',"export {default as ReminderButton} from '../app/reminder-button';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as MyFeeList} from '../app/my-fee-list';");
+writeFileSync('.test-output/home-fee-entry.ts',"export {default as ReminderButton} from '../app/reminder-button';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as MyFeeList} from '../app/my-fee-list';export {default as HomeFeesOwed} from '../app/home-fees-owed';export {feeOverdueAt} from '../lib/fee-reminder-schedule';");
 await build({entryPoints:['.test-output/home-fee-entry.ts'],outfile:'.test-output/home-fee-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner'],loader:{'.css':'empty'}});
-const {ReminderButton,HomeUnpaid,MyFeeList}=await import(pathToFileURL(resolve('.test-output/home-fee-ui.mjs')).href);
+const {ReminderButton,HomeUnpaid,MyFeeList,HomeFeesOwed,feeOverdueAt}=await import(pathToFileURL(resolve('.test-output/home-fee-ui.mjs')).href);
 const original={fetch:globalThis.fetch,document:globalThis.document,setInterval:globalThis.setInterval,clearInterval:globalThis.clearInterval,act:globalThis.IS_REACT_ACT_ENVIRONMENT};
 const requests=[],listeners=new Map(),timers=new Map();let nextTimer=0,ui;
 globalThis.document={visibilityState:'visible',addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name,fn)=>{if(listeners.get(name)===fn)listeners.delete(name)}};
@@ -35,5 +35,21 @@ try{
  await act(async()=>ui.update(React.createElement(HomeUnpaid,{...props,payments:[{eventId:'e',playerId:'friend',cents:300}]})));assert.equal(ui.toJSON(),null,'paying the latest bill hides the card');
  await mount(MyFeeList,{settlements:[old,latest],playerId:'p1',eventName:id=>id,onOpen(){}});assert.equal(ui.root.findAllByType('button').length,0,'the newer version removes the old member bill');
  await mount(MyFeeList,{settlements:[old],playerId:'p1',payments:[{eventId:'e',playerId:'p1',cents:300}],eventName:id=>id,onOpen(){}});assert.ok(text(ui.toJSON()).includes('已付款'));
- console.log('PASS home fee/reminder UI: onboarding, latest response wins, account isolation, 99+, failure preservation, visible-only refresh, cleanup/reduced motion, latest bills, proxy navigation, paid and removed hiding');
+ 
+ const confirmed=Date.parse('2026-10-20T08:00:00Z'),late=feeOverdueAt(confirmed),marked=[];
+ const owedSplit={...split('t1',1,[]),created:confirmed,transfers:[{from:'p2',to:'p1',cents:450},{from:'p3',to:'p1',cents:300},{from:'p1',to:'p4',cents:200}]};
+ const owed={settlements:[owedSplit],payments:[],players:[{id:'p1',name:'Fictional Alice'},{id:'p2',name:'Fictional Bob'},{id:'p3',name:'Fictional Carol'},{id:'p4',name:'Fictional Dan'}],me:{playerId:'p1'},admin:false,now:late-1,
+  events:[{id:'e',title:'Fictional activity',status:'ended'}],onOpen:id=>requests.push(id),onMarkTransfers:list=>marked.push(...list)};
+ await mount(HomeFeesOwed,owed);let shown=text(ui.toJSON());
+ assert.ok(shown.includes('等你收款：1 场活动')&&shown.includes('Fictional Bob')&&shown.includes('Fictional Carol')&&!shown.includes('Fictional Dan'),'the receiver sees who still owes them, not their own outgoing transfer');
+ assert.ok(!shown.includes('已提醒 3 次')&&!shown.includes('提醒 3 次仍未付款'),'not overdue yet, and members never see the overdue card');
+ await act(()=>ui.root.findAllByType('button').find(b=>text(b.props.children).includes('全部标记已收到')).props.onClick());
+ assert.deepEqual(marked.map(t=>[t.from,t.to,t.settlementId]),[['p2','p1','t1'],['p3','p1','t1']]);
+ await act(async()=>ui.update(React.createElement(HomeFeesOwed,{...owed,now:late,payments:[{eventId:'e',playerId:'p3',cents:300,to:'p1'}]})));shown=text(ui.toJSON());
+ assert.ok(shown.includes('已提醒 3 次仍未付')&&!shown.includes('Fictional Carol'),'overdue after the automatic reminders; a marked transfer disappears');
+ await act(async()=>ui.update(React.createElement(HomeFeesOwed,{...owed,now:late,admin:true,me:{playerId:'p9'}})));shown=text(ui.toJSON());
+ assert.ok(shown.includes('提醒 3 次仍未付款')&&shown.includes('Fictional Bob · €4.50')&&shown.includes('Fictional Alice · €2.00')&&!shown.includes('等你收款'),'administrators see every overdue payer');
+ await act(()=>ui.root.findByType('button').props.onClick());assert.equal(requests.at(-1),'e');
+ await act(async()=>ui.update(React.createElement(HomeFeesOwed,{...owed,now:late,admin:true,events:[{id:'e',title:'Fictional activity',status:'cancelled'}]})));assert.equal(ui.toJSON(),null,'cancelled activities are not listed');
+ console.log('PASS home fee/reminder UI: receivables, overdue tags and admin overdue card, onboarding, latest response wins, account isolation, 99+, failure preservation, visible-only refresh, cleanup/reduced motion, latest bills, proxy navigation, paid and removed hiding');
 }finally{if(ui)await act(()=>ui.unmount());Object.assign(globalThis,{fetch:original.fetch,document:original.document,setInterval:original.setInterval,clearInterval:original.clearInterval,IS_REACT_ACT_ENVIRONMENT:original.act})}
