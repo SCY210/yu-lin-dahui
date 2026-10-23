@@ -44,10 +44,10 @@ function swapLivePlayers(s:State,a:Account,p:{eventId:string;p1:string;p2:string
   if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查报名时段和轮休状态');
  }
  const before=touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}));
- const retained=new Set(s.rounds.filter(r=>touched.some(m=>m.roundId===r.id)).flatMap(r=>r.liveRetained??[]));
+ const retained=new Set(s.rounds.filter(r=>current.some(m=>m.roundId===r.id)).flatMap(r=>r.liveRetained??[]));
  for(const m of next){const original=touched.find(x=>x.id===m.id)!;original.a=m.a;original.b=m.b;decorateMatch(s,e,original)}
  const playing=new Set(current.flatMap(m=>[...m.a,...m.b])),rest=livePresentIds(s,e,now).filter(id=>!playing.has(id));
- for(const m of touched){const r=s.rounds.find(r=>r.id===m.roundId);if(r){r.eligible=[...new Set([...r.eligible,...m.a,...m.b])];r.rest=rest;r.liveRetained=[...m.a,...m.b].filter(id=>retained.has(id))}}
+ for(const m of touched){const r=s.rounds.find(r=>r.id===m.roundId);if(r){r.eligible=[...new Set([...r.eligible,...m.a,...m.b])];r.rest=rest;r.liveRetained=[...new Set([...(r.liveRetained??[]),...[...m.a,...m.b].filter(id=>retained.has(id))])]}}
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'liveSwap',reason:'交换实时排场上场人员',changes:{eventId:e.id,p1:p.p1,p2:p.p2,before,after:touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}))}});
 }
 /** Explicit correction of the current lineup; never completes a game or changes another court. */
@@ -67,8 +67,11 @@ export async function applyLiveLineup(s:State,a:Account,action:string,input:unkn
  const allowed=new Set(liveLineupCandidates(s,e,m,now));
  if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查其他场地的最新阵容、报名时段和轮休状态');
  const before={a:[...m.a],b:[...m.b]};
+ const currentRounds=new Set(s.matches.filter(x=>x.eventId===e.id&&x.status==='playing').map(x=>x.roundId));
+ const retained=new Set(s.rounds.filter(x=>currentRounds.has(x.id)).flatMap(x=>x.liveRetained??[]));
  m.a=[...p.a];m.b=[...p.b];decorateMatch(s,e,m);
- r.liveRetained=r.liveRetained?.filter(id=>selected.includes(id));
+ // A brief swap to the bench and back before any game completes is not a completed rest.
+ r.liveRetained=[...new Set([...(r.liveRetained??[]),...selected.filter(id=>retained.has(id))])];
  r.eligible=[...new Set([...r.eligible,...selected])];
  const playing=new Set(s.matches.filter(x=>x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  r.rest=livePresentIds(s,e,now).filter(id=>!playing.has(id));

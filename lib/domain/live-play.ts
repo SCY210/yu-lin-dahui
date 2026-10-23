@@ -107,9 +107,10 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   if(!old||(m.end??m.start)>(old.end??old.start!)||((m.end??m.start)===(old.end??old.start!)&&(m.start>old.start!||(m.start===old.start&&m.id.localeCompare(old.id)<0))))previousByCourt.set(key,m);
  }
  // A winner waiting for their own court must not be consumed as a substitute for another court.
+ const winRuns=winnerRotation?liveWinStreaks(s,e):new Map<string,number>();
  const reserved=new Map<string,string>();
  for(const [key,m] of previousByCourt)if(winnerRotation&&liveRounds.has(m.roundId)&&!s.matches.some(x=>x.eventId===e.id&&playing(x)&&physical(s,e,x.courtId)===key))for(const id of winners(m)){
-  if((lastTurns.get(id)??0)<=m.start!&&present.includes(id)&&!busy.has(id)&&!liveResting(e,id)&&courts.some(b=>physical(s,e,b.id)===key&&bookingAllowsPlayer(s,e.id,b.id,id,now,now+1)))reserved.set(id,key);
+  if((winRuns.get(id)??0)<2&&(lastTurns.get(id)??0)<=m.start!&&present.includes(id)&&!busy.has(id)&&!liveResting(e,id)&&courts.some(b=>physical(s,e,b.id)===key&&bookingAllowsPlayer(s,e.id,b.id,id,now,now+1)))reserved.set(id,key);
  }
  for(const court of courts){
   const key=physical(s,e,court.id),venue=court.venue??e.venue;

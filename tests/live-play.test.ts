@@ -246,3 +246,20 @@ test('moving a retained winner to an earlier-started court preserves their perso
  await apply(s,owner,'score',{matchId:other.id,a:21,b:19},now+120000);assert.ok(liveForcedRest(e,id));
  const ongoing=active(s)[0];await apply(s,owner,'void',{matchId:ongoing.id,status:'cancelled'},now+130000);assert.ok(liveForcedRest(e,id),'cancelling a court is not a completed rest game');
 });
+
+test('a completed break on another court returns a two-win player to the bench, not to the old retained slot',async()=>{
+ const {s,e,owner}=fixture(8,2);s.bookings[1].start=now+180000;
+ await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0],held=[...first.a];await score(s,first.id,now+60000);
+ const second=active(s)[0],fresh=[...second.a,...second.b].filter(id=>!held.includes(id));await apply(s,owner,'liveLineup',{matchId:second.id,expectedA:second.a,expectedB:second.b,a:held,b:fresh},now+61000);
+ await apply(s,owner,'score',{matchId:second.id,a:21,b:19},now+120000);assert.ok(held.every(id=>liveForcedRest(e,id)));
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:s.bookings[1].id},now+180001);const other=active(s)[0];await apply(s,owner,'score',{matchId:other.id,a:21,b:19},now+240000);assert.ok(held.every(id=>!liveForcedRest(e,id)));
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:first.courtId},now+240001);const returned=active(s)[0],round=s.rounds.find(r=>r.id===returned.roundId)!;
+ assert.ok(held.every(id=>!round.liveRetained?.includes(id)),'the old two-win court does not resurrect its retained slot after a break');
+});
+
+test('briefly swapping a retained winner to the bench and back does not clear their win count',async()=>{
+ const {s,e,owner}=fixture(8);await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0];await score(s,first.id,now+60000);const second=active(s)[0],id=first.a[0],spare=s.players.find(p=>!participants(second).has(p.id))!.id;
+ const swap=async(p1:string,p2:string,at:number)=>apply(s,owner,'liveSwap',{eventId:e.id,p1,p2,expectedLineup:active(s).map(m=>({id:m.id,a:[...m.a],b:[...m.b]}))},at);
+ await swap(id,spare,now+61000);await swap(spare,id,now+62000);
+ await apply(s,owner,'score',{matchId:second.id,a:second.a.includes(id)?21:19,b:second.b.includes(id)?21:19},now+120000);assert.ok(liveForcedRest(e,id));
+});
