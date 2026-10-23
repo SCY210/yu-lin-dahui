@@ -1,0 +1,9 @@
+/* Builds on the home-unpaid card (fee-status.css): money owed to this member, and overdue bills for the owner and administrators.
+   Money coming in has its own colour so it never reads as a debt; the ink theme's primary is nearly its red, so it uses jade. */
+.home-receivable{--receivable:var(--primary)}
+.wuxia-theme .home-receivable{--receivable:#3f6b55}
+.home-unpaid.home-receivable,.card.home-unpaid.home-receivable,.wuxia-theme .card.home-unpaid.home-receivable{border-color:color-mix(in srgb,var(--receivable) 45%,transparent);border-left-color:var(--receivable);background:color-mix(in srgb,var(--receivable) 8%,var(--card))}
+.home-receivable .home-unpaid-title{color:var(--receivable)}
+.home-receivable .home-unpaid-row>span:last-child{color:var(--receivable)}
+.home-receivable .home-unpaid-row small{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.fee-overdue-tag{display:inline-block;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--destructive) 14%,var(--card));color:var(--destructive);font-size:12px;font-style:normal;font-weight:600;line-height:1.5}
