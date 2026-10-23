@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import {createSimulation} from '../lib/admin-simulation';
 import {apply} from '../lib/domain/commands';
 import {startDuePointsSessions} from '../lib/domain/points-auto-start';
-import {maxConsecutiveRounds} from '../lib/domain/grouping';
-import {liveStreaks} from '../lib/domain/live-play';
+import {liveWinStreaks} from '../lib/domain/live-play';
 import type {Match} from '../lib/domain/types';
 
 const minute=60000,base=Date.parse('2026-10-14T16:00:00Z'),ids=(m:Match)=>[...m.a,...m.b];
@@ -41,7 +40,7 @@ test('one court of singles rotates opponents',async()=>{
  assert.ok(Math.max(...played)-Math.min(...played)<=1);
 });
 
-test('live play: after three games in a row a player rests whenever somebody else can play',async()=>{
+test('live play: personal wins never exceed two before a mandatory break',async()=>{
  for(const count of [11,12]){
   const s=createSimulation(base).state,e=s.events[0];s.registrations=s.registrations.slice(0,count);
   await apply(s,s.accounts[0],'liveStart',{eventId:e.id},e.start+minute);
@@ -50,8 +49,8 @@ test('live play: after three games in a row a player rests whenever somebody els
    // Courts finish at different times, and every waiting court is started at once.
    for(const m of s.matches.filter(m=>m.status==='playing'&&t-(m.start??t)>=(m.courtId===s.bookings[0].id?11:14)*minute))await apply(s,s.accounts[0],'score',{matchId:m.id,a:21,b:17},t);
    for(const c of s.bookings)if(!s.matches.some(m=>m.status==='playing'&&m.courtId===c.id))try{await apply(s,s.accounts[0],'liveNext',{eventId:e.id,courtId:c.id},t)}catch{/* waiting for another court */}
-   longest=Math.max(longest,...liveStreaks(s,e.id).values());
+   longest=Math.max(longest,...liveWinStreaks(s,e).values());
   }
-  assert.ok(longest<=maxConsecutiveRounds,count+' players: longest run '+longest);
+  assert.ok(longest<=2,count+' players: longest run '+longest);
  }
 });

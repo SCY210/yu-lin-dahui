@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {sqliteD1} from './helpers/sqlite-d1.mjs';
+import {seedAccountNoticeFixture} from './helpers/account-notice.mjs';
+mkdirSync('.test-output',{recursive:true});
+const database=sqliteD1();globalThis.__winnerApi={env:{DB:database.db},user:{userId:'sim-admin',method:'password',username:'fictional',displayName:'Fictional'}};
+await build({stdin:{contents:`export {GET,POST} from './app/api/club/route';export {load,save} from './lib/store';export {loadClubState} from './lib/club-maintenance';export {emptyState} from './lib/domain/types';export {createSimulation} from './lib/admin-simulation';`,resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'esm',outfile:'.test-output/live-winner-api.mjs',plugins:[{name:'winner-fixture',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'fixture'}));b.onResolve({filter:/\/auth$/},()=>({path:'auth',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'js',contents:a.path==='env'?'export const env=globalThis.__winnerApi.env;':'export const getAppUser=async()=>globalThis.__winnerApi.user;'}))}}]});
+const api=await import(pathToFileURL(resolve('.test-output/live-winner-api.mjs')).href),origin='https://club.invalid',realNow=Date.now;let now=realNow();Date.now=()=>now;
+const request=async(action,payload)=>({action,payload,requestId:crypto.randomUUID(),revision:(await api.loadClubState()).revision});
+const post=body=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
+const send=async(action,payload)=>{const body=await request(action,payload),r=await post(body);assert.equal(r.status,200,await r.text());return body};
+try{
+ const s=api.createSimulation(now).state;s.bookings=s.bookings.slice(0,1);const e=s.events[0];e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:Array.from({length:6},(_,i)=>s.players.slice(i*2,i*2+2).map(p=>p.id))};await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());await api.loadClubState();
+ let stored=await api.load(),first=stored.matches.find(m=>m.status==='playing'),held=[...first.a];
+ now+=60000;await send('score',{matchId:first.id,a:21,b:19});await send('liveNext',{eventId:e.id,courtId:first.courtId});
+ stored=await api.load();let second=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>[...second.a,...second.b].includes(id)));
+ now+=60000;const aWon=held.every(id=>second.a.includes(id)),score=await request('score',{matchId:second.id,a:aWon?21:19,b:aWon?19:21});
+ const before=await api.load();database.injectFailure(query=>query.startsWith('INSERT INTO commits'));assert.equal((await post(score)).status,503);database.injectFailure(null);assert.deepEqual(await api.load(),before,'failed score also rolls back the mandatory break');
+ assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);
+ stored=await api.load();assert.equal(stored.events[0].livePlay.rest.filter(r=>r.reason==='win-limit').length,2,'replaying a score never duplicates the break');
+ const visible=await (await api.GET(new Request(origin+'/api/club?activity='+e.id))).json();assert.ok(held.every(id=>visible.events[0].livePlay.rest.some(r=>r.playerId===id&&r.reason==='win-limit')));
+ assert.equal((await post(await request('liveReady',{eventId:e.id,playerId:held[0]}))).status,400);
+ await send('livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:false});
+ const next=await request('liveNext',{eventId:e.id,courtId:first.courtId,allowSame:true});assert.deepEqual((await Promise.all([post(next),post({...next,requestId:crypto.randomUUID()})])).map(r=>r.status).sort(),[200,409]);
+ stored=await api.load();const third=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>![...third.a,...third.b].includes(id)));assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
+ console.log('PASS winner API: retained winners, persisted two-win rest, scoped response, no early override, atomic rollback, idempotence and concurrent next-game conflict.');
+}finally{Date.now=realNow;database.close();delete globalThis.__winnerApi}

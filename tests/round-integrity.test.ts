@@ -82,23 +82,23 @@ async function live(count=12,courts=2){
 }
 const players=(m:Match)=>[...m.a,...m.b];
 
-test('live play: a scored court waits for 开始组队, which prefers the bench and refuses the same four unless asked',async()=>{
+test('live play: a scored court waits for 开始组队, which retains winners and refuses the same four even with an old override',async()=>{
  const {s,e}=await live(12,2),[first]=s.matches.filter(m=>m.status==='playing'),member=s.accounts.find(a=>a.playerId===first.a[0])!;
  const bench=s.players.map(p=>p.id).filter(id=>!s.matches.some(m=>m.status==='playing'&&players(m).includes(id)));
  await apply(s,member,'score',{matchId:first.id,a:21,b:19},e.start+15*minute);
  assert.ok(!s.matches.some(m=>m.status==='playing'&&m.courtId===first.courtId),'no next game on its own');
  assert.equal(hasEmptyLiveCourt(s,e,e.start+16*minute),false,'the clock does not treat a waiting court as work');
  await apply(s,member,'liveNext',{eventId:e.id,courtId:first.courtId},e.start+16*minute);
- const next=s.matches.find(m=>m.status==='playing'&&m.courtId===first.courtId)!;assert.ok(players(next).every(id=>bench.includes(id)),'the four waiting players come on');
+ const next=s.matches.find(m=>m.status==='playing'&&m.courtId===first.courtId)!;assert.ok(first.a.every(id=>players(next).includes(id)));assert.equal(players(next).filter(id=>bench.includes(id)).length,2);
  const outsider={id:'outsider',email:'',role:'member' as const,playerId:'nobody'};s.accounts.push(outsider);
  await apply(s,member,'score',{matchId:next.id,a:21,b:19},e.start+30*minute);
  await assert.rejects(()=>apply(s,outsider,'liveNext',{eventId:e.id,courtId:first.courtId},e.start+31*minute),/403/);
  // Four players on one court: only the same four are left.
  const solo=await live(4,1),[game]=solo.s.matches,owner=solo.s.accounts[0];
  await apply(solo.s,owner,'score',{matchId:game.id,a:21,b:19},solo.e.start+15*minute);
- await assert.rejects(()=>apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId},solo.e.start+16*minute),/原班人马/);
- await apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId,allowSame:true},solo.e.start+16*minute);
- assert.equal(solo.s.matches.filter(m=>m.status==='playing').length,1);
+ await assert.rejects(()=>apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId},solo.e.start+16*minute),/人数不足/);
+ await assert.rejects(()=>apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId,allowSame:true},solo.e.start+16*minute),/人数不足/);
+ assert.equal(solo.s.matches.filter(m=>m.status==='playing').length,0);
 });
 
 test('the MVP prompt stays on the home page while the vote is open',()=>{

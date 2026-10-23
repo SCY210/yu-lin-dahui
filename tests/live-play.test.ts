@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {liveAppearances,liveResting} from '../lib/domain/live-play';
+import {liveAppearances,liveResting,liveForcedRest,liveWinStreaks} from '../lib/domain/live-play';
 import {matchupKey} from '../lib/domain/match-history';
 import {emptyState,type Event} from '../lib/domain/types';
 
@@ -46,7 +46,7 @@ test('不连续上场跳过下一局，再下一局恢复候选且偏好仍保�
  const second=active(s)[0];assert.ok([...second.a,...second.b].every(id=>!firstPlayers.includes(id)));
  assert.ok(firstPlayers.every(id=>liveResting(e,id)));
  await score(s,second.id,now+120000);
- assert.ok([...active(s)[0].a,...active(s)[0].b].filter(id=>firstPlayers.includes(id)).length>=3,'the waiting group returns, with one equal-count substitution allowed to break the cohort');
+ assert.equal([...active(s)[0].a,...active(s)[0].b].filter(id=>firstPlayers.includes(id)).length,2,'two returning bench players join the retained winners');
  assert.ok(firstPlayers.every(id=>!liveResting(e,id)));
  assert.equal(e.livePlay!.preferences.filter(p=>p.avoidConsecutive).length,4);
 });
@@ -58,7 +58,7 @@ test('没有替补就等待，球友可在休息好后主动准备，不强迫�
  assert.equal(active(s).length,0);assert.equal(s.matches.length,1);
  for(const a of s.accounts)await apply(s,a,'liveReady',{eventId:e.id,playerId:a.playerId},now+120000);
  assert.equal(active(s).length,0,'a court that has had a game waits for 开始组队');await nextGame(s,s.matches[0].courtId,now+120000);
- assert.equal(active(s).length,1);assert.ok(e.livePlay!.preferences.every(p=>p.avoidConsecutive));
+ assert.equal(active(s).length,0,'marking ready does not create substitutes');assert.ok(e.livePlay!.preferences.every(p=>p.avoidConsecutive));
 });
 
 test('另一片场仍在打的上一轮结束，不会误清除刚申请的轮休',async()=>{
@@ -69,15 +69,15 @@ test('另一片场仍在打的上一轮结束，不会误清除刚申请的轮�
  await score(s,first[1].id,now+65000);assert.ok(liveResting(e,'p00'));
  assert.ok(active(s).every(m=>![...m.a,...m.b].includes('p00')));
  await score(s,active(s)[0].id,now+120000);assert.equal(liveResting(e,'p00'),false);
- assert.ok(active(s).some(m=>[...m.a,...m.b].includes('p00')));
+ assert.ok(!liveResting(e,'p00'),'eligible again, without displacing retained winners');
 });
 
-test('静态14人两片场反复推进时，上场次数差保持不超过一次',async()=>{
+test('14人两场保留胜者且等待球友持续轮换',async()=>{
  const {s,e,owner}=fixture(14,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
  for(let cycle=0;cycle<24;cycle++){
   for(const match of [...active(s)])await score(s,match.id,now+(cycle+1)*60000);
   const counts=s.players.map(p=>liveAppearances(s,e.id,p.id));
-  assert.ok(Math.max(...counts)-Math.min(...counts)<=1,JSON.stringify(counts));
+  assert.ok(Math.max(...counts)-Math.min(...counts)<=3,JSON.stringify(counts));
   assert.equal(new Set(active(s).flatMap(m=>[...m.a,...m.b])).size,8);
  }
 });
@@ -136,8 +136,8 @@ test('two courts with staggered finishes: waiting players get priority while equ
  await score(s,second.id,now+60000);
  await score(s,first.id,now+90000);
  const next=participants(active(s).find(m=>m.courtId===first.courtId)!);
- assert.equal([...next].filter(id=>waiting.has(id)).length,3);
- assert.equal([...next].filter(id=>participants(first).has(id)).length,1);
+ assert.equal([...next].filter(id=>waiting.has(id)).length,0,'other court winners stay there; its losers do not jump ahead of unplayed bench players');
+ assert.equal([...next].filter(id=>participants(first).has(id)).length,2);assert.ok(first.a.every(id=>next.has(id)));
  assert.ok(![...next].some(id=>participants(active(s).find(m=>m.courtId!==first.courtId)!).has(id)));
 });
 for(const fixed of [false,true])test(`bench priority beats smaller game counts; fixed partners: ${fixed}`,async()=>{
@@ -147,7 +147,7 @@ for(const fixed of [false,true])test(`bench priority beats smaller game counts; 
  for(let i=0;i<2;i++)s.matches.push({id:'past'+i,eventId:e.id,roundId:'past-round'+i,courtId:'court1',a:bench.slice(0,2),b:bench.slice(2),start:now-(4-i)*60000,end:now-(3-i)*60000,status:'complete',scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:owner.id,games:[{a:21,b:19}]});
  await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s).find(m=>m.courtId==='court0')!;
  await score(s,first.id,now+60000);
- assert.deepEqual(participants(active(s).find(m=>m.courtId==='court0')!),new Set(bench));
+ const picked=participants(active(s).find(m=>m.courtId==='court0')!);assert.ok(first.a.every(id=>picked.has(id)));assert.equal(bench.filter(id=>picked.has(id)).length,2);
  if(fixed)assert.ok([active(s)[0].a,active(s)[0].b].every(team=>e.pointsChoice!.teams!.some(t=>t.every(id=>team.includes(id)))));
 });
 test('two waiting players get both places before willing just-finished players fill the other two',async()=>{
@@ -158,7 +158,7 @@ test('two waiting players get both places before willing just-finished players f
 });
 
 test('live doubles rotate all three matchups before repeating and never immediately repeat at equal strength',async()=>{
- const {s,e,owner}=fixture(4);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const {s,e,owner}=fixture(6);await apply(s,owner,'liveStart',{eventId:e.id},now);
  const seen:string[]=[];
  for(let turn=0;turn<10;turn++){
   const m=active(s)[0],key=matchupKey(m.a,m.b);
@@ -192,4 +192,57 @@ test('12 players on two staggered courts meet the whole roster instead of cyclin
  for(const m of s.matches)for(const id of [...m.a,...m.b])for(const other of [...m.a,...m.b])if(id!==other)contacts.get(id)!.add(other);
  assert.ok([...contacts.values()].every(ids=>ids.size===11),JSON.stringify([...contacts].map(([id,ids])=>[id,ids.size])));
  const counts=s.players.map(p=>liveAppearances(s,e.id,p.id));assert.ok(Math.max(...counts)-Math.min(...counts)<=2);
+});
+
+test('winners retain their places and existing balance rules may keep them partnered',async()=>{
+ const {s,e,owner}=fixture(8);await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0];
+ await apply(s,owner,'score',{matchId:first.id,a:21,b:19},now+60000);
+ const bench=s.players.filter(p=>![...first.a,...first.b].includes(p.id));bench[0].rating=1400;bench[1].rating=600;bench[2].rating=1800;bench[3].rating=1800;
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:first.courtId},now+60001);const next=active(s)[0];
+ assert.ok(first.a.every(id=>participants(next).has(id)));assert.ok(first.b.every(id=>!participants(next).has(id)));
+ assert.ok([next.a,next.b].some(team=>first.a.every(id=>team.includes(id))),'no forced winner split overrides the existing balance algorithm');
+ assert.deepEqual(new Set(s.rounds.find(r=>r.id===next.roundId)!.liveRetained),new Set(first.a));
+});
+
+test('two-win limit follows the individual through a partner change and cannot be overridden',async()=>{
+ const {s,e,owner}=fixture(8);await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0],winner=first.a[0];
+ await score(s,first.id,now+60000);const second=active(s)[0],fresh=[...second.a,...second.b].filter(id=>!first.a.includes(id));
+ await apply(s,owner,'liveLineup',{matchId:second.id,expectedA:[...second.a],expectedB:[...second.b],a:[winner,fresh[0]],b:[first.a[1],fresh[1]]},now+61000);
+ await apply(s,owner,'score',{matchId:second.id,a:21,b:19},now+120000);
+ assert.equal(liveWinStreaks(s,e).get(winner),2);assert.ok(liveForcedRest(e,winner));assert.ok(!liveForcedRest(e,fresh[0]));
+ await assert.rejects(()=>apply(s,owner,'liveReady',{eventId:e.id,playerId:winner},now+120001),/连赢两局/);
+ await apply(s,owner,'livePreference',{eventId:e.id,playerId:winner,avoidConsecutive:false},now+120002);assert.ok(liveForcedRest(e,winner));
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:second.courtId,allowSame:true},now+120003);const third=active(s)[0];
+ assert.ok(!participants(third).has(winner));assert.ok(participants(third).has(fresh[0]));
+ await assert.rejects(()=>apply(s,owner,'liveLineup',{matchId:third.id,expectedA:[...third.a],expectedB:[...third.b],a:[winner,third.a[1]],b:third.b},now+120004),/可上场/);
+ await apply(s,owner,'score',{matchId:third.id,a:21,b:19},now+180000);assert.ok(!liveForcedRest(e,winner),'a whole later-started game completed during the break');
+});
+
+test('six fixed partners keep rotating when both winners must leave after their second win',async()=>{
+ const {s,e,owner}=fixture(6);e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:[['p00','p01'],['p02','p03'],['p04','p05']]};
+ await apply(s,owner,'liveStart',{eventId:e.id},now);const first=active(s)[0],held=[...first.a];await score(s,first.id,now+60000);
+ const second=active(s)[0];const retainedSide=held.every(id=>second.a.includes(id))?'a':'b';
+ await apply(s,owner,'score',{matchId:second.id,a:retainedSide==='a'?21:19,b:retainedSide==='b'?21:19},now+120000);
+ assert.ok(held.every(id=>liveForcedRest(e,id)));await nextGame(s,second.courtId,now+120001);
+ assert.equal(active(s).length,1);assert.ok(held.every(id=>!participants(active(s)[0]).has(id)));assert.equal(participants(active(s)[0]).size,4);
+ await apply(s,owner,'score',{matchId:active(s)[0].id,a:21,b:19},now+180000);assert.ok(held.every(id=>!liveForcedRest(e,id)));
+ await nextGame(s,first.courtId,now+180001);const returned=active(s)[0];assert.ok(held.every(id=>participants(returned).has(id)));
+ await apply(s,owner,'score',{matchId:returned.id,a:held.every(id=>returned.a.includes(id))?21:19,b:held.every(id=>returned.b.includes(id))?21:19},now+240000);
+ assert.ok(held.every(id=>liveWinStreaks(s,e).get(id)===1),'returning from the bench resets the personal run');
+});
+
+test('starting another court does not reset a retained winner waiting for their own next game',async()=>{
+ const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);const [first,other]=active(s);
+ await apply(s,owner,'score',{matchId:first.id,a:21,b:19},now+60000);await score(s,other.id,now+65000);
+ await nextGame(s,first.courtId,now+70000);const next=active(s).find(m=>m.courtId===first.courtId)!;
+ assert.ok(first.a.every(id=>participants(next).has(id)));
+ const fresh=[...next.a,...next.b].filter(id=>!first.a.includes(id));await apply(s,owner,'liveLineup',{matchId:next.id,expectedA:next.a,expectedB:next.b,a:first.a,b:fresh},now+71000);
+ await apply(s,owner,'score',{matchId:next.id,a:21,b:19},now+120000);assert.ok(first.a.every(id=>liveForcedRest(e,id)));
+});
+
+test('moving a retained winner to an earlier-started court preserves their personal win limit',async()=>{
+ const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);const [first,other]=active(s);await score(s,first.id,now+60000);const id=first.a[0];
+ await apply(s,owner,'liveSwap',{eventId:e.id,p1:id,p2:other.a[0],expectedLineup:active(s).map(m=>({id:m.id,a:[...m.a],b:[...m.b]}))},now+70000);
+ await apply(s,owner,'score',{matchId:other.id,a:21,b:19},now+120000);assert.ok(liveForcedRest(e,id));
+ const ongoing=active(s)[0];await apply(s,owner,'void',{matchId:ongoing.id,status:'cancelled'},now+130000);assert.ok(liveForcedRest(e,id),'cancelling a court is not a completed rest game');
 });

@@ -71,7 +71,7 @@ files from ignored local test folders.
 
 A player who played each of the latest three rounds of an activity (`tiredPlayers`, `maxConsecutiveRounds` in `lib/domain/grouping.ts`) is chosen last for the next round in round, planned and gap-filling generation, for doubles, singles and fixed teams. So they rest whenever somebody else can take the place. Courts are never left short only for this rule: when the remaining players cannot fill every court, tired players still play. The rule can therefore only be met when at least a quarter of the players rest each round; with 10 players on two courts some must play a fourth round.
 
-Live play applies the same limit to games (`liveStreaks` in `lib/domain/live-play.ts`). A player rests when a game starts at the venue while they are not on court. After three games in a row they go to the back of the queue, and a cohort-breaking swap never brings in a tired player for a rested one.
+Live doubles use a separate winner-retention rule: winners stay for at most two personal consecutive wins, then take a mandatory break. Retained winners and bench substitutes use the existing pairing cost and may remain partners. This replaces the old live three-appearance queue penalty; planned-round limits remain unchanged. See [Live court rotation](LIVE_PLAY.md).
 
 ## Mixing everyone on few courts
 

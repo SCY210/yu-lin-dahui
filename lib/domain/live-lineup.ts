@@ -4,7 +4,7 @@ import {authorizeEventAction} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import {teamSize} from './match-format';
 import {bookingAllowsPlayer} from './booking-signups';
-import {livePresentIds,liveResting} from './live-play';
+import {livePresentIds,liveResting,liveForcedRest} from './live-play';
 import {decorateMatch} from './play';
 import {fail,type State,type Event,type Match,type Account} from './types';
 const id=z.string().min(1).max(100),team=z.array(id).min(1).max(2);
@@ -14,7 +14,7 @@ const schemas={liveLineup:z.object({matchId:id,a:team,b:team,expectedA:team,expe
 export function liveLineupCandidates(s:State,e:Event,m:Match,now:number){
  const busy=new Set(s.matches.filter(x=>x.id!==m.id&&x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  const current=new Set([...m.a,...m.b]),venue=s.bookings.find(b=>b.id===m.courtId)?.venue??e.venue;
- return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&(!liveResting(e,id,venue)||current.has(id)));
+ return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&((!liveForcedRest(e,id)&&!liveResting(e,id,venue))||current.has(id)));
 }
 /** The unscored games currently on court, in the same snapshot form as a planned round (round-lineup.ts). */
 export function liveLineupSnapshot(s:Pick<State,'matches'>,eventId:string){
@@ -44,9 +44,10 @@ function swapLivePlayers(s:State,a:Account,p:{eventId:string;p1:string;p2:string
   if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查报名时段和轮休状态');
  }
  const before=touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}));
+ const retained=new Set(s.rounds.filter(r=>touched.some(m=>m.roundId===r.id)).flatMap(r=>r.liveRetained??[]));
  for(const m of next){const original=touched.find(x=>x.id===m.id)!;original.a=m.a;original.b=m.b;decorateMatch(s,e,original)}
  const playing=new Set(current.flatMap(m=>[...m.a,...m.b])),rest=livePresentIds(s,e,now).filter(id=>!playing.has(id));
- for(const m of touched){const r=s.rounds.find(r=>r.id===m.roundId);if(r){r.eligible=[...new Set([...r.eligible,...m.a,...m.b])];r.rest=rest}}
+ for(const m of touched){const r=s.rounds.find(r=>r.id===m.roundId);if(r){r.eligible=[...new Set([...r.eligible,...m.a,...m.b])];r.rest=rest;r.liveRetained=[...m.a,...m.b].filter(id=>retained.has(id))}}
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'liveSwap',reason:'交换实时排场上场人员',changes:{eventId:e.id,p1:p.p1,p2:p.p2,before,after:touched.map(m=>({matchId:m.id,a:[...m.a],b:[...m.b]}))}});
 }
 /** Explicit correction of the current lineup; never completes a game or changes another court. */
@@ -67,6 +68,7 @@ export async function applyLiveLineup(s:State,a:Account,action:string,input:unkn
  if(selected.some(id=>!allowed.has(id)))fail('409: 所选球友已不在可上场名单，请检查其他场地的最新阵容、报名时段和轮休状态');
  const before={a:[...m.a],b:[...m.b]};
  m.a=[...p.a];m.b=[...p.b];decorateMatch(s,e,m);
+ r.liveRetained=r.liveRetained?.filter(id=>selected.includes(id));
  r.eligible=[...new Set([...r.eligible,...selected])];
  const playing=new Set(s.matches.filter(x=>x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  r.rest=livePresentIds(s,e,now).filter(id=>!playing.has(id));

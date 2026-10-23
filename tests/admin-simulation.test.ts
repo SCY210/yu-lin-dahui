@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createSimulation,changeSimulation,simulationView} from '../lib/admin-simulation';
 import {pendingSchedulingIds,schedulingMode} from '../lib/domain/scheduling';
-import {liveAppearances} from '../lib/domain/live-play';
+import {liveAppearances,liveForcedRest,liveWinStreaks} from '../lib/domain/live-play';
 import {emptyState} from '../lib/domain/types';
 import {realmSnapshot} from '../lib/domain/realm-rating';
 const now=Date.parse('2030-10-10T13:03:00Z');
@@ -13,7 +13,7 @@ test('simulation is a closed 12-player, two-court graph with confirmed signups a
 });
 test('real live scheduler uses both courts, rotates the bench, and persists scores only in the simulation document',async()=>{
  const original=createSimulation(now);let d=await changeSimulation(original,'pointsStart',start(original),request(),now);assert.equal(original.state.matches.length,0);assert.equal(d.state.matches.filter(m=>m.status==='playing').length,2);assert.equal(new Set(d.state.matches.flatMap(m=>[...m.a,...m.b])).size,8);
- for(let i=0;i<12;i++){const active=d.state.matches.filter(m=>m.status==='playing'),m=active.find(m=>m.courtId==='sim-court-'+(i%2+1))!,other=structuredClone(active.find(x=>x.id!==m.id));const bench=d.state.players.filter(p=>!active.some(m=>[...m.a,...m.b].includes(p.id))).map(p=>p.id);d=await changeSimulation(d,'score',{matchId:m.id,a:21,b:19},request(),now+(i+1)*60000);d=await changeSimulation(d,'liveNext',{eventId:'sim-event',courtId:m.courtId,allowSame:true},request(),now+(i+1)*60000);const next=d.state.matches.find(x=>x.courtId===m.courtId&&x.status==='playing')!;assert.ok([...next.a,...next.b].filter(id=>bench.includes(id)).length>=3,"bench priority permits one cohort-breaking substitution");assert.deepEqual(d.state.matches.find(x=>x.id===other!.id),other)}
+ for(let i=0;i<12;i++){const active=d.state.matches.filter(m=>m.status==='playing'),m=active.find(m=>m.courtId==='sim-court-'+(i%2+1))!,other=structuredClone(active.find(x=>x.id!==m.id));const bench=d.state.players.filter(p=>!active.some(m=>[...m.a,...m.b].includes(p.id))).map(p=>p.id);d=await changeSimulation(d,'score',{matchId:m.id,a:21,b:19},request(),now+(i+1)*60000);d=await changeSimulation(d,'liveNext',{eventId:'sim-event',courtId:m.courtId,allowSame:true},request(),now+(i+1)*60000);const next=d.state.matches.find(x=>x.courtId===m.courtId&&x.status==='playing')!;for(const id of m.a)assert.equal([...next.a,...next.b].includes(id),!liveForcedRest(d.state.events[0],id),'simulation uses the same retained-winner / mandatory-break rule');assert.ok([...liveWinStreaks(d.state,d.state.events[0]).values()].every(n=>n<=2));assert.ok([...next.a,...next.b].filter(id=>bench.includes(id)).length>=2,"bench players join retained winners");assert.deepEqual(d.state.matches.find(x=>x.id===other!.id),other)}
  const counts=d.state.players.map(p=>liveAppearances(d.state,'sim-event',p.id));assert.ok(Math.max(...counts)-Math.min(...counts)<=2,'including simultaneous games');assert.equal(d.state.matches.filter(m=>m.status==='complete').length,12);
 });
 test('preplanning and reset use the same commands but never keep stale test scores or lateness',async()=>{
