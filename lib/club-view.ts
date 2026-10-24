@@ -32,7 +32,7 @@ const hiddenProfileKeys=['grip','shoes','level'];
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now(),shared?:{revision:number;consumeState?:boolean;activityId?:string}){
  const activityId=shared?.activityId;
  // The GET handler owns its parsed snapshot and discards it after projection. Other callers retain copy semantics.
- if(!shared?.consumeState)s=structuredClone(s);for(const e of s.events)e.status=eventStatusAt(e,now);enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
+ if(!shared?.consumeState)s=structuredClone(s);for(const e of s.events){e.status=eventStatusAt(e,now);if(e.livePlay)e.livePlay={...e.livePlay,rest:e.livePlay.rest.filter(r=>r.reason!=='win-limit')}}enableDefaultAttendance(s,now);const actualAttendance=s.attendance;applyDefaultAttendance(s);
  const admin=a.role==='admin',history={...s},ownerId=clubOwnerId(s),ownerPlayerId=clubOwnerPlayerId(s);
  if(!admin)s.events=s.events.filter(e=>e.status!=='draft'||e.creatorId===a.id);
  const historicalIds=new Set(s.events.map(e=>e.id));

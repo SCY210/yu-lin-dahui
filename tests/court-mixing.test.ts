@@ -40,7 +40,7 @@ test('one court of singles rotates opponents',async()=>{
  assert.ok(Math.max(...played)-Math.min(...played)<=1);
 });
 
-test('live play: personal wins never exceed two before a mandatory break',async()=>{
+test('live play: winning streaks do not force a break or block a full court',async()=>{
  for(const count of [11,12]){
   const s=createSimulation(base).state,e=s.events[0];s.registrations=s.registrations.slice(0,count);
   await apply(s,s.accounts[0],'liveStart',{eventId:e.id},e.start+minute);
@@ -51,6 +51,6 @@ test('live play: personal wins never exceed two before a mandatory break',async(
    for(const c of s.bookings)if(!s.matches.some(m=>m.status==='playing'&&m.courtId===c.id))try{await apply(s,s.accounts[0],'liveNext',{eventId:e.id,courtId:c.id},t)}catch{/* waiting for another court */}
    longest=Math.max(longest,...liveWinStreaks(s,e).values());
   }
-  assert.ok(longest<=2,count+' players: longest run '+longest);
+  assert.ok(longest>=2);assert.ok(!e.livePlay!.rest.some(r=>r.reason==='win-limit'));assert.equal(new Set(s.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b])).size,8);
  }
 });

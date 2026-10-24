@@ -20,11 +20,12 @@ try{
  now+=60000;const aWon=held.every(id=>second.a.includes(id)),score=await request('score',{matchId:second.id,a:aWon?21:19,b:aWon?19:21});
  const before=await api.load();database.injectFailure(query=>query.startsWith('INSERT INTO commits'));assert.equal((await post(score)).status,503);database.injectFailure(null);assert.deepEqual(await api.load(),before,'failed score also rolls back the mandatory break');
  assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);
- stored=await api.load();assert.equal(stored.events[0].livePlay.rest.filter(r=>r.reason==='win-limit').length,2,'replaying a score never duplicates the break');
- const visible=await (await api.GET(new Request(origin+'/api/club?activity='+e.id))).json();assert.ok(held.every(id=>visible.events[0].livePlay.rest.some(r=>r.playerId===id&&r.reason==='win-limit')));
- assert.equal((await post(await request('liveReady',{eventId:e.id,playerId:held[0]}))).status,400);
+ stored=await api.load();assert.equal(stored.events[0].livePlay.rest.filter(r=>r.reason==='win-limit').length,0,'winning twice never creates a forced break');
+ const legacy=structuredClone(stored);legacy.events[0].livePlay.rest.push(...held.map(playerId=>({playerId,venue:e.venue,after:now,reason:'win-limit'})));await api.save(legacy,'legacy-win-rest',stored);
+ const visible=await (await api.GET(new Request(origin+'/api/club?activity='+e.id))).json();assert.ok(!visible.events[0].livePlay.rest.some(r=>r.reason==='win-limit'),'old clients also receive no retired win-limit blocks');
+ assert.equal((await post(await request('liveReady',{eventId:e.id,playerId:held[0]}))).status,200);
  await send('livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:false});
  const next=await request('liveNext',{eventId:e.id,courtId:first.courtId,allowSame:true});assert.deepEqual((await Promise.all([post(next),post({...next,requestId:crypto.randomUUID()})])).map(r=>r.status).sort(),[200,409]);
- stored=await api.load();const third=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>![...third.a,...third.b].includes(id)));assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
- console.log('PASS winner API: retained winners, persisted two-win rest, scoped response, no early override, atomic rollback, idempotence and concurrent next-game conflict.');
+ stored=await api.load();const third=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>[...third.a,...third.b].includes(id)));assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
+ console.log('PASS winner API: retained winners, no win cap, legacy breaks ignored/hidden, scoped response, atomic rollback, idempotence and concurrent next-game conflict.');
 }finally{Date.now=realNow;database.close();delete globalThis.__winnerApi}

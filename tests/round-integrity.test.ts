@@ -82,7 +82,7 @@ async function live(count=12,courts=2){
 }
 const players=(m:Match)=>[...m.a,...m.b];
 
-test('live play: a scored court waits for 开始组队, which retains winners and refuses the same four even with an old override',async()=>{
+test('live play: a scored court waits for 开始组队, which retains winners and permits the same four when short',async()=>{
  const {s,e}=await live(12,2),[first]=s.matches.filter(m=>m.status==='playing'),member=s.accounts.find(a=>a.playerId===first.a[0])!;
  const bench=s.players.map(p=>p.id).filter(id=>!s.matches.some(m=>m.status==='playing'&&players(m).includes(id)));
  await apply(s,member,'score',{matchId:first.id,a:21,b:19},e.start+15*minute);
@@ -96,9 +96,8 @@ test('live play: a scored court waits for 开始组队, which retains winners an
  // Four players on one court: only the same four are left.
  const solo=await live(4,1),[game]=solo.s.matches,owner=solo.s.accounts[0];
  await apply(solo.s,owner,'score',{matchId:game.id,a:21,b:19},solo.e.start+15*minute);
- await assert.rejects(()=>apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId},solo.e.start+16*minute),/人数不足/);
- await assert.rejects(()=>apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId,allowSame:true},solo.e.start+16*minute),/人数不足/);
- assert.equal(solo.s.matches.filter(m=>m.status==='playing').length,0);
+ await apply(solo.s,owner,'liveNext',{eventId:solo.e.id,courtId:game.courtId},solo.e.start+16*minute);
+ assert.equal(solo.s.matches.filter(m=>m.status==='playing').length,1);
 });
 
 test('the MVP prompt stays on the home page while the vote is open',()=>{

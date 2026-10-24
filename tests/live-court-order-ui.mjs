@@ -34,5 +34,12 @@ try{
  assert.ok(text(ui.toJSON()).includes('再点“开始组队”安排下一局'),'the help text describes the button');
  const start=ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队');await act(()=>start.props.onClick());
  assert.equal(sent.at(-1)[0],'liveNext');assert.equal(sent.at(-1)[1].courtId,s.bookings.find(b=>b.name==='1号场').id);
+ const tiny=createSimulation(now).state;tiny.players=tiny.players.slice(0,4);tiny.accounts=tiny.accounts.slice(0,4);tiny.registrations=tiny.registrations.slice(0,4);tiny.bookings=tiny.bookings.slice(0,1);
+ const tinyEvent=tiny.events[0],tinyOwner=tiny.accounts[0];await apply(tiny,tinyOwner,'liveStart',{eventId:tinyEvent.id},now);await apply(tiny,tinyOwner,'score',{matchId:tiny.matches[0].id,a:21,b:19},now+1);
+ tinyEvent.livePlay.rest=tiny.players.map(p=>({playerId:p.id,venue:tinyEvent.venue,after:now,reason:'win-limit'}));
+ const tinyData=projectClubState(tiny,tinyOwner,month(now),new Date(now).getUTCFullYear(),now+2);
+ await act(()=>ui.update(React.createElement(LivePlay,{e:tinyData.events[0],ctx:{...ctx,data:tinyData}})));
+ const continueButton=ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队');assert.ok(continueButton);assert.equal(continueButton.props.disabled,false,'four available players are not blocked by the old win limit or same-lineup rule');
+ assert.ok(!text(ui.toJSON()).includes('两连胜，轮休一局'));
  console.log('PASS live court order UI: playing and waiting courts keep their number order, and 开始组队 targets its own court');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=original.window;globalThis.document=original.document;delete globalThis.IS_REACT_ACT_ENVIRONMENT}

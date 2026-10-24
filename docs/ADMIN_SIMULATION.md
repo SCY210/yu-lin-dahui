@@ -1,6 +1,6 @@
 # Administrator scheduling simulation
 
-Live doubles use the same winner-retention rule as production: winners stay, waiting players fill the remaining places, and the existing matching algorithm may keep or split the winning pair. Personal two-win breaks persist in the simulation document and cannot be bypassed by ready-again or old same-player requests. Reset clears only simulated streaks and breaks. Tests cover retained winners and forced rests while preserving the other court and the real club.
+Live doubles use the same winner preference as production, without a consecutive-win limit. Waiting players remain eligible; scarce substitutes never cause an automatic two-win lockout. Saved legacy win-limit entries are ignored and omitted from normal responses. Four available players can continue, while voluntary rest and busy-player protections remain. Simulation changes never write the real club.
 
 Activities offers a simulation entry to the club owner, administrators and authorized member testers. Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox.
 

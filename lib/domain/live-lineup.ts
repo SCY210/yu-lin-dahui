@@ -4,7 +4,7 @@ import {authorizeEventAction} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import {teamSize} from './match-format';
 import {bookingAllowsPlayer} from './booking-signups';
-import {livePresentIds,liveResting,liveForcedRest} from './live-play';
+import {livePresentIds,liveResting} from './live-play';
 import {decorateMatch} from './play';
 import {fail,type State,type Event,type Match,type Account} from './types';
 const id=z.string().min(1).max(100),team=z.array(id).min(1).max(2);
@@ -14,7 +14,7 @@ const schemas={liveLineup:z.object({matchId:id,a:team,b:team,expectedA:team,expe
 export function liveLineupCandidates(s:State,e:Event,m:Match,now:number){
  const busy=new Set(s.matches.filter(x=>x.id!==m.id&&x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  const current=new Set([...m.a,...m.b]),venue=s.bookings.find(b=>b.id===m.courtId)?.venue??e.venue;
- return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&((!liveForcedRest(e,id)&&!liveResting(e,id,venue))||current.has(id)));
+ return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&(!liveResting(e,id,venue)||current.has(id)));
 }
 /** The unscored games currently on court, in the same snapshot form as a planned round (round-lineup.ts). */
 export function liveLineupSnapshot(s:Pick<State,'matches'>,eventId:string){
