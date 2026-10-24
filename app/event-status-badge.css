@@ -25,7 +25,7 @@ html.wuxia-theme .badge.event-status-badge[data-status=draft]{background:transpa
    the badge onto its own line; the format and time never break mid-word. */
 .event-card .event-info>.row:first-child{flex-wrap:nowrap;align-items:flex-start;justify-content:space-between;gap:8px}
 .event-card .event-info>.row:first-child>h3{flex:1;min-width:0;overflow-wrap:anywhere}
-.event-card .event-info>.row:first-child>.event-status-badge{flex-shrink:0;margin-top:2px}
+.event-card .event-info>.row:first-child>.event-status-badge,.event-card .event-info>.row:first-child>.event-badges{flex-shrink:0;margin-top:2px}
 .event-card .event-info>p{flex-wrap:wrap;column-gap:5px;row-gap:0}
 .event-card .event-info>p>span,.event-card .event-info>p>svg{flex-shrink:0;white-space:nowrap}
 .event-card .event-info>p>.event-card-time{display:inline-flex;align-items:center;gap:4px}

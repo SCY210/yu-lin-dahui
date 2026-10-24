@@ -1,4 +1,5 @@
 'use client';
+import {Clock,UserCheck} from 'lucide-react';
 import {eventRankingEnabled} from '../lib/domain/event-ranking';
 import type {Event,Match} from '../lib/domain/types';
 import type {CardContext} from './match-card';
@@ -32,12 +33,21 @@ export default function PointsAttendance({e,ctx}:{e:Event;ctx:SchedulingContext}
  const late=session?.attendance.filter(row=>row.late)??[];
  const lifecycle=eventStatusAt(e,now),window=pointsWindow(e),due=now>=Math.max(e.start,window.start);
  const status=lifecycle==='cancelled'?'已取消':lifecycle==='draft'?'未开放':lifecycle==='ended'?'已结束':session?.startedAt||due?'进行中':'未到开赛时间';
- return <details className="card points-attendance">
-  <summary className="points-attendance-summary"><strong>{eventRankingEnabled(e)?'积分赛':'普通对局'}</strong><span className="badge">{status}</span><span>上场意愿 / 到场管理</span></summary>
+ const missing=late.filter(row=>!row.available),resumable=active?missing.filter(row=>manager||own(row.playerId)):[],me=ctx.data.me.playerId;
+ return <>
+ {/* Never folded: whoever is still missing, and the button that puts them back into scheduling. */}
+ {resumable.length>0&&<section className="card points-arrival-alert" role="status">
+  <strong><Clock size={18} aria-hidden="true"/>{!manager&&resumable.some(row=>row.playerId===me)?'你被报告迟到，暂时不会排你上场':`迟到未到场 · ${resumable.length} 人`}</strong>
+  <p className="hint">到了球馆就点“已到场”，马上恢复排场，按场数正常轮换上场。</p>
+  <div className="actions">{resumable.map(row=><button type="button" key={row.playerId} className="primary" disabled={ctx.busy} onClick={()=>ctx.send('pointsPresence',{eventId:e.id,playerId:row.playerId,status:'arrived'})}><UserCheck size={17} aria-hidden="true"/>{row.playerId===me?'我已到场':ctx.name(row.playerId)+' 已到场'}</button>)}</div>
+ </section>}
+ <details className="card points-attendance">
+  <summary className="points-attendance-summary"><strong>上场与到场</strong><span className="badge">{status}</span>{missing.length>0&&<span className="points-attendance-missing">{missing.length} 人迟到未到</span>}<span>上场意愿 · 迟到 · 补位</span></summary>
   <p className="hint">{schedulingMode(ctx.data,e)==='planned'?'到活动开始时间自动开始：还没有预排的，会先按接龙自动预排全部赛程。预排发布后即可录分；未录分的对局可随时换人，录入比分后结束本局。':'到活动对局时段自动开始；每局录分后接续下一场。'}</p>
   <PointsParticipation e={e} ctx={ctx}/>
   <p className="hint">正式报名的球友默认都已到场，不用逐个确认。有人迟到（会来）或不来了，同场球友或组织者在对应对局上报告：迟到先换人打，积分赛中的正式成员本活动扣 1 积分，普通活动不扣分；不来了判本局负。临时来宾不计积分或修为。</p>
-  {late.length>0&&<div className="points-late-list">{late.map(row=><div className="row" key={row.playerId}><strong>{ctx.name(row.playerId)} · {guest(row.playerId)?'来宾迟到（不计积分）':eventRankingEnabled(e)?'迟到 −1 分':'迟到（不扣分）'}</strong><span>{row.available?'已到场':'暂不排场'}</span>{active&&(manager||own(row.playerId))&&<div className="actions">{!row.available&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.send('pointsPresence',{eventId:e.id,playerId:row.playerId,status:'arrived'})}>已到场，恢复排场</button>}{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>ctx.open('撤销误标迟到','pointsPresence',{eventId:e.id,playerId:row.playerId,status:'clear-late'},[],undefined,'撤销迟到标记并恢复可排场状态；积分赛中的正式成员返还本次扣除的 1 积分，普通活动和来宾不计积分。已完成比分保持不变。')}>撤销误标</button>}</div>}</div>)}</div>}
+  {late.length>0&&<div className="points-late-list">{late.map(row=><div className="row" key={row.playerId}><strong>{ctx.name(row.playerId)} · {guest(row.playerId)?'来宾迟到（不计积分）':eventRankingEnabled(e)?'迟到 −1 分':'迟到（不扣分）'}</strong><span>{row.available?'已到场':'暂不排场'}</span>{active&&manager&&<div className="actions"><button type="button" className="ghost" disabled={ctx.busy} onClick={()=>ctx.open('撤销误标迟到','pointsPresence',{eventId:e.id,playerId:row.playerId,status:'clear-late'},[],undefined,'撤销迟到标记并恢复可排场状态；积分赛中的正式成员返还本次扣除的 1 积分，普通活动和来宾不计积分。已完成比分保持不变。')}>撤销误标</button></div>}</div>)}</div>}
   {(session?.waiting??[]).map(row=><div className="points-waiting" key={row.matchId}><strong>{ctx.data.bookings.find(b=>b.id===ctx.data.matches.find(m=>m.id===row.matchId)?.courtId)?.name??'场地'} · 等待补位</strong><p className="hint">场下可上场人数不足，原对局已撤销且不计胜负。人员准备好后可重新补排。</p>{manager&&active&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open('重新补排','pointsReplace',{eventId:e.id,matchId:row.matchId,replacement:row.replacement},[choice('replacement','补排方式',[['group','重新安排整组'],['player','只替换迟到者']])],undefined,'重新检查同球馆可上场的成员及其他场地占用。不会再次扣分。')}>重新补排</button>}</div>)}
- </details>;
+ </details>
+ </>;
 }

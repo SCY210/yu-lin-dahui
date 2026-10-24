@@ -28,3 +28,7 @@ On activity cards the badge always sits at the top right of the title; a long ti
 In planned and round-by-round scheduling, a finished round's folded header is green and the round on court has a coloured edge, so state is visible without expanding. Finished match cards have a green tint. On phones, the two courts stay side by side. In each court the score (or VS) is centred above the two teams, which sit left and right with an avatar above every name, so names use the full card width.
 
 Folded round headers have three looks: a finished round is green, the round on court is red with a pulsing dot and edge, and a round not yet played keeps the default look. In every match card team A is blue and team B is orange (label and player chips), so the two sides are easy to tell apart when read across; the winner's label gets a green ring.
+
+## Points match badge
+
+An activity that counts for points (`eventRankingEnabled`: singles or doubles not set to ordinary) carries a gold "points match" seal badge to the right of its state badge: on activity cards, in the activity header and next to the live label on the home page's running card (`app/points-match-badge.tsx`). Its mark is a gold hexagon with a shuttlecock and a small star, and the pill uses a gold gradient with a darker gold border, so it is not mistaken for the amber "full" state or for a folded section. Ordinary and practice activities show no badge. On cards the two badges stay together and wrap as a group beside the title.

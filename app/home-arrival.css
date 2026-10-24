@@ -1,0 +1,10 @@
+/* The "I have arrived" card: the most urgent item on the home page, so it uses the live red and a large button. */
+.home-arrival,.card.home-arrival,.wuxia-theme .card.home-arrival{border:1px solid color-mix(in srgb,var(--destructive) 55%,transparent);border-left:5px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 9%,var(--card));margin:0 0 16px}
+.home-arrival-title{display:flex;align-items:center;gap:8px;color:var(--destructive);font-size:16px}
+.home-arrival .hint{margin:6px 0 10px}
+.home-arrival-list{display:grid;gap:8px}
+.home-arrival-item{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.home-arrival-event{display:grid;gap:2px;flex:1 1 160px;min-width:0;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.home-arrival-event small{color:var(--muted-foreground)}
+.home-arrival .home-arrival-button{flex:1 1 140px;justify-content:center;min-height:48px;font-size:17px}
+.home-arrival-button svg{vertical-align:-3px}
