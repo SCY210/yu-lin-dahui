@@ -3,3 +3,10 @@
 .points-attendance-summary>span:last-child{margin-left:auto;font-size:12px;color:var(--muted-foreground)}
 .points-attendance.card{padding:10px 14px}
 .points-attendance:not([open])>:not(summary){display:none}
+/* Late players still missing are never folded inside 上场与到场: a red card with the button that resumes scheduling. */
+.points-arrival-alert,.card.points-arrival-alert,.wuxia-theme .card.points-arrival-alert{display:grid;gap:8px;border:1px solid color-mix(in srgb,var(--destructive) 55%,transparent);border-left:5px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 9%,var(--card))}
+.points-arrival-alert>strong{display:flex;align-items:center;gap:8px;color:var(--destructive)}
+.points-arrival-alert .hint{margin:0}
+.points-arrival-alert .actions button{min-height:48px;font-size:16px}
+.points-arrival-alert .actions button svg{vertical-align:-3px}
+.points-attendance-summary>.points-attendance-missing{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--destructive) 14%,var(--card));color:var(--destructive);font-size:12px;font-weight:700}

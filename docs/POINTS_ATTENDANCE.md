@@ -39,3 +39,15 @@ At the club owner's request, every confirmed signup is present by default. There
 Both confirmation dialogs point to the other option.
 
 Temporary guests remain excluded from season points and rating. Late/absent records can pause their scheduling, but the interface does not advertise a guest point or rating penalty. Arrival never refunds a real member penalty; only the organiser-only mistaken-mark action can do that.
+
+## Confirming arrival is never folded
+
+The scheduling section that holds play preferences, late reports and waiting courts is now called "play and arrival". Its header shows the activity state and, while anyone reported late has not arrived, how many are missing. It no longer names the points mode: whether an activity counts for points is shown by its own badge (see [Activity status badges](EVENT_STATUS.md)).
+
+The arrival button is never inside that folded section:
+
+- On the activity page, while the activity runs, a red card above the section lists every late player who has not arrived and whom the viewer may resume (themselves, a friend they registered, or anyone for organisers), each with a large "I have arrived" (or "<name> has arrived") button (`pointsPresence` with `arrived`). The folded list keeps the late history and the organisers' mistaken-mark refund.
+- On the home page, the same member sees a red card at the top for each running activity in which they, or a friend they registered, were reported late or marked absent (`app/home-arrival.tsx`, `lib/client/arrival-holds.ts`). Its button sends `pointsPresence` for a late report and `noShowArrived` for a no-show, the same commands as the activity page, so permissions are unchanged. Tapping the activity opens its matches.
+- Nothing is shown before the start, after the end, for cancelled, deleted, practice or tournament activities, or to other members.
+
+Tests: `tests/arrival-holds.test.ts`, `tests/home-arrival-ui.mjs` and `tests/points-attendance-ui.mjs`.
