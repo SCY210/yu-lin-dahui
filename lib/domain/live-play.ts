@@ -66,7 +66,7 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
-  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0);
+  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0);
  };
  let best=ids,bestCost=cost(ids);
  if(size===2)for(const candidate of [[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]){

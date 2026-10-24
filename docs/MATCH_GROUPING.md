@@ -23,6 +23,14 @@ a global optimum. Fixed partners stay together and use the same balance
 priority when matching opposing teams. With unequal players, repeating a
 partner can be necessary for a fair contest, including individual rotation.
 
+Live rotating doubles also add a bounded partner-repetition cost to the adjusted
+worst gap: 24 points for each immediate repeat plus 4 per historical pair use
+(the frequency part is capped at 16), with an overall cap of 40. Unlike exact
+rematch cost, this applies when the same pair faces different opponents. The
+separate frequency cap keeps recency meaningful during long sessions. It is a
+soft balance/variety tradeoff, never an eligibility ban; other scheduling modes
+pass zero for this extra cost.
+
 History is indexed once per scheduling operation, including published plans
 when planning future rounds. Cancelled drafts and no-show forfeits do not count
 as played encounters. Team order, side reversal and court changes do not hide

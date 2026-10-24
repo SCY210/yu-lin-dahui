@@ -32,6 +32,17 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   rematches:(a:string[],b:string[])=>matches.get(matchupKey(a,b))??0,
   cohorts:(ids:string[])=>groups.get(teamKey(ids))??0,
   unmet,
+  /** Separate from whole-game rematches: repeating a pair against NEW opponents still counts.
+   * Indexed lookups only. The live balance comparator caps the total at 40 Elo-equivalent points. */
+  partnerPenalty:(a:string[],b:string[])=>{
+   let uses=0,recent=0;
+   for(const team of [a,b])if(team.length===2){
+    uses+=partners.get(teamKey(team))??0;
+    if(lastPartner.get(team[0])===team[1]||lastPartner.get(team[1])===team[0])recent++;
+   }
+   // Frequency cannot saturate every pairing and erase the consecutive-partner distinction on long evenings.
+   return Math.min(16,uses*4)+recent*24;
+  },
   variety:(a:string[],b:string[],lastWeight=350)=>{
    let cost=0;
    for(const team of [a,b])if(team.length===2){
