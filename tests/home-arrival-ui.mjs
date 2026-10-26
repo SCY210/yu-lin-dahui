@@ -1,7 +1,7 @@
 // Real React components with fictional activities; never contacts production.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
-import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {mkdirSync,writeFileSync,readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import React from 'react';
@@ -29,5 +29,12 @@ try{
  await mount(PointsMatchBadge,{e:{matchFormat:'doubles'}});assert.ok(text(ui.toJSON()).includes('积分赛'));assert.ok(ui.root.findAllByType('svg').length===1,'the badge carries its own mark');
  for(const e of [{matchFormat:'doubles',ranked:false},{matchFormat:'practice'}]){await mount(PointsMatchBadge,{e});assert.equal(ui.toJSON(),null,JSON.stringify(e))}
  assert.match(readFileSync('app/points-match-badge.css','utf8'),/html\.wuxia-theme \.badge\.points-match-badge/,'the badge keeps its look in the ink theme');
+ // The badge rule must outrank every theme rule for badges, such as the ink theme's activity-card rule that replaced the gold.
+ const specificity=sel=>[(sel.match(/#[\w-]+/g)??[]).length,(sel.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g)??[]).length,(sel.replace(/[.#][\w-]+|\[[^\]]+\]|::?[\w-]+/g,' ').match(/(^|[\s>+~])[a-z]+/gi)??[]).length];
+ const beats=(x,y)=>x[0]-y[0]||x[1]-y[1]||x[2]-y[2];
+ const own=readFileSync('app/points-match-badge.css','utf8').replace(/\/\*[\s\S]*?\*\//g,'').match(/^([^{]*\.points-match-badge[^{]*)\{/m)[1].split(',').map(s=>specificity(s.trim()));
+ const themeRules=readdirSync('app').filter(n=>n.endsWith('.css')&&n!=='points-match-badge.css').flatMap(n=>[...readFileSync('app/'+n,'utf8').replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/([^{}]+)\{[^}]*background[^}]*\}/g)].flatMap(m=>m[1].split(',').map(s=>s.trim()).filter(s=>/\.badge(?![\w-])/.test(s)&&!/event-status-badge|points-match-badge/.test(s))));
+ assert.ok(themeRules.some(r=>r.includes('.wuxia-theme .event-card .event-info .badge')),'the ink card rule is among those checked');
+ for(const rule of themeRules)assert.ok(own.some(o=>beats(o,specificity(rule))>0),'the points badge outranks '+rule);
  console.log('PASS home arrival and points badge UI: own and proxy holds, resume commands, navigation, hidden after the end and for others, badge only on ranked activities');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}
