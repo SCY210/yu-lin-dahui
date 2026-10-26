@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { fail, type State, type Account } from './types';
 import { finished, won } from './social';
 import { authorizeEventAction } from './permissions';
-import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen } from './activity-voting';
+import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen, mvpVotes } from './activity-voting';
 const id = z.string().min(1).max(100);
 export const memberSocialActions = ['profileDetails', 'profileGender', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
 const schemas = {
@@ -118,11 +118,15 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             if (!canCastAwardVote(s, e, a, now))
                 fail('403: 仅本活动正式报名或实际参加的球友、活动创建者和管理员可以投票');
             const mine = (v: State['awardVotes'][number]) => v.eventId === e.id && v.voterId === a.id && v.category === p.category;
-            const previous = s.awardVotes.find(mine);
-            if (p.active === false) {
-                if (previous && previous.playerId !== p.playerId)
-                    fail('409: 选票已更新，请刷新后再撤回');
-                s.awardVotes = s.awardVotes.filter(v => !mine(v));
+            // A cast MVP vote is final (docs/MVP_ONLY_VOTING.md). Repeating the same vote, as a retried request does,
+            // changes nothing; changing or withdrawing it is refused. Only a vote counted for this activity is final: a
+            // stored vote outside its voting window (for example after the activity was moved) can still be replaced.
+            const previous = mvpVotes(s, e).find(mine);
+            if (p.active === false)
+                fail(previous ? 'MVP 选票一经投出不能撤回' : '你还没有投 MVP');
+            if (previous) {
+                if (previous.playerId !== p.playerId)
+                    fail('MVP 选票一经投出不能改投');
             }
             else {
                 if (!awardCandidateIds(s, e.id, now).includes(p.playerId))
