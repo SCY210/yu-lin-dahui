@@ -17,3 +17,16 @@ The private production Worker checks for due rewards every five elapsed hours. A
 Validate domain rules, actual SQLite rollback/races, wallet provenance, UI privacy and the scheduled waiting/idle/due/failure paths. Confirm production bindings, the hourly wakeup and the five-hour interval gate. The first deployment must initialize the policy without awarding old activities. Do not test by minting coins for real members.
 
 Provider references: [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) and [version metadata](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/).
+
+## Attendance streak
+
+Members also earn coins for coming to points matches in a row (`attendanceStreakClaims` in `lib/domain/automatic-coins.ts`):
+
+- Every 4 points matches in a row that a member attended on time earn the streak reward on the 4th, and the count starts again. So the 4th, 8th, 12th and so on in an unbroken run each earn it.
+- A points match is a ranked activity that is not a tournament and was not cancelled, left as a draft or deleted. Singles and doubles count together, in the order they started. Ordinary activities, practice and tournaments neither count nor break a run.
+- Attending uses the same rule as participation coins (a confirmed signup with genuine play or attendance; not waitlist only, not a no-show). Missing a points match, including one the member did not sign up for, starts the count again. So does being reported late; a mistaken late mark that an organiser clears does not.
+- The whole history establishes or breaks a run, but only activities inside the reward rollout earn, and only after their scheduled end, like the other automatic rewards.
+- The reward is 20 coins by default (`defaultAttendanceStreakCoins`). The owner and administrators can change it, or set 0 to stop new rewards, from the treasure shop's reward rules (`treasureStreakReward`, audited). An awarded run keeps the amount it was awarded with; the change only affects runs completed later.
+- Like every automatic source, a later correction (for example a late report added afterwards) reconciles the entitlement in the same transaction.
+
+Tests: `tests/attendance-streak-coins.test.ts` and `tests/treasure-shop-ui.mjs`.

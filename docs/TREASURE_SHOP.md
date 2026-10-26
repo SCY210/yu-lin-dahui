@@ -19,6 +19,9 @@ After a qualifying activity ends, the server settles rewards automatically:
   winning-game points as the ranking, with consecutive wins scoped to their
   season and singles/doubles format. Losing a match does not deduct coins.
   Ranking points may still decrease independently.
+- Every 4 points matches in a row attended on time earn an attendance-streak
+  reward, 20 coins by default and adjustable by the owner and administrators.
+  See [Automatic activity coins](AUTOMATIC_COINS.md#attendance-streak).
 - Eligible participants receive five coins per activity, once across all courts
   and time slots. A confirmed elapsed attendance interval or a completed match
   establishes participation; waitlist-only entries and no-show/awaiting-arrival
