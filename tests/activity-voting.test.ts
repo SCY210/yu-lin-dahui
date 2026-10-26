@@ -94,21 +94,21 @@ test('自己的账号不能给自己投票，参加活动的创建者和管理�
  assert.equal(e.status,'ended');
 });
 
-test('每活动每账号每奖项一票，改投转移真实票数而非累加',async()=>{
+test('每活动每账号一票，投出后不能改投；重复同一票不累加也不改时间',async()=>{
  const {s,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');assert.equal(s.awardVotes.filter(v=>v.playerId==='formal-b-player').length,2);
- await vote('formal-a','attended');assert.equal(s.awardVotes.length,2);assert.equal(s.awardVotes.filter(v=>v.playerId==='formal-b-player').length,1);assert.equal(s.awardVotes.filter(v=>v.playerId==='attended-player').length,1);
- await vote('formal-a','attended','mvp',undefined,now+1000);assert.equal(s.awardVotes.length,2);assert.equal(s.awardVotes.find(v=>v.voterId==='formal-a')?.at,now+1000);
+ const before=structuredClone(s);await assert.rejects(()=>vote('formal-a','attended'),/不能改投/);assert.deepEqual(s,before);
+ await vote('formal-a','formal-b','mvp',undefined,now+1000);assert.deepEqual(s.awardVotes,before.awardVotes,'a retried identical vote changes nothing');
  for(const category of ['defense','net','effort'] as const){const before=structuredClone(s);await assert.rejects(()=>vote('formal-a','formal-b',category));assert.deepEqual(s,before)}
  assert.equal(s.awardVotes.filter(v=>v.voterId==='formal-a').length,1);
 });
 
 test('同一账号在两次活动的同类投票独立，不能串用另一活动候选人',async()=>{
  const {s,vote}=fixture();await vote('admin','formal-a');await vote('admin','foreign','mvp','other-event');assert.equal(s.awardVotes.length,2);
- await vote('admin','formal-b');assert.equal(s.awardVotes.find(v=>v.eventId==='other-event')?.playerId,'foreign-player');assert.equal(s.awardVotes.find(v=>v.eventId==='vote-event')?.playerId,'formal-b-player');
- await assert.rejects(()=>vote('admin','foreign'),/候选球友/);
+ await assert.rejects(()=>vote('admin','formal-b'),/不能改投/);assert.equal(s.awardVotes.find(v=>v.eventId==='other-event')?.playerId,'foreign-player');assert.equal(s.awardVotes.find(v=>v.eventId==='vote-event')?.playerId,'formal-a-player');
+ await assert.rejects(()=>vote('creator','foreign'),/候选球友/);
 });
 
-test('取消活动立即停止普通成员、创建者和管理员的新增或改投，保留原票数',async()=>{
+test('取消活动立即停止普通成员、创建者和管理员的投票，保留原票数',async()=>{
  const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');e.status='cancelled';const before=structuredClone(s);
  for(const id of ['formal-a','creator','admin']){assert.equal(canCastAwardVote(s,e,account(id),now),false);await assert.rejects(()=>vote(id,'attended'),/已取消/);assert.deepEqual(s,before);}
 });
@@ -130,25 +130,34 @@ test('retired tag-vote withdrawal cannot delete historical records',async()=>{
  const {s,e,account}=fixture();s.tagVotes.push({id:'legacy-tag',eventId:e.id,voterId:'admin',playerId:'formal-a-player',tag:'legacy',at:now-1});const before=structuredClone(s);await assert.rejects(()=>apply(s,account('admin'),'tagVote',{eventId:e.id,playerId:'formal-a-player',tag:'legacy',active:false},now),/MVP/);assert.deepEqual(s,before);
 });
 
-test('可撤回自己的本项选票，不影响其他账号、奖项或活动',async()=>{
- const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');s.awardVotes.push({id:'legacy-defense',eventId:e.id,voterId:'formal-a',playerId:'attended-player',category:'defense',at:now-1});await vote('admin','foreign','mvp','other-event');
- await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now);assert.equal(s.awardVotes.length,3);assert.ok(s.awardVotes.every(v=>!(v.eventId===e.id&&v.voterId==='formal-a'&&v.category==='mvp')));assert.ok(s.awardVotes.some(v=>v.voterId==='creator'));await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now);assert.equal(s.awardVotes.length,3);
+test('投出的选票不能撤回，没投过也不能撤回',async()=>{
+ const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');await vote('creator','formal-b');const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/不能撤回/);
+ await assert.rejects(()=>apply(s,account('admin'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/还没有投/);
+ assert.deepEqual(s,before);
 });
 
-test('旧选票撤回不能删掉已经改投的新选择，不能伪造别人的账号',async()=>{
- const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');await vote('formal-a','attended');const before=structuredClone(s);await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/409/);assert.deepEqual(s,before);await vote('creator','formal-b');await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'attended-player',category:'mvp',active:false,voterId:'creator'},now);assert.ok(s.awardVotes.some(v=>v.voterId==='creator'));
+test('不能借别人的账号撤回或改投',async()=>{
+ const {s,e,account,vote}=fixture();await vote('creator','formal-b');const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false,voterId:'creator'},now));
+ assert.deepEqual(s,before);assert.ok(s.awardVotes.some(v=>v.voterId==='creator'));
 });
 
-test('候选人后来停用仍可撤回自己的旧票，关闭活动后不能撤票',async()=>{
- const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');s.players.find(p=>p.id==='formal-b-player')!.enabled=false;await apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now);assert.equal(s.awardVotes.length,0);e.status='cancelled';await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/已取消/);
+test('候选人后来停用，已投的票照常保留且不能撤回；活动时间外的旧票可以重投',async()=>{
+ const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');s.players.find(p=>p.id==='formal-b-player')!.enabled=false;
+ await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/不能撤回/);assert.equal(s.awardVotes.length,1);
+ e.status='cancelled';await assert.rejects(()=>apply(s,account('formal-a'),'awardVote',{eventId:e.id,playerId:'formal-b-player',category:'mvp',active:false},now),/已取消/);
+ // A stored vote from before the activity's start (it was moved) is not counted, so it does not lock the ballot.
+ const moved=fixture();moved.s.awardVotes.push({id:'stale',eventId:moved.e.id,voterId:'formal-a',playerId:'attended-player',category:'mvp',at:moved.e.start-1});
+ await moved.vote('formal-a','formal-b');assert.deepEqual(moved.s.awardVotes.filter(v=>v.voterId==='formal-a').map(v=>v.playerId),['formal-b-player']);
 });
 
 test('已经真实出场的取消接龙者可评选，未来比赛不生成虚构资格',()=>{
  const {s,e}=fixture();const match={id:'played',eventId:e.id,roundId:'r',courtId:'c',status:'complete' as const,start:now-600000,end:now-300000,a:['cancelled-player','formal-a-player'],b:['formal-b-player','attended-player'],scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:'admin',games:[{a:21,b:19}]};s.matches.push(match);assert.ok(awardCandidateIds(s,e.id,now).includes('cancelled-player'));s.matches.push({...match,id:'future-game',end:now+1000,a:['future-player','formal-a-player']});assert.ok(!awardCandidateIds(s,e.id,now).includes('future-player'));
 });
 
-test('汇总正确处理零票、并列、改票及不同活动奖项，不伪造结果',async()=>{
- const {s,e,vote}=fixture();assert.equal(awardSummary(s.awardVotes,e.id,'mvp').max,0);await vote('formal-a','formal-b');await vote('creator','attended');let summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,2);assert.deepEqual(new Set(summary.leaders),new Set(['formal-b-player','attended-player']));await vote('formal-a','attended');summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,2);assert.equal(summary.max,2);assert.deepEqual(summary.leaders,['attended-player']);assert.equal(awardSummary(s.awardVotes,e.id,'defense').total,0);
+test('汇总正确处理零票、并列、新增选票及不同活动奖项，不伪造结果',async()=>{
+ const {s,e,vote}=fixture();assert.equal(awardSummary(s.awardVotes,e.id,'mvp').max,0);await vote('formal-a','formal-b');await vote('creator','attended');let summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,2);assert.deepEqual(new Set(summary.leaders),new Set(['formal-b-player','attended-player']));await vote('admin','attended');summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,3);assert.equal(summary.max,2);assert.deepEqual(summary.leaders,['attended-player']);assert.equal(awardSummary(s.awardVotes,e.id,'defense').total,0);
 });
 
 test('成员投影保留自己的选择，别人的票不暴露账号或编码账号的选票ID',async()=>{

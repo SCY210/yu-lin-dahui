@@ -11,7 +11,7 @@ const {default:Ballot}=await import(pathToFileURL(resolve('.test-output/mvp-only
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const now=Date.now(),event={id:'fixture',creatorId:'owner',status:'ended',start:now-7200000,end:now-1000};
 const data={me:{id:'member',playerId:'self',role:'member'},players:['self','alice','bob'].map(id=>({id,name:id,enabled:true})),registrations:['self','alice','bob'].map(playerId=>({eventId:event.id,playerId,status:'confirmed'})),attendance:[],matches:[],awardVotes:[]};
-const sent=[],ctx={data,busy:false,async action(action,payload){sent.push({action,payload});data.awardVotes=data.awardVotes.filter(v=>v.eventId!==event.id||v.voterId!==data.me.id);if(payload.active)data.awardVotes.push({id:'own-vote',eventId:event.id,voterId:data.me.id,playerId:payload.playerId,category:'mvp',at:now});}};
+const sent=[],ctx={data,busy:false,async action(action,payload){sent.push({action,payload});data.awardVotes=data.awardVotes.filter(v=>v.eventId!==event.id||v.voterId!==data.me.id);if(payload.active!==false)data.awardVotes.push({id:'own-vote',eventId:event.id,voterId:data.me.id,playerId:payload.playerId,category:'mvp',at:now});}};
 const text=node=>typeof node==='string'?node:(node?.children??[]).map(text).join('');
 let ui;
 try{
@@ -19,9 +19,15 @@ try{
  const buttons=()=>ui.root.findAllByType('button'),candidate=id=>buttons().find(b=>b.props.className?.includes('award-person')&&b.props['aria-label']?.includes(id));
  assert.equal(candidate('self').props.disabled,true);assert.equal(buttons().filter(b=>b.props.className?.includes('award-person')).length,3);
  assert.ok(!/最佳防守|最佳网前|最拼命|打法标签|四项|\/ 4/.test(text(ui.root)));
- await act(async()=>{candidate('alice').props.onClick();});assert.equal(data.awardVotes.length,1);assert.equal(sent[0].payload.category,'mvp');
- await act(async()=>{candidate('bob').props.onClick();});assert.equal(data.awardVotes.length,1);assert.equal(data.awardVotes[0].playerId,'bob');
- await act(async()=>{buttons().find(b=>text(b)==='撤回 MVP').props.onClick();});assert.equal(data.awardVotes.length,0);assert.equal(sent[2].payload.active,false);
+ const byText=label=>buttons().find(b=>text(b)===label);
+ // Picking a player only selects them; nothing is sent until the vote is confirmed, and it can be reconsidered.
+ await act(async()=>{candidate('bob').props.onClick();});assert.equal(sent.length,0);assert.ok(text(ui.root).includes('投出后不能改投或撤回'));
+ await act(async()=>{byText('再想想').props.onClick();});assert.equal(byText('确认投出'),undefined);assert.equal(sent.length,0);
+ await act(async()=>{candidate('alice').props.onClick();});assert.equal(candidate('alice').props['aria-pressed'],true);
+ await act(async()=>{byText('确认投出').props.onClick();});assert.equal(sent.length,1);assert.equal(sent[0].payload.category,'mvp');assert.equal(sent[0].payload.playerId,'alice');assert.equal(sent[0].payload.active,undefined);assert.equal(data.awardVotes.length,1);
+ await act(async()=>{ui.update(React.createElement(Ballot,{e:event,ctx,now}))});
+ assert.ok(buttons().filter(b=>b.props.className?.includes('award-person')).every(b=>b.props.disabled),'a cast vote locks the ballot');
+ assert.equal(byText('撤回 MVP'),undefined,'there is no withdrawal');assert.ok(text(ui.root).includes('选票已锁定'));assert.equal(data.awardVotes[0].playerId,'alice');
  await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'cancelled'},ctx,now})));
  assert.ok(buttons().filter(b=>b.props.className?.includes('award-person')).every(b=>b.props.disabled));
  data.awardVotes=[{id:'valid',eventId:event.id,voterId:'member',playerId:'alice',category:'mvp',at:now},{id:'late',eventId:event.id,voterId:'other',playerId:'bob',category:'mvp',at:event.end+25*3600000}];await act(()=>ui.update(React.createElement(Ballot,{e:{...event,status:'ended',tournament:{status:'draft'}},ctx,now:event.end+24*3600000})));assert.ok(text(ui.root).includes('本场 MVP：'));assert.ok(!/获得.*5.*积分/.test(text(ui.root)),'tournament MVP does not promise season points');assert.ok(!text(ui.root).includes('赛后开放投票'),'closed candidate cards consistently show the closed state');
@@ -32,5 +38,5 @@ try{
   if(allowed)assert.ok(text(details[0]).includes('alice → bob'));
   assert.ok(!text(ui.root).includes('投票为实名'),'the voting hint no longer explains who can see each vote');
  }
- console.log('PASS MVP-only ballot: self-vote/replace/withdraw/cancelled guards and named details restricted to admins and owner, including member organisers.');
+ console.log('PASS MVP-only ballot: self-vote guard, select-then-confirm, locked final vote without withdrawal, cancelled guard and named details restricted to admins and owner, including member organisers.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
