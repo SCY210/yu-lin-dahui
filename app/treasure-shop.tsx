@@ -39,14 +39,17 @@ function ProductDetails({product,balance,busy,onClose,onRedeem}:{product:Product
 
 function OrderRow({order,owner,busy,name,onHandle}:{order:Order;owner?:boolean;busy:boolean;name:(id:string)=>string;onHandle?:(order:Order,status:'fulfilled'|'cancelled')=>void}){return <article className="ts-order"><div className="ts-order-main"><span className="ts-order-icon" aria-hidden="true"><Package size={20}/></span><div><strong>{order.productName}</strong><small>{owner?name(order.playerId)+' · ':''}{order.quantity} 件 · {count(order.total)} 羽币</small><small>{fmt(order.created)}</small></div><span className={'ts-order-status ts-order-status-'+order.status}>{statusName[order.status]}</span></div>{order.status==='pending'&&<div className="ts-order-next">{owner?<div className="ts-order-actions"><button type="button" className="secondary" disabled={busy} onClick={()=>onHandle?.(order,'fulfilled')}><Check size={15}/>确认完成</button><button type="button" className="ghost" disabled={busy} onClick={()=>onHandle?.(order,'cancelled')}>取消并退还羽币</button></div>:<span>{order.kind==='physical'?'兑换成功，请联系群主安排领取。':'兑换成功，等待群主为你安排。'}</span>}</div>}{order.status==='cancelled'&&<p className="ts-order-note">羽币已退回，库存已恢复。</p>}</article>}
 
-function RewardRules({policy,pendingCorrection}:{policy:ClubData['treasureShop']['rewardPolicy'];pendingCorrection:number}){
+type StreakReward=ClubData['treasureShop']['streakReward'];
+function RewardRules({policy,pendingCorrection,streak,onEditStreak}:{policy:ClubData['treasureShop']['rewardPolicy'];pendingCorrection:number;streak:StreakReward;onEditStreak?:()=>void}){
  return <div className="ts-rewards">
   {pendingCorrection>0&&<p className="ts-correction" role="status"><strong>待校正 {count(pendingCorrection)} 羽币</strong><span>后续自动奖励先抵扣待校正部分，手动发币和兑换退款不受影响；当前余额不会变成负数。</span></p>}
   <Disclosure label="羽币奖励规则" className="ts-reward-rules">
    <p className="ts-reward-timing">{policy?'活动结束后自动结算，羽币明细可查看每笔记录。':'自动奖励尚未启用，启用前结束的活动不补发。'}</p>
-   <dl className="ts-reward-rates"><div><dt>赢球得分</dt><dd>1 积分 <span>奖励</span> 1 羽币</dd></div><div><dt>参加活动</dt><dd>每场活动 <strong>5 羽币</strong></dd></div><div><dt>输球扣分</dt><dd>羽币不扣</dd></div></dl>
+   <dl className="ts-reward-rates"><div><dt>赢球得分</dt><dd>1 积分 <span>奖励</span> 1 羽币</dd></div><div><dt>参加活动</dt><dd>每场活动 <strong>5 羽币</strong></dd></div><div><dt>连续到场</dt><dd>{streak.coins?<>连续 {streak.length} 场积分赛 <strong>{count(streak.coins)} 羽币</strong></>:'已关闭'}</dd></div><div><dt>输球扣分</dt><dd>羽币不扣</dd></div></dl>
    <p>胜局积分包含逆袭和连胜奖励，每获得 1 积分奖励 1 羽币；群主调分、投票和通知等奖励不自动发币。兑换只消耗羽币，不影响排行积分或修为。</p>
    <p>参与奖励每场活动只发一次，多场地、多时段不重复发放；仅候补、未实际参加的取消报名、缺席和临时来宾不计入。整场取消的活动不发奖励。</p>
+   <p>连续到场奖励：俱乐部举办的积分赛（单打、双打合并计算）每连续 {streak.length} 场都按时到场，在第 {streak.length} 场结束后发放，之后重新计数。缺席其中任何一场，或在某一场被报告迟到，都从 0 重新计；被误标迟到、撤销后不影响。普通活动、练球和赛事不计入。</p>
+   {onEditStreak&&<p className="ts-streak-edit"><button type="button" className="secondary" onClick={onEditStreak}>调整连续到场奖励</button><span>只影响之后满 {streak.length} 场的奖励，已发出的不变。</span></p>}
    <p>同一场比赛不会重复奖励。比分修正或作废时，可收回尚未使用的自动奖励；已花掉的部分从后续自动奖励中抵扣，手动发币和兑换退款不受影响，不向你收费。</p>
    <p className="ts-reward-start">{policy?<>从 {fmt(policy.activatedAt)} 启用，仅限此后结束的活动；更早结束的活动不补发。</>:'群主仍可单独发放羽币，手动发放与自动奖励分别记录。'}</p>
   </Disclosure>
@@ -70,9 +73,10 @@ export default function TreasureShop({data,open,busy=false,name}:Props){
  const redeem=(p:Product,quantity:number)=>open('确认兑换','treasureRedeem',{productId:p.id,quantity,expectedPrice:p.price},[],v=>({productId:v.productId,quantity:v.quantity,expectedPrice:v.expectedPrice}),`兑换「${p.name}」${quantity} 件，共 ${count(p.price*quantity)} 羽币。当前余额 ${count(shop.balance)} 羽币，兑换后剩余 ${count(shop.balance-p.price*quantity)} 羽币。${p.kind==='physical'?'实物礼品由群主安排领取。':'虚拟礼品由群主安排发放。'}`);
  const handleOrder=(o:Order,status:'fulfilled'|'cancelled')=>open(status==='fulfilled'?'确认礼品已完成':'取消兑换并退款','treasureOrder',{id:o.id,status},[],v=>({id:v.id,status:v.status}),status==='fulfilled'?`确认已向 ${playerName(o.playerId)} 发放「${o.productName}」${o.quantity} 件？完成后将保留兑换记录。`:`取消 ${playerName(o.playerId)} 的「${o.productName}」${o.quantity} 件，退回 ${count(o.total)} 羽币并恢复库存。`);
  const grant=()=>open('调整球友羽币','treasureGrant',{playerId:'',operation:'add',amount:10,adjustmentReason:''},[choice('playerId','球友',walletPlayers.map(p=>[p.id,p.name])),choice('operation','操作',[['add','发放羽币'],['subtract','扣除羽币']]),{key:'amount',label:'羽币数量（整数）',type:'number',min:1,max:1000000,step:1},{key:'adjustmentReason',label:'调整原因',type:'textarea',required:true}],v=>({playerId:v.playerId,amount:(v.operation==='subtract'?-1:1)*Number(v.amount),reason:String(v.adjustmentReason??'').trim()}),'只允许群主操作，原因会出现在球友自己的羽币明细中。羽币独立于排行积分和修为，余额不能扣成负数。');
+ const editStreak=()=>open('调整连续到场奖励','treasureStreakReward',{coins:shop.streakReward.coins},[{key:'coins',label:`每连续 ${shop.streakReward.length} 场积分赛奖励的羽币（0 为关闭）`,type:'number',min:0,max:1000,step:1}],v=>({coins:Number(v.coins)}),`修改后只影响之后满 ${shop.streakReward.length} 场的奖励，已经发出的连续到场奖励不变。`);
  return <div className="treasure-shop">
   <header className="ts-header"><h1>羽林宝阁</h1><div className="ts-wallet" aria-label={'我的羽币余额 '+count(shop.balance)} title="羽币来自活动奖励或群主发放，用于兑换礼品；不影响排行积分与修为。"><Coins size={18} aria-hidden="true"/><strong>{count(shop.balance)}</strong><span>羽币</span></div></header>
-  <RewardRules policy={shop.rewardPolicy} pendingCorrection={shop.pendingCorrection}/>
+  <RewardRules policy={shop.rewardPolicy} pendingCorrection={shop.pendingCorrection} streak={shop.streakReward} onEditStreak={shop.streakReward.canEdit?editStreak:undefined}/>
   <div className="ts-catalog-heading"><h2><ShoppingBag size={20}/>兑换好物</h2><span>{catalog.length} 件商品</span></div>
   <div className="ts-filters" role="group" aria-label="商品类型">{([['all','全部'],['physical','实物礼品'],['digital','虚拟礼品']] as const).map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>
   {catalog.length?<div className="ts-products">{catalog.map(product=><ProductCard key={product.id} product={product} busy={busy} onOpen={()=>setSelectedId(product.id)}/>)}</div>:<div className="ts-empty"><Gift size={34} strokeWidth={1.25}/><strong>{products.some(p=>p.active)?'这一类还没有礼品':'好物正在准备中'}</strong><p>{owner?'添加商品、设置价格和库存，即可开放兑换。':'等群主上架好物，再来看看吧。'}</p>{owner&&<button type="button" className="secondary" disabled={busy} onClick={()=>editProduct()}><Plus size={17}/>添加商品</button>}</div>}

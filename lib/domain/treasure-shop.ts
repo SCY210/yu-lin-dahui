@@ -2,7 +2,7 @@ import {z} from 'zod';
 import {isClubOwner} from './ownership';
 import {isGuest} from './guests';
 import {parseDomainCommand} from './command-contract';
-import {pendingAutomaticCorrection} from './automatic-coins';
+import {attendanceStreakCoins,attendanceStreakLength,pendingAutomaticCorrection} from './automatic-coins';
 import {treasureBalance,appendTreasureLedger} from './treasure-ledger';
 export {treasureBalance} from './treasure-ledger';
 import {fail,type Account,type State,type TreasureLedger} from './types';
@@ -12,7 +12,9 @@ export const treasureProductInput=z.object({id:identifier.optional(),name:z.stri
 export const treasureGrantInput=z.object({playerId:identifier,amount:z.number().int().min(-1000000).max(1000000).refine(n=>n!==0,'调整数量不能为零'),reason:z.string().trim().min(1).max(300),requestId:z.string().uuid()}).strict();
 export const treasureRedeemInput=z.object({productId:identifier,quantity:z.number().int().min(1).max(99).default(1),expectedPrice:amount.min(1),requestId:z.string().uuid()}).strict();
 export const treasureOrderInput=z.object({id:identifier,status:z.enum(['fulfilled','cancelled'])}).strict();
-const schemas={treasureProduct:treasureProductInput,treasureGrant:treasureGrantInput,treasureRedeem:treasureRedeemInput,treasureOrder:treasureOrderInput};
+/** Coins for attending attendanceStreakLength points matches in a row; 0 turns the reward off. */
+export const treasureStreakRewardInput=z.object({coins:z.number().int().min(0).max(1000)}).strict();
+const schemas={treasureProduct:treasureProductInput,treasureGrant:treasureGrantInput,treasureRedeem:treasureRedeemInput,treasureOrder:treasureOrderInput,treasureStreakReward:treasureStreakRewardInput};
 const actions=new Set(Object.keys(schemas));
 export function isTreasureAction(action:string){return actions.has(action)}
 function owner(s:State,a:Account){if(!isClubOwner(s,a))fail('403: 只有群主可以管理羽林宝阁')}
@@ -60,9 +62,16 @@ export function treasureOrder(s:State,a:Account,input:unknown,now:number){
  }
  o.status=c.status;o.updated=now;o.handledBy=a.id;audit(s,a,'treasureOrder',c.status==='fulfilled'?'已发放宝阁礼品':'取消兑换并退回羽币',now,{playerId:o.playerId,orderId:o.id});return o;
 }
+/** The owner and administrators set the attendance-streak reward. Runs already awarded keep their amount. */
+export function treasureStreakReward(s:State,a:Account,input:unknown,now:number){
+ if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有群主和管理员可以调整连续到场奖励');
+ const c=treasureStreakRewardInput.parse(input),before=attendanceStreakCoins(s);
+ s.settings.attendanceStreakCoins=c.coins;
+ audit(s,a,'treasureStreakReward',`连续 ${attendanceStreakLength} 次积分赛到场奖励：${before} → ${c.coins} 羽币`,now,{before,coins:c.coins});
+}
 export function applyTreasure(s:State,a:Account,action:string,input:unknown,now:number){
  const parsed=parseDomainCommand(schemas,action,input);if(!parsed)return false;
- switch(parsed.action){case 'treasureProduct':treasureProduct(s,a,parsed.payload,now);break;case 'treasureGrant':treasureGrant(s,a,parsed.payload,now);break;case 'treasureRedeem':treasureRedeem(s,a,parsed.payload,now);break;case 'treasureOrder':treasureOrder(s,a,parsed.payload,now);break}return true;
+ switch(parsed.action){case 'treasureProduct':treasureProduct(s,a,parsed.payload,now);break;case 'treasureGrant':treasureGrant(s,a,parsed.payload,now);break;case 'treasureRedeem':treasureRedeem(s,a,parsed.payload,now);break;case 'treasureOrder':treasureOrder(s,a,parsed.payload,now);break;case 'treasureStreakReward':treasureStreakReward(s,a,parsed.payload,now);break}return true;
 }
 /** Only the owner sees all fulfilment records. No account identifiers leave the shop projection. */
 export function treasureShopView(s:State,a:Account){
@@ -70,5 +79,6 @@ export function treasureShopView(s:State,a:Account){
  const ledger=s.treasureLedger.filter(r=>r.playerId===a.playerId).map(r=>({id:r.id,playerId:r.playerId,delta:r.delta,balance:r.balance,kind:r.kind,reason:r.reason,at:r.at,orderId:r.orderId}));
  const orders=s.treasureOrders.filter(o=>isOwner||o.playerId===a.playerId).map(o=>({id:o.id,playerId:o.playerId,productId:o.productId,productName:o.productName,kind:o.kind,price:o.price,quantity:o.quantity,total:o.total,status:o.status,created:o.created,updated:o.updated}));
  const policy=s.settings.automaticCoins,rewardPolicy=policy?{version:policy.version,activatedAt:policy.activatedAt}:null;
- return {products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId),rewardPolicy,ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId)})):[]};
+ const streakReward={coins:attendanceStreakCoins(s),length:attendanceStreakLength,canEdit:isClubOwner(s,a)||a.role==='admin'};
+ return {products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId),rewardPolicy,streakReward,ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId)})):[]};
 }

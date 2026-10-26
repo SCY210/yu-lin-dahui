@@ -6,9 +6,14 @@ import {gameFacts} from './game-facts';
 import {realmLedger,type RealmLedger} from './realm-rating';
 import {scoreSeasonGames,seasonGameScope} from './season-points';
 import {appendTreasureLedger,automaticRewardPool} from './treasure-ledger';
+import {eventRankingEnabled} from './event-ranking';
 import {fail,type Event,type State,type TreasureRewardClaim} from './types';
 
 export const participationCoins=5;
+/** Attending this many points matches in a row earns attendanceStreakCoins; the count then starts again. */
+export const attendanceStreakLength=4;
+export const defaultAttendanceStreakCoins=20;
+export const attendanceStreakCoins=(s:Pick<State,'settings'>)=>s.settings.attendanceStreakCoins??defaultAttendanceStreakCoins;
 const automaticKinds=new Set(['automatic_reward','automatic_correction']);
 
 /** Explicit rollout boundary, persisted atomically with the first reconciliation.
@@ -57,7 +62,7 @@ function participation(s:State,e:Event,playerId:string,now:number,index=particip
  * Owner grants, losses and attendance/notification/MVP points are never sources. */
 function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
  const policy=s.settings.automaticCoins;if(!policy)return [];
- const excluded=new Set(policy.excludedEventIds),prior=new Set((s.treasureRewardClaims??[]).map(row=>row.id)),events=new Map(s.events.filter(e=>endedRewardEvent(e,policy.activatedAt,excluded,now)).map(e=>[e.id,e]));
+ const excluded=new Set(policy.excludedEventIds),priorAmounts=new Map((s.treasureRewardClaims??[]).map(row=>[row.id,row.amount])),prior=new Set(priorAmounts.keys()),events=new Map(s.events.filter(e=>endedRewardEvent(e,policy.activatedAt,excluded,now)).map(e=>[e.id,e]));
  // Account disabling does not cancel genuine attendance or an earned entitlement.
  const members=new Set(s.accounts.map(a=>a.playerId).filter(id=>s.players.some(p=>p.id===id)&&!isGuest(s,id)));
  const claims:TreasureRewardClaim[]=[],index=participationIndex(s,now);
@@ -65,6 +70,7 @@ function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
   const id=JSON.stringify(['participation',e.id,playerId]);
   if(e.deletedAt===undefined||prior.has(id))claims.push({id,eventId:e.id,playerId,source:'participation',amount:participationCoins,updated:now});
  }
+ claims.push(...attendanceStreakClaims(s,now,events,members,index,priorAmounts));
  // Score the complete history before applying the reward rollout boundary:
  // earlier games establish (or break) a streak but receive no retroactive coins.
  // The canonical scope keeps quarters and singles/doubles streaks independent.
@@ -75,6 +81,31 @@ function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
   const amount=Math.max(0,points);if(!amount)continue;
   const id=JSON.stringify(['match_win',g.matchId,g.gameIndex,g.playerId]);
   if(events.get(g.eventId)!.deletedAt===undefined||prior.has(id))claims.push({id,eventId:g.eventId,playerId:g.playerId,source:'match_win',matchId:g.matchId,gameIndex:g.gameIndex,amount,updated:now});
+ }
+ return claims;
+}
+
+/** Points matches held (ranked, not tournaments, not cancelled, draft or deleted), in the order they started. */
+function heldPointsMatches(s:State,now:number){
+ return s.events.filter(e=>e.deletedAt===undefined&&eventRankingEnabled(e)&&!e.tournament&&!['draft','cancelled'].includes(e.status)&&Number.isFinite(e.end)&&e.end<=now)
+  .sort((a,b)=>a.start-b.start||a.id.localeCompare(b.id));
+}
+/** Every attendanceStreakLength points matches in a row that a member attended on time earn coins on the last of them.
+ * Missing one, or being reported late in one, starts the count again; singles and doubles count together. The whole
+ * history establishes or breaks a run, but only activities inside the reward rollout earn. An awarded run keeps the
+ * amount it was awarded with, so changing the setting only affects new runs. */
+function attendanceStreakClaims(s:State,now:number,rewardable:Map<string,Event>,members:Set<string>,index:ParticipationIndex,priorAmounts:Map<string,number>){
+ const claims:TreasureRewardClaim[]=[],coins=attendanceStreakCoins(s);
+ const runs=new Map([...members].map(id=>[id,0]));
+ for(const e of heldPointsMatches(s,now)){
+  const late=new Set((e.pointsSession?.attendance??[]).filter(row=>row.late).map(row=>row.playerId));
+  for(const playerId of members){
+   const run=participation(s,e,playerId,now,index)&&!late.has(playerId)?runs.get(playerId)!+1:0;
+   runs.set(playerId,run);
+   if(!run||run%attendanceStreakLength||!rewardable.has(e.id))continue;
+   const id=JSON.stringify(['attendance_streak',e.id,playerId]),amount=priorAmounts.get(id)||coins;
+   if(amount>0)claims.push({id,eventId:e.id,playerId,source:'attendance_streak',amount,updated:now});
+  }
  }
  return claims;
 }
@@ -102,7 +133,7 @@ export function reconcileAutomaticCoins(s:State,now:number,ledger?:RealmLedger){
   const delta=change<0?-Math.min(automaticRewardPool(s,playerId),-change):Math.max(0,change-pendingBefore);
   if(!delta)continue;
   const kind=delta>0?'automatic_reward' as const:'automatic_correction' as const;
-  const reason=delta>0?'活动结束自动结算：胜局积分与参与奖励':'比分或活动记录修正，校正自动奖励';
+  const reason=delta>0?'活动结束自动结算：胜局积分、参与与连续到场奖励':'比分或活动记录修正，校正自动奖励';
   appendTreasureLedger(s,{playerId,delta,kind,reason,actor,at:now,requestId:`automatic:${crypto.randomUUID()}`});
   changed=true;
  }
