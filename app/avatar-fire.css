@@ -125,3 +125,23 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .wuxia-theme .avatar-fire-shell[data-mood=loss][data-tier='3'] .avatar-fire-seal{background:#2e2638;color:#f2dfae!important;border-color:#a88bd6;box-shadow:none}
 @media(prefers-reduced-motion:reduce){.avatar-fire-shell[data-mood=loss]>img.avatar-fire-image,.al-strike{animation:none!important}.al-rain line{opacity:.6}}
 @media(prefers-reduced-motion:reduce){.avatar-fire-art *,.avatar-fire-seal::after{animation:none!important}.af-flow{stroke-dasharray:none;opacity:.5}.af-thunder{opacity:.8}.af-motes circle{opacity:.6}}
+/* Loss seal text: a lasting, heavier mood per tier instead of the winning seal's quick glint (which never suits a
+   losing run). The rain keeps falling across the seal, and the phrase stays readable the whole time.
+   1 乌云罩顶: fine drizzle over the seal; the phrase slowly hangs its head and dims.
+   2 风雨交加: denser slanting rain; the phrase sways in the wind.
+   3 天劫加身: violet lightning crackles round the phrase and flares with each strike on the avatar. */
+.avatar-fire-shell[data-mood=loss] .avatar-fire-seal::after{inset:-2px;background:repeating-linear-gradient(100deg,transparent 0 5px,#ffffff59 5px 6px,transparent 6px 9px);background-size:18px 18px;transform:none;opacity:.55;animation:al-seal-rain 1.4s linear infinite;animation-play-state:paused}
+.avatar-fire-shell[data-mood=loss][data-tier='2'] .avatar-fire-seal::after{background:repeating-linear-gradient(115deg,transparent 0 3px,#ffffff70 3px 4.5px,transparent 4.5px 6px);background-size:14px 14px;opacity:.7;animation-duration:.7s}
+.avatar-fire-shell[data-mood=loss][data-tier='3'] .avatar-fire-seal::after{background:repeating-linear-gradient(115deg,transparent 0 3px,#d9c8ff73 3px 4.5px,transparent 4.5px 6px);background-size:14px 14px;opacity:.6;animation-duration:.6s}
+.avatar-fire-shell[data-mood=loss] .avatar-fire-seal>.af-seal-word{display:inline-block;transform-origin:50% 100%;animation:al-seal-droop 3.2s ease-in-out infinite;animation-play-state:paused}
+.avatar-fire-shell[data-mood=loss][data-tier='2'] .avatar-fire-seal>.af-seal-word{transform-origin:50% 90%;animation:al-seal-sway 2.2s ease-in-out infinite;animation-play-state:paused}
+.avatar-fire-shell[data-mood=loss][data-tier='3'] .avatar-fire-seal>.af-seal-word{animation:al-seal-crackle 1.3s steps(1,end) infinite,al-seal-struck 3.8s linear infinite;animation-play-state:paused}
+.avatar-fire-shell[data-mood=loss][data-moving=true] .avatar-fire-seal::after,.avatar-fire-shell[data-mood=loss][data-moving=true] .avatar-fire-seal>.af-seal-word{animation-play-state:running}
+@keyframes al-seal-rain{from{background-position:0 -18px}to{background-position:-4px 0}}
+@keyframes al-seal-droop{0%,100%{transform:translateY(0) rotate(0deg);opacity:1}45%,60%{transform:translateY(1.5px) rotate(-3deg);opacity:.72}}
+@keyframes al-seal-sway{0%,100%{transform:rotate(-4deg) translateX(-.6px)}50%{transform:rotate(4deg) translateX(.6px)}}
+/* A steady electric glow with small irregular flickers; the strike (in step with al-strike) flares it white. */
+@keyframes al-seal-crackle{0%{text-shadow:0 0 3px #b08cff,0 0 6px #8e63d8}23%{text-shadow:-1px 0 2px #d9c8ff,1px 0 5px #8e63d8}41%{text-shadow:0 0 4px #b08cff,0 0 9px #8e63d8}58%{text-shadow:1px 0 2px #fff2b8,-1px 0 6px #8e63d8}77%{text-shadow:0 0 2px #b08cff,0 0 7px #6f45c4}}
+@keyframes al-seal-struck{0%,68%,80%,100%{transform:translate(0,0);filter:none}70%{transform:translate(-.8px,.4px);filter:brightness(1.8) drop-shadow(0 0 2px #fff)}72%{transform:translate(.8px,-.4px);filter:none}74%{transform:translate(0,0);filter:brightness(1.6) drop-shadow(0 0 2px #fff)}}
+.wuxia-theme .avatar-fire-shell[data-mood=loss][data-tier='3'] .avatar-fire-seal::after{background:repeating-linear-gradient(115deg,transparent 0 3px,#f2dfae5c 3px 4.5px,transparent 4.5px 6px);background-size:14px 14px}
+@media(prefers-reduced-motion:reduce){.avatar-fire-shell[data-mood=loss] .avatar-fire-seal::after,.avatar-fire-shell[data-mood=loss] .avatar-fire-seal>.af-seal-word{animation:none!important}.avatar-fire-shell[data-mood=loss][data-tier='3'] .avatar-fire-seal>.af-seal-word{text-shadow:0 0 3px #b08cff,0 0 6px #8e63d8}}
