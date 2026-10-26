@@ -45,6 +45,8 @@ Members whose live run is two or more consecutive rated losses get weather over 
 | 4–5 | wind and rain | a dark storm cloud, slanting rain and flashes inside the cloud | "N lian gui" |
 | 6+ | heavenly tribulation | a violet-black tribulation cloud turns above; lightning strikes the avatar, which flashes white and shakes a little | "du jie N" |
 
+The seal text has its own lasting effect instead of the winning seal's passing glint, heavier with each tier: at 2–3 losses fine drizzle keeps falling across the seal while the phrase slowly hangs its head and dims; at 4–5 denser slanting rain falls and the phrase sways in the wind; at 6+ violet lightning keeps crackling round the phrase and flares white each time the bolt strikes the avatar. The phrase stays readable throughout.
+
 Colours follow the theme (cool greys in the classic theme, ink greys in the ink-wash theme). The seal uses the same placement and fixed type as the winning seal, and motion pauses offscreen, in the background and under reduced motion. Tests: `tests/losing-streak.test.ts` and `tests/avatar-fire-ui.mjs`.
 
 ## Live state
