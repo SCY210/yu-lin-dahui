@@ -7,6 +7,7 @@ import {realmLedger,type RealmLedger} from './realm-rating';
 import {scoreSeasonGames,seasonGameScope} from './season-points';
 import {appendTreasureLedger,automaticRewardPool} from './treasure-ledger';
 import {eventRankingEnabled} from './event-ranking';
+import {bountyOutcome} from './bounties';
 import {fail,type Event,type State,type TreasureRewardClaim} from './types';
 
 export const participationCoins=5;
@@ -71,11 +72,17 @@ function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
   if(e.deletedAt===undefined||prior.has(id))claims.push({id,eventId:e.id,playerId,source:'participation',amount:participationCoins,updated:now});
  }
  claims.push(...attendanceStreakClaims(s,now,events,members,index,priorAmounts));
+ const rated=ledger??realmLedger(s,now);
+ // A completed bounty pays the coins frozen when it was accepted (lib/domain/bounties.ts).
+ for(const e of events.values())for(const b of e.bounties??[])if(b.coins>0&&members.has(b.playerId)&&bountyOutcome(s,e,b,now,b.kind==='upset'?rated.byPlayer.get(b.playerId)??[]:undefined)==='completed'){
+  const id=JSON.stringify(['bounty',e.id,b.playerId]);
+  if(e.deletedAt===undefined||prior.has(id))claims.push({id,eventId:e.id,playerId:b.playerId,source:'bounty',amount:b.coins,updated:now});
+ }
  // Score the complete history before applying the reward rollout boundary:
  // earlier games establish (or break) a streak but receive no retroactive coins.
  // The canonical scope keeps quarters and singles/doubles streaks independent.
  const matches=new Map(s.matches.map(match=>[match.id,match]));
- const scored=scoreSeasonGames((ledger??realmLedger(s,now)).games,g=>seasonGameScope(g,matches.get(g.matchId)!));
+ const scored=scoreSeasonGames(rated.games,g=>seasonGameScope(g,matches.get(g.matchId)!));
  for(const {game:g,points} of scored){
   if(!g.won||!events.has(g.eventId)||!members.has(g.playerId))continue;
   const amount=Math.max(0,points);if(!amount)continue;
@@ -133,7 +140,7 @@ export function reconcileAutomaticCoins(s:State,now:number,ledger?:RealmLedger){
   const delta=change<0?-Math.min(automaticRewardPool(s,playerId),-change):Math.max(0,change-pendingBefore);
   if(!delta)continue;
   const kind=delta>0?'automatic_reward' as const:'automatic_correction' as const;
-  const reason=delta>0?'活动结束自动结算：胜局积分、参与与连续到场奖励':'比分或活动记录修正，校正自动奖励';
+  const reason=delta>0?'活动结束自动结算：胜局积分、参与、连续到场与悬赏奖励':'比分或活动记录修正，校正自动奖励';
   appendTreasureLedger(s,{playerId,delta,kind,reason,actor,at:now,requestId:`automatic:${crypto.randomUUID()}`});
   changed=true;
  }
