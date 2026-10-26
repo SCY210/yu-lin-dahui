@@ -27,7 +27,7 @@ await build({entryPoints:['app/club-app.tsx'],outfile:'.test-output/club-lineup-
    :['./score-reminder','./bonus-popup','./notification-prompt'].includes(a.path)?`export default function Capture(props){globalThis.__clubLineupUi[${JSON.stringify(a.path)}]=props;return null}`
    :a.path==='./event-view'?`import{createElement as h}from'react';export default function View({ctx}){globalThis.__clubLineupUi.ctx=ctx;const m=ctx.data.matches[0];return h('section',{},h('pre',{'data-lineup':true},JSON.stringify({revision:ctx.data.revision,a:m.a,b:m.b})),h('button',{id:'open-lineup',onClick:()=>ctx.open('调整上场人员','liveLineup',{matchId:m.id,expectedA:[...m.a],expectedB:[...m.b],a:[...m.b],b:[...m.a]},[])},'调整阵容'));}`
    :a.path==='./forms-dialog'?`import{createElement as h}from'react';export default function Forms({form,action}){return form?h('section',{'data-editor':true},h('pre',{},JSON.stringify(form.values)),h('button',{id:'save-lineup',onClick:()=>void action(form.action,form.values).catch(()=>{})},'保存阵容')):null;}`
-   :`export default function Shell({children}){return children??null}export const TreasureIcon=()=>null,AccountNoticeEvidence=()=>null,MyAchievements=()=>null,MySettings=()=>null,SimulationEntry=()=>null,Avatar=()=>null,useVisualTheme=()=>false,newEventForm=()=>({});`;
+   :`export default function Shell({children}){return children??null}export const TreasureIcon=()=>null,AccountNoticeEvidence=()=>null,MyAchievements=()=>null,MySettings=()=>null,SimulationEntry=()=>null,Avatar=()=>null,HomeBounties=()=>null,useVisualTheme=()=>false,newEventForm=()=>({});`;
   return {loader:'js',contents:content};
  });
 }}]});

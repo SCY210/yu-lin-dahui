@@ -1,6 +1,7 @@
 import {notificationPointEntries} from './notification-points';
 import {attendancePointAdjustments} from './points-attendance';
 import {mvpPointAdjustments} from './activity-voting';
+import {bountyPointAdjustments} from './bounties';
 import {eventRankingEnabled} from './event-ranking';
 import {pointGrants,ratingAdjustments} from './point-grants';
 import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
@@ -49,6 +50,7 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
  const notification=new Map<string,number>();if(!singles)for(const g of notificationPointEntries(s))if(chosen.has(g.period))notification.set(g.playerId,(notification.get(g.playerId)??0)+g.points);
  const attendance=new Map<string,number>();for(const g of attendancePointAdjustments(s))if(chosen.has(g.period)&&(format==='all'||g.format===format))attendance.set(g.playerId,(attendance.get(g.playerId)??0)+g.delta);
  const mvp=new Map<string,number>();for(const g of mvpPointAdjustments(s,now))if(chosen.has(g.period)&&(format==='all'||g.format===format))mvp.set(g.playerId,(mvp.get(g.playerId)??0)+g.delta);
+ const bounty=new Map<string,number>();for(const g of bountyPointAdjustments(s,now,id=>ledger.byPlayer.get(id)??[]))if(chosen.has(g.period)&&(format==='all'||g.format===format))bounty.set(g.playerId,(bounty.get(g.playerId)??0)+g.delta);
  const members=new Set(s.accounts.map(account=>account.playerId));
  // One pass over the matches, grouped by player in match order (a filter per player was players × matches).
  const played=new Map<string,{match:Match;games:number}[]>();
@@ -65,8 +67,8 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
   const rated=scored.map(row=>row.game);
   const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=scored.reduce((n,row)=>n+row.points,0),upsets=rated.reduce((n,g)=>n+upsetBonus(g),0),streakPoints=scored.reduce((n,row)=>n+row.streakPoints,0),pending=scored.filter(row=>!row.game.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
- }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0||row.mvpPoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0)+(bounty.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,bountyPoints:bounty.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+ }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0||row.mvpPoints!==0||row.bountyPoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }
 const yearMonths=(year:number)=>Array.from({length:12},(_,i)=>year+'-'+String(i+1).padStart(2,'0'));

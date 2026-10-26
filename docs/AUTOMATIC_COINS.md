@@ -30,3 +30,7 @@ Members also earn coins for coming to points matches in a row (`attendanceStreak
 - Like every automatic source, a later correction (for example a late report added afterwards) reconciles the entitlement in the same transaction.
 
 Tests: `tests/attendance-streak-coins.test.ts` and `tests/treasure-shop-ui.mjs`.
+
+## Bounties
+
+A completed bounty pays the coins frozen when it was accepted, as another automatic source (`bounty`), after the activity's scheduled end and only for activities inside the reward rollout. See [Bounties](BOUNTIES.md).
