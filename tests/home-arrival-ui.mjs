@@ -6,6 +6,14 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import React from 'react';
 import renderer,{act} from 'react-test-renderer';
+import ts from 'typescript';
+function assertCardBadgePosition(source){
+ const file=ts.createSourceFile('activity-card.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),cards=[];
+ const visit=node=>{if(ts.isJsxElement(node)&&node.openingElement.attributes.properties.some(p=>ts.isJsxAttribute(p)&&p.name.getText(file)==='className'&&p.initializer&&ts.isStringLiteral(p.initializer)&&p.initializer.text==='event-info'))cards.push(node);ts.forEachChild(node,visit)};
+ visit(file);assert.equal(cards.length,1,'one activity-card content area is checked');
+ const children=cards[0].children.filter(c=>!ts.isJsxText(c)||c.text.trim()),last=children.at(-1);
+ assert.ok(last&&ts.isJsxSelfClosingElement(last)&&last.tagName.getText(file)==='PointsMatchBadge','the points badge is the last item in the card content area');
+}
 mkdirSync('.test-output',{recursive:true});
 writeFileSync('.test-output/home-arrival-entry.ts',"export {default as HomeArrival} from '../app/home-arrival';export {default as PointsMatchBadge} from '../app/points-match-badge';");
 await build({entryPoints:['.test-output/home-arrival-entry.ts'],outfile:'.test-output/home-arrival-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
@@ -40,6 +48,12 @@ try{
  const corner=readFileSync('app/points-match-badge.css','utf8').match(/^([^{]*\.event-card[^{]*\.points-match-badge[^{]*)\{[^}]*margin:[^;}]* auto/m);
  assert.ok(corner,'activity cards push the badge to the bottom-right corner');
  assert.ok(own.every(o=>beats(specificity(corner[1].trim()),o)>0),'the corner badge rule outranks the badge rule');
- assert.match(readFileSync('app/club-app.tsx','utf8'),/<PointsMatchBadge e=\{ev\}\/><\/div><\/button>/,'the card badge is the last item of the card');
+ assertCardBadgePosition(readFileSync('app/club-app.tsx','utf8'));
+ // Decorative siblings outside the content area must not affect its badge position.
+ const card=(content,decoration='')=>`const card=<button><div className="event-info">${content}</div>${decoration}</button>`;
+ assertCardBadgePosition(card('<h3>Activity</h3><PointsMatchBadge e={ev}/>'));
+ assertCardBadgePosition(card('<h3>Activity</h3><PointsMatchBadge e={ev}/>','<svg aria-hidden="true"/>'));
+ assert.throws(()=>assertCardBadgePosition(card('<PointsMatchBadge e={ev}/><h3>Activity</h3>')),/last item/);
+ assert.throws(()=>assertCardBadgePosition(card('<h3>Activity</h3>','<PointsMatchBadge e={ev}/>')),/last item/);
  console.log('PASS home arrival and points badge UI: own and proxy holds, resume commands, navigation, hidden after the end and for others, badge only on ranked activities');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}
