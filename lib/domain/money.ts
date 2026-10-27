@@ -33,10 +33,11 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  const distribute=(name:string,type:'court'|'ball'|'other',amount:number,start:number,end:number,mode:Mode,estimated:boolean,bearer='members',bookingId:string|undefined,item:string)=>{
   const scoped=usesAutomaticAttendance(e)&&(s.registrations.some(r=>r.eventId===e.id&&r.bookingSignups)||s.attendance.some(a=>a.eventId===e.id&&a.bookingId));
   const booking=bookingId&&scoped?s.bookings.find(b=>b.id===bookingId):undefined;
-  const scope=booking&&usesAutomaticAttendance(e)?courtSpans(s,e,booking).map(a=>({...a,end:Math.min(a.end,now)})).filter(a=>a.end>a.start):spans;
-  const scopeIds=ids.filter(id=>scope.some(a=>a.playerId===id&&a.start<end&&a.end>start));
-  const scopedActive=(a:number,b:number)=>scopeIds.filter(id=>scope.some(x=>x.playerId===id&&x.start<b&&x.end>a));
-  const scopedMinutes=(id:string)=>{const rows=scope.filter(a=>a.playerId===id).map(a=>[Math.max(a.start,start),Math.min(a.end,end)]).filter(a=>a[1]>a[0]).sort((a,b)=>a[0]-b[0]);let total=0,last=-Infinity;for(const [a,b]of rows){total+=Math.max(0,b-Math.max(a,last));last=Math.max(last,b)}return total};
+  // A court's fee is shared by everyone taking part while it is booked, whichever court they signed up for, so
+  // courts that filled unevenly at the same time still give everyone the same share. A booking only limits the time window.
+  const scopeIds=ids.filter(id=>spans.some(a=>a.playerId===id&&a.start<end&&a.end>start));
+  const scopedActive=(a:number,b:number)=>scopeIds.filter(id=>spans.some(x=>x.playerId===id&&x.start<b&&x.end>a));
+  const scopedMinutes=(id:string)=>{const rows=spans.filter(a=>a.playerId===id).map(a=>[Math.max(a.start,start),Math.min(a.end,end)]).filter(a=>a[1]>a[0]).sort((a,b)=>a[0]-b[0]);let total=0,last=-Infinity;for(const [a,b]of rows){total+=Math.max(0,b-Math.max(a,last));last=Math.max(last,b)}return total};
   total+=amount;const segmentWeights:Record<string,number>={};const intervals:{key:string;start:number;end:number;members:string[]}[]=[];
   if(mode==='interval'){for(let i=0;i<cuts.length-1;i++){const a=Math.max(cuts[i],start),b=Math.min(cuts[i+1],end);if(b>a){const members=scopedActive(a,b);const key=String(i);segmentWeights[key]=b-a;intervals.push({key,start:a,end:b,members})}}}
   else{intervals.push({key:'all',start,end,members:booking?scopeIds:ids});segmentWeights.all=1}
