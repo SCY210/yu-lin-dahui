@@ -1,18 +1,15 @@
-import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
-import {courtSpans} from './booking-signups';
+import {attendanceForEvent} from './attendance';
 import type {State,Event,Settlement} from './types';
 
 type Result=Pick<Settlement,'eventId'|'bills'|'detail'|'total'|'subsidy'|'unallocated'|'expenseTotal'|'roundingDifference'>;
-/** Equal attendance, court scope and exemptions receive exactly equal cents.
+/** Equal attendance and exemptions receive exactly equal cents, whichever courts the players signed up for.
  * Keep the recorded expenses separate from the rounded split total. */
 export function equalFeeAmounts(s:State,e:Event,now:number,result:Result,allocate:(n:number,w:Record<string,number>)=>Record<string,number>){
  const spans=attendanceForEvent(s,e),groups=new Map<string,string[]>();
  const intervals=(rows:{start:number;end:number|null}[])=>rows.map(a=>[Math.max(a.start,e.start),Math.min(a.end??Math.min(now,e.end),e.end,now)]).filter(([a,b])=>b>a).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
- const scoped=usesAutomaticAttendance(e)&&(s.registrations.some(r=>r.eventId===e.id&&r.bookingSignups)||s.attendance.some(a=>a.eventId===e.id&&a.bookingId));
- const bookings=s.bookings.filter(b=>b.eventId===e.id).sort((a,b)=>a.id.localeCompare(b.id));
  for(const bill of result.bills){
   const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===bill.playerId);
-  const key=JSON.stringify([intervals(spans.filter(a=>a.playerId===bill.playerId)),scoped?bookings.map(b=>[b.id,intervals(courtSpans(s,e,b).filter(a=>a.playerId===bill.playerId))]):null,r?.courtExempt.mode??'none',r?.ballExempt.mode??'none']);
+  const key=JSON.stringify([intervals(spans.filter(a=>a.playerId===bill.playerId)),r?.courtExempt.mode??'none',r?.ballExempt.mode??'none']);
   groups.set(key,[...(groups.get(key)??[]),bill.playerId]);
  }
  const expenseTotal=result.total,types=['court','ball','other'] as const;
