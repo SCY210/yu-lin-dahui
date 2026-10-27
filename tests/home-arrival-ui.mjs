@@ -36,5 +36,10 @@ try{
  const themeRules=readdirSync('app').filter(n=>n.endsWith('.css')&&n!=='points-match-badge.css').flatMap(n=>[...readFileSync('app/'+n,'utf8').replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/([^{}]+)\{[^}]*background[^}]*\}/g)].flatMap(m=>m[1].split(',').map(s=>s.trim()).filter(s=>/\.badge(?![\w-])/.test(s)&&!/event-status-badge|points-match-badge/.test(s))));
  assert.ok(themeRules.some(r=>r.includes('.wuxia-theme .event-card .event-info .badge')),'the ink card rule is among those checked');
  for(const rule of themeRules)assert.ok(own.some(o=>beats(o,specificity(rule))>0),'the points badge outranks '+rule);
+ // On activity cards the smaller corner badge must also outrank the badge's own rule in both themes.
+ const corner=readFileSync('app/points-match-badge.css','utf8').match(/^([^{]*\.event-card[^{]*\.points-match-badge[^{]*)\{[^}]*margin:[^;}]* auto/m);
+ assert.ok(corner,'activity cards push the badge to the bottom-right corner');
+ assert.ok(own.every(o=>beats(specificity(corner[1].trim()),o)>0),'the corner badge rule outranks the badge rule');
+ assert.match(readFileSync('app/club-app.tsx','utf8'),/<PointsMatchBadge e=\{ev\}\/><\/div><\/button>/,'the card badge is the last item of the card');
  console.log('PASS home arrival and points badge UI: own and proxy holds, resume commands, navigation, hidden after the end and for others, badge only on ranked activities');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}
