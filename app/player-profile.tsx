@@ -12,6 +12,7 @@ import FeatureGuide from './feature-guide';
 const RacketGallery=lazy(()=>import('./racket-gallery'));
 import './player-profile.css';
 const AchievementCollection=lazy(()=>import('./achievement-collection'));
+const BondCard=lazy(()=>import('./bond-card'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
 import {genderOptions,genderLabels,type ProfileGender} from '../lib/player-profile-options';
 
@@ -69,6 +70,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         {ctx.admin && canEdit && !genderOnly && <button type="button" className="pp-rename" onClick={()=>ctx.open('修改球友姓名', 'profile', {playerId:p.id, name:p.name}, [text('name', '球友姓名')])}>修改姓名</button>}
       </div>}
     </header>
+
+    {!isOwn&&!p.guestEventId&&!p.guestFriendId&&ctx.data.bonds&&<Disclosure label="羁绊" defaultOpen><Deferred><BondCard p={p} ctx={ctx}/></Deferred></Disclosure>}
 
     <Disclosure label="个人资料与打法" defaultOpen><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
