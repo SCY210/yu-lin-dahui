@@ -13,6 +13,7 @@ import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions'
 import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
+import {eventPairingOdds,oddsRandom,oddsSplits} from './pairing-odds';
 import {eventFormat,courtPlayers,isPractice} from './match-format';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
 
@@ -61,15 +62,17 @@ export function hasEmptyLiveCourt(s:Pick<State,'bookings'|'matches'>,e:Event,now
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }
-function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number){
+/** splits: the team splits allowed by hidden pairing odds (lib/domain/pairing-odds.ts); all three when omitted. */
+function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number,splits?:string[][][]){
  const size=eventFormat(e)==='singles'?1:2;
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
   return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0);
  };
- let best=ids,bestCost=cost(ids);
- if(size===2)for(const candidate of [[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]){
+ const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
+ let best=first,bestCost=cost(first);
+ for(const candidate of others){
   const next=cost(candidate);if(compareBalance(next,bestCost)<0){best=candidate;bestCost=next}
  }
  return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
@@ -154,6 +157,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     ids[i]=candidate;const next=pair(s,e,ids,history,rating);
     if(compareBalance(next.cost,chosen.cost)<0)chosen=next;
    }
+   const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
+   if(odds){const four=[...chosen.a,...chosen.b];chosen=pair(s,e,four,history,rating,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))))}
    teams={a:chosen.a,b:chosen.b};
   }
   if(!teams)continue;

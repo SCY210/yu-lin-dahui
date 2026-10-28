@@ -1,6 +1,7 @@
 import type {PointsSession} from './points-attendance';
 import type {BountyRecord,BountySettings} from './bounties';
 import type {Tournament} from './tournament';
+import type {PairingOdds} from './pairing-odds';
 export type Account={id:string;email:string;role:'admin'|'member';playerId:string;/** Sandbox-only permission; never grants real administrator authority. */simulationTester?:boolean;/** Extra-point notices already acknowledged (lib/domain/bonus-notices.ts). */bonusSeen?:string[];/** Received gifts already acknowledged (lib/domain/bonds.ts). */giftSeen?:string[]};
 import type {ProfileGender} from '../player-profile-options';
 /** cultivationBase: legacy weekly-v2 offset, retained but no longer used. */
@@ -46,7 +47,7 @@ export type Season={id:string;rules:Rules;version?:number};
 export type RatingChange={id:string;matchId:string;playerId:string;before:number;after:number;delta:number;algorithm:string;k:number};
 export type Audit={id:string;at:number;actor:string;action:string;reason:string;changes?:unknown};
 export type AutomaticCoinPolicy={version:'win-points-v1';activatedAt:number;excludedEventIds:string[]};
-export type Settings={automaticCoins?:AutomaticCoinPolicy;/** Coins for every attendanceStreakLength points matches in a row (docs/AUTOMATIC_COINS.md); unset means the default. */attendanceStreakCoins?:number;/** Bounty rewards and penalty (lib/domain/bounties.ts); unset means the defaults. */bounty?:BountySettings;rankedEventsVersion?:'admins-v1';name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[];progressionVersion?:'weekly-v2';realmVersion?:'elo-v1';rankingVersion?:'signed-v1';scoringPolicy?:'all-ranked-v1';strengthVersion?:'realm-elo-v2';feePayees?:FeePayee[]}
+export type Settings={/** Hidden pairing odds of future activities (lib/domain/pairing-odds.ts); never sent to members. */pairingOdds?:PairingOdds[];automaticCoins?:AutomaticCoinPolicy;/** Coins for every attendanceStreakLength points matches in a row (docs/AUTOMATIC_COINS.md); unset means the default. */attendanceStreakCoins?:number;/** Bounty rewards and penalty (lib/domain/bounties.ts); unset means the defaults. */bounty?:BountySettings;rankedEventsVersion?:'admins-v1';name:string;inviteHash:string;rules:Rules;initialized:boolean;ownerAccountId?:string;blockedWords?:string[];progressionVersion?:'weekly-v2';realmVersion?:'elo-v1';rankingVersion?:'signed-v1';scoringPolicy?:'all-ranked-v1';strengthVersion?:'realm-elo-v2';feePayees?:FeePayee[]}
 /** A saved transfer recipient, offered when setting an activity's fee recipient; newest use first. */
 export type FeePayee={playerId?:string;id:string;name:string;phone:string;createdBy:string;usedAt:number};
 export type ProfileRestrictions={genderOnlyPlayerIds:string[]};

@@ -3,6 +3,7 @@ import {applyFriendSignup} from './friend-signup';
 import {activityAcknowledgementInput} from './activity-acknowledgement';
 import {applyTreasure,isTreasureAction} from './treasure-shop';
 import {applyBond,isBondAction} from './bonds';
+import {applyPairingOdds} from './pairing-odds';
 import {applyBounty} from './bounties';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
@@ -93,6 +94,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     input = restoreMaskedEdits(s, a, action, input);
     if(applyTreasure(s,a,action,input,now)) return null;
     if(applyBond(s,a,action,input)) return null;
+    if(applyPairingOdds(s,a,action,input,now)) return null;
     if(applyBounty(s,a,action,input,now)) return null;
     if(applyParticipation(s,a,action,input,now)) return null;
     if(await applyPointsSession(s,a,action,input,now,apply)) return null;

@@ -17,6 +17,7 @@ import {visibleActivityAcknowledgements} from './domain/activity-acknowledgement
 import {treasureShopView} from './domain/treasure-shop';
 import {bonusNotices} from './domain/bonus-notices';
 import {bondView,giftNotices} from './domain/bonds';
+import {pairingOddsView} from './domain/pairing-odds';
 import {withScorer} from './domain/score-conflict';
 import {guestIds,guestHostName,guestHostPlayerId,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
@@ -83,7 +84,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
  return maskClubContent({
   ...(activityId?{activityScope:activityId}:{}),
-  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,bounty:bountySettings(s),feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy,playerId})=>({id,name,phone,mine:createdBy===a.id,...(playerId?{playerId}:{})})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{})},me:{...a,giftNotices:giftNotices(history,a,now),bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin,canUseSimulation:canUseSimulation(a)},
+  revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,bounty:bountySettings(s),feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy,playerId})=>({id,name,phone,mine:createdBy===a.id,...(playerId?{playerId}:{})})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{}),...(pairingOddsView(history,a,now)?{pairingOdds:pairingOddsView(history,a,now)}:{})},me:{...a,giftNotices:giftNotices(history,a,now),bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin,canUseSimulation:canUseSimulation(a)},
   players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestHostId:guestHostPlayerId(s,p.id),guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,canViewCourtOccupancy:!!e.creatorId&&e.creatorId===a.id,mapUrl:googleMapsUrl(e.venue,e.address),
    // Bounty answers are private: each member sees their own (with its result once settled); administrators see all.
