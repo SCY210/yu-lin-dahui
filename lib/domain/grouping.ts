@@ -8,6 +8,7 @@ import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
 import {eventFormat,teamSize,isPractice} from './match-format';
+import {eventPairingOdds,oddsRandom,oddsSplits} from './pairing-odds';
 export function readyIds(s:State,eventId:string,at:number,duration=0){const e=s.events.find(e=>e.id===eventId);if(!e)return [];const automatic=usesAutomaticAttendance(e);return [...new Set(attendanceForEvent(s,e).filter(a=>a.start<=at&&(automatic?(a.end??e.end)>at&&(a.end??e.end)>=at+duration*60000:a.end===null)&&a.state==='ready').map(a=>a.playerId))].filter(id=>!awaitingArrival(e,id)&&!e.noShowHold?.includes(id)&&!matchingStopped(e,id)&&(!automatic||s.registrations.some(r=>r.eventId===eventId&&r.playerId===id&&r.status==='confirmed'))&&s.players.some(p=>p.id===id&&p.enabled)&&!s.matches.some(m=>m.status==='playing'&&[...m.a,...m.b].includes(id)))}
 /** A player may play at most this many rounds of an activity in a row (docs/MATCH_GROUPING.md). */
 export const maxConsecutiveRounds=3;
@@ -95,6 +96,17 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
   if(candidate.some((id,index)=>!canUse(courts[Math.floor(index/4)].id,id)))continue;
   const paired=pairCourts(candidate),cost=penalty(paired),comparison=compareBalance(cost,bestCost);
   if(comparison<0||(comparison===0&&rand()<.1)){best=paired;bestCost=cost}
+ }
+ // Hidden pairing odds decide partners or opponents only once the courts are chosen, so who plays and who shares a
+ // court stay as fair turns and balance made them (lib/domain/pairing-odds.ts).
+ const odds=eventPairingOdds(s,e.id);
+ if(odds){
+  const draw=oddsRandom(seed);
+  for(let offset=fixed?4:0;offset<best.length;offset+=4){
+   const options=oddsSplits(odds,best.slice(offset,offset+4),draw).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
+   best=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x);
+  }
+  bestCost=penalty(best);
  }
  const rest=eligible.filter(id=>!best.includes(id));
  return {eligible,rest,courts:courts.slice(0,best.length/4).map((court,i)=>({courtId:court.id,a:best.slice(i*4,i*4+2),b:best.slice(i*4+2,i*4+4)})),stats:Object.fromEntries(eligible.map(id=>{const d=debts.get(id)!;return [id,{deficit:d.deficit,wait:d.wait,games:d.games}]})),penalty:bestCost.variety,balance:bestCost};

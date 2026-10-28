@@ -1,4 +1,4 @@
-// Real 球友圈 directory and home 道缘榜 with fictional members; never contacts production.
+// Real 球友圈 directory and 道缘榜 with fictional members; never contacts production.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {mkdirSync,writeFileSync} from 'node:fs';
@@ -8,9 +8,9 @@ import React,{act} from 'react';
 import renderer from 'react-test-renderer';
 
 mkdirSync('.test-output',{recursive:true});
-writeFileSync('.test-output/player-directory-entry.ts',"export {default as PlayerDirectory} from '../app/player-directory';export {default as HomeBonds} from '../app/home-bonds';");
+writeFileSync('.test-output/player-directory-entry.ts',"export {default as PlayerDirectory} from '../app/player-directory';export {default as BondBoard} from '../app/bond-board';");
 await build({entryPoints:['.test-output/player-directory-entry.ts'],outfile:'.test-output/player-directory-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
-const {PlayerDirectory,HomeBonds}=await import(pathToFileURL(resolve('.test-output/player-directory-ui.mjs')).href);
+const {PlayerDirectory,BondBoard}=await import(pathToFileURL(resolve('.test-output/player-directory-ui.mjs')).href);
 const prior=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=node=>typeof node==='string'?node:(Array.isArray(node)?node:node?.children??[]).map(text).join('');
 const mount=async(Component,props)=>{if(ui)await act(()=>ui.unmount());await act(async()=>{ui=renderer.create(React.createElement(Component,props))})};
@@ -46,23 +46,32 @@ try{
  const rows=[{playerId:'b',score:16000,games:120,wins:60,giftsSent:12,giftsReceived:0},{playerId:'a',score:320,games:3,wins:2,giftsSent:0,giftsReceived:0}];
  const pairs=[{a:'b',b:'c',score:90000,games:500,wins:300,gifts:0},{a:'b',b:'me',score:16000,games:120,wins:60,gifts:12},...Array.from({length:8},(_,i)=>({a:'x'+i,b:'a',score:800-i*10,games:8,wins:4,gifts:0}))];
  const profiles=[];
- await mount(HomeBonds,{rows,players,meId:'me',onProfile:id=>profiles.push(id)});
+ await mount(BondBoard,{rows,players,meId:'me',onProfile:id=>profiles.push(id)});
  let shown=text(ui.toJSON());
  assert.ok(shown.includes('道缘榜')&&!shown.includes('全群道缘'),'members only see their own list');
- const names=()=>ui.root.findAll(n=>n.props.className==='home-bonds-player').map(b=>text(b.findByType('strong')));
+ const names=()=>ui.root.findAll(n=>n.props.className==='bond-board-player').map(b=>text(b.findByType('strong')));
  assert.deepEqual(names().slice(0,2),['Fictional Ben','Fictional Ann'],'strongest first');assert.equal(names().length,8,'the first eight');
  assert.ok(shown.includes('风雨同舟')&&shown.includes('16,000')&&shown.includes('礼物 12 羽币')&&shown.includes('还没有一起搭档'));
  await act(()=>button('查看全部 11 位').props.onClick());
  assert.equal(names().length,11,'every member except the viewer, guests and disabled members');assert.ok(!names().includes('Fictional Guest')&&!names().includes('Fictional Off'));
- await act(()=>ui.root.findAll(n=>n.props.className==='home-bonds-player')[0].props.onClick());assert.deepEqual(profiles,['b']);
- await mount(HomeBonds,{rows,pairs,players,meId:'me',onProfile:id=>profiles.push(id)});
+ await act(()=>ui.root.findAll(n=>n.props.className==='bond-board-player')[0].props.onClick());assert.deepEqual(profiles,['b']);
+ await mount(BondBoard,{rows,pairs,players,meId:'me',onProfile:id=>profiles.push(id)});
  await act(()=>button('全群道缘').props.onClick());shown=text(ui.toJSON());
- assert.ok(shown.includes('仅群主和管理员可见')&&shown.includes('心有灵犀')&&shown.includes('90,000'));
- assert.equal(ui.root.findAll(n=>n.type==='li').length,8);
- await act(()=>ui.root.findByProps({'aria-label':'按球友名字筛选道缘'}).props.onChange({target:{value:'cai'}}));
- assert.equal(ui.root.findAll(n=>n.type==='li').length,1,'filter by name');
- assert.equal(text(ui.root.findAll(n=>n.props.className==='home-bonds-rank')[0]),'1','ranks stay those of the whole list');
- await act(()=>button('Fictional Cai').props.onClick());assert.deepEqual(profiles.at(-1),'c');
- await mount(HomeBonds,{rows:[],players:[{id:'me',name:'Fictional Me'}],meId:'me',onProfile:()=>{}});assert.equal(ui.toJSON(),null,'nothing to show alone');
- console.log('PASS 球友圈 directory and 道缘榜: list of every member, search by name/motto/racket, sort by 修为/道缘/name, remembered card view, home list strongest first, members see only their own, admins see and filter every pair');
+ const members=()=>ui.root.findAll(n=>n.props.className==='bond-board-member').map(b=>b.props['aria-label'].replace(/^查看|的道缘$/g,''));
+ assert.ok(shown.includes('仅群主和管理员可见'));
+ assert.deepEqual(members().slice(0,4),['Fictional Ben','Fictional Cai','Fictional Me','Fictional Ann'],'one row per member, deepest 道缘 first, not one row per pair');
+ assert.equal(members().length,8,'the first eight members');
+ const ben=ui.root.findAll(n=>n.props.className==='bond-board-member')[0];
+ assert.ok(text(ben).includes('2 段道缘')&&text(ben).includes('最深')&&text(ben).includes('Fictional Cai')&&text(ben).includes('心有灵犀'),'each row shows the strongest partner');
+ assert.ok(ben.findAll(n=>n.props.className?.startsWith?.('avatar')).length>=2,'with avatars');
+ await act(()=>ui.root.findByProps({'aria-label':'搜索球友的道缘'}).props.onChange({target:{value:'x3'}}));
+ assert.deepEqual(members(),['Fictional X3'],'search by name');
+ await act(()=>ui.root.findAll(n=>n.props.className==='bond-board-member')[0].props.onClick());shown=text(ui.toJSON());
+ assert.ok(shown.includes('1 段道缘')&&shown.includes('全部球友'),'the chosen member alone');
+ assert.deepEqual(names().slice(0,1),['Fictional Ann'],'the chosen member, strongest first');
+ assert.equal(button('查看全部 11 位')!==undefined,true,'with everyone else, even without 道缘');
+ await act(()=>button('Fictional X3').props.onClick());assert.equal(profiles.at(-1),'x3','the name opens the profile');
+ await act(()=>button('全部球友').props.onClick());assert.equal(members().length,1,'back to the members, search kept');
+ await mount(BondBoard,{rows:[],players:[{id:'me',name:'Fictional Me'}],meId:'me',onProfile:()=>{}});assert.equal(ui.toJSON(),null,'nothing to show alone');
+ console.log('PASS 球友圈 directory and 道缘榜: list of every member, search by name/motto/racket, sort by 修为/道缘/name, remembered card view, 道缘榜 strongest first, members see only their own, admins pick any member and see their 道缘');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior;delete globalThis.localStorage}

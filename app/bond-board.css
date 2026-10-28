@@ -1,0 +1,39 @@
+/* 道缘榜 on the 我的 page (docs/BONDS.md). */
+.bond-board{display:grid;gap:8px}
+.bond-board-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.bond-board-head h2{display:flex;align-items:center;gap:8px;margin:0;font-size:19px}
+.bond-board-head h2 svg{color:var(--primary)}
+.bond-board .hint{margin:0}
+.bond-board-tabs{display:flex;padding:3px;border:1px solid var(--border);border-radius:11px}
+.bond-board-tabs button{min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground);font:inherit;font-size:13px;cursor:pointer}
+.bond-board-tabs button[aria-selected=true]{background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary);font-weight:700}
+.bond-board-search{display:flex;flex-direction:row;align-items:center;gap:8px;min-height:44px;padding:0 11px;border:1px solid var(--border);border-radius:11px;color:var(--muted-foreground)}
+.bond-board-search input{flex:1;width:auto;min-width:0;min-height:0;padding:10px 0;border:0;border-radius:0;box-shadow:none;background:transparent;font:inherit;font-size:16px;color:inherit;outline:none}
+.bond-board-search:focus-within{outline:3px solid #a897e9;outline-offset:1px}
+.bond-board-list,.bond-board-members{list-style:none;margin:0;padding:0;display:grid}
+.bond-board-list li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:54px;padding:5px 0;border-top:1px solid var(--border)}
+.bond-board-list li:first-child,.bond-board-members li:first-child{border-top:0}
+.bond-board-rank{font-size:13px;font-weight:700;color:var(--muted-foreground);text-align:center;font-variant-numeric:tabular-nums}
+.bond-board-player{display:flex;align-items:center;gap:9px;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.bond-board-who{display:grid;gap:1px;min-width:0}
+.bond-board-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bond-board-who small{font-size:12px;color:var(--muted-foreground)}
+.bond-board-player:hover strong,.bond-board-member:hover strong{color:var(--primary)}
+.bond-board-score{display:grid;justify-items:end;gap:1px;font-size:14px;white-space:nowrap}
+.bond-board-score small{font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.bond-board-more{justify-self:center;min-height:44px}
+.bond-board-members li{border-top:1px solid var(--border)}
+.bond-board-member{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;width:100%;min-height:58px;padding:6px 0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.bond-board-top{display:flex;align-items:center;gap:6px;min-width:0;max-width:52vw;font-size:13px}
+.bond-board-top>small{font-size:11px;color:var(--muted-foreground)}
+.bond-board-top .avatar{width:28px;height:28px;flex:0 0 28px;font-size:12px}
+.bond-board-top>span:last-child{display:grid;justify-items:start;gap:1px;min-width:0}
+.bond-board-top b{max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.bond-board-back{justify-self:start;display:flex;align-items:center;gap:2px;min-height:40px;padding-left:4px}
+.bond-board-focus{display:flex;align-items:center;gap:12px;padding:4px 0 6px}
+.bond-board-focus .avatar.bond-board-face{width:52px;height:52px;flex:0 0 52px;font-size:20px}
+.bond-board-focus div{display:grid;gap:2px;min-width:0}
+.bond-board-focus button{justify-self:start;min-height:32px;padding:0;border:0;background:none;color:inherit;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
+.bond-board-focus button:hover{color:var(--primary)}
+.bond-board-focus small{font-size:12px;color:var(--muted-foreground)}
+.wuxia-theme .bond-board-search input{background:transparent;border:0;box-shadow:none}

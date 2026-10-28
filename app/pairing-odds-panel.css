@@ -1,0 +1,34 @@
+/* 临时排场概率 in group management (lib/domain/pairing-odds.ts). */
+.pairing-odds{display:grid;gap:14px}
+.po-event select{min-height:44px}
+.po-block{display:grid;gap:10px}
+.po-block h4{margin:0;font-size:15px}
+.po-rule{position:relative;display:grid;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px}
+.po-remove{position:absolute;top:4px;right:4px;width:34px;height:34px;min-height:0;padding:0;display:flex;align-items:center;justify-content:center}
+.po-new{justify-self:start;display:flex;align-items:center;gap:6px}
+.po-save{justify-self:start;min-width:120px}
+.po-picker{display:grid;gap:6px;min-width:0}
+.po-label,.po-percent>span{font-size:13px;font-weight:700;color:var(--muted-foreground)}
+.po-chips{display:flex;flex-wrap:wrap;gap:6px}
+.po-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:2px 2px 2px 3px;border-radius:99px;background:color-mix(in srgb,var(--primary) 10%,transparent);font-size:14px;max-width:100%}
+.po-chip .avatar{width:28px;height:28px;flex-shrink:0}
+.po-chip>span:not(.avatar){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.po-chip button{display:flex;align-items:center;justify-content:center;width:30px;height:30px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted-foreground);cursor:pointer}
+.po-add{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:0 12px;border:1px dashed var(--border);border-radius:99px;background:transparent;color:var(--primary);font:inherit;font-size:14px;cursor:pointer}
+.po-menu{display:grid;gap:6px;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.po-search{display:flex;flex-direction:row;align-items:center;gap:8px;min-height:42px;padding:0 10px;border:1px solid var(--border);border-radius:10px;color:var(--muted-foreground)}
+.po-search input{flex:1;width:auto;min-width:0;min-height:0;padding:9px 0;border:0;border-radius:0;box-shadow:none;background:transparent;font:inherit;font-size:16px;color:inherit;outline:none}
+.po-search:focus-within{outline:3px solid #a897e9;outline-offset:1px}
+.po-menu ul{list-style:none;margin:0;padding:0;max-height:264px;overflow-y:auto;display:grid}
+.po-menu li button{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:4px 6px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.po-menu li button[aria-pressed=true]{background:color-mix(in srgb,var(--primary) 10%,transparent)}
+.po-menu li button:disabled{opacity:.45;cursor:default}
+.po-menu li .avatar{width:32px;height:32px;flex-shrink:0}
+.po-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.po-menu li small{font-size:11px;color:var(--muted-foreground)}
+.po-menu li svg{color:var(--primary)}
+.po-done{justify-self:end;min-height:40px}
+.po-percent{display:grid;grid-template-columns:auto minmax(0,1fr) 48px;flex-direction:row;align-items:center;gap:10px}
+.po-percent input{width:100%;min-height:0;padding:0;border:0;box-shadow:none;background:transparent;accent-color:var(--primary)}
+.po-percent output{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.wuxia-theme .po-search input,.wuxia-theme .po-percent input{background:transparent;border:0;box-shadow:none}

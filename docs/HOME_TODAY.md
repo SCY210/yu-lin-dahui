@@ -16,8 +16,6 @@ From top to bottom:
 3. **Live activities** (`liveActivities`). One highlighted card per running activity, merging all of its courts. If the member is on court, the card names the court, partner and opponents. Otherwise it shows a resting hint.
 4. **Recently ended** (`recentlyEnded`). Activities that ended in the last `recentlyEndedHours` (24 h, as long as the MVP vote is open), or that the organiser ended early. While the member may still vote (`canCastAwardVote`) and has not voted, the card offers the MVP vote. Otherwise it links to the results.
 
-Below these, the bond list (`app/home-bonds.tsx`, see `docs/BONDS.md`) ranks the member's bonds with every other member, strongest first.
-
 When nothing applies, a quiet empty state links to the Activities tab. The component re-evaluates every 15 seconds, so cards appear and expire on time without reloading.
 
 ## Activities tab (`groupEvents`)
