@@ -1,4 +1,4 @@
-/* 羁绊 (docs/BONDS.md). Each stage keeps the hue of the reference table, darkened enough to read on light cards. */
+/* 道缘 (docs/BONDS.md). Each stage keeps the hue of the reference table, darkened enough to read on light cards. */
 .bond-tier-0{--bond:#767c86}.bond-tier-1{--bond:#4f8a5c}.bond-tier-2{--bond:#2a809b}.bond-tier-3{--bond:#4867bd}.bond-tier-4{--bond:#a8760c}.bond-tier-5{--bond:#bd6226}.bond-tier-6{--bond:#c55247}.bond-tier-7{--bond:#cc3445}.bond-tier-8{--bond:#c9356c}.bond-tier-9{--bond:#b9408f}.bond-tier-10{--bond:#7652e0}
 .bond-stage{display:inline-block;font-weight:800;letter-spacing:.06em;color:var(--bond)}
 .bond-stage.bond-tier-9{background:linear-gradient(90deg,#d23a7c,#a64fd0);-webkit-background-clip:text;background-clip:text;color:transparent}

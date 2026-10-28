@@ -1,6 +1,6 @@
 # Bonds
 
-Every pair of members has a bond (`lib/domain/bonds.ts`, stages in `lib/domain/bond-tiers.ts`). Its affinity score sets its stage, from the reference table the owner provided. The table glosses the stage names; the app shows the Chinese names in `bondTiers`.
+Every pair of members has a bond (`lib/domain/bonds.ts`, stages in `lib/domain/bond-tiers.ts`). The app calls it *dao yuan* ("bond on the Way"), in keeping with the club's cultivation theme, and calls its affinity score *yuan zhi*. The score sets the stage, from the reference table the owner provided. The table glosses the stage names; the app shows the Chinese names in `bondTiers`.
 
 | Stage | Affinity |
 | --- | --- |
@@ -28,8 +28,10 @@ Gifts are stored as treasure ledger rows, with no new table: the giver's `redeem
 
 ## Where it shows
 
-- **Profiles.** Another member's profile shows the viewer's bond with them under the bond section (`app/bond-card.tsx`): the stage, affinity, progress to the next stage, the current boost, partner games and gifts, a button to give a shop item, and the full stage table. A member's own profile and guests' profiles show none.
+- **Profiles.** Another member's profile shows the viewer's bond with them (`app/bond-card.tsx`): the stage, affinity, progress to the next stage, the current boost, partner games and gifts, a button to give a shop item, and the full stage table. The section comes right after the two fixed sections, personal details and rackets. A member's own profile and guests' profiles show none.
+- **Home page list** (`app/home-bonds.tsx`). The viewer's bond with every enabled member, strongest first; the first eight show and the rest open on request. The owner and administrators get a second tab with the bond between every pair of members that has one, strongest first, with a name filter.
+- **Member directory** (`app/player-directory.tsx`). Each row of the directory shows the viewer's bond stage with that member, and the directory can sort by it.
 - **Gift notices.** A member who received a gift sees a popup when the app opens (`app/gift-popup.tsx`): who gave what, with the note. Closing it records the gifts on the account (`giftSeen`, `Account.giftSeen`); gifts older than 30 days are not announced.
 - **Shop.** Ledger rows name gifts given and received; orders bought as a gift say whom they are for.
 
-The club view sends each member only their own bonds and gift notices (`bonds`, `me.giftNotices`); nobody sees the bond between two other members.
+The club view sends each member only their own bonds and gift notices (`bonds.rows`, `me.giftNotices`). Only the owner and administrators also receive every pair (`bonds.pairs`, from `bondPairs`, which replays history the same way as `bondRows` so both agree); other members never see the bond between two other members.

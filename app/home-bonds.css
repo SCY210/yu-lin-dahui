@@ -1,0 +1,26 @@
+/* 道缘榜 on the home page (docs/BONDS.md). */
+.home-bonds{display:grid;gap:8px}
+.home-bonds-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.home-bonds-head h2{display:flex;align-items:center;gap:8px;margin:0;font-size:19px}
+.home-bonds-head h2 svg{color:var(--primary)}
+.home-bonds .hint{margin:0}
+.home-bonds-tabs{display:flex;padding:3px;border:1px solid var(--border);border-radius:11px}
+.home-bonds-tabs button{min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground);font:inherit;font-size:13px;cursor:pointer}
+.home-bonds-tabs button[aria-selected=true]{background:color-mix(in srgb,var(--primary) 13%,transparent);color:var(--primary);font-weight:700}
+.home-bonds-search{display:flex;flex-direction:row;align-items:center;gap:8px;min-height:44px;padding:0 11px;border:1px solid var(--border);border-radius:11px;color:var(--muted-foreground)}
+.home-bonds-search input{flex:1;width:auto;min-width:0;min-height:0;padding:10px 0;border:0;border-radius:0;box-shadow:none;background:transparent;font:inherit;font-size:16px;color:inherit;outline:none}
+.home-bonds-search:focus-within{outline:3px solid #a897e9;outline-offset:1px}
+.home-bonds-list{list-style:none;margin:0;padding:0;display:grid}
+.home-bonds-list li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:54px;padding:5px 0;border-top:1px solid var(--border)}
+.home-bonds-list li:first-child{border-top:0}
+.home-bonds-rank{font-size:13px;font-weight:700;color:var(--muted-foreground);text-align:center;font-variant-numeric:tabular-nums}
+.home-bonds-player{display:flex;align-items:center;gap:9px;min-width:0;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.home-bonds-who{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;min-width:0}
+.home-bonds-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.home-bonds-who button{min-height:36px;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+.home-bonds-who button:hover,.home-bonds-player:hover strong{color:var(--primary)}
+.home-bonds-who small{flex-basis:100%;font-size:12px;color:var(--muted-foreground)}
+.home-bonds-score{display:grid;justify-items:end;gap:1px;font-size:14px;white-space:nowrap}
+.home-bonds-score small{font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.home-bonds-more{justify-self:center;min-height:44px}
+.wuxia-theme .home-bonds-search input{background:transparent;border:0;box-shadow:none}

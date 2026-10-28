@@ -24,7 +24,7 @@ try{
  const ctx=(bonds,products=[{id:'tape',name:'Fictional grip tape',price:12,stock:3,active:true},{id:'gone',name:'Sold out',price:5,stock:0,active:true}])=>({busy:false,open:(...args)=>forms.push(args),data:{bonds,treasureShop:{products}}});
  await mount(BondCard,{p:friend,ctx:ctx({rows:[{playerId:'p2',score:6200,games:40,wins:22,giftsSent:30,giftsReceived:0}]})});
  let shown=text(ui.toJSON());
- for(const part of ['我和 Fictional Ben 的羁绊','朝夕相处','6,200','距「风雨同舟」还差 8,800','默契加成 ×4','一起搭档每局 +240','赢球再 +160','40 局 · 赢 22 局','送出 30 · 收到 0 羽币','莫逆之交'])assert.ok(shown.includes(part),part);
+ for(const part of ['我和 Fictional Ben 的道缘','缘值','朝夕相处','6,200','距「风雨同舟」还差 8,800','默契加成 ×4','一起搭档每局 +240','赢球再 +160','40 局 · 赢 22 局','送出 30 · 收到 0 羽币','莫逆之交'])assert.ok(shown.includes(part),part);
  assert.equal(ui.root.findAll(n=>n.props?.className==='bond-current').length,1,'the stage table marks the current stage');
  assert.equal(button('送羽币'),undefined,'coins cannot be given');
  await act(()=>button('送礼物').props.onClick());
@@ -44,7 +44,7 @@ try{
  const notices=[{id:'g1',fromPlayerId:'p1',coins:30,value:30,message:'谢谢搭档',at:1},{id:'g2',fromPlayerId:'p3',coins:0,item:'Fictional grip tape × 2',value:24,at:2}];
  const props={notices,name:id=>names[id],busy:false,blocked:false,acknowledge:async ids=>{acknowledged.push(ids)}};
  await mount(GiftPopup,props);shown=text(ui.toJSON());
- for(const part of ['你收到了 2 份礼物！','羁绊好感度共 +2,700','Fictional Ann 送你 30 羽币','谢谢搭档','Fictional Cai 送你：Fictional grip tape × 2','由群主发放'])assert.ok(shown.includes(part),part);
+ for(const part of ['你收到了 2 份礼物！','道缘缘值共 +2,700','Fictional Ann 送你 30 羽币','谢谢搭档','Fictional Cai 送你：Fictional grip tape × 2','由群主发放'])assert.ok(shown.includes(part),part);
  await act(()=>button('收下礼物').props.onClick());
  assert.deepEqual(acknowledged,[['g1','g2']]);assert.equal(ui.toJSON(),null,'closes at once');
  await mount(GiftPopup,{...props,blocked:true});assert.equal(ui.toJSON(),null,'waits behind other popups');

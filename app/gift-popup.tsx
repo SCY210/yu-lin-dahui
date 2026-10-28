@@ -15,7 +15,7 @@ export default function GiftPopup({notices,name,blocked,busy,acknowledge,onDismi
  // Close at once; if saving fails the gift is simply announced again on the next visit.
  const confirm=()=>{if(busy||inFlight.current)return;inFlight.current=true;setDismissed(d=>[...d,...ids]);onDismiss?.(ids);void acknowledge(ids).catch(()=>{}).finally(()=>{inFlight.current=false})};
  return <Dialog open onOpenChange={open=>{if(!open)confirm()}}><DialogContent className="app-dialog gift-popup">
-  <DialogHeader><div className="gift-popup-icon" aria-hidden="true"><Gift size={34}/></div><DialogTitle>你收到了{shown.length>1?' '+shown.length+' 份':''}礼物！</DialogTitle><DialogDescription>羁绊好感度共 +{new Intl.NumberFormat('zh-CN').format(bond)}。</DialogDescription></DialogHeader>
+  <DialogHeader><div className="gift-popup-icon" aria-hidden="true"><Gift size={34}/></div><DialogTitle>你收到了{shown.length>1?' '+shown.length+' 份':''}礼物！</DialogTitle><DialogDescription>道缘缘值共 +{new Intl.NumberFormat('zh-CN').format(bond)}。</DialogDescription></DialogHeader>
   <ul className="gift-popup-list">{shown.map(n=><li key={n.id}>
    <span><strong>{name(n.fromPlayerId)}</strong> 送你{n.item?<>：{n.item}<small>由群主发放</small></>:<> <b>{n.coins}</b> 羽币</>}</span>
    {n.message&&<q>{n.message}</q>}

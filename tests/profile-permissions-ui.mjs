@@ -35,5 +35,8 @@ try{
  await act(()=>buttons().find(button=>text(button)==='编辑档案').props.onClick());assert.equal(calls[0][1],'profileDetails');assert.ok(calls[0][3].some(field=>field.key==='racket'));assert.ok(calls[0][3].some(field=>field.key==='years'));
  const ownerEquipment=ui.root.findAllByType('details').find(details=>text(details.findAllByType('summary')[0])==='战拍与装备');await act(async()=>{ownerEquipment.props.onToggle({currentTarget:{open:true}});});
  assert.ok(ui.root.findAllByType('input').some(input=>input.props.type==='file'));assert.ok(buttons().some(button=>button.props['aria-label']?.includes('删除战拍')));
- console.log('PASS profile controls: gender-only dialog contains one field, avatar/rename/upload/delete controls absent, existing racket photo remains visible; verified owner gets full profile, rename, avatar and racket controls.');
+ await act(()=>ui.unmount());
+ await act(async()=>{ui=renderer.create(React.createElement(PlayerProfile,{p:ownerPlayer,ctx:{...ownerContext,data:{...ownerContext.data,bonds:{rows:[]}}}}));});
+ assert.deepEqual(ui.root.findAll(node=>node.type==='details'&&String(node.props.className).includes('app-disclosure')).map(node=>text(node.findAllByType('summary')[0])).slice(0,4),['个人资料与打法','战拍与装备','道缘','比赛统计'],'道缘 comes right after the two fixed sections');
+ console.log('PASS profile controls: gender-only dialog contains one field, avatar/rename/upload/delete controls absent, existing racket photo remains visible; verified owner gets full profile, rename, avatar and racket controls; 道缘 follows 个人资料与打法 and 战拍与装备.');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
