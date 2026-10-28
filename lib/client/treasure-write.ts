@@ -1,7 +1,7 @@
 import type {Form} from '../../app/form-fields';
 
-const stableWrite=(action:string)=>action.startsWith('treasure')||action==='grantPoints'||action==='bondGift';
-/** An ambiguous failure must not turn a second click into another purchase, gift or manual grant. */
+const stableWrite=(action:string)=>action.startsWith('treasure')||action==='grantPoints';
+/** An ambiguous failure must not turn a second click into another purchase or manual grant. */
 export function prepareTreasureForm(form:Form,makeId:()=>string=()=>crypto.randomUUID()):Form&{writeRequestId?:string}{
  return stableWrite(form.action)?{...form,writeRequestId:makeId()}:form;
 }

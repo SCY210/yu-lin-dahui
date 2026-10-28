@@ -1,5 +1,5 @@
 'use client';
-import {Coins,Gift,HeartHandshake} from 'lucide-react';
+import {Gift,HeartHandshake} from 'lucide-react';
 import {bondCoinPoints,bondGamePoints,bondTierIndex,bondTiers,bondWinPoints,type BondRow} from '../lib/domain/bond-tiers';
 import {choice,number,text,type Field} from './ui';
 import './bond.css';
@@ -7,7 +7,7 @@ import './bond.css';
 const count=(n:number)=>new Intl.NumberFormat('zh-CN').format(n);
 type Product={id:string;name:string;price:number;stock:number;active:boolean};
 type Values=Record<string,unknown>;
-type BondContext={busy:boolean;open:(title:string,action:string,values:Values,fields:Field[],convert:(v:Values)=>unknown,description:string)=>void;data:{bonds?:{rows:BondRow[];giftable:number};treasureShop?:{products:Product[]}}};
+type BondContext={busy:boolean;open:(title:string,action:string,values:Values,fields:Field[],convert:(v:Values)=>unknown,description:string)=>void;data:{bonds?:{rows:BondRow[]};treasureShop?:{products:Product[]}}};
 const giftNote={...text('message','留言（可不填，最多60字）'),optional:true};
 
 /** A bond stage name in its own colour, as in the stage table. */
@@ -18,13 +18,8 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
  const row:BondRow=ctx.data.bonds?.rows?.find(r=>r.playerId===p.id)??{playerId:p.id,score:0,games:0,wins:0,giftsSent:0,giftsReceived:0};
  const index=bondTierIndex(row.score),tier=bondTiers[index],next=bondTiers[index+1];
  const progress=next?Math.min(1,(row.score-tier.min)/(next.min-tier.min)):1;
- const giftable:number=ctx.data.bonds?.giftable??0;
  const products:Product[]=(ctx.data.treasureShop?.products??[]).filter(x=>x.active&&x.stock>0);
  const canGift=p.enabled!==false&&!p.guestEventId&&!p.guestFriendId;
- const giveCoins=()=>ctx.open('送羽币给 '+p.name,'bondGift',{coins:Math.min(10,giftable),message:''},
-  [{...number('coins','赠送羽币'),min:1,max:giftable,step:1},giftNote],
-  (v:Values)=>({toPlayerId:p.id,coins:Number(v.coins),message:String(v.message??'').trim()}),
-  `你现在可以赠送 ${count(giftable)} 羽币。羽币会转给对方，每送 1 羽币，你们的好感度 +${bondCoinPoints}。收到的赠礼只能兑换礼品，不能转送。`);
  const giveItem=()=>ctx.open('送礼物给 '+p.name,'treasureRedeem',{productId:products[0]?.id??'',quantity:1,message:''},
   [choice('productId','礼品',products.map(x=>[x.id,`${x.name} · ${count(x.price)} 羽币`])),{...number('quantity','数量'),min:1,max:99,step:1},giftNote],
   (v:Values)=>{const product=products.find(x=>x.id===v.productId);return {productId:v.productId,quantity:Number(v.quantity),expectedPrice:product?.price??0,giftTo:p.id,message:String(v.message??'').trim()}},
@@ -40,13 +35,12 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
   <p className="bond-boost">默契加成 ×{tier.boost}：一起搭档每局 +{count(bondGamePoints*tier.boost)}，赢球再 +{count(bondWinPoints*tier.boost)}</p>
   <dl className="bond-facts">
    <div><dt>一起搭档</dt><dd>{count(row.games)} 局 · 赢 {count(row.wins)} 局</dd></div>
-   <div><dt>互赠礼物</dt><dd>送出 {count(row.giftsSent)} · 收到 {count(row.giftsReceived)} 羽币</dd></div>
+   <div><dt>互赠礼物（按价值）</dt><dd>送出 {count(row.giftsSent)} · 收到 {count(row.giftsReceived)} 羽币</dd></div>
   </dl>
   {canGift&&<div className="bond-actions">
-   <button type="button" className="secondary" disabled={ctx.busy||giftable<1} onClick={giveCoins}><Coins size={16} aria-hidden="true"/>送羽币</button>
    <button type="button" className="secondary" disabled={ctx.busy||!products.length} onClick={giveItem}><Gift size={16} aria-hidden="true"/>送礼物</button>
   </div>}
-  {canGift&&(giftable<1||!products.length)&&<p className="hint bond-hint">{giftable<1?'暂时没有可赠送的羽币。':''}{!products.length?'羽林宝阁暂时没有可送的礼品。':''}</p>}
+  {canGift&&!products.length&&<p className="hint bond-hint">羽林宝阁暂时没有可送的礼品。</p>}
   <details className="bond-ladder"><summary>羁绊阶段</summary><ol>{bondTiers.map((t,i)=><li key={t.name} className={i===index?'bond-current':''}><BondStage index={i}/><small>{count(t.min)}{bondTiers[i+1]?'–'+count(bondTiers[i+1].min):'+'}</small></li>)}</ol></details>
  </section>;
 }
