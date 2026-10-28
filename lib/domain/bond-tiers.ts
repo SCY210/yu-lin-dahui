@@ -9,7 +9,7 @@ export const bondTiers=[
 ] as const;
 /** 好感度 for one game played as partners, before the stage boost, plus the extra for winning it together. */
 export const bondGamePoints=60,bondWinPoints=40;
-/** 好感度 per 羽币 given, as coins or as a shop gift. Gifts are not boosted. */
+/** 好感度 per 羽币 of a shop gift's value. Gifts are not boosted. */
 export const bondCoinPoints=50;
 /** Received gifts are announced for this long; older ones are not brought up again. */
 export const giftNoticeDays=30;

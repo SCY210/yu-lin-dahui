@@ -160,10 +160,10 @@ export async function POST(req: Request) {
             await reserveDailyCreation(user.userId, body.requestId, creationAction, account.role === 'admin');
         }
 
-                if (!rebaseLineup && !['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem', 'bondGift'].includes(body.action) && body.revision !== s.revision)
+                if (!rebaseLineup && !['register', 'cancel', 'courtRegister', 'courtCancel', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action) && body.revision !== s.revision)
                     fail('409: 数据已更新，请刷新后重试');
                 // Domain replay keys come from the authenticated write envelope, never a client-selected payload key.
-                const payload = ['treasureGrant','treasureRedeem','bondGift'].includes(body.action) && body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
+                const payload = ['treasureGrant','treasureRedeem'].includes(body.action) && body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
                     ? { ...body.payload, requestId: body.requestId } : body.payload;
                 const preview = await apply(s, a, body.action, payload, Date.now());
                 if (body.action === 'historyPreview' && preview)
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
             }
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
-                    if (!rebaseLineup && !['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem', 'bondGift'].includes(body.action))
+                    if (!rebaseLineup && !['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
                         fail('409: 其他管理员刚刚保存了变更，请刷新重试');
                     continue;
                 }

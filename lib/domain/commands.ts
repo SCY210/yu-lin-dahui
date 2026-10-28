@@ -92,7 +92,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
     if(applyTreasure(s,a,action,input,now)) return null;
-    if(applyBond(s,a,action,input,now)) return null;
+    if(applyBond(s,a,action,input)) return null;
     if(applyBounty(s,a,action,input,now)) return null;
     if(applyParticipation(s,a,action,input,now)) return null;
     if(await applyPointsSession(s,a,action,input,now,apply)) return null;

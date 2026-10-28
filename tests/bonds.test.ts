@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Match,type State} from '../lib/domain/types';
 import {apply} from '../lib/domain/commands';
-import {bondRows,bondTierIndex,bondTiers,bondView,giftNotices,giftableCoins,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
+import {bondRows,bondTierIndex,bondTiers,bondView,giftNotices,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
 import {treasureBalance,treasureProduct,treasureOrder,treasureShopView} from '../lib/domain/treasure-shop';
 import {appendTreasureLedger} from '../lib/domain/treasure-ledger';
 import {projectClubState} from '../lib/club-view';
@@ -61,10 +61,17 @@ test('only partners gain from games; both members see the same score; each game 
  assert.equal(bond(pair,'p1','p2')!.score,1500+2*(bondGamePoints+bondWinPoints),'金兰之契 doubles every later game');
 });
 
-test('giving coins moves them to the receiver, raises the bond and announces the gift once',async()=>{
+test('members cannot give each other coins, so nobody can pool coins',async()=>{
  const s=fixture();coins(s,'p1',100);
- await apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:30,message:'谢谢搭档',requestId:crypto.randomUUID()},start+1000);
- assert.equal(treasureBalance(s,'p1'),70);assert.equal(treasureBalance(s,'p2'),30);
+ await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:30,requestId:crypto.randomUUID()},start),/403/);
+ await assert.rejects(()=>apply(s,account(s,1),'treasureGrant',{playerId:'p2',amount:30,reason:'x',requestId:crypto.randomUUID()},start),/403/);
+ assert.equal(treasureBalance(s,'p1'),100);assert.equal(treasureBalance(s,'p2'),0);assert.equal(bond(s,'p1','p2'),undefined);
+});
+
+test('coin gifts recorded while they were allowed still count and are announced once',async()=>{
+ const s=fixture(),requestId=crypto.randomUUID();coins(s,'p1',100);
+ appendTreasureLedger(s,{playerId:'p1',delta:-30,kind:'gift_sent',reason:'gift',actor:'a1',at:start+1000,requestId,giftTo:'p2',giftValue:30});
+ appendTreasureLedger(s,{playerId:'p2',delta:30,kind:'gift_received',reason:'gift',actor:'a1',at:start+1000,requestId:'gift:'+requestId,giftFrom:'p1',giftValue:30,message:'谢谢搭档'});
  assert.deepEqual(bond(s,'p1','p2'),{playerId:'p2',score:30*bondCoinPoints,games:0,wins:0,giftsSent:30,giftsReceived:0});
  assert.equal(bond(s,'p2','p1')!.score,30*bondCoinPoints);assert.equal(bond(s,'p2','p1')!.giftsReceived,30);
  const [notice]=giftNotices(s,account(s,2),start+2000);
@@ -72,34 +79,21 @@ test('giving coins moves them to the receiver, raises the bond and announces the
  assert.deepEqual(giftNotices(s,account(s,1),start+2000),[],'the giver gets no notice');
  await apply(s,account(s,2),'giftSeen',{ids:[notice.id]},start+3000);
  assert.deepEqual(giftNotices(s,s.accounts[2],start+4000),[]);
- assert.equal(giftNotices(s,account(s,2),start+31*86400000).length,0,'old gifts are not brought up again');
 });
 
-test('a gift request is idempotent and checked: no gifts to oneself, to friends or beyond the giftable coins',async()=>{
+test('a shop gift request is idempotent and checked: no gifts to oneself or to friends, notes up to 60 characters',async()=>{
  const s=fixture();coins(s,'p1',50);const requestId=crypto.randomUUID();
- await apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:20,requestId},start);
- await apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:20,requestId},start+1);
- assert.equal(treasureBalance(s,'p1'),30,'a replay does not give twice');
- await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'p3',coins:20,requestId},start+2),/请求编号/);
- await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'p1',coins:5,requestId:crypto.randomUUID()},start),/自己/);
+ const product=treasureProduct(s,account(s,0),{name:'Fictional shuttles',description:'',price:10,stock:9,kind:'physical',active:true},start);
+ const gift=(extra:object)=>apply(s,account(s,1),'treasureRedeem',{productId:product.id,expectedPrice:10,quantity:1,giftTo:'p2',requestId:crypto.randomUUID(),...extra},start);
+ await gift({requestId});await gift({requestId});
+ assert.equal(treasureBalance(s,'p1'),40,'a replay does not give twice');assert.equal(s.treasureOrders.length,1);
+ await assert.rejects(()=>gift({requestId,giftTo:'p3'}),/请求编号/);
+ await assert.rejects(()=>gift({giftTo:'p1'}),/自己/);
  s.players.push({id:'guest',name:'Fictional Guest',ownerId:'a1',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',guestEventId:'e'});
- await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'guest',coins:5,requestId:crypto.randomUUID()},start),/正式球友/);
- await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:31,requestId:crypto.randomUUID()},start),/不足/);
- await assert.rejects(()=>apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:5,message:'x'.repeat(61),requestId:crypto.randomUUID()},start),/60/);
- assert.equal(treasureBalance(s,'p1'),30);
-});
-
-test('coins received as a gift cannot be given back, so a pair cannot pass the same coins to raise their bond',async()=>{
- const s=fixture();coins(s,'p1',40);coins(s,'p2',10);
- await apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:40,requestId:crypto.randomUUID()},start);
- assert.equal(treasureBalance(s,'p2'),50);assert.equal(giftableCoins(s,'p2'),10);
- await assert.rejects(()=>apply(s,account(s,2),'bondGift',{toPlayerId:'p1',coins:11,requestId:crypto.randomUUID()},start+1),/收到的赠礼只能兑换礼品/);
- await apply(s,account(s,2),'bondGift',{toPlayerId:'p3',coins:10,requestId:crypto.randomUUID()},start+2);
- assert.equal(giftableCoins(s,'p2'),0);assert.equal(treasureBalance(s,'p2'),40,'the received coins stay spendable in the shop');
- const owner=account(s,0),product=treasureProduct(s,owner,{name:'Fictional shuttles',description:'',price:15,stock:5,kind:'physical',active:true},start);
- await apply(s,account(s,2),'treasureRedeem',{productId:product.id,expectedPrice:15,quantity:1,requestId:crypto.randomUUID()},start+3);
- assert.equal(treasureBalance(s,'p2'),25);assert.equal(giftableCoins(s,'p2'),0,'shop spending uses received coins first');
- coins(s,'p2',5,start+4);assert.equal(giftableCoins(s,'p2'),5);
+ await assert.rejects(()=>gift({giftTo:'guest'}),/正式球友/);
+ await assert.rejects(()=>gift({message:'x'.repeat(61)}),/60/);
+ assert.equal(treasureBalance(s,'p1'),40);
+ assert.equal(giftNotices(s,account(s,2),start+31*86400000).length,0,'old gifts are not brought up again');
 });
 
 test('a shop gift is bought by the giver, raises the bond, is announced to the receiver and is undone when the order is cancelled',async()=>{
@@ -120,11 +114,12 @@ test('a shop gift is bought by the giver, raises the bond, is announced to the r
 
 test('the club view shows each member only their own bonds and gifts',async()=>{
  const s=fixture();coins(s,'p1',20);
+ const product=treasureProduct(s,account(s,0),{name:'Fictional towel',description:'',price:10,stock:9,kind:'physical',active:true},start);
  play(s,start,['p1','p2'],['p3','p4'],[[21,10]]);
  play(s,start+1000,['p3','p4'],['p1','p2'],[[21,10]]);
- await apply(s,account(s,1),'bondGift',{toPlayerId:'p2',coins:10,message:'Fictional thanks',requestId:crypto.randomUUID()},start+2000);
+ await apply(s,account(s,1),'treasureRedeem',{productId:product.id,expectedPrice:10,quantity:1,giftTo:'p2',message:'Fictional thanks',requestId:crypto.randomUUID()},start+2000);
  const now=start+3000,view=(i:number)=>projectClubState(s,account(s,i),'2027-01',2027,now) as unknown as {bonds:ReturnType<typeof bondView>;me:{giftNotices:unknown[]}};
- assert.deepEqual(view(1).bonds.rows.map(r=>r.playerId),['p2']);assert.equal(view(1).bonds.giftable,10);
+ assert.deepEqual(view(1).bonds.rows.map(r=>r.playerId),['p2']);assert.ok(!('giftable' in view(1).bonds));
  assert.deepEqual(view(3).bonds.rows.map(r=>[r.playerId,r.score]),[['p4',bondGamePoints*2+bondWinPoints]],'p3 sees only their own partner');
  assert.equal(view(2).me.giftNotices.length,1);assert.equal(view(3).me.giftNotices.length,0);
  assert.ok(!JSON.stringify(view(3)).includes('Fictional thanks'),'other members never see the note');
