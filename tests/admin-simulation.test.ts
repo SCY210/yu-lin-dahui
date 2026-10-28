@@ -48,11 +48,31 @@ test('real member snapshots preserve names, avatars, gender and replayed strengt
  const club=emptyState();for(let i=0;i<14;i++){const id='real-'+i;club.accounts.push({id:'account-'+i,email:'private@example.test',role:'member',playerId:id});club.players.push({id,ownerId:'account-'+i,name:'真实球友 '+i,enabled:i!==0,initialRating:2000,rating:2000,ratedGames:20,ratingReason:'private note',avatarId:'avatar-'+i,profile:{gender:i%2?'female':'male',years:5,hand:'left',preference:'mixed',style:'private style',equipment:'private equipment'}})}
  club.players.unshift({...club.players[1],id:'invited',name:'代报朋友'});
  club.audits=[300,300,50].map((rating,i)=>({id:'seed-'+i,actor:'account-1',action:'grantPoints',reason:'test strength',at:now-100,changes:{playerId:'real-1',period:'2030-10',points:0,rating,reason:'test strength'}}));
- const original=structuredClone(club),d=createSimulation(now,club);assert.equal(d.version,2);assert.equal(d.state.players.length,12);assert.equal(d.state.bookings.length,2);assert.equal(d.state.players[0].name,'真实球友 1');assert.equal(d.state.players[0].avatarId,'avatar-1');assert.equal(d.state.players[0].profile?.gender,'female');assert.equal(d.state.players[0].rating,1650);assert.equal(realmSnapshot(d.state,now).get('sim-player-1')!.score,1650);assert.ok(d.state.players.every(p=>p.id.startsWith('sim-')&&p.ownerId.startsWith('sim-')));assert.ok(!JSON.stringify(d).includes('private@example.test'));assert.ok(!JSON.stringify(d).includes('private style'));assert.ok(!JSON.stringify(d).includes('real-1"'));assert.ok(simulationView(d,now).data.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));
+ const original=structuredClone(club),d=createSimulation(now,club);assert.equal(d.version,2);assert.equal(d.state.players.length,12);assert.equal(d.state.bookings.length,2);assert.equal(d.state.players[0].name,'真实球友 1');assert.equal(d.state.players[0].avatarId,'avatar-1');assert.equal(d.state.players[0].profile?.gender,'female');assert.equal(d.state.players[0].rating,1650);assert.equal(realmSnapshot(d.state,now).get('sim-player-1')!.score,1650);assert.ok(d.state.players.every(p=>p.id.startsWith('sim-')&&p.ownerId.startsWith('sim-')));assert.ok(!JSON.stringify(d).includes('private@example.test'));assert.ok(!JSON.stringify(d).includes('private style'));assert.ok(!JSON.stringify(d.state).includes('real-1"')&&!JSON.stringify(simulationView(d,now)).includes('real-1"'),'only the server-side link to the member names real IDs');assert.equal(d.sources?.['sim-player-1'],'real-1');assert.ok(simulationView(d,now).data.quarterlyLeaderboard.every(r=>r.points===0&&r.games===0));
  const live=await changeSimulation(d,'pointsStart',start(d),request(),now),m=live.state.matches[0];await changeSimulation(live,'score',{matchId:m.id,a:21,b:19},request(),now+1000);assert.deepEqual(club,original);
  club.players[1].name='刷新后的球友';club.players[1].enabled=false;const reset=await changeSimulation(live,'reset',{},request(),now+2000,club);assert.ok(!reset.state.players.some(p=>p.name==='代报朋友'));assert.equal(reset.state.matches.length,0);assert.equal(reset.revision,live.revision+1);
 });
 
 test('fewer members never create fictional replacements, while an empty roster refuses initialization',()=>{
  const club=createSimulation(now).state;club.players=club.players.slice(0,5);const d=createSimulation(now,club);assert.equal(d.state.players.length,5);assert.equal(d.state.registrations.length,5);assert.equal(d.state.bookings.length,2);assert.equal(d.state.events[0].capacity,5);assert.match(d.state.events[0].title,/5人/);club.players=[];assert.throws(()=>createSimulation(now,club),/暂无可用于模拟的真实球友/);
+});
+
+test('the sandbox schedules with the current production pairing odds of the next activity, never showing them',async()=>{
+ const club=emptyState(),hour=3600000;
+ for(let i=0;i<14;i++){const id='real-'+i;club.accounts.push({id:'account-'+i,email:'',role:i?'member':'admin',playerId:id});club.players.push({id,ownerId:'account-'+i,name:'Fictional '+i,enabled:true,initialRating:1000+i*40,rating:1000+i*40,ratedGames:0,ratingReason:''})}
+ const event=(id:string,start:number,status='open')=>({id,creatorId:'account-0',title:id,start,end:start+2*hour,venue:'Fictional hall',address:'',capacity:20,signupDeadline:start,cancelDeadline:start-hour,note:'',status,attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'}) as ReturnType<typeof emptyState>['events'][number];
+ club.events=[event('over',now-5*hour,'ended'),event('later',now+48*hour),event('soon',now+24*hour)];
+ const rule=(eventId:string,percent:number)=>({eventId,defaults:[{players:['real-0'],targets:['real-1','real-13'],percent}],conditions:[{pair:['real-2','real-3'] as [string,string],members:['real-4','real-13'],one:75,two:100},{pair:['real-5','real-13'] as [string,string],members:['real-6'],one:90,two:90}]});
+ club.settings.pairingOdds=[rule('over',0),rule('later',10),rule('soon',100)];
+ const d=createSimulation(now,club);
+ assert.deepEqual(d.state.settings.pairingOdds,[{eventId:'sim-event',defaults:[{players:['sim-player-1'],targets:['sim-player-2'],percent:100}],conditions:[{pair:['sim-player-3','sim-player-4'],members:['sim-player-5'],one:75,two:100}]}],'the next activity, on the same members; members outside the sandbox drop out');
+ assert.equal('pairingOdds' in simulationView(d,now).data.settings,false,'testers never receive the rules');
+ const planned=await changeSimulation(d,'preplan',{},request(),now,club);
+ const shared=planned.state.matches.filter(m=>[...m.a,...m.b].includes('sim-player-1')&&[...m.a,...m.b].includes('sim-player-2'));
+ assert.ok(shared.length&&shared.every(m=>[m.a,m.b].some(t=>t.includes('sim-player-1')&&t.includes('sim-player-2'))),'100%: partners whenever they share a court, as in production');
+ club.settings.pairingOdds=[rule('later',10)];
+ const changed=await changeSimulation(planned,'eventRanking',{eventId:'sim-event',ranked:false,expectedRanked:true},request(),now,club);
+ assert.equal(changed.state.settings.pairingOdds?.[0].defaults[0].percent,10,'a change in production applies on the next write');
+ delete club.settings.pairingOdds;
+ assert.equal((await changeSimulation(changed,'eventRanking',{eventId:'sim-event',ranked:true,expectedRanked:false},request(),now,club)).state.settings.pairingOdds,undefined,'and clearing them too');
 });

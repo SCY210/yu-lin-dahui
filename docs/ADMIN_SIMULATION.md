@@ -29,6 +29,8 @@ member snapshot with a conditional revision update. Reset clears test results an
 snapshot. The activity lasts six hours; both courts use the current time window.
 One-click 90-minute preplanning and all three scheduling modes remain available.
 
+The document also keeps, server side only, which real member each sandbox player was copied from (`sources`). Every write reads the club and carries the current pairing odds of the next real activity onto those players, so simulated lineups follow the same odds as production ([Pairing odds](PAIRING_ODDS.md)); the simulation view never includes them.
+
 The actual scheduling, score, absence, lateness and rotation commands run entirely
 inside this graph. They never write the club settings row, real accounts, players,
 activities, rankings, expenses, commit revision or notification queues. Ordinary
