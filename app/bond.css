@@ -1,0 +1,28 @@
+/* 羁绊 (docs/BONDS.md). Each stage keeps the hue of the reference table, darkened enough to read on light cards. */
+.bond-tier-0{--bond:#767c86}.bond-tier-1{--bond:#4f8a5c}.bond-tier-2{--bond:#2a809b}.bond-tier-3{--bond:#4867bd}.bond-tier-4{--bond:#a8760c}.bond-tier-5{--bond:#bd6226}.bond-tier-6{--bond:#c55247}.bond-tier-7{--bond:#cc3445}.bond-tier-8{--bond:#c9356c}.bond-tier-9{--bond:#b9408f}.bond-tier-10{--bond:#7652e0}
+.bond-stage{display:inline-block;font-weight:800;letter-spacing:.06em;color:var(--bond)}
+.bond-stage.bond-tier-9{background:linear-gradient(90deg,#d23a7c,#a64fd0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bond-stage.bond-tier-10{background:linear-gradient(90deg,#6c4cf0,#b65cf2,#4f8ff0,#6c4cf0);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:bond-shimmer 4s linear infinite}
+@keyframes bond-shimmer{to{background-position:-200% 0}}
+.bond-card{border:1px solid color-mix(in srgb,var(--bond) 35%,transparent);border-radius:14px;padding:14px 16px;background:linear-gradient(135deg,color-mix(in srgb,var(--bond) 9%,var(--card,#fff)),var(--card,#fff) 70%);display:grid;gap:8px}
+.bond-head{display:flex;align-items:center;gap:10px;color:var(--bond)}.bond-head>svg{flex-shrink:0}
+.bond-title{flex:1;min-width:0;display:grid;gap:1px}.bond-title>span:first-child{font-size:12px;color:var(--muted-foreground,#687089)}.bond-title .bond-stage{font-size:20px}
+.bond-score{display:grid;justify-items:end;font-size:22px;line-height:1.1;color:var(--foreground,#22203d);font-variant-numeric:tabular-nums}.bond-score small{font-size:11px;font-weight:500;color:var(--muted-foreground,#687089)}
+.bond-bar{height:8px;border-radius:99px;background:color-mix(in srgb,var(--bond) 14%,transparent);overflow:hidden}.bond-bar>span{display:block;height:100%;border-radius:inherit;background:var(--bond);min-width:4px}
+.bond-next,.bond-boost{margin:0;font-size:13px;color:var(--muted-foreground,#687089)}.bond-next b{color:var(--foreground,#22203d);font-variant-numeric:tabular-nums}.bond-next .bond-stage{letter-spacing:.02em}
+.bond-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 0}.bond-facts>div{border-radius:10px;padding:8px 10px;background:color-mix(in srgb,var(--bond) 6%,transparent)}.bond-facts dt{font-size:12px;color:var(--muted-foreground,#687089)}.bond-facts dd{margin:2px 0 0;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.bond-actions{display:flex;gap:8px}.bond-actions>button{flex:1;min-height:44px}.bond-hint{margin:0}
+.bond-ladder summary{font-size:13px;padding:4px 0;color:var(--muted-foreground,#687089)}
+.bond-ladder ol{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}
+/* Name above its range, so four-character names never break on phones. */
+.bond-ladder li{display:grid;gap:1px;padding:6px 9px;border-radius:8px;font-size:14px}.bond-ladder li .bond-stage{white-space:nowrap}.bond-ladder li small{font-size:11px;color:var(--muted-foreground,#687089);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bond-ladder li.bond-current{background:color-mix(in srgb,var(--bond) 12%,transparent);outline:1px solid color-mix(in srgb,var(--bond) 40%,transparent)}
+.wuxia-theme .bond-card{border-radius:6px}
+@media(max-width:600px){.bond-card{padding:13px}.bond-title .bond-stage{font-size:18px}.bond-score{font-size:19px}.bond-facts dd{font-size:13px}}
+.gift-popup{text-align:center}.gift-popup-icon{display:flex;justify-content:center;margin:4px auto 6px;color:#d6457a}
+.wuxia-theme .gift-popup-icon{color:#b7985f}
+.gift-popup-list{list-style:none;margin:12px 0 16px;padding:0;display:grid;gap:8px;text-align:left}
+.gift-popup-list li{display:grid;gap:4px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,#d6457a 8%,var(--card,#fff))}.gift-popup-list b{color:#c9356c}.gift-popup-list small{display:inline;margin-left:6px;font-size:12px}
+.gift-popup-list q{font-size:14px;color:var(--muted-foreground,#687089);overflow-wrap:anywhere}
+.gift-popup-confirm{font-size:17px;min-height:48px}
+@media(prefers-reduced-motion:reduce){.bond-stage.bond-tier-10{animation:none}}
