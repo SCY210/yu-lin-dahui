@@ -1,13 +1,13 @@
 import {fail,type Account,type Event,type State} from './types';
 import {isPractice} from './match-format';
-import {canEnableEventRanking,eventRankingEnabled} from './event-ranking';
+import {canEnableEventRanking,canManageRankedEvent,eventRankingEnabled} from './event-ranking';
 import {canRecoverEvent} from './event-privacy';
 
 export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Event,'creatorId'>){
  return account.role==='admin'||event.creatorId===account.id;
 }
 
-export function canScheduleEvent(account:Pick<Account,'id'|'role'>&{isOwner?:boolean},event:Event){return (canManageEvent(account,event)||!!account.isOwner)&&(!eventRankingEnabled(event)||account.role==='admin'||!!account.isOwner)}
+export function canScheduleEvent(account:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Event){return (canManageEvent(account,event)||!!account.isOwner)&&(!eventRankingEnabled(event)||canManageRankedEvent(account,event))}
 
 /** Score entry is shared by the event's signed-up accounts, not just its host.
  * Resolve the account's own player and active signup from stored data. A proxy
@@ -36,8 +36,8 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
  if(event.deletedAt!==undefined&&rankedManagementActions.has(action))fail('活动已删除，请先恢复活动');
- if(action==='eventRanking'){if(!canEnableEventRanking(s,a))fail('403: 只有群主和管理员可以开启积分赛');return true;}
- if(eventRankingEnabled(event)&&rankedManagementActions.has(action)&&!canEnableEventRanking(s,a))fail('403: 只有群主和管理员可以开启积分赛');
+ if(action==='eventRanking'){if(!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');return true;}
+ if(eventRankingEnabled(event)&&rankedManagementActions.has(action)&&!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');
  if(event.tournament&&['pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsModeVote','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','playSettings','handicap','challengeMatch'].includes(action))fail('赛事请使用对战表安排比赛');
  if(isPractice(event)&&['pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','playSettings','handicap','challengeMatch'].includes(action))fail('练球活动不生成比赛或积分，请使用活动接龙和费用功能');
  if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
@@ -52,7 +52,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  }else if(action==='pointsPresence'&&p.status==='arrived'){
   const player=s.players.find(x=>x.id===p.playerId);
   if(!canManageEvent(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能确认自己或代报名朋友已到场');
- }else if(!canManageEvent(a,event)&&!canEnableEventRanking(s,a))fail('403: 只能管理自己创建的活动');
+ }else if(!canManageEvent(a,event)&&!canEnableEventRanking(s,a,event))fail('403: 只能管理自己创建的活动');
  if(event.deletedAt!==undefined&&!['deleteEvent','restoreEvent'].includes(action))fail('活动已删除，请先恢复活动');
  return true;
 }

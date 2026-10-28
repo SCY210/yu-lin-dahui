@@ -4,7 +4,8 @@ Live doubles use the same winner preference as production, without a consecutive
 
 Rotating live matches share production's bounded partner-repetition cost: prefer new partners when strength is close, retain the balanced pairing for large differences, and preserve fixed-partner mode. No separate simulation-only pairing algorithm or win-limit is introduced.
 
-Activities offers a simulation entry to the club owner, administrators and authorized member testers. Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox.
+Activities offers a simulation entry to the club owner, administrators and authorized member testers. Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox. Testers also manage
+ranking and scheduling for their own real activities; see [Tester ranked activities](TESTER_RANKED_EVENTS.md). Their member role and other administrator restrictions remain unchanged.
 
 Initialization snapshots up to twelve enabled, account-backed club members in
 stored roster order, with two courts and confirmed simulated registrations.

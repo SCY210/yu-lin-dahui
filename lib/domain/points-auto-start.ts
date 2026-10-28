@@ -24,7 +24,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
  for(const original of s.events){
   const window=pointsWindow(original);
   if(original.deletedAt!==undefined||isPractice(original)||original.tournament||!['open','locked','live'].includes(eventStatusAt(original,now))||now<Math.max(original.start,window.start)||now>=original.end)continue;
-  const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
+  const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a,original)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
   if(!actor)continue;
   const mode=schedulingMode(s,original),planKey=awaitsPlan(s,original,mode)?autoPlanKey(s,original,now):null;
   // Cloning the complete history twice on every unchanged poll can itself exceed the free CPU budget.

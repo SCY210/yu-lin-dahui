@@ -177,7 +177,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             if ((p.practiceBallCount ?? 0) > 0)
                 assertAdvancer(s, p.practiceBallBy, '请选择练球用球是谁的');
-            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有群主和管理员可以开启积分赛');
+            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有群主、管理员和测试员可以创建积分赛');
             if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');

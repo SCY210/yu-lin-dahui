@@ -6,12 +6,13 @@ import {pathToFileURL} from 'node:url';
 import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
-writeFileSync('.test-output/event-ranking-ui-entry.ts',"export {default as EventRanking} from '../app/event-ranking';export {newEventForm} from '../app/event-create-form';");
+writeFileSync('.test-output/event-ranking-ui-entry.ts',"export {default as EventRanking} from '../app/event-ranking';export {newEventForm} from '../app/event-create-form';export {canManageRankedEvent} from '../lib/domain/event-ranking';");
 await build({entryPoints:['.test-output/event-ranking-ui-entry.ts'],bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*'],outfile:'.test-output/event-ranking-ui.mjs'});
-const {EventRanking,newEventForm}=await import(pathToFileURL(resolve('.test-output/event-ranking-ui.mjs')).href);
+const {EventRanking,newEventForm,canManageRankedEvent}=await import(pathToFileURL(resolve('.test-output/event-ranking-ui.mjs')).href);
 const booked=(form)=>({...form.values,courts:form.values.courts.map(r=>({...r,advancedBy:'p0'}))});
 const ordinary=newEventForm(Date.now(),false,false);assert.ok(!ordinary.fields.some(f=>f.key==='ranking'));assert.equal(ordinary.convert({...booked(ordinary),ranking:'ranked'}).ranked,false);
 const adminForm=newEventForm(Date.now(),false,true);assert.ok(adminForm.fields.some(f=>f.key==='ranking'));assert.equal(adminForm.convert(booked(adminForm)).ranked,true);assert.equal(adminForm.convert({...booked(adminForm),ranking:'ordinary'}).ranked,false);assert.equal(adminForm.convert({...booked(adminForm),matchFormat:'practice'}).ranked,false);
+const testerForm=newEventForm(Date.now(),false,canManageRankedEvent({id:'member',role:'member',simulationTester:true}));assert.ok(testerForm.fields.some(f=>f.key==='ranking'));assert.equal(testerForm.convert(booked(testerForm)).ranked,true);
 const original={window:globalThis.window,document:globalThis.document},surface={addEventListener(){},removeEventListener(){}};globalThis.window=surface;globalThis.document=surface;
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;const opened=[],e={id:'e',creatorId:'member',ranked:false,status:'open',start:Date.now()-1000,end:Date.now()+3600000},ctx={data:{me:{id:'member',role:'member'},matches:[]},busy:false,open(...args){opened.push(args)}};
 const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');
@@ -19,6 +20,11 @@ try{
  await act(()=>{ui=renderer.create(React.createElement(EventRanking,{e,ctx}))});assert.equal(ui.root.findAllByType('button').length,0);assert.ok(text(ui.root).includes('普通活动'));assert.ok(text(ui.root).includes('不加减积分或修为'));
  ctx.data.me={id:'admin',role:'admin'};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));await act(()=>ui.root.findByType('button').props.onClick());assert.deepEqual(opened.at(-1).slice(0,3),['开启积分赛','eventRanking',{eventId:'e',ranked:true,expectedRanked:false}]);
  ctx.data.me={id:'owner',role:'member',isOwner:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,1);
+ ctx.data.me={id:'member',role:'member',simulationTester:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,1);
+ await act(()=>ui.root.findByType('button').props.onClick());assert.equal(opened.at(-1)[1],'eventRanking');
+ ctx.data.me={id:'other',role:'member',simulationTester:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0,'testers cannot configure another creator activity');
+ ctx.data.me={id:'member',role:'member',simulationTester:false};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0,'revoked capability hides controls');
+ ctx.data.me={id:'member',role:'member',simulationTester:true};
  ctx.data.matches=[{eventId:'e',start:1,games:[],scoreA:null,scoreB:null,status:'playing'}];await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0);
- console.log('PASS event ranking UI: member creation cannot enable, admin/owner controls, ordinary labels, and started activities frozen');
+ console.log('PASS event ranking UI: member refusal, tester creation/own controls and revocation, owner/admin controls, ordinary labels and history guards');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT;for(const key of ['window','document']){if(original[key]===undefined)delete globalThis[key];else globalThis[key]=original[key]}}

@@ -25,5 +25,5 @@ export function newEventForm(now:number,tournament=false,canRank=false,members:s
   return {...rest,ranked:v.matchFormat!=='practice'&&canRank&&ranking==='ranked',start,end,cancelDeadline:epoch(v.cancelDeadline),...(v.matchFormat==='practice'?{practiceShuttleCents,practiceBallCount,...(practiceBallBy?{practiceBallBy}:{})}:{}),
    // Slots of one court that follow each other become one slot with one sign-up list; later bookers are handovers.
    bookings:mergeCourtSlots(rows.map(r=>({name:r.name.trim()||'1号场',start:epoch(r.start),end:epoch(r.end),pricing:'hourly' as const,cents:Math.round(courtPrice*100),signupCapacity:v.capacity,advancedBy:r.parts[0].advancedBy,...(r.parts.length>1?{handovers:r.parts.slice(1).map(p=>({at:epoch(p.start),advancedBy:p.advancedBy}))}:{})})),String(v.venue))}},
- description:!canRank?'普通活动支持接龙、分组和录分，不计积分或修为；只有群主或管理员可以在开打前开启积分赛。练球请填写练习内容。':tournament?'先报名，再由创建者指定参赛队伍、抽签分组。小组循环赛结束后，按排名晋级淘汰赛。比赛名称自动生成。':'活动名称自动生成。单打与双打可选积分赛或普通活动，普通活动不计积分与修为；练球请填写具体练习内容，不计积分。球费按单颗价格 × 耗球数量记录，之后可在费用页补录。'};
+ description:!canRank?'普通活动支持接龙、分组和录分，不计积分或修为；群主、管理员或本活动的测试员创建者可以在开打前开启积分赛。练球请填写练习内容。':tournament?'先报名，再由创建者指定参赛队伍、抽签分组。小组循环赛结束后，按排名晋级淘汰赛。比赛名称自动生成。':'活动名称自动生成。单打与双打可选积分赛或普通活动，普通活动不计积分与修为；练球请填写具体练习内容，不计积分。球费按单颗价格 × 耗球数量记录，之后可在费用页补录。'};
 }

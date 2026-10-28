@@ -193,7 +193,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(['ended','cancelled','draft'].includes(eventStatusAt(e,now)))fail('请在活动开放后、结束前使用实时排场');
  if(e.tournament)fail('赛事请使用对战表安排比赛');
  if(isPractice(e))fail('练球活动不生成比赛或积分');
- const manager=canManageEvent(a,e)||canEnableEventRanking(s,a);
+ const manager=canManageEvent(a,e)||canEnableEventRanking(s,a,e);
  if(command.action==='liveNext'){
   // Like score entry: anyone signed up for the activity, its organiser or an administrator.
   if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
