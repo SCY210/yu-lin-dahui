@@ -30,7 +30,7 @@ if (!unitOnly) {
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
     'owner-rating-ui', 'event-ranking-ui',
     'account-notice-api', 'activity-notice-api',
-    'bonus-popup-ui', 'bond-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
+    'bonus-popup-ui', 'bond-ui', 'player-directory-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
     'published-swap-api', 'published-swap-ui',
     'early-score-api',
     'match-player-filter-ui', 'court-occupancy-ui',

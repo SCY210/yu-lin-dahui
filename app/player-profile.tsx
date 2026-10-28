@@ -71,8 +71,6 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       </div>}
     </header>
 
-    {!isOwn&&!p.guestEventId&&!p.guestFriendId&&ctx.data.bonds&&<Disclosure label="羁绊" defaultOpen><Deferred><BondCard p={p} ctx={ctx}/></Deferred></Disclosure>}
-
     <Disclosure label="个人资料与打法" defaultOpen><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
@@ -96,6 +94,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       <div className="pp-equipment-note"><span>其他装备与备注</span><p className={profile.equipment ? '' : 'pp-unfilled'}>{profile.equipment || '尚未填写'}</p></div>
       <Deferred><RacketGallery ctx={ctx} playerId={p.id}/></Deferred>
     </section></Disclosure>
+
+    {!isOwn&&!p.guestEventId&&!p.guestFriendId&&ctx.data.bonds&&<Disclosure label="道缘" defaultOpen><Deferred><BondCard p={p} ctx={ctx}/></Deferred></Disclosure>}
 
     <Disclosure label="比赛统计"><section className="pp-section" aria-label="比赛统计">
       <div className="pp-section-heading"><h3 className="pp-section-title">球场记录</h3><div className="pp-guide-actions"><FeatureGuide rules={rules} topic="rating" label="境界说明"/><FeatureGuide rules={rules} topic="state" label="状态说明"/></div></div>

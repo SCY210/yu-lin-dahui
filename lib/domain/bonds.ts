@@ -3,9 +3,10 @@ import {parseDomainCommand} from './command-contract';
 import {finished} from './social';
 import {gameFacts} from './game-facts';
 import {isGuest} from './guests';
+import {isClubOwner} from './ownership';
 import {fail,type Account,type Match,type State} from './types';
 
-import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,bondCoinPoints,giftNoticeDays,type BondRow,type GiftNotice} from './bond-tiers';
+import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,bondCoinPoints,giftNoticeDays,type BondRow,type BondPair,type GiftNotice} from './bond-tiers';
 export * from './bond-tiers';
 
 /** A gift row of this member's own ledger: a shop gift they gave or received. Members cannot give coins to each other, so
@@ -64,9 +65,34 @@ export function giftNotices(s:Pick<State,'treasureLedger'|'treasureOrders'>,a:Pi
   .sort((x,y)=>x.at-y.at||x.id.localeCompare(y.id));
 }
 
-/** The viewer's own bonds and gifts only; nobody sees the bonds between two other members. */
+/** Every pair of members with a bond, strongest first, replayed the same way as `bondRows` so both agree. */
+export function bondPairs(s:Pick<State,'matches'|'players'|'accounts'|'treasureLedger'|'treasureOrders'>,matches:Match[]=finished(s as State)):BondPair[]{
+ const steps:{at:number;order:string;key:string;game?:boolean;won?:boolean;gift?:number}[]=[];
+ const key=(x:string,y:string)=>x<y?x+'|'+y:y+'|'+x;
+ for(const m of matches)for(const side of ['a','b'] as const){
+  const team=[...new Set(m[side])];if(team.length<2)continue;
+  for(const g of gameFacts(m))for(let i=0;i<team.length;i++)for(let j=i+1;j<team.length;j++)
+   steps.push({at:m.end!,order:m.id+':'+String(g.index).padStart(3,'0'),key:key(team[i],team[j]),game:true,won:g.winner===side});
+ }
+ // Each gift appears once, on the giver's row.
+ const cancelled=new Set(s.treasureOrders.filter(o=>o.status==='cancelled').map(o=>o.id));
+ for(const r of s.treasureLedger)if(r.giftTo&&!(r.orderId&&cancelled.has(r.orderId)))
+  steps.push({at:r.at,order:r.requestId.replace(/^gift:/,''),key:key(r.playerId,r.giftTo),gift:r.giftValue??Math.abs(r.delta)});
+ steps.sort((x,y)=>x.at-y.at||x.order.localeCompare(y.order));
+ const pairs=new Map<string,BondPair>();
+ for(const step of steps){
+  const [a,b]=step.key.split('|');if(a===b||isGuest(s as State,a)||isGuest(s as State,b))continue;
+  const pair=pairs.get(step.key)??{a,b,score:0,games:0,wins:0,gifts:0};
+  pair.score+=step.game?(bondGamePoints+(step.won?bondWinPoints:0))*bondTiers[bondTierIndex(pair.score)].boost:step.gift!*bondCoinPoints;
+  if(step.game){pair.games++;if(step.won)pair.wins++}else pair.gifts+=step.gift!;
+  pairs.set(step.key,pair);
+ }
+ return [...pairs.values()].filter(p=>p.score>0).sort((x,y)=>y.score-x.score||x.a.localeCompare(y.a)||x.b.localeCompare(y.b));
+}
+
+/** The viewer's own bonds; only the owner and administrators also see the bonds between every pair of members. */
 export function bondView(s:State,a:Account,matches?:Match[]){
- return {rows:bondRows(s,a.playerId,matches)};
+ return {rows:bondRows(s,a.playerId,matches),...(a.role==='admin'||isClubOwner(s,a)?{pairs:bondPairs(s,matches)}:{})};
 }
 
 export function applyBond(s:State,a:Account,action:string,input:unknown){

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Match,type State} from '../lib/domain/types';
 import {apply} from '../lib/domain/commands';
-import {bondRows,bondTierIndex,bondTiers,bondView,giftNotices,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
+import {bondRows,bondPairs,bondTierIndex,bondTiers,bondView,giftNotices,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
 import {treasureBalance,treasureProduct,treasureOrder,treasureShopView} from '../lib/domain/treasure-shop';
 import {appendTreasureLedger} from '../lib/domain/treasure-ledger';
 import {projectClubState} from '../lib/club-view';
@@ -112,7 +112,19 @@ test('a shop gift is bought by the giver, raises the bond, is announced to the r
  assert.deepEqual(giftNotices(s,account(s,2),start+4000),[]);
 });
 
-test('the club view shows each member only their own bonds and gifts',async()=>{
+test('the list of every pair agrees with what each member sees of their own bonds',async()=>{
+ const s=fixture();coins(s,'p1',100);
+ const product=treasureProduct(s,account(s,0),{name:'Fictional towel',description:'',price:10,stock:9,kind:'physical',active:true},start);
+ for(let w=0;w<30;w++)play(s,start+w*week,w%3?['p1','p2']:['p1','p3'],w%3?['p3','p4']:['p2','p4'],[[21,15],[w%2?21:15,w%2?15:21]]);
+ await apply(s,account(s,1),'treasureRedeem',{productId:product.id,expectedPrice:10,quantity:2,giftTo:'p4',requestId:crypto.randomUUID()},start+3*week);
+ const pairs=bondPairs(s);
+ assert.ok(pairs.length>=5);assert.deepEqual(pairs.map(p=>p.score),[...pairs.map(p=>p.score)].sort((x,y)=>y-x),'strongest first');
+ for(const p of pairs){const row=bond(s,p.a,p.b)!;assert.equal(p.score,row.score,p.a+'-'+p.b);assert.equal(p.games,row.games);assert.equal(p.wins,row.wins);assert.equal(p.gifts,row.giftsSent+row.giftsReceived);assert.equal(bond(s,p.b,p.a)!.score,p.score)}
+ assert.equal(pairs.find(p=>p.a==='p1'&&p.b==='p4')!.gifts,20);
+ assert.ok(!pairs.some(p=>p.a==='p0'||p.b==='p0'),'members who never partnered have no pair');
+});
+
+test('the club view shows each member only their own bonds and gifts; the owner and administrators also see every pair',async()=>{
  const s=fixture();coins(s,'p1',20);
  const product=treasureProduct(s,account(s,0),{name:'Fictional towel',description:'',price:10,stock:9,kind:'physical',active:true},start);
  play(s,start,['p1','p2'],['p3','p4'],[[21,10]]);
@@ -123,4 +135,8 @@ test('the club view shows each member only their own bonds and gifts',async()=>{
  assert.deepEqual(view(3).bonds.rows.map(r=>[r.playerId,r.score]),[['p4',bondGamePoints*2+bondWinPoints]],'p3 sees only their own partner');
  assert.equal(view(2).me.giftNotices.length,1);assert.equal(view(3).me.giftNotices.length,0);
  assert.ok(!JSON.stringify(view(3)).includes('Fictional thanks'),'other members never see the note');
+ assert.ok(!('pairs' in view(1).bonds)&&!('pairs' in view(3).bonds),'members never see other pairs');
+ assert.deepEqual(view(0).bonds.pairs!.map(p=>[p.a,p.b]),[['p1','p2'],['p3','p4']],'the owner sees every pair');
+ s.accounts[0].role='member';assert.ok(view(0).bonds.pairs,'the owner sees every pair whatever their role');
+ s.accounts[4].role='admin';assert.ok(view(4).bonds.pairs,'administrators see every pair');
 });

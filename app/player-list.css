@@ -27,5 +27,3 @@
 .pl-hub .social-tabs button{min-height:44px}
 @media(max-width:600px){.pl-directory{margin-top:22px}.pl-directory-heading{gap:10px;align-items:flex-start}.pl-directory-heading h2{font-size:19px}.pl-directory-heading p{font-size:13px;max-width:230px}.pl-count{font-size:11px;padding:6px 9px}.pl-detail-heading{gap:12px;margin:20px 0 23px}.pl-detail-heading h1{font-size:22px}.pl-detail-heading .eyebrow{font-size:9px;letter-spacing:1px}.pl-back{font-size:13px;padding:10px 12px}.pl-hub .social-tabs button{font-size:14px}}
 
-.pl-mobile-hint{display:none}
-@media(max-width:760px){.pl-mobile-hint{display:inline}.pl-desktop-hint{display:none}}

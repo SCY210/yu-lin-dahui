@@ -13,7 +13,7 @@ const giftNote={...text('message','留言（可不填，最多60字）'),optiona
 /** A bond stage name in its own colour, as in the stage table. */
 export function BondStage({index}:{index:number}){return <span className={'bond-stage bond-tier-'+index}>{bondTiers[index].name}</span>}
 
-/** The viewer's 羁绊 with another member, shown on that member's profile (docs/BONDS.md). */
+/** The viewer's 道缘 with another member, shown on that member's profile (docs/BONDS.md). */
 export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:boolean;guestEventId?:string;guestFriendId?:string};ctx:BondContext}){
  const row:BondRow=ctx.data.bonds?.rows?.find(r=>r.playerId===p.id)??{playerId:p.id,score:0,games:0,wins:0,giftsSent:0,giftsReceived:0};
  const index=bondTierIndex(row.score),tier=bondTiers[index],next=bondTiers[index+1];
@@ -23,12 +23,12 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
  const giveItem=()=>ctx.open('送礼物给 '+p.name,'treasureRedeem',{productId:products[0]?.id??'',quantity:1,message:''},
   [choice('productId','礼品',products.map(x=>[x.id,`${x.name} · ${count(x.price)} 羽币`])),{...number('quantity','数量'),min:1,max:99,step:1},giftNote],
   (v:Values)=>{const product=products.find(x=>x.id===v.productId);return {productId:v.productId,quantity:Number(v.quantity),expectedPrice:product?.price??0,giftTo:p.id,message:String(v.message??'').trim()}},
-  `用你的羽币在羽林宝阁兑换礼品送给对方，由群主发放。对方进入首页时会收到礼物提示，好感度按礼品价值每羽币 +${bondCoinPoints}。`);
- return <section className={'bond-card bond-tier-'+index} aria-label={'我和'+p.name+'的羁绊'}>
+  `用你的羽币在羽林宝阁兑换礼品送给对方，由群主发放。对方进入首页时会收到礼物提示，缘值按礼品价值每羽币 +${bondCoinPoints}。`);
+ return <section className={'bond-card bond-tier-'+index} aria-label={'我和'+p.name+'的道缘'}>
   <div className="bond-head">
    <HeartHandshake size={20} aria-hidden="true"/>
-   <div className="bond-title"><span>我和 {p.name} 的羁绊</span><BondStage index={index}/></div>
-   <strong className="bond-score" aria-label={'好感度 '+row.score}>{count(row.score)}<small>好感度</small></strong>
+   <div className="bond-title"><span>我和 {p.name} 的道缘</span><BondStage index={index}/></div>
+   <strong className="bond-score" aria-label={'缘值 '+row.score}>{count(row.score)}<small>缘值</small></strong>
   </div>
   <div className="bond-bar" role="progressbar" aria-valuemin={tier.min} aria-valuemax={next?.min??tier.min} aria-valuenow={row.score} aria-label="距离下一阶段"><span style={{width:(progress*100).toFixed(1)+'%'}}/></div>
   <p className="bond-next">{next?<>距「<BondStage index={index+1}/>」还差 <b>{count(next.min-row.score)}</b></>:<>已达最高阶段</>}</p>
@@ -41,6 +41,6 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
    <button type="button" className="secondary" disabled={ctx.busy||!products.length} onClick={giveItem}><Gift size={16} aria-hidden="true"/>送礼物</button>
   </div>}
   {canGift&&!products.length&&<p className="hint bond-hint">羽林宝阁暂时没有可送的礼品。</p>}
-  <details className="bond-ladder"><summary>羁绊阶段</summary><ol>{bondTiers.map((t,i)=><li key={t.name} className={i===index?'bond-current':''}><BondStage index={i}/><small>{count(t.min)}{bondTiers[i+1]?'–'+count(bondTiers[i+1].min):'+'}</small></li>)}</ol></details>
+  <details className="bond-ladder"><summary>道缘阶段</summary><ol>{bondTiers.map((t,i)=><li key={t.name} className={i===index?'bond-current':''}><BondStage index={i}/><small>{count(t.min)}{bondTiers[i+1]?'–'+count(bondTiers[i+1].min):'+'}</small></li>)}</ol></details>
  </section>;
 }
