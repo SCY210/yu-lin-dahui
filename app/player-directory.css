@@ -1,5 +1,6 @@
 /* 球友圈 directory: search, sort, and a compact list next to the cards. */
-.pd{display:grid;gap:12px;min-width:0}
+/* One column no wider than the page: the card carousel must not widen it on phones. */
+.pd{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
 .pd-tools{display:grid;gap:8px}
 .pd-search{display:flex;flex-direction:row;align-items:center;gap:8px;min-height:46px;padding:0 12px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--muted-foreground,#737087)}
 .pd-search:focus-within{outline:3px solid #a897e9;outline-offset:1px}
