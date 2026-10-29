@@ -86,6 +86,8 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
    if(!usesAutomaticAttendance(e))return now;
    expires=Math.min(expires,now+liveMaxAge);liveBoundaries(s,e,boundary,now);
   }
+  // The same end boundary also switches live actions to their final signup
+  // phase for manual overtime; expired activities are never auto-restarted.
   boundary(e.start);boundary(e.end);
   for(const attendance of attendanceForEvent(s,e)){
    boundary(attendance.start);

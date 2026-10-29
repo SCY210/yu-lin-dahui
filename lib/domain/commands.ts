@@ -583,10 +583,13 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                     fail('三局两胜须有一方赢两局');
             }
             assertTournamentScore(s,event(m.eventId),m,games.length>1?games.filter(g=>g.a>g.b).length:games[0].a,games.length>1?games.filter(g=>g.b>g.a).length:games[0].b);
+            // Explicit live play can continue after the booking ends. Record its
+            // real clock time without extending the activity's fee interval.
+            const scoreEndLimit=r.live?Math.max(now,start+1):matchEvent.end;
             if (p.end === undefined || (matchEvent.livePlay?.enabled && firstCompletion))
-                p.end = m.end ?? Math.min(matchEvent.end, Math.max(now, start + 1));
-            if (p.end <= start || p.end > matchEvent.end)
-                fail('结束时间必须晚于开赛且在活动时间内');
+                p.end = m.end ?? Math.min(scoreEndLimit, Math.max(now, start + 1));
+            if (p.end <= start || p.end > scoreEndLimit)
+                fail(r.live?'结束时间必须晚于开赛且不能晚于当前时间':'结束时间必须晚于开赛且在活动时间内');
             if(unstarted||planned&&firstCompletion&&m.start!==start){
                 m.start=start;
                 if(!s.seasons.some(season=>season.id===month(start)))s.seasons.push({id:month(start),rules:{...rules},version:1});

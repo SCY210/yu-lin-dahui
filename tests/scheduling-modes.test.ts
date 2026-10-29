@@ -86,12 +86,12 @@ test('live play swaps players like a planned round: partners, the bench and acro
  assert.ok(s.matches.every(m=>m.status!=='playing'||m.scoreA===null),'no game is completed');
 });
 
-test('a live swap rejects stale lineups, scored games, fixed partners, unavailable players and members',async()=>{
+test('a live swap rejects stale lineups, scored games, fixed partners, unavailable players and outsiders',async()=>{
  const {s,owner,m1,m2,bench,swap}=await liveFixture();
  const before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'liveSwap',{eventId:'e',p1:m1.a[0],p2:bench[0],expectedLineup:[]},start+2*minute),/409/);assert.deepEqual(s,before);
  await assert.rejects(()=>swap(bench[0],bench[1]),/正在场上/);
- await assert.rejects(()=>apply(s,s.accounts.find(a=>a.playerId===bench[0])!,'liveSwap',{eventId:'e',p1:m1.a[0],p2:bench[0],expectedLineup:liveLineupSnapshot(s,'e')},start+2*minute),/403/);
+ await assert.rejects(()=>apply(s,{...s.accounts[1],id:'outsider',playerId:'unknown'},'liveSwap',{eventId:'e',p1:m1.a[0],p2:bench[0],expectedLineup:liveLineupSnapshot(s,'e')},start+2*minute),/403/);
  s.events[0].livePlay!.rest.push({playerId:bench[0],venue:s.events[0].venue,after:start});await assert.rejects(()=>swap(m1.a[0],bench[0]),/409/,'a player taking a break is not put on court');s.events[0].livePlay!.rest=[];
  m2.games=[{a:5,b:3}];await assert.rejects(()=>swap(m2.a[0],bench[0]),/已录分/);m2.games=[];
  s.events[0].pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed'};await assert.rejects(()=>swap(m1.a[0],bench[0]),/固定搭档/);

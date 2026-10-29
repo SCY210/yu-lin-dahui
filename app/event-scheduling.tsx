@@ -12,6 +12,7 @@ import {dt,epoch,hm,labels,halfTimed,number,choice} from './form-fields';
 import {ceilHalfHour} from '../lib/time-planning';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
+import {liveActivityAvailable} from '../lib/domain/live-window';
 import {canScheduleEvent} from '../lib/domain/permissions';
 import {isPractice,eventFormat} from '../lib/domain/match-format';
 import {pointsWindow} from '../lib/domain/points-window';
@@ -30,6 +31,7 @@ export type SchedulingContext={matchPlayerId?:string;data:ClubData;name:(id:stri
 const compareRounds=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefined?a.pointsSlot-b.pointsSlot:0)||a.start-b.start||a.id.localeCompare(b.id);
 export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canScheduleEvent(ctx.data.me,e);
+ const liveAfterEnd=now>=e.end&&liveActivityAvailable(e,now);
  const [selection,setSelection]=useState({eventId:e.id,playerId:''});
  const ids=eventMatchPlayerIds(ctx.data,e),playerId=selection.eventId===e.id&&ids.includes(selection.playerId)?selection.playerId:'';
  const filteredContext={...ctx,matchPlayerId:playerId};
@@ -39,7 +41,7 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  if(e.tournament)return <><EventRanking e={e} ctx={ctx}/>{filter}<EventTournament key={e.id} e={e} ctx={filteredContext}/></>;
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
- return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><EventRanking e={e} ctx={ctx}/><PointsAttendance e={e} ctx={ctx}/><section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||!active} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?' 活动已结束或未开放，当前仅查看记录。':''}</p></details></section>
+ return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><EventRanking e={e} ctx={ctx}/><PointsAttendance e={e} ctx={ctx}/><section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
   {filter}
   {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now}/>}
   {cancelled.length>0&&<Disclosure key={playerId} label={'已撤销轮次 · '+cancelled.length}>{cancelled.slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}

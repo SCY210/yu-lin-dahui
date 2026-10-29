@@ -52,5 +52,25 @@ try{
  fixture.env.DB.batch=async()=>{throw new Error('switch rollback')};assert.equal((await post(switchWrite)).status,503);fixture.env.DB.batch=originalModeBatch;assert.deepEqual(await api.load(),modeBefore);assert.equal((await post(switchWrite)).status,200);assert.equal((await post(switchWrite)).status,200);stored=await api.load();assert.deepEqual(stored.matches,activeBeforeMode);assert.equal(stored.events[0].schedulingMode,'planned');assert.equal(stored.events[0].livePlay.enabled,false);assert.equal(stored.audits.filter(a=>a.action==='schedulingMode').length,1);assert.equal((await post(await request('schedulingMode',switchPayload))).status,409);
  const running=stored.matches.find(m=>m.status==='playing'),countBeforeFinish=stored.matches.length;assert.equal((await post(await request('score',{matchId:running.id,a:21,b:19}))).status,200);stored=await api.load();assert.equal(stored.matches.length,countBeforeFinish);assert.ok(stored.matches.every(m=>m.status!=='playing'));
  console.log('PASS scheduling switch API: creator/admin authority, rollback, idempotence, preserved current games and history, stale-mode refusal and disabled live advancement');
- console.log('PASS live-play API: stored preferences, permissions, no time inputs, atomic score save, next game started on request, request idempotence, correction without advancing, SQLite rollback and concurrent scoring conflict');
+ const overtimeBefore=await api.load(),overtimeState=structuredClone(overtimeBefore),overtimeEvent=overtimeState.events[0],overtimeEnd=Date.now()-60000;
+ overtimeEvent.start=overtimeEnd-7200000;overtimeEvent.end=overtimeEnd;overtimeEvent.schedulingMode='live';overtimeEvent.livePlay.enabled=false;overtimeEvent.livePlay.rest=[];
+ for(const b of overtimeState.bookings){b.start=overtimeEvent.start;b.end=overtimeEvent.end}
+ for(const r of overtimeState.registrations){r.arrival=overtimeEvent.start;r.departure=overtimeEvent.end}
+ await api.save(overtimeState,'fixture-overtime',overtimeBefore);user('owner');
+ assert.equal((await post(await request('liveStart',{eventId:event.id}))).status,200,'stored API starts an overtime game');
+ stored=await api.load();const overtimeMatch=stored.matches.find(m=>m.status==='playing');assert.ok(overtimeMatch&&overtimeMatch.start>overtimeEnd);
+ const liveSnapshot=state=>state.matches.filter(m=>m.eventId===event.id&&m.status==='playing').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((a,b)=>a.id.localeCompare(b.id));
+ const swapPayload={eventId:event.id,p1:overtimeMatch.a[0],p2:overtimeMatch.b[0],expectedLineup:liveSnapshot(stored)};
+ user('member8');assert.equal((await post(await request('liveSwap',{...swapPayload,role:'admin'}))).status,403,'stored outsider identity cannot forge a swap');
+ user('member4');const swapWrite=await request('liveSwap',swapPayload),swapBefore=await api.load(),swapBatch=fixture.env.DB.batch;
+ fixture.env.DB.batch=async list=>{if(!list[0].query.startsWith('INSERT INTO commits'))return swapBatch(list);sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw Error('injected swap rollback')}finally{sql.exec('ROLLBACK')}};
+ assert.equal((await post(swapWrite)).status,503);fixture.env.DB.batch=swapBatch;assert.deepEqual(await api.load(),swapBefore);
+ assert.equal((await post(swapWrite)).status,200);assert.equal((await post(swapWrite)).status,200);stored=await api.load();
+ assert.equal(stored.audits.filter(a=>a.action==='liveSwap').length,1);assert.ok(stored.matches.find(m=>m.id===overtimeMatch.id).a.includes(swapPayload.p2));
+ assert.equal(stored.events[0].end,overtimeEnd);assert.equal(stored.bookings[0].end,overtimeEnd);assert.ok(stored.registrations.every(r=>r.departure===overtimeEnd));
+ assert.equal((await post(await request('liveSwap',swapPayload))).status,409,'stale lineup is refused even with a fresh revision');
+ const raceState=await api.load(),raceMatch=raceState.matches.find(m=>m.status==='playing');
+ const memberRace=await request('liveSwap',{eventId:event.id,p1:raceMatch.a[0],p2:raceMatch.b[0],expectedLineup:liveSnapshot(raceState)});
+ assert.deepEqual((await Promise.all([post(memberRace),post({...memberRace,requestId:crypto.randomUUID()})])).map(r=>r.status).sort(),[200,409],'concurrent member swaps cannot overwrite a newer lineup');
+ console.log('PASS live-play API: stored preferences/permissions, score/next-game idempotence, overtime starts, confirmed-member swaps, outsider refusal, unchanged fee intervals and SQLite rollback');
 }finally{sql.close();delete globalThis.__livePlayApiTest}

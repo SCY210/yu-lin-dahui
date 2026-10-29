@@ -20,7 +20,13 @@ New scores never create win-limit breaks. Only an explicit non-consecutive-play 
 
 ## Current lineup corrections and refresh
 
-Creators and administrators may exchange partners, a court player with a waiting player, or players on separate courts before scoring. Fixed partners remain protected. Current-lineup snapshots, permissions, duplicate players, other active games, attendance and voluntary breaks are checked on the server. Stale requests return 409 and failed transactions roll back. Corrections preserve match IDs, start times and completed results.
+Creators, administrators and accounts with a confirmed signup may exchange partners, a court player with a waiting player, or players on separate courts before scoring through the two-player swap controls. Waitlisted, cancelled, disabled and unrelated accounts cannot use these controls. A proxy guest's signup grants no authority to the registrant. The legacy full-lineup replacement command remains organiser-only. Fixed partners remain protected. Current-lineup snapshots, permissions, duplicate players, other active games, attendance and voluntary breaks are checked on the server. Stale requests return 409 and failed transactions roll back. Corrections preserve match IDs, start times and completed results.
+
+## Manual play after the scheduled end
+
+An organiser may start live play or switch an expired activity to live mode after its scheduled end. Signed-up accounts may then request the next game, and confirmed accounts may swap an unscored current lineup. The final scheduled court and signup phase supplies the available players; earlier departures, voluntary breaks, absence holds, fixed partners and other active games still apply. Drafts, cancellation, deletion, a manual closure before the scheduled end and the before-start gate remain protected.
+
+Overtime games store their actual start and completion timestamps. Activity dates, booking intervals, registration times and fee allocation durations remain unchanged. The usual end-time projection and voting rules remain clock-based. Expired activities never restart through background maintenance: overtime games require an explicit action. Conditional reads retain the existing activity-end boundary, so clients see the transition without a new polling policy or database migration.
 
 The historical retained-player marker can still describe personal winning runs, but it no longer controls eligibility. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
 

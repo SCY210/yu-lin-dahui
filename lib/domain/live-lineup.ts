@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction} from './permissions';
-import {eventStatusAt} from './event-lifecycle';
+import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
 import {teamSize} from './match-format';
 import {bookingAllowsPlayer} from './booking-signups';
 import {livePresentIds,liveResting} from './live-play';
@@ -12,9 +12,10 @@ const lineup=z.array(z.object({id,a:team,b:team})).max(64);
 const schemas={liveLineup:z.object({matchId:id,a:team,b:team,expectedA:team,expectedB:team}),liveSwap:z.object({eventId:id,p1:id,p2:id,expectedLineup:lineup})};
 /** Candidates belong to this venue and signup window, are not on another court, and are not taking a break. */
 export function liveLineupCandidates(s:State,e:Event,m:Match,now:number){
+ const at=liveAvailabilityTime(e,now);
  const busy=new Set(s.matches.filter(x=>x.id!==m.id&&x.status==='playing').flatMap(x=>[...x.a,...x.b]));
  const current=new Set([...m.a,...m.b]),venue=s.bookings.find(b=>b.id===m.courtId)?.venue??e.venue;
- return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,now,now+1)&&(!liveResting(e,id,venue)||current.has(id)));
+ return livePresentIds(s,e,now).filter(id=>!busy.has(id)&&bookingAllowsPlayer(s,e.id,m.courtId,id,at,at+1)&&(!liveResting(e,id,venue)||current.has(id)));
 }
 /** The unscored games currently on court, in the same snapshot form as a planned round (round-lineup.ts). */
 export function liveLineupSnapshot(s:Pick<State,'matches'>,eventId:string){
@@ -26,7 +27,7 @@ const unscored=(m:Match)=>m.start!==null&&!m.games.length&&m.scoreA===null&&m.sc
 function swapLivePlayers(s:State,a:Account,p:{eventId:string;p1:string;p2:string;expectedLineup:{id:string;a:string[];b:string[]}[]},now:number){
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(!e.livePlay?.enabled)fail('只能在实时排场中交换当前上场人员');
- if(['draft','ended','cancelled'].includes(eventStatusAt(e,now))||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
+ if(!liveActivityAvailable(e,now)||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
  if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单局交换成员');
  const expected=[...p.expectedLineup].map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((x,y)=>x.id.localeCompare(y.id));
  if(JSON.stringify(expected)!==JSON.stringify(liveLineupSnapshot(s,e.id)))fail('409: 上场人员已更新，请重新选择要交换的球友');
@@ -59,7 +60,7 @@ export async function applyLiveLineup(s:State,a:Account,action:string,input:unkn
  const e=s.events.find(e=>e.id===m.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  const r=s.rounds.find(r=>r.id===m.roundId&&r.eventId===e.id)??fail('轮次不存在');
  if(!e.livePlay?.enabled||m.status!=='playing'||r.status!=='playing'||m.start===null||m.games.length||m.scoreA!==null||m.scoreB!==null)fail('只能调整实时排场中尚未录分的当前对局');
- if(['draft','ended','cancelled'].includes(eventStatusAt(e,now))||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
+ if(!liveActivityAvailable(e,now)||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
  if(JSON.stringify(m.a)!==JSON.stringify(p.expectedA)||JSON.stringify(m.b)!==JSON.stringify(p.expectedB))fail('409: 上场人员已更新，请刷新后重新选择');
  const size=teamSize(e),selected=[...p.a,...p.b];
  if(p.a.length!==size||p.b.length!==size)fail(size===1?'单打每队须有一人':'双打每队须有两人');

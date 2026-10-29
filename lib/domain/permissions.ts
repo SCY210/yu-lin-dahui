@@ -21,6 +21,14 @@ export function canRecordScore(s:Pick<State,'registrations'>,a:Pick<Account,'id'
   (r.bookingSignups?r.bookingSignups.some(row=>['confirmed','waitlist'].includes(row.status)):['confirmed','waitlist'].includes(r.status)));
 }
 
+/** Two-person live swaps are shared with the event's confirmed accounts. Proxy
+ * guests and waitlisting do not grant their registrant additional authority. */
+export function canSwapLivePlayers(s:Pick<State,'registrations'|'players'>,a:Pick<Account,'id'|'role'|'playerId'>,event:Event){
+ if(event.deletedAt!==undefined||isPractice(event)||event.tournament||['draft','cancelled'].includes(event.status))return false;
+ if(canManageEvent(a,event))return true;
+ return s.players.some(p=>p.id===a.playerId&&p.enabled)&&s.registrations.some(r=>r.eventId===event.id&&r.playerId===a.playerId&&r.status==='confirmed'&&(!r.bookingSignups||r.bookingSignups.some(slot=>slot.status==='confirmed')));
+}
+
 const rankedManagementActions=new Set(['pointsStart','pointsNext','liveStart','livePause','generate','planPoints','publishPoints','publish','start','schedulingMode','playSettings','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart']);
 const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','playSettings','handicap','challengeMatch']);
 
@@ -43,6 +51,8 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
  if(action==='score'||action==='liveNext'){
   if(!canRecordScore(s,a,event))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或管理员可以录入比分':'403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
+ }else if(action==='liveSwap'){
+  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以交换上场人员');
  }else if(action==='pointsLate'){
   const m=s.matches.find(m=>m.id===p.matchId);
   if(!canManageEvent(a,event)&&!(m&&[...m.a,...m.b].includes(a.playerId)&&a.playerId!==p.playerId))fail('403: 只有同场到场的球友、创建者或管理员可以报告迟到');
