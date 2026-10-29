@@ -1,7 +1,7 @@
 // Real 球友圈 directory and 道缘榜 with fictional members; never contacts production.
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
-import {mkdirSync,writeFileSync} from 'node:fs';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import React,{act} from 'react';
@@ -41,6 +41,7 @@ try{
  assert.ok(text(ui.toJSON()).includes('cards 30'));assert.equal(store.get('yl-player-directory-view'),'cards','the view is remembered');
  await act(()=>input.props.onChange({target:{value:'Fictional 1'}}));assert.deepEqual(shownCards.at(-1),['p10','p11','p12','p13','p14','p15','p16','p17','p18','p19'],'cards follow the search');
  await mount(PlayerDirectory,props);assert.ok(text(ui.toJSON()).includes('cards 30'),'the remembered view comes back');
+ assert.ok(readFileSync('app/player-directory.css','utf8').includes('.pd{display:grid;grid-template-columns:minmax(0,1fr)'),'the directory column never grows with the card carousel, which zoomed phones out');
 
  const players=[{id:'me',name:'Fictional Me'},{id:'a',name:'Fictional Ann'},{id:'b',name:'Fictional Ben'},{id:'c',name:'Fictional Cai'},{id:'g',name:'Fictional Guest',guestEventId:'e'},{id:'off',name:'Fictional Off',enabled:false},...Array.from({length:8},(_,i)=>({id:'x'+i,name:'Fictional X'+i}))];
  const rows=[{playerId:'b',score:16000,games:120,wins:60,giftsSent:12,giftsReceived:0},{playerId:'a',score:320,games:3,wins:2,giftsSent:0,giftsReceived:0}];
