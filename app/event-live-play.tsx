@@ -87,9 +87,9 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
   </Disclosure>
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}
-  <Disclosure label={'其他球友上场与轮休 · '+roster.filter(r=>r.playerId!==data.me.playerId).length+'人'}><section className="card live-rotation-roster"><p className="hint">连胜不会强制轮休。主动选择不连续上场的球友，可点“休息好了”恢复匹配。</p>{roster.filter(r=>r.playerId!==data.me.playerId).map(playerRow)}</section></Disclosure>
-  <Disclosure label={`已完成${eventRankingEnabled(e)?'积分赛':'普通对局'} · ${history.length} 局`} defaultOpen={!!playerId||!active}><div className="courts-grid completed-points-matches">{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>{!history.length&&<p className="hint">暂无已完成对局。</p>}</Disclosure>
-  {!!cancelled.length&&<Disclosure label={`已撤销对局 · ${cancelled.length} 局`}><div className="courts-grid">{cancelled.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div></Disclosure>}
+  <Disclosure label={'其他球友上场与轮休 · '+roster.filter(r=>r.playerId!==data.me.playerId).length+'人'}>{()=><section className="card live-rotation-roster"><p className="hint">连胜不会强制轮休。主动选择不连续上场的球友，可点“休息好了”恢复匹配。</p>{roster.filter(r=>r.playerId!==data.me.playerId).map(playerRow)}</section>}</Disclosure>
+  <Disclosure label={`已完成${eventRankingEnabled(e)?'积分赛':'普通对局'} · ${history.length} 局`} defaultOpen={!!playerId||!active}>{()=><><div className="courts-grid completed-points-matches">{history.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>{!history.length&&<p className="hint">暂无已完成对局。</p>}</>}</Disclosure>
+  {!!cancelled.length&&<Disclosure label={`已撤销对局 · ${cancelled.length} 局`}>{()=><div className="courts-grid">{cancelled.map(m=><MatchCard key={m.id} m={m} ctx={ctx}/>)}</div>}</Disclosure>}
   <Disclosure label={eventFormat(e)==='singles'?'单打轮转':'搭档方式与投票'}><Deferred><EventPointsPlan e={e} ctx={ctx} planning/></Deferred></Disclosure>
  </div>;
 }

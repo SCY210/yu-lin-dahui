@@ -26,6 +26,48 @@ Partner-mode voting defaults to open before selection/confirmation unless the cr
 
 One account has one vote, can change/retract it before the start, and the creator confirms the selection. Tests cover default opening, explicit closure, waitlist rejection/promotion, and eligibility loss.
 
+## History and refresh work
+
+Bond replay builds the guest set and indexes completed matches and gift rows once.
+Read projections share the derived bond history per stored revision through the
+existing bounded cache and validity window. Member rows and administrative pairs
+are replayed only on first demand, avoiding extra work on a cold member read.
+Each viewer still receives only
+their own rows; owner/administrator access to pair rankings is checked on every
+projection. Returned rows are independent copies. Gift notices, acknowledgement,
+cancelled gifts and legacy asymmetric gift records keep their existing behavior.
+Commands and other callers without a stored-revision read context compute fresh
+results. No new clock-dependent behavior or persistence format is introduced.
+
+Visible social statistics aggregate attendance and registrations once instead of
+searching the whole activity history per player. Arena and court statistics use
+completed matches indexed by visible activity. These request-local indexes retain
+the caller's visibility filters, earliest manual arrival rules, per-court signup
+semantics and match ordering.
+
+The client reuses date formatters in a bounded 32-entry cache and one EUR currency
+formatter. Chinese formatting, Madrid daylight-saving transitions and explicit
+format options are preserved. Historical activity cards, live rosters and match
+history pass render callbacks to `Disclosure`, so collapsed sections skip row
+calculations as well as DOM mounting. Reopening uses the current response.
+
+Reproduce the paired local measurements with Node from `.node-version`:
+
+```sh
+node tests/application-performance-benchmark.mjs
+node scripts/benchmark-client.mjs
+```
+
+The application benchmark loads the complete baseline source tree from commit
+`b2624dea039d5cc740f82232c209cd7c23fd9eaa` through Git, so that commit must be
+available locally. It requires the same dependency lockfile and compares full
+responses for an owner, member and draft creator, live and ended activities,
+full and activity scope, and cold and shared results. All records are fictional;
+reports go to ignored `.test-output/`. Timings measure local JavaScript work,
+not network latency or deployed Cloudflare CPU. See
+[the Worker budget](PERFORMANCE_BUDGET.md) for production limits and existing
+clock-boundary tests.
+
 ## Verification
 
 Use npm test, npm run typecheck, and npm run build. tests/club-read-api.mjs isolates authentication/persistence to verify 304 avoidance, revision/query/role/user invalidation, 401/403, fresh exports, setup, and invalid inputs without production access.

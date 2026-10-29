@@ -2,10 +2,11 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Match,type State} from '../lib/domain/types';
 import {apply} from '../lib/domain/commands';
-import {bondRows,bondPairs,bondTierIndex,bondTiers,bondView,giftNotices,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
+import {bondRows,bondPairs,bondHistory,bondTierIndex,bondTiers,bondView,giftNotices,bondGamePoints,bondWinPoints,bondCoinPoints} from '../lib/domain/bonds';
 import {treasureBalance,treasureProduct,treasureOrder,treasureShopView} from '../lib/domain/treasure-shop';
 import {appendTreasureLedger} from '../lib/domain/treasure-ledger';
 import {projectClubState} from '../lib/club-view';
+import {clearSharedClubValues} from '../lib/club-view-shared';
 
 const week=7*86400000,start=Date.parse('2027-01-02T10:00:00Z');
 function fixture(){
@@ -139,4 +140,118 @@ test('the club view shows each member only their own bonds and gifts; the owner 
  assert.deepEqual(view(0).bonds.pairs!.map(p=>[p.a,p.b]),[['p1','p2'],['p3','p4']],'the owner sees every pair');
  s.accounts[0].role='member';assert.ok(view(0).bonds.pairs,'the owner sees every pair whatever their role');
  s.accounts[4].role='admin';assert.ok(view(4).bonds.pairs,'administrators see every pair');
+});
+
+test('indexed bond history preserves both ledger sides, game ordering, guest conversion and cancelled gifts',()=>{
+ const s=fixture();coins(s,'p1',100);
+ s.players.push({...s.players[1],id:'guest',guestEventId:'e'});
+ for(let i=0;i<24;i++)play(s,start+(i%5)*1000,i%3?['p1','p2']:['p1','guest'],['p3','p4'],[[21,15],[17,21],[21,19]]);
+ play(s,start,['p1'],['p2'],[[21,15]]);
+ const incomplete=play(s,start,['p1','p2'],['p3','p4'],[[21,15]]);incomplete.end=null;
+ const cancelled=play(s,start,['p1','p2'],['p3','p4'],[[21,15]]);cancelled.status='cancelled';
+ s.matches.reverse();
+ // Unequal legacy sides must not be reconstructed from the giver's administrative pair total.
+ appendTreasureLedger(s,{playerId:'p1',delta:-7,kind:'gift_sent',reason:'legacy',actor:'a1',at:start+1000,requestId:'legacy',giftTo:'p2'});
+ appendTreasureLedger(s,{playerId:'p2',delta:0,kind:'gift_received',reason:'legacy',actor:'a1',at:start+1000,requestId:'gift:legacy',giftFrom:'p1',giftValue:11});
+ appendTreasureLedger(s,{playerId:'p4',delta:0,kind:'gift_received',reason:'legacy',actor:'a1',at:start+1000,requestId:'gift:receipt-only',giftFrom:'p1',giftValue:5});
+ appendTreasureLedger(s,{playerId:'p1',delta:-20,kind:'gift_sent',reason:'cancelled',actor:'a1',at:start,requestId:'cancelled',giftTo:'p3',orderId:'cancelled-order'});
+ s.treasureOrders.push({id:'cancelled-order',status:'cancelled'} as State['treasureOrders'][number]);
+ for(const converted of [false,true]){
+  if(converted)s.accounts.push({id:'guest-account',playerId:'guest',role:'member',email:''});
+  const before=structuredClone(s),history=bondHistory(s);
+  assert.deepEqual(history.pairs(),bondPairs(s));
+  for(const player of s.players)assert.deepEqual(history.rowFor(player.id),bondRows(s,player.id),player.id);
+  for(const viewer of s.accounts)assert.deepEqual(bondView(s,viewer,undefined,history),bondView(s,viewer));
+  assert.equal(history.rowFor('p1').some(row=>row.playerId==='guest'),converted);
+  assert.equal(history.rowFor('p1').find(row=>row.playerId==='p2')?.giftsSent,7);
+  assert.equal(history.rowFor('p2').find(row=>row.playerId==='p1')?.giftsReceived,11);
+  assert.deepEqual(s,before,'history construction never mutates the source');
+ }
+});
+
+test('shared bond history authorizes each viewer and isolates mutable response rows',()=>{
+ const s=fixture();play(s,start,['p1','p2'],['p3','p4'],[[21,15]]);
+ const history=bondHistory(s),member=account(s,1),admin=account(s,0);
+ const values=()=>({rows:s.players.map(player=>history.rowFor(player.id)),pairs:history.pairs()}),expected=structuredClone(values());
+ const first=bondView(s,member,undefined,history);assert.ok(!('pairs' in first));first.rows[0].score=-1;first.rows.push({...first.rows[0],playerId:'injected'});
+ const privileged=bondView(s,admin,undefined,history);privileged.pairs![0].score=-1;privileged.pairs!.length=0;
+ assert.deepEqual(values(),expected);
+ assert.deepEqual(bondView(s,member,undefined,history),bondView(s,member));
+ member.role='admin';assert.deepEqual(bondView(s,member,undefined,history).pairs,bondPairs(s));
+ member.role='member';assert.ok(!('pairs' in bondView(s,member,undefined,history)),'a prior administrator response grants no access');
+ admin.role='member';assert.deepEqual(bondView(s,admin,undefined,history).pairs,bondPairs(s),'the owner still sees pairs');
+});
+
+test('lazy bond replay computes only requested results once from an independent snapshot',()=>{
+ const s=fixture();coins(s,'p1',30);play(s,start,['p1','p2'],['p3','p4'],[[21,15]]);
+ appendTreasureLedger(s,{playerId:'p1',delta:-7,kind:'gift_sent',reason:'legacy',actor:'a1',at:start+1000,requestId:'lazy-gift',giftTo:'p2',giftValue:7});
+ const expectedRows=bondRows(s,'p1'),expectedPairs=bondPairs(s),history=bondHistory(s);
+ // Mutate the original request before either lazy replay; cached facts must remain an independent snapshot.
+ s.matches[0].a[1]='p3';s.matches[0].games[0].a=10;s.treasureLedger.at(-1)!.giftValue=999;
+ s.accounts.length=0;s.players.length=0;
+ const sort=Array.prototype.sort;let sorts=0;
+ Array.prototype.sort=function(...args){sorts++;return sort.apply(this,args)};
+ try{
+  const first=history.rowFor('p1');assert.deepEqual(first,expectedRows);assert.ok(sorts>0);
+  sorts=0;assert.strictEqual(history.rowFor('p1'),first);assert.equal(sorts,0,'member replay is memoized');
+  const pairs=history.pairs();assert.deepEqual(pairs,expectedPairs);assert.ok(sorts>0,'pairs were not eagerly computed with the member');
+  sorts=0;assert.strictEqual(history.pairs(),pairs);assert.equal(sorts,0,'pair replay is memoized');
+ }finally{Array.prototype.sort=sort}
+ const member=fixture().accounts[1];
+ const onlyMember={rowFor:()=>expectedRows,pairs:()=>{throw new Error('Member must not request administrative pairs')}};
+ assert.deepEqual(bondView(fixture(),member,undefined,onlyMember).rows,expectedRows);
+});
+
+test('bond replays build guest membership once instead of scanning accounts for every game',()=>{
+ const s=fixture();for(let i=0;i<200;i++)play(s,start+i,['p1','p2'],['p3','p4'],[[21,15],[17,21],[21,19]]);
+ const players=s.players,accounts=s.accounts;let reads=0;
+ Object.defineProperty(s,'players',{get:()=>{reads++;return players}});
+ Object.defineProperty(s,'accounts',{get:()=>{reads++;return accounts}});
+ for(const replay of [()=>bondRows(s,'p1'),()=>bondPairs(s),()=>bondHistory(s)]){
+  reads=0;replay();assert.ok(reads<=3,`guest membership read ${reads} collections for one replay`);
+ }
+});
+
+test('club projections share bond facts across scopes while checking every viewer and current role',()=>{
+ clearSharedClubValues();
+ try{
+  const s=fixture(),now=start+3600000;s.revision=701;
+  s.events.push({id:'e',title:'Fictional event',creatorId:'a0',start,end:now,venue:'Fictional court',address:'',capacity:8,signupDeadline:start,cancelDeadline:start,note:'',status:'ended',courtMode:'equal',ballMode:'equal'});
+  play(s,start,['p1','p2'],['p3','p4'],[[21,15]]);
+  const full=(i:number)=>projectClubState(s,account(s,i),'2027-01',2027,now,{revision:s.revision});
+  const activity=(i:number)=>projectClubState(s,account(s,i),'2027-01',2027,now,{revision:s.revision,activityId:'e'});
+  const plain=(i:number)=>projectClubState(s,account(s,i),'2027-01',2027,now);
+  // Start with a member's scoped read, then reuse the same history for privileged and full reads.
+  assert.deepEqual(activity(1).bonds,plain(1).bonds);
+  assert.deepEqual(full(0).bonds,plain(0).bonds);
+  const edited=full(0);edited.bonds.pairs![0].score=-123;
+  const member=activity(1);member.bonds.rows[0].score=-123;
+  assert.deepEqual(full(0).bonds,plain(0).bonds);assert.deepEqual(full(1).bonds,plain(1).bonds);
+  s.accounts[4].role='admin';assert.deepEqual(activity(4).bonds.pairs,plain(0).bonds.pairs);
+  // Even before the normal revision invalidation, a role downgrade cannot reuse an administrative response.
+  s.accounts[4].role='member';assert.ok(!('pairs' in full(4).bonds));assert.ok(!('pairs' in activity(4).bonds));
+  s.accounts[0].role='member';assert.deepEqual(activity(0).bonds.pairs,plain(0).bonds.pairs,'owner privileges remain current');
+ }finally{clearSharedClubValues()}
+});
+
+test('new stored revisions invalidate shared bonds after guest conversion, gifts and order cancellation',()=>{
+ clearSharedClubValues();
+ try{
+  const s=fixture(),now=start+3600000;s.revision=801;coins(s,'p1',100);
+  s.players.push({...s.players[1],id:'guest',guestEventId:'e'});
+  play(s,start,['p1','guest'],['p3','p4'],[[21,15]]);
+  const view=(i:number)=>projectClubState(s,account(s,i),'2027-01',2027,now,{revision:s.revision});
+  const equalFresh=(i:number)=>{const cached=view(i),fresh=projectClubState(s,account(s,i),'2027-01',2027,now);assert.deepEqual(cached.bonds,fresh.bonds);assert.deepEqual(cached.me.giftNotices,fresh.me.giftNotices);return cached};
+  assert.ok(!equalFresh(1).bonds.rows.some(row=>row.playerId==='guest'));
+  s.accounts.push({id:'guest-account',playerId:'guest',role:'member',email:''});s.revision++;
+  assert.ok(equalFresh(1).bonds.rows.some(row=>row.playerId==='guest'),'a converted guest is included immediately');
+  appendTreasureLedger(s,{playerId:'p1',delta:-7,kind:'gift_sent',reason:'legacy',actor:'a1',at:start+1000,requestId:'new-gift',giftTo:'p2',giftValue:7,orderId:'gift-order'});
+  appendTreasureLedger(s,{playerId:'p2',delta:0,kind:'gift_received',reason:'legacy',actor:'a1',at:start+1000,requestId:'gift:new-gift',giftFrom:'p1',giftValue:7,orderId:'gift-order',message:'Only the recipient sees this'});
+  s.revision++;
+  assert.equal(equalFresh(1).bonds.rows.find(row=>row.playerId==='p2')?.giftsSent,7);
+  assert.equal(equalFresh(2).me.giftNotices.length,1);assert.equal(equalFresh(3).me.giftNotices.length,0);
+  s.treasureOrders.push({id:'gift-order',status:'cancelled'} as State['treasureOrders'][number]);s.revision++;
+  assert.ok(!equalFresh(1).bonds.rows.some(row=>row.playerId==='p2'));
+  assert.equal(equalFresh(2).me.giftNotices.length,0);equalFresh(0);
+ }finally{clearSharedClubValues()}
 });
