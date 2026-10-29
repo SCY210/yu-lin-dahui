@@ -38,7 +38,7 @@ export default function PlayerDirectory({roster,stats,bonds,meId,onProfile,cards
    </div>
   </div>
   {needle&&<p className="pd-found" aria-live="polite">找到 {shown.length} 位球友</p>}
-  {!shown.length?<p className="empty">{roster.length?'没有找到这位球友。':'还没有可查看的球友。'}</p>:view==='cards'?<div key={needle+sort}>{cards(shown)}</div>:
+  {!shown.length?<p className="empty">{roster.length?'没有找到这位球友。':'还没有可查看的球友。'}</p>:view==='cards'?<div className="pd-cards" key={needle+sort}>{cards(shown)}</div>:
   <ul className="pd-list">{shown.map(p=>{const row=stats(p.id),score=row?.realmScore,b=bond.get(p.id),self=p.id===meId;return <li key={p.id}>
    <button type="button" className="pd-item" onClick={()=>onProfile(p.id)} aria-label={'查看'+p.name+'的档案'}>
     <Avatar p={p}/>

@@ -1,15 +1,18 @@
 /* 球友圈 directory: search, sort, and a compact list next to the cards. */
-.pd{display:grid;gap:12px;min-width:0}
-.pd-tools{display:grid;gap:8px}
+/* A carousel inside an auto-sized grid track can enlarge the whole directory.
+   Keep the same bounded track for both views, including nested grid items. */
+.pd{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;width:100%}
+.pd-tools{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.pd-cards{min-width:0;width:100%;max-width:100%}
 .pd-search{display:flex;flex-direction:row;align-items:center;gap:8px;min-height:46px;padding:0 12px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--muted-foreground,#737087)}
 .pd-search:focus-within{outline:3px solid #a897e9;outline-offset:1px}
 .pd-search input{flex:1;width:auto;min-width:0;min-height:0;border:0;border-radius:0;box-shadow:none;background:transparent;font:inherit;font-size:16px;color:var(--foreground,#22203d);outline:none;padding:10px 0}
 .pd-search input::-webkit-search-cancel-button{display:none}
 .pd-search button{display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin-right:-6px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
-.pd-row{display:flex;gap:8px;align-items:stretch}
-.pd-row select{flex:1;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--foreground,#22203d);font:inherit;font-size:15px}
+.pd-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch;min-width:0}
+.pd-row select{width:100%;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--foreground,#22203d);font:inherit;font-size:16px}
 .pd-views{display:flex;padding:3px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff)}
-.pd-views button{display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--muted-foreground,#737087);font:inherit;font-size:14px;cursor:pointer}
+.pd-views button{display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--muted-foreground,#737087);font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
 .pd-views button[aria-pressed=true]{background:color-mix(in srgb,var(--primary,#4f46e5) 13%,transparent);color:var(--primary,#4f46e5);font-weight:700}
 .pd-found{margin:0;font-size:13px;color:var(--muted-foreground,#737087)}
 .pd-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
