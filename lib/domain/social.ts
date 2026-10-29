@@ -22,10 +22,31 @@ export function courtLeaderboard(s:State,eventId:string,all=finished(s)){const k
 export function annual(s:State,id:string,year:number,all=finished(s)){const ms=all.filter(m=>[...m.a,...m.b].includes(id)&&Number(month(m.start!).slice(0,4))===year);const rel=relationships(s,id,ms);return {year,games:ms.reduce((n,m)=>n+gameRecord(m,id).games,0),wins:ms.reduce((n,m)=>n+gameRecord(m,id).wins,0),activities:new Set(ms.map(m=>m.eventId)).size,favoritePartner:rel.partners[0]??null,dominates:[...rel.opponents].filter(r=>r.games>=3).sort((a,b)=>b.rate-a.rate||b.games-a.games)[0]??null,...streaks(ms,id),minutes:ms.reduce((n,m)=>n+Math.max(0,m.end!-m.start!)/60000,0)}}
 export function funnyStats(s:State,period:string,all=finished(s)){const ms=all.filter(m=>month(m.start!)===period);return s.players.map(p=>{const mine=ms.filter(m=>[...m.a,...m.b].includes(p.id));return {playerId:p.id,closeLosses:mine.filter(m=>{const g=m.games.at(-1)??{a:m.scoreA!,b:m.scoreB!};return !won(m,p.id)&&Math.max(g.a,g.b)===21&&Math.min(g.a,g.b)===19}).length,threeGames:mine.filter(m=>m.games.length===3).length,overtime:mine.filter(m=>m.games.some(g=>Math.max(g.a,g.b)>21)).length,longestMinutes:mine.reduce((n,m)=>Math.max(n,(m.end!-m.start!)/60000),0),...streaks(mine,p.id)}})}
 export function personality(s:State,year:number,now=Date.now()){
- // Group manual arrivals once by activity and player instead of scanning every record per player and activity.
- const arrivalsBy=new Map<string,State['attendance']>();for(const a of s.attendance)if(a.source!=='automatic'&&a.start<=now){const key=a.eventId+'\u0000'+a.playerId,list=arrivalsBy.get(key);if(list)list.push(a);else arrivalsBy.set(key,[a])}
  const events=s.events.filter(e=>Number(month(e.start).slice(0,4))===year);
- return s.players.map(p=>{const arrivals=events.map(e=>({e,a:arrivalsBy.get(e.id+'\u0000'+p.id)?.slice().sort((a,b)=>a.start-b.start)[0]})).filter((x):x is {e:typeof x.e;a:NonNullable<typeof x.a>}=>!!x.a);const regs=s.registrations.filter(r=>r.playerId===p.id&&r.status!=='cancelled'&&events.some(e=>e.id===r.eventId));return {playerId:p.id,early:arrivals.filter(({e,a})=>a.start<e.start).length,onTime:arrivals.filter(({e,a})=>a.start>=e.start&&a.start<=e.start+5*60000).length,promoted:regs.filter(r=>r.bookingSignups?r.bookingSignups.some(x=>x.status!=='cancelled'&&x.joinedAsWaitlist&&x.promotedAt):r.joinedAsWaitlist&&r.promotedAt).length,fastSignup:regs.filter(r=>r.bookingSignups?r.bookingSignups.some(x=>x.status!=='cancelled'&&x.registeredAt&&x.sequence===1):r.registeredAt&&r.sequence===1).length,signupSamples:regs.filter(r=>r.registeredAt).length}})}
+ const eventIds=new Set(events.map(e=>e.id));
+ const empty=()=>({early:0,onTime:0,promoted:0,fastSignup:0,signupSamples:0});
+ const totals=new Map<string,ReturnType<typeof empty>>();
+ const row=(id:string)=>{let value=totals.get(id);if(!value){value=empty();totals.set(id,value)}return value};
+ // Only the earliest manual arrival counts; automatic and future attendance never become punctuality samples.
+ const arrivals=new Map<string,Map<string,State['attendance'][number]>>();
+ for(const a of s.attendance){
+  if(a.source==='automatic'||!(a.start<=now)||!eventIds.has(a.eventId))continue;
+  let players=arrivals.get(a.eventId);if(!players){players=new Map();arrivals.set(a.eventId,players)}
+  const first=players.get(a.playerId);if(!first||a.start<first.start)players.set(a.playerId,a);
+ }
+ for(const e of events)for(const [id,a] of arrivals.get(e.id)??[]){
+  const count=row(id);if(a.start<e.start)count.early++;else if(a.start<=e.start+5*60000)count.onTime++;
+ }
+ // Index visible registrations once, rather than searching the activity history for every player's registration.
+ for(const r of s.registrations){
+  if(r.status==='cancelled'||!eventIds.has(r.eventId))continue;
+  const count=row(r.playerId);
+  if(r.bookingSignups?r.bookingSignups.some(x=>x.status!=='cancelled'&&x.joinedAsWaitlist&&x.promotedAt):r.joinedAsWaitlist&&r.promotedAt)count.promoted++;
+  if(r.bookingSignups?r.bookingSignups.some(x=>x.status!=='cancelled'&&x.registeredAt&&x.sequence===1):r.registeredAt&&r.sequence===1)count.fastSignup++;
+  if(r.registeredAt)count.signupSamples++;
+ }
+ return s.players.map(p=>({playerId:p.id,...(totals.get(p.id)??empty())}));
+}
 /** matchLevels: each team's realm from settled 修为 (定级中 while a player is in placement). */
 /** Every finished match list is filtered and sorted once and shared by the helpers below (they used to redo it per
  * player and per activity). Outputs are unchanged. */
@@ -35,4 +56,9 @@ export function socialHistoryParts(history:State,period:string,year:number,realm
  for(const match of all)for(const id of new Set([...match.a,...match.b])){const rows=byPlayer.get(id);if(rows)rows.push(match);else byPlayer.set(id,[match])}
  return {stats:history.players.map(p=>playerStats(history,p.id,realms.get(p.id),byPlayer.get(p.id)??[])),funny:funnyStats(history,period,all),annual:history.players.map(p=>({playerId:p.id,...annual(history,p.id,year,byPlayer.get(p.id)??[])}))};
 }
-export function socialSnapshot(s:State,period:string,year:number,now=Date.now(),history=s,realms=realmSnapshot(history,now),parts=socialHistoryParts(history,period,year,realms)){const growth=realms,level=(team:string[])=>teamRealmLabel(team.map(id=>growth.get(id)??{score:realmPolicy.start,placement:true}));const own=finished(s);return {stats:parts.stats,funny:parts.funny,personality:personality(s,year,now),annual:parts.annual,arenas:Object.fromEntries(s.events.map(e=>[e.id,arenaStatus(s,e.id,own)])),courtBoards:Object.fromEntries(s.events.map(e=>[e.id,courtLeaderboard(s,e.id,own)])),matchLevels:Object.fromEntries(s.matches.map(m=>[m.id,{a:level(m.a),b:level(m.b)}]))}}
+export function socialSnapshot(s:State,period:string,year:number,now=Date.now(),history=s,realms=realmSnapshot(history,now),parts=socialHistoryParts(history,period,year,realms)){
+ const growth=realms,level=(team:string[])=>teamRealmLabel(team.map(id=>growth.get(id)??{score:realmPolicy.start,placement:true}));
+ const byEvent=new Map<string,Match[]>();
+ for(const match of finished(s)){const rows=byEvent.get(match.eventId);if(rows)rows.push(match);else byEvent.set(match.eventId,[match])}
+ return {stats:parts.stats,funny:parts.funny,personality:personality(s,year,now),annual:parts.annual,arenas:Object.fromEntries(s.events.map(e=>[e.id,arenaStatus(s,e.id,byEvent.get(e.id)??[])])),courtBoards:Object.fromEntries(s.events.map(e=>[e.id,courtLeaderboard(s,e.id,byEvent.get(e.id)??[])])),matchLevels:Object.fromEntries(s.matches.map(m=>[m.id,{a:level(m.a),b:level(m.b)}]))};
+}

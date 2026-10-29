@@ -16,7 +16,7 @@ import {cancellationView} from './domain/cancellations';
 import {visibleActivityAcknowledgements} from './domain/activity-acknowledgement';
 import {treasureShopView} from './domain/treasure-shop';
 import {bonusNotices} from './domain/bonus-notices';
-import {bondView,giftNotices} from './domain/bonds';
+import {bondHistory,bondView,giftNotices} from './domain/bonds';
 import {pairingOddsView} from './domain/pairing-odds';
 import {withScorer} from './domain/score-conflict';
 import {guestIds,guestHostName,guestHostPlayerId,guestLevelAt} from './domain/guests';
@@ -56,6 +56,8 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const visibility=admin?'admin':'drafts:'+history.events.filter(e=>e.status==='draft'&&e.creatorId===a.id).map(e=>e.id).sort().join(',');
  const computeVisible=()=>({achievements:achievementSnapshot({...history,events:s.events,matches:s.matches},now),avatarStreaks:activeAvatarStreaks(streakGames,historicalMatches,rankingQuarter(month(now)))});
  const {achievements,avatarStreaks}=shared?sharedClubValue(shared.revision+'|'+visibility,now,()=>sharedViewValidUntil(history,now),computeVisible):computeVisible();
+ // Bond facts depend on stored history, not the viewer. Selection and admin access stay in bondView per request.
+ const bonds=shared?sharedClubValue('bonds|'+shared.revision,now,()=>sharedViewValidUntil(history,now),()=>bondHistory(history)):undefined;
  const noStreak={singles:0,doubles:0};
  const members=new Set(history.accounts.map(account=>account.playerId));
  // Normal screens never consume a per-game rating replay. The explicit history preview still returns it,
@@ -95,7 +97,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   social,
   pointGrants:!activityId&&isClubOwner(s,a)?pointGrants(s):[],
   treasureShop:treasureShopView(s,a),
-  bonds:bondView(history,a),
+  bonds:bondView(history,a,undefined,bonds),
   achievements:activityId?Object.fromEntries(Object.entries(achievements).filter(([id])=>id===a.playerId)):achievements,
   challenges:s.challenges.filter(c=>matchIds.has(c.sourceMatchId)&&(!c.matchId||matchIds.has(c.matchId))),
   tagVotes:[] as State['tagVotes'],awardVotes:s.awardVotes.filter(v=>v.category==='mvp').map((v,i)=>{const event=s.events.find(e=>e.id===v.eventId),voter=event&&(a.role==='admin'||isClubOwner(s,a))?s.accounts.find(x=>x.id===v.voterId):undefined;return {...v,id:v.voterId===a.id?v.id:'award:'+v.eventId+':mvp:'+i,voterId:v.voterId===a.id?a.id:'',...(voter?{voterPlayerId:voter.playerId}:{})}}),

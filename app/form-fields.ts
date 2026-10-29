@@ -1,7 +1,21 @@
 import {madridDateTime,madridEpoch} from '../lib/time-planning';
-export const fmt=(t:number,opts:any={month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Europe/Madrid',...opts}).format(t);
+const dateFormats=new Map<string,Intl.DateTimeFormat>();
+const defaultDateOptions: Intl.DateTimeFormatOptions={month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'};
+const currencyFormat=new Intl.NumberFormat('zh-CN',{style:'currency',currency:'EUR'});
+/** Reuse ICU formatters across rows and refreshes; keep uncommon option combinations bounded. */
+export function fmt(t:number,opts:Intl.DateTimeFormatOptions=defaultDateOptions){
+ const options={timeZone:'Europe/Madrid',...opts};
+ const key=JSON.stringify(Object.entries(options).filter(([,value])=>value!==undefined).sort(([a],[b])=>a.localeCompare(b)));
+ let format=dateFormats.get(key);
+ if(!format){
+  format=new Intl.DateTimeFormat('zh-CN',options);
+  if(dateFormats.size>=32)dateFormats.delete(dateFormats.keys().next().value!);
+  dateFormats.set(key,format);
+ }
+ return format.format(t);
+}
 export const hm=(t:number)=>fmt(t,{hour:'2-digit',minute:'2-digit'});
-export const euro=(c:number)=>new Intl.NumberFormat('zh-CN',{style:'currency',currency:'EUR'}).format(c/100);
+export const euro=(c:number)=>currencyFormat.format(c/100);
 export const dt=madridDateTime;
 export const epoch=madridEpoch;
 export const labels:any={draft:'草稿',open:'报名中',locked:'报名锁定',live:'进行中',ended:'已结束',cancelled:'已取消',waitlist:'候补',confirmed:'正式',ready:'可上场',paused:'暂时休息',left:'已离场',published:'已发布',playing:'比赛中',complete:'已完成',forfeit:'弃权'};
