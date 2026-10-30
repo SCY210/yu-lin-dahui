@@ -9,7 +9,7 @@ import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
-import {emptyTournament,assertTournamentScore} from './tournament';
+import {newTournament,assertTournamentScore} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
@@ -187,7 +187,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
-            if(tournament){e.tournament=emptyTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
+            if(tournament){e.tournament=newTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
             // New activities record who advanced every court slot and expense (docs/FEE_ADVANCES.md).
             e.feeAdvances = true;
             s.events.push(e);
@@ -570,7 +570,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('实时排场按一局结束，请每局录入一次比分');
             if (m.playMode === 'koc' && games.length > 1)
                 fail('个人轮转采用一局制，每局结束后重新排搭档');
-            if (games.some(g => !validScore(g.a, g.b, rules)))
+            if (!matchEvent.tournament?.scoring && games.some(g => !validScore(g.a, g.b, rules)))
                 fail('终局比分不符合目标分、领先分与封顶规则');
             if (games.length > 1) {
                 let aw = 0, bw = 0;
@@ -582,7 +582,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 if (Math.max(aw, bw) !== 2)
                     fail('三局两胜须有一方赢两局');
             }
-            assertTournamentScore(s,event(m.eventId),m,games.length>1?games.filter(g=>g.a>g.b).length:games[0].a,games.length>1?games.filter(g=>g.b>g.a).length:games[0].b);
+            assertTournamentScore(s,event(m.eventId),m,games.length>1?games.filter(g=>g.a>g.b).length:games[0].a,games.length>1?games.filter(g=>g.b>g.a).length:games[0].b,false,games);
             // Explicit live play can continue after the booking ends. Record its
             // real clock time without extending the activity's fee interval.
             const scoreEndLimit=r.live?Math.max(now,start+1):matchEvent.end;
@@ -739,12 +739,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'settle': {
             const p = command.payload;
             const e = event(p.eventId);
-            if (p.confirmed && now < e.end && (usesAutomaticAttendance(e) || s.attendance.some(x => x.eventId === e.id && x.end === null)))
+            if (p.confirmed && e.tournament?.fee === undefined && now < e.end && (usesAutomaticAttendance(e) || s.attendance.some(x => x.eventId === e.id && x.end === null)))
                 fail('请等待活动结束，再确认正式分摊');
             const result = p.confirmed ? calculateSettlement(s, e, now) : calculateSettlementPreview(s, e, now);
             if (p.confirmed && result.unallocated)
                 fail('仍有待分配费用，请通过费用承担设置指定群补贴或核对参加时间');
-            if (p.confirmed && e.feeAdvances && !result.transfers)
+            if (p.confirmed && e.feeAdvances && e.tournament?.fee === undefined && !result.transfers)
                 fail('请先为每个场地时段和费用填写垫付人，再确认分摊');
             const latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
             if (p.confirmed && latest && sameSettlement(result, latest))

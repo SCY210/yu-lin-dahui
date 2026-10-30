@@ -17,6 +17,7 @@ export function ballCents(c:{pricing:string;cents:number;tubeCount:number;used:n
 export function legacyTubeUnitCents(c:{pricing:string;cents:number;tubeCount:number}){return c.pricing==='tube'&&c.tubeCount>0&&c.cents%c.tubeCount===0?c.cents/c.tubeCount:null}
 export function bookingCents(b:{pricing:string;cents:number;start:number;end:number}){return b.pricing==='total'?b.cents:Math.round(b.cents*(b.end-b.start)/3600000)}
 export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,'id'|'version'|'created'|'reason'|'confirmed'>{
+ if(e.tournament?.fee!==undefined)return entryFeeSettlement(s,e,e.tournament.fee);
  // Every lookup below reads only this activity's rows. Narrowing them once keeps the organiser's fee previews of all
  // activities linear in the club's history instead of rescanning every activity's rows per player and segment.
  const own=<T extends {eventId:string}>(rows:T[])=>rows.filter(row=>row.eventId===e.id);
@@ -57,6 +58,13 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  }
  if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');
  return withFeeTransfers(s,e,equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate));
+}
+/** A competition with an entry fee (docs/TOURNAMENTS.md): every confirmed entrant owes the same fee, and courts and
+ * shuttles are no longer split. The organisers can change the fee; a new confirmation is a new version as usual. */
+function entryFeeSettlement(s:State,e:Event,fee:number){
+ const ids=[...new Set(s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].sort();
+ const shares=Object.fromEntries(ids.map(id=>[id,fee])),total=fee*ids.length;
+ return {eventId:e.id,bills:ids.map(playerId=>({playerId,court:0,ball:0,other:fee,total:fee,minutes:0})),detail:[{item:'entry-fee',name:'报名费',type:'other' as const,start:e.start,end:e.end,cents:total,shares,subsidy:0,unallocated:0,estimated:false}],total,subsidy:0,unallocated:0};
 }
 /** When every court slot and expense records who advanced it, the split also says who transfers what to whom
  * (lib/domain/fee-transfers.ts). The collector is the activity's fee recipient when that is a member. */
