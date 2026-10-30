@@ -71,3 +71,22 @@ the diagram; server-side management and scoring permissions remain unchanged.
 The chart scrolls within its own region on small screens, with zoom, fit-all and
 original-size controls. It never rearranges the bracket into an unconnected
 vertical list. Group standings and all tournament rules remain unchanged.
+
+## Results and archive
+
+Once the champion is known, the competition page shows the podium and every team's place and record: matches, wins,
+losses, games and points (`tournamentResults` in `lib/domain/tournament-results.ts`). Places follow the format.
+
+- **Knockout:** a team's place follows the round it went out in. The final loser is second, the semi-final losers share
+  third, the quarter-final losers share fifth, and so on.
+- **Groups then knockout:** teams that did not qualify follow, sharing a place with the other groups' teams of the same
+  group place.
+- **Round robin:** places keep the table order.
+
+The creator, owner and administrators archive a finished competition with one click (`tournamentArchive`, audited).
+The results are frozen with the players' names as they were, so later renames or edits never change a past
+competition. The competition then appears under past competitions on the Activities page, newest first, with its
+champion, and stays viewable at any time. An archived competition's draw and fixtures cannot change. Archiving can be
+undone to make a correction, and the entry fee can still be adjusted.
+
+Tests: `tests/tournament-results.test.ts`.

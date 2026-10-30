@@ -7,6 +7,7 @@ import {teamSize,isPractice} from './match-format';
 import {validateRound} from './grouping';
 import {fail,month,type State,type Account,type Match} from './types';
 import {isClubOwner} from './ownership';
+import {tournamentResults} from './tournament-results';
 import {categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type TournamentFixture} from './tournament';
 const id=z.string().min(1).max(100);
 const schemas={
@@ -15,6 +16,7 @@ const schemas={
  tournamentKnockout:z.object({eventId:id}),tournamentReopen:z.object({eventId:id}),
  tournamentStart:z.object({eventId:id,fixtureId:id,courtId:id}),
  tournamentReferee:z.object({eventId:id,fixtureId:id,playerId:id.nullable()}),
+ tournamentArchive:z.object({eventId:id,archived:z.boolean()}),
 };
 /** One round robin per group: every team meets every other once (circle method). */
 function roundRobin(group:string[],g:number){
@@ -51,6 +53,17 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   if(p.fee===null)delete t.fee;else t.fee=p.fee;
   s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,fee:p.fee}});return true;
  }
+ if(c.action==='tournamentArchive'){
+  // One click files a finished competition under past competitions with its results frozen, names included.
+  if(!c.payload.archived){if(!t.archive)fail('比赛没有归档');delete t.archive}
+  else{
+   if(t.archive)fail('比赛已经归档');
+   const results=tournamentResults(t,s)??fail('比赛还没有决出冠军，不能归档');
+   t.archive={at:now,by:a.id,results:results.map(r=>({...r,players:r.players.map(id=>({id,name:s.players.find(p=>p.id===id)?.name??'球友'}))}))};
+  }
+  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:c.payload.archived?'归档比赛':'取消归档',changes:{eventId:e.id}});return true;
+ }
+ if(t.archive)fail('比赛已归档，请先取消归档');
  if(isPractice(e)||['draft','ended','cancelled'].includes(eventStatusAt(e,now)))fail('赛事尚未开放或已经结束');
  switch(c.action){
   case 'tournamentDraw':{
