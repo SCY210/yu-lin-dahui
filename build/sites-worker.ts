@@ -10,13 +10,16 @@ import { operatorExport } from "../lib/operator-export";
 import {legacySiteRedirect} from '../lib/legacy-redirect';
 import {runCoinRewardSweep} from '../lib/coin-reward-sweep';
 import {runFeeReminderSweep} from '../lib/fee-reminder-sweep';
+import {runBountyReminderSweep} from '../lib/bounty-reminder-sweep';
 import {loadClubState} from '../lib/club-maintenance';
 
 export default {
-  async scheduled(_controller:ScheduledController,env:Cloudflare.Env,ctx:ExecutionContext){
+  async scheduled(controller:ScheduledController,env:Cloudflare.Env,ctx:ExecutionContext){
     if(!env.DB||env.YULIN_HOSTING_PROVIDER!=='cloudflare'||env.YULIN_RELEASE_CHANNEL!=='private')return;
-    // Each hourly job runs even if the other fails; reminders queued here are delivered without waiting for a visit.
-    const jobs=await Promise.allSettled([runCoinRewardSweep({db:env.DB,now:Date.now(),settle:loadClubState}),runFeeReminderSweep({db:env.DB,now:Date.now()})]);
+    // Each job runs even if another fails; reminders queued here are delivered without waiting for a visit. Coins and
+    // fee reminders run on the hourly trigger; bounty notices on every ten-minute tick (wrangler.cloudflare.json).
+    const now=Date.now(),hourly=controller.cron==='0 * * * *';
+    const jobs=await Promise.allSettled([...(hourly?[runCoinRewardSweep({db:env.DB,now,settle:loadClubState}),runFeeReminderSweep({db:env.DB,now})]:[]),runBountyReminderSweep({db:env.DB,now})]);
     for(const job of jobs)if(job.status==='rejected')console.warn('Scheduled job deferred');
     ctx.waitUntil(flushPushOutbox(env).catch(()=>{console.warn('Push delivery deferred')}));
   },
