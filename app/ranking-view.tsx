@@ -3,16 +3,20 @@ import Disclosure from './disclosure';
 import type {ClubData} from '../lib/contracts/club';
 import {Avatar} from './avatar';
 import {useState} from 'react';
+import {ChevronDown} from 'lucide-react';
 import RealmBadge,{PlacementBadge} from './realm-badge';
 import {QuarterPicker,YearPicker} from './month-picker';
 import {rankingQuarter,quarterLabel} from '../lib/ranking-quarter';
 import {seasonPointsPolicy,winningStreakBonus} from '../lib/domain/season-points';
+import {pointsBreakdown,type BreakdownRow} from '../lib/client/ranking-breakdown';
 import FeatureGuide from './feature-guide';
 import RankingPodium from './ranking-podium';
 import './ranking-view.css';
 
+const signed=(n:number)=>(n>0?'+':'')+n;
+
 export default function RankingView({data,period,setPeriod,onProfile,rankingPeriod='quarterly',setRankingPeriod,rankingFormat='all',setRankingFormat,year=Number(period.slice(0,4)),setYear}:any) {
- const [detailed,setDetailed]=useState(false);
+ const [detailed,setDetailed]=useState(false),[opened,setOpened]=useState<string|null>(null);
  const annual=rankingPeriod==='annual',singles=rankingFormat==='singles';
  const quarter=rankingQuarter(period);
  const pendingPeriod=annual?data.rankingYear!==year:data.rankingQuarter!==quarter;
@@ -26,7 +30,6 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
  // Placement rows show only the neutral 定级中 chip: no realm, stage or realm progress.
  const placing=(r:Parameters<typeof realmScore>[0])=>!!(r.provisional||realmScore(r)?.placement);
  const leaders=rows.filter((r:ClubData['quarterlyLeaderboard'][number])=>(r.games>0||r.points>0)&&r.rank<=3).slice(0,3);
- const signed=(n:number)=>(n>0?'+':'')+n;
  const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap);
  return <>
   <div className="heading rv-heading">
@@ -44,10 +47,21 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
     <b className={'rank rank-'+(r.rank-1)}>{r.rank}</b>
     {<button type="button" className="pp-rank-avatar-link" aria-label={'查看'+r.name+'的球员档案'} onClick={()=>onProfile?.(r.playerId)}><Avatar p={player(r)} size="ranking-avatar"/></button>}
     <div className="ranking-person"><strong><button type="button" className="rv-name-link" onClick={()=>onProfile?.(r.playerId)} aria-label={'查看'+r.name+'的球员档案'}>{r.name}</button>{r.playerId===data.me.playerId&&<span className="me-label">我</span>}</strong><div className="rv-realm-meta">{placing(r)?<PlacementBadge className="rv-realm-badge" games={realmScore(r)?.ratedGames} total={realmScore(r)?.placementGames} />:<RealmBadge className="rv-realm-badge" realm={realm(r)} stage={realmScore(r)?.stage} />}</div>{detailed&&placing(r)&&realmScore(r)&&<div className="rv-progress"><span>修为 {realmScore(r).score??1000} · 定级完成后显示境界</span></div>}{detailed&&!placing(r)&&realmScore(r)&&<div className="rv-progress" aria-label={`${realm(r)}修为 ${realmScore(r).score}，境界进度 ${realmScore(r).progressPercent}%`}><span className="rv-progress-track" aria-hidden="true"><span style={{width:realmScore(r).progressPercent+'%'}}/></span><span>修为 {realmScore(r).score??1000} · {realmScore(r).progressPercent}%</span></div>}<small>{r.games}局计分 · {r.wins}胜 {r.losses}负</small>{detailed&&r.total!==r.games&&<small>实际比赛 {r.total} 局</small>}</div>
-    <div className="ranking-result"><strong>{r.points}<span> 分</span></strong>{detailed&&!!r.streakPoints&&<small>连胜加分 {signed(r.streakPoints)}</small>}{!!r.notificationPoints&&<small>通知积分 {signed(r.notificationPoints)}</small>}{!!r.attendancePoints&&<small>迟到扣分 {signed(r.attendancePoints)}</small>}{!!r.mvpPoints&&<small>MVP 加分 {signed(r.mvpPoints)}</small>}{!!r.bountyPoints&&<small>悬赏 {signed(r.bountyPoints)}</small>}{!!r.pendingGames&&<small>含进行中 {signed(r.pendingPoints)}</small>}<small>{r.games?Math.round(r.rate*100)+'% 胜率':annual?'本年暂无计分赛':'本季度暂无计分赛'}</small>{detailed&&<small>局均净胜 {r.margin.toFixed(1)}</small>}</div>
+    <div className="ranking-result"><strong>{r.points}<span> 分</span></strong>{detailed&&!!r.streakPoints&&<small>连胜加分 {signed(r.streakPoints)}</small>}{!!r.notificationPoints&&<small>通知积分 {signed(r.notificationPoints)}</small>}{!!r.attendancePoints&&<small>迟到扣分 {signed(r.attendancePoints)}</small>}{!!r.mvpPoints&&<small>MVP 加分 {signed(r.mvpPoints)}</small>}{!!r.bountyPoints&&<small>悬赏 {signed(r.bountyPoints)}</small>}{!!r.pendingGames&&<small>含进行中 {signed(r.pendingPoints)}</small>}<small>{r.games?Math.round(r.rate*100)+'% 胜率':annual?'本年暂无计分赛':'本季度暂无计分赛'}</small>{detailed&&<small>局均净胜 {r.margin.toFixed(1)}</small>}<button type="button" className="rv-breakdown-toggle" aria-expanded={opened===r.playerId} aria-controls={'rv-breakdown-'+r.playerId} aria-label={r.name+'的积分明细'} onClick={()=>setOpened(opened===r.playerId?null:r.playerId)}>明细<ChevronDown size={15} aria-hidden="true"/></button></div>
+    {opened===r.playerId&&<PointsBreakdown r={r} name={r.name} id={'rv-breakdown-'+r.playerId}/>}
    </div>)}
    {!rows.length&&<p className="empty" role={pendingPeriod?'status':undefined}>{pendingPeriod?'正在读取'+(annual?year+'年度':quarterLabel(quarter))+'榜单…':singles?scope+'还没有单打比赛成绩。完成一对一单打后即可在这里排名。':'群组还没有启用的球友。'}</p>}{rows.length>0&&!leaders.length&&<p className="hint">{annual?'本年':quarterLabel(quarter)}{singles?'尚无有效单打计分赛。':'尚无有效计分赛，所有球友已在榜单中。'}</p>}
   </section>
   <Disclosure label="积分规则"><section className="rv-calculation" aria-label={annual?'年度积分计算':'季度积分计算'}><strong>{annual?'年度积分 = 本年每个计分小局的赛季积分之和':'季度积分 = 本季度每个计分小局的赛季积分之和'}</strong><p>每局赢 {seasonPointsPolicy.win} 分、输扣 {-seasonPointsPolicy.loss} 分；赢下赛前平均修为比自己高 {upsets.map(u=>u.gap+' 分以上的对手另加 '+u.bonus+' 分').join('，高 ')}。积分只用于{annual?'本年':'本季度'}排名，不改变修为和境界；修为是长期实力，不随季度、年度重置。{singles?'单打榜只统计每方各 1 人的单打小局；群主手动积分调整只计入双打榜。':'双打榜只统计 2 对 2 的双打小局；群主手动积分调整计入指定月份，并汇总到季度、年度双打榜，不改变胜场；群主单独填写的修为调整会改变修为和境界。'}</p><p>连胜加分：第 {seasonPointsPolicy.streak.start} 个连续胜局另加 {winningStreakBonus(2)} 分，第 3 个另加 {winningStreakBonus(3)} 分，第 4 个及之后每局另加 {seasonPointsPolicy.streak.cap} 分，每局连胜加分最多 {seasonPointsPolicy.streak.cap} 分，可与强弱加成叠加。按完赛时间、比赛编号、小局顺序计算，输掉一个计分小局就从头开始；单打与双打分别累计，每个马德里自然季度重新开始，年度榜汇总四个季度。友谊赛、让分局、取消和未完成记录不参与连胜；缺席判负会中断缺席者的连胜。修正或作废比分会重新计算连胜和积分。</p><p>每次活动迟到扣 1 积分，计入对应单打或双打榜，不扣修为。撤销误标返还这一分。迟到扣分按活动开始月份归属季度、年度。</p><p>进行中活动的小局即时计入榜单并标注“含进行中”，活动结束后与境界一起确认；让分局、友谊赛不计积分，只计入实际比赛数。</p><p>按实际开赛时间归属马德里自然{annual?'年':quarterLabel(quarter)}。同分依次比较{annual?'全年':'本季度'}计分小局胜率、局均净胜分，仍相同则并列。</p></section></Disclosure>
  </>;
+}
+
+/** The sources of one row's points, adding up to its total (lib/client/ranking-breakdown.ts). */
+function PointsBreakdown({r,name,id}:{r:BreakdownRow&{pendingGames?:number;pendingPoints?:number};name:string;id:string}){
+ const lines=pointsBreakdown(r);
+ return <div className="rv-breakdown" id={id} role="region" aria-label={name+'的积分明细'}>
+  {lines.length>0&&<dl>{lines.map(line=><div key={line.label}><dt>{line.label}</dt><dd>{signed(line.points)}</dd></div>)}</dl>}
+  <div className="rv-breakdown-total"><span>合计</span><b>{r.points} 分</b></div>
+  {!!r.pendingGames&&<p className="rv-breakdown-note">含进行中 {r.pendingGames} 局（{signed(r.pendingPoints??0)}），活动结束后确认。</p>}
+ </div>;
 }
