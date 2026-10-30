@@ -107,3 +107,30 @@ test('an entry fee replaces the court split and can be confirmed before the comp
  await apply(s,owner,'settle',{eventId:e.id,confirmed:true,reason:'Entry fees'},now);
  assert.equal(s.settlements.at(-1)!.confirmed,true);
 });
+
+test('men\'s singles only takes men, doubles must keep a category, and partners for men\'s doubles are men',async()=>{
+ const {s,e,owner}=fixture(true,4,['male','male','female','male']);
+ await assert.rejects(()=>apply(s,owner,'tournamentSettings',settings(e,{category:'mens-doubles'}),now),/单打比赛只能选择单打或男单/);
+ await apply(s,owner,'tournamentSettings',settings(e,{category:'mens-singles'}),now);
+ await assert.rejects(()=>apply(s,owner,'tournamentDraw',{eventId:e.id,teams:[['p0'],['p1'],['p2'],['p3']],seed:1},now),/男单只限男球友/);
+ const doubles=fixture(false,4,['male','male','male','male']);
+ await apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:'mens-doubles'}),now);
+ await assert.rejects(()=>apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:null}),now),/请选择男双或混双/);
+ const pairs=balancedPairs([{id:'m1',score:1200,gender:'male'},{id:'w1',score:1500,gender:'female'},{id:'m2',score:1000,gender:'male'}],'mens-doubles');
+ assert.deepEqual(pairs,{teams:[['m1','m2']],left:['w1']});
+});
+
+test('the group stage and the knockout follow their own scoring rule',async()=>{
+ const {s,e,owner}=fixture(true,4);
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'groups',scoring:{games:1,points:11},knockoutScoring:{games:3,points:21}}),now);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),groups:2,advance:1,seed:2},now);
+ const t=e.tournament!;let clock=now;
+ for(const f of t.fixtures){await apply(s,owner,'tournamentStart',{eventId:e.id,fixtureId:f.id,courtId:'court0'},clock);clock+=60000;
+  await assert.rejects(()=>apply(s,owner,'score',{matchId:f.matchId!,...win},clock),/一局定胜负/);
+  await apply(s,owner,'score',{matchId:f.matchId!,a:11,b:6},clock)}
+ await apply(s,owner,'tournamentKnockout',{eventId:e.id},clock);
+ const final=t.fixtures.find(f=>f.stage==='knockout')!;await apply(s,owner,'tournamentStart',{eventId:e.id,fixtureId:final.id,courtId:'court0'},clock);
+ await assert.rejects(()=>apply(s,owner,'score',{matchId:final.matchId!,a:11,b:6},clock+60000),/三局两胜/);
+ await apply(s,owner,'score',{matchId:final.matchId!,...win},clock+60000);
+ assert.equal(s.matches.find(m=>m.id===final.matchId)!.status,'complete');
+});

@@ -8,10 +8,12 @@ import EventScheduling from './event-scheduling';
 import {NoShowHold} from './match-no-show';
 import {Forms} from './ui';
 import Disclosure from './disclosure';
-import EventTournament from './event-tournament';
+import EventView from './event-view';
+import {newEventForm} from './event-create-form';
+import {feeMembers} from '../lib/domain/fee-transfers';
 import type {CompetitionSimulationView} from '../lib/competition-simulation';
 import type {LiveOp} from '../lib/domain/live-score';
-import {choice} from './form-fields';
+import {useSecondClock} from '../lib/client/live-score';
 import './admin-simulation.css';
 type Danger=Parameters<SchedulingContext['setDanger']>[0];
 type Kind='activity'|'competition';
@@ -61,20 +63,33 @@ function SimulationSession({kind,accountId,back,retry}:{kind:Kind;accountId:stri
  </div>;
 }
 
-const steps=['设置赛制、项目、计分和报名费','选人（双打可按修为自动配对）并抽签','一键开赛，或在对战表逐场安排并指定裁判','打开「裁判记分」逐分记分，或一键录完','小组赛结束后生成淘汰赛，继续开赛录分','决出冠军后查看成绩并一键归档'];
+const steps=['用正式的「创建比赛」表单建比赛：项目、时间、球馆、场地','球友报名（可一键全员报名），到点后可「快进到开赛」','群主或管理员设置赛制、小组赛和淘汰赛计分、报名费','选人（双打可按修为自动配对）并抽签','开赛、指定裁判，用「裁判记分」逐分记分，或一键录完','生成淘汰赛，决出冠军后在费用页确认报名费、查看成绩并归档'];
 type Action=(name:string,payload:Record<string,unknown>)=>Promise<unknown>;
-/** The competition sandbox: the real competition page on sandbox data, plus shortcuts that start every ready fixture
- * and finish every match in play, so the whole flow can be tried in minutes. */
+/** The competition sandbox runs the real flow on sandbox data: the real create form, member signups, and the real
+ * activity page with its signup, competition and fee tabs. Shortcuts sign everyone up, move the competition to now,
+ * start ready fixtures and finish matches in play, so the whole flow can be tried in minutes. */
 function CompetitionBody({view,ctx,busy,error,back,form,setForm,danger,setDanger,action}:{view:CompetitionSimulationView;ctx:SchedulingContext;busy:boolean;error:string;back:()=>void;form:Form|null;setForm:(f:Form|null)=>void;danger:Danger|null;setDanger:(d:Danger|null)=>void;action:Action}){
- const data=view.data,e=data.events[0];
+ const data=view.data,e=data.events.find(e=>e.deletedAt===undefined),[tab,setTab]=useState('overview');
+ const clock=useSecondClock();
+ const run=(name:string,payload:Record<string,unknown>={})=>void action(name,payload).catch(()=>{});
  const live={scores:view.live,send:async(op:LiveOp)=>{const next=await action('liveScore',op) as CompetitionSimulationView;return next.live[op.matchId]}};
+ const create=()=>{const f=newEventForm(Date.now(),true,true,feeMembers(data.players));ctx.open(f.title,f.action,f.values,f.fields,f.convert,'仅保存到模拟空间，不会创建真实比赛。'+(f.description??''))};
+ const signedUp=(id:string)=>!!e&&data.registrations.some(r=>r.eventId===e.id&&r.playerId===id&&r.status!=='cancelled');
+ const count=data.players.filter(p=>signedUp(p.id)).length;
+ const regs=(ev:{id:string})=>data.registrations.filter(r=>r.eventId===ev.id&&r.status!=='cancelled').sort((a,b)=>a.sequence-b.sequence);
+ const eventCtx={...ctx,live,regs,refresh:async()=>{},openEvent:()=>setTab('overview'),openProfile:()=>{}};
  return <div className="admin-simulation"><button type="button" className="ghost" onClick={back}>返回选择</button>
-  <section className="card simulation-heading"><span className="badge">授权成员专用 · 模拟数据</span><h1>{e.title}</h1><p>{data.players.length} 位真实球友已正式报名，使用姓名、头像、性别与修为快照。模拟记录单独保存，不进入真实榜单、费用或通知。</p>
+  <section className="card simulation-heading"><span className="badge">授权成员专用 · 模拟数据</span><h1>{e?.title??'模拟比赛'}</h1><p>{data.players.length} 位真实球友的姓名、头像、性别与修为快照。流程与正式比赛一致，记录单独保存，不进入真实榜单、费用或通知。</p>
    <ol className="simulation-steps">{steps.map(step=><li key={step}>{step}</li>)}</ol>
-   <div className="actions"><button type="button" className="primary" disabled={busy} onClick={()=>void action('autoStart',{}).catch(()=>{})}>一键开赛空闲场地</button><button type="button" className="secondary" disabled={busy} onClick={()=>void action('autoScore',{}).catch(()=>{})}>一键录完进行中比赛</button><button type="button" className="ghost" disabled={busy} onClick={()=>setForm({title:'重置模拟比赛',action:'reset',values:{expectedRevision:view.revision,matchFormat:'doubles'},fields:[choice('matchFormat','比赛类型',[['doubles','双打 · 固定搭档'],['singles','单打']])],description:'清除模拟比赛记录，从当前启用的正式球友中取最多 16 人，刷新资料并建立四场地比赛。真实活动不受影响。'})}>重置模拟比赛</button></div>
-   <p className="hint">一键录分按双方修为随机生成符合计分规则的比分；裁判已记完的比赛按裁判比分提交。</p></section>
+   <div className="actions">{!e&&<button type="button" className="primary" disabled={busy} onClick={create}>创建比赛</button>}
+    {e&&count<data.players.length&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('signupAll')}>全员报名</button>}
+    {e&&clock<e.start&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('startNow')}>快进到开赛</button>}
+    {e?.tournament&&e.tournament.phase!=='setup'&&<><button type="button" className="primary" disabled={busy} onClick={()=>run('autoStart')}>一键开赛空闲场地</button><button type="button" className="secondary" disabled={busy} onClick={()=>run('autoScore')}>一键录完进行中比赛</button></>}
+    <button type="button" className="ghost" disabled={busy} onClick={()=>setForm({title:'重置模拟比赛',action:'reset',values:{expectedRevision:view.revision},fields:[],description:'清除模拟比赛和报名，重新取最多 16 位正式球友的资料快照。真实活动不受影响。'})}>重置模拟比赛</button></div>
+   <p className="hint">一键录分按双方修为随机生成符合该阶段计分规则的比分；裁判已记完的比赛按裁判比分提交。</p></section>
   {error&&<p className="connection-note" role="alert">{error}</p>}
-  <EventTournament e={e} ctx={{...ctx,live}}/>
+  {e&&<Disclosure label={'模拟球友报名 · 已报名 '+count+' / '+data.players.length}><div className="simulation-signups">{data.players.map(p=><div key={p.id} className="row small-line"><span className="grow">{p.name}</span><button type="button" className={signedUp(p.id)?'ghost':'secondary'} disabled={busy} onClick={()=>run('signup',{playerId:p.id,cancel:signedUp(p.id)})}>{signedUp(p.id)?'取消报名':'替他报名'}</button></div>)}</div></Disclosure>}
+  {e&&<EventView e={e} ctx={eventCtx} tab={tab} setTab={setTab} back={()=>setTab('overview')}/>}
   <Forms form={form} setForm={setForm} danger={danger} setDanger={setDanger} busy={busy} action={action}/>
  </div>;
 }

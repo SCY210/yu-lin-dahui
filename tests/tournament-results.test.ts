@@ -10,7 +10,7 @@ function fixture(count:number,format:TournamentFormat){
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=Array.from({length:count+1},(_,i)=>({id:i?'member'+i:'owner',email:'',playerId:'p'+i,role:i?'member' as const:'admin' as const}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.playerId,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
- const e:Event={id:'cup',creatorId:'owner',title:'Fictional cup',matchFormat:'singles',tournament:{...newTournament(),format,scoring:{games:1,points:21}},start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:count,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
+ const e:Event={id:'cup',creatorId:'owner',title:'Fictional cup',matchFormat:'singles',tournament:{...newTournament(),format,scoring:{games:1,points:21},knockoutScoring:{games:1,points:21}},start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:count,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
  s.events=[e];s.bookings=[{id:'court0',eventId:e.id,name:'Court 0',start:e.start,end:e.end,pricing:'total',cents:0}];
  s.registrations=s.players.slice(1).map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
  return {s,e,owner:s.accounts[0],member:s.accounts[1],entrants:s.players.slice(1).map(p=>[p.id])};

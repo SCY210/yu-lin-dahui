@@ -34,7 +34,7 @@ introduced. All tournament mutations require the persisted creator/admin authori
 
 ## Formats, categories, scoring and entry fees
 
-Before the draw, the owner and administrators choose the format, the doubles category and the scoring rule
+Before the draw, the owner and administrators choose the format, the category and the scoring rules
 (`tournamentSettings`, audited; `app/tournament-settings.tsx`). Everyone sees the chosen settings on the competition
 page. Creators who are not administrators can still draw and run the competition, but cannot change these settings.
 
@@ -42,13 +42,19 @@ page. Creators who are not administrators can still draw and run the competition
   existed); a single knockout; or a single round robin of 2 to 16 teams in one table, whose top team is the champion.
   A knockout is seeded by team realm score: the page sends the teams strongest first, seeds 1 and 2 can only meet in the final
   and 1 to 4 in the semi-finals, and the top seeds take the byes (`seededFirstRound`).
-- **Categories.** Singles, or doubles for men only or mixed (one man and one woman per team). Gender comes from the
-  player profile, or a guest's gender. The draw refuses a team that does not fit and names the players; unset doubles
+- **Categories.** Singles (anyone), men's singles, men's doubles, or mixed doubles (one man and one woman per team).
+  The create form asks for the category, and singles or doubles follows from it. Settings may switch only within
+  singles (singles or men's singles) or within doubles (men's or mixed). Gender comes from the player profile, or a
+  guest's gender. Men's categories list only men for the draw, the draw refuses a team that does not fit and names the
+  players, and auto-balanced men's doubles pair men only. Doubles competitions created before categories have none and
   take anyone.
 - **Scoring.** One game or best of three, to 21, 15 or 11 points. After deuce a side must lead by two, and the side that
-  reaches the cap (30, 21 or 15) wins. New competitions default to best of three to 21. With a rule, score entry asks
-  for every game, rejects unfinished games and replaces the club's own target and cap for these matches. Competitions
-  without a rule keep the club rules.
+  reaches the cap (30, 21 or 15) wins. The group stage (or round robin) and the knockout each have their own rule
+  (`scoring` and `knockoutScoring`, `stageRule`), for example one game to 15 in the groups and best of three to 21 in
+  the knockout. New competitions default to best of three to 21 for both. With a rule, score entry, referee scoring and
+  the board follow the rule of the match's stage. Score entry asks for every game, rejects unfinished games, and
+  replaces the club's own target and cap for these matches. Competitions without a rule keep the club rules, and a
+  knockout without its own rule follows the group rule.
 - **Partners.** Doubles partners are fixed for the whole competition. The auto-balance button pairs the strongest with the
   weakest by realm score, then swaps members between teams while that brings the team totals closer
   (`lib/domain/tournament-pairing.ts`). Mixed doubles only swap within a gender. Players left without a partner are

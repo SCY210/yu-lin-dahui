@@ -5,7 +5,7 @@ import {canScheduleEvent} from '../lib/domain/permissions';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventFormat} from '../lib/domain/match-format';
-import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryLabels,type TournamentFixture} from '../lib/domain/tournament';
+import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryName,type TournamentFixture} from '../lib/domain/tournament';
 import {balancedPairs} from '../lib/domain/tournament-pairing';
 import TournamentSettings from './tournament-settings';
 import TournamentResults from './tournament-results';
@@ -34,7 +34,9 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
  const realm=(id:string)=>data.social?.stats?.find(row=>row.playerId===id)?.realmScore?.score??1000;
  const genderOf=(id:string)=>{const p=data.players.find(p=>p.id===id),g=p?.profile?.gender??p?.guestGender;return typeof g==='string'?g:undefined};
  const strength=(team:string[])=>team.reduce((sum,id)=>sum+realm(id),0);
- const eligible=data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&data.players.some(p=>p.id===r.playerId&&p.enabled)).slice().sort((a,b)=>a.sequence-b.sequence).map(r=>r.playerId);
+ // Men's categories only offer men; the draw checks every team again (categoryProblem).
+ const signedUp=data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&data.players.some(p=>p.id===r.playerId&&p.enabled)).slice().sort((a,b)=>a.sequence-b.sequence).map(r=>r.playerId);
+ const mensOnly=t.category==='mens-singles'||t.category==='mens-doubles',eligible=mensOnly?signedUp.filter(id=>genderOf(id)==='male'):signedUp,excluded=signedUp.filter(id=>!eligible.includes(id));
  const [selected,setSelected]=useState<string[]>(eligible),[pairs,setPairs]=useState<string[][]>([]),[groups,setGroups]=useState(2),[advance,setAdvance]=useState(2),[unpaired,setUnpaired]=useState<string[]>([]);
  // Balanced partners by 修为 (lib/domain/tournament-pairing.ts); the selects below stay editable afterwards.
  const autoPair=()=>{const result=balancedPairs(eligible.map(id=>({id,score:realm(id),gender:genderOf(id)})),t.category);setPairs(result.teams);setUnpaired(result.left)};
@@ -64,12 +66,12 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
   </article>;
  };
  return <div className="event-tournament">
-  <section className="card"><p className="eyebrow">{singles?'单打比赛':(t.category?categoryLabels[t.category]:'双打比赛')+' · 固定搭档'}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?<>先打组内单循环，每组前 {t.phase==='setup'?advance:t.advance} 名晋级。小组按胜场、净胜分、总得分排序；完全同分按抽签顺序。淘汰赛按小组名次交叉安排，人数不足整签位时自动轮空。</>:format==='knockout'?'单败淘汰，按修为排种子，种子队在签位不足时轮空。':'所有队伍互相打一场，按胜场、净胜分、总得分排名；完全同分按抽签顺序。'}单打和双打战绩分别进入各自榜单。</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}{t.phase!=='setup'&&<button type="button" className="secondary" onClick={()=>setBoard(true)}>实时比分大屏</button>}
+  <section className="card"><p className="eyebrow">{categoryName(t,singles)+(singles?' 比赛':' · 固定搭档')}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?<>先打组内单循环，每组前 {t.phase==='setup'?advance:t.advance} 名晋级。小组按胜场、净胜分、总得分排序；完全同分按抽签顺序。淘汰赛按小组名次交叉安排，人数不足整签位时自动轮空。</>:format==='knockout'?'单败淘汰，按修为排种子，种子队在签位不足时轮空。':'所有队伍互相打一场，按胜场、净胜分、总得分排名；完全同分按抽签顺序。'}单打和双打战绩分别进入各自榜单。</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}{t.phase!=='setup'&&<button type="button" className="secondary" onClick={()=>setBoard(true)}>实时比分大屏</button>}
   </section>
   <TournamentResults e={e} ctx={ctx} manager={!ctx.readOnly&&canScheduleEvent(data.me,e)}/>
   <TournamentSettings key={e.id+':'+t.phase+':'+(t.fee??'')} e={e} ctx={ctx} organiser={organiser}/>
   {manager&&active&&!started&&<Disclosure label={t.phase==='setup'?'选择参赛者与分组':'重新抽签（尚未开打）'} defaultOpen={t.phase==='setup'}>
-   <section className="card tournament-setup"><h3>{singles?'选择正式报名的参赛者':'指定双打固定搭档'}</h3><p className="hint">至少 4 {singles?'位选手':'组搭档'}，最多 32 {singles?'位选手':'组搭档'}。请先在活动接龙完成正式报名。</p>
+   <section className="card tournament-setup"><h3>{singles?'选择正式报名的参赛者':'指定双打固定搭档'}</h3><p className="hint">至少 4 {singles?'位选手':'组搭档'}，最多 32 {singles?'位选手':'组搭档'}。请先在活动接龙完成正式报名。</p>{excluded.length>0&&<p className="hint">{categoryName(t,singles)}只限男球友，未列出：{excluded.map(name).join('、')}（资料性别不是男或未填写）。</p>}
     {singles?<div className="tournament-entrants">{eligible.map(id=><label key={id}><input type="checkbox" checked={selected.includes(id)} onChange={event=>setSelected(event.target.checked?[...selected,id]:selected.filter(x=>x!==id))}/>{name(id)}</label>)}</div>:<><div className="tournament-pairs">{pairs.map((pair,index)=><div key={index} className="tournament-pair"><strong>队伍 {index+1}</strong>{pair.map((value,side)=><select key={side} aria-label={'队伍 '+(index+1)+' 球友 '+(side+1)} value={value} onChange={event=>setPairs(pairs.map((p,i)=>i===index?p.map((id,j)=>j===side?event.target.value:id):p))}><option value="">选择球友</option>{eligible.filter(id=>id===value||!pairs.flat().includes(id)).map(id=><option key={id} value={id}>{name(id)}</option>)}</select>)}<button type="button" className="ghost" aria-label={'移除队伍 '+(index+1)} onClick={()=>setPairs(pairs.filter((_,i)=>i!==index))}>移除</button></div>)}</div><div className="actions"><button type="button" className="secondary" disabled={eligible.length<2} onClick={autoPair}>按修为自动平衡分配</button><button type="button" className="secondary" disabled={pairs.length>=32} onClick={()=>setPairs([...pairs,['','']])}>添加双打队伍</button></div>{unpaired.length>0&&<p className="hint">暂未配对：{unpaired.map(name).join('、')}{t.category==='mixed-doubles'?'（男女人数不等或资料未填性别）':''}，可手动调整。</p>}<p className="hint">自动分配让最强和最弱的搭档，再交换队员使各队修为总和尽量接近；分配后仍可逐队修改。</p></>}
     {format==='groups'&&<div className="tournament-options"><label>小组数量<select value={groups} onChange={event=>setGroups(Number(event.target.value))}>{[2,3,4,5,6,7,8].map(n=><option key={n} value={n}>{n} 组</option>)}</select></label><label>每组晋级<select value={advance} onChange={event=>setAdvance(Number(event.target.value))}>{[1,2,3,4].map(n=><option key={n} value={n}>{n} 名</option>)}</select></label></div>}
     <p className="hint">已选择 {teams.length} {singles?'位选手':'支队伍'} · {format==='groups'?'至少 4 队，每组至少 2 队，晋级名额不能超过最小组人数。':format==='round-robin'?'2 到 16 队。':'至少 2 队，最多 32 队。'}</p><button type="button" className="primary" disabled={busy||!valid} onClick={draw}>{format==='groups'?'抽签并生成小组赛':format==='knockout'?'排种子并生成淘汰赛':'生成循环赛对战表'}</button>

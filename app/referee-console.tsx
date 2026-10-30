@@ -2,7 +2,7 @@
 import {useRef,useState} from 'react';
 import {ArrowLeftRight,Pause,Play,ShieldAlert,X} from 'lucide-react';
 import type {Event,Match} from '../lib/domain/types';
-import {defaultScoring,scoringLabel} from '../lib/domain/tournament';
+import {defaultScoring,matchRule,scoringLabel} from '../lib/domain/tournament';
 import {cardRules,finalGames,liveElapsed,liveTally,type CardKind,type LiveOp,type LiveOpBody,type LiveScore,type Side} from '../lib/domain/live-score';
 import {clock,sendLiveOp,useLiveScores,useSecondClock} from '../lib/client/live-score';
 import type {SchedulingContext} from './event-scheduling';
@@ -15,7 +15,7 @@ const cardKinds:CardKind[]=['warning','yellow','red','black'];
  * submitted as the match score. */
 export default function RefereeConsole({e,m,ctx,close}:{e:Event;m:Match;ctx:SchedulingContext;close:()=>void}){
  // The sandbox passes its own scores and transport in ctx.live; otherwise the live score endpoint is polled.
- const rule=e.tournament?.scoring??defaultScoring,remote=useLiveScores(e.id,3000,!ctx.live),now=useSecondClock();
+ const rule=matchRule(e.tournament,m.id)??defaultScoring,remote=useLiveScores(e.id,3000,!ctx.live),now=useSecondClock();
  const scores=ctx.live?.scores??remote.scores,pollError=ctx.live?'':remote.error,put=ctx.live?()=>{}:remote.put,transport=ctx.live?.send??sendLiveOp;
  const live:LiveScore|undefined=scores[m.id],tally=liveTally(rule,live?.events??[]),status=live?.status??'ready';
  const [error,setError]=useState(''),[sheet,setSheet]=useState(false),[cardSide,setCardSide]=useState<Side>('a'),[cardPlayer,setCardPlayer]=useState(''),[cardKind,setCardKind]=useState<CardKind>('warning');

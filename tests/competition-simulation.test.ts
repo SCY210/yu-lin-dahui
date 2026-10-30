@@ -5,6 +5,7 @@ import {createCompetitionSimulation,changeCompetitionSimulation,competitionView,
 import {balancedPairs} from '../lib/domain/tournament-pairing';
 import {tournamentChampion} from '../lib/domain/tournament';
 import {tournamentResults} from '../lib/domain/tournament-results';
+import {newEventForm} from '../app/event-create-form';
 
 const now=Date.parse('2030-10-10T13:05:00Z');
 /** A fictional club of eighteen members, half men and half women. */
@@ -16,37 +17,52 @@ function club():State{
 }
 let request=0;
 const step=(doc:CompetitionSimulationDocument,action:string,payload:Record<string,unknown>={},at=now)=>changeCompetitionSimulation(doc,action,payload,'request-'+(++request),at);
+/** The real create form, filled in as an organiser would: mixed doubles on four courts tomorrow. */
+function createPayload(by:string){
+ const form=newEventForm(now,true,true,[[by,'Organiser']]),courts=[1,2,3,4].map(i=>({...form.values.courts[0],name:i+'号场',advancedBy:by}));
+ return form.convert!({...form.values,category:'mixed-doubles',courts,venue:'Fixture venue'});
+}
 
-test('the competition sandbox runs a whole competition, from format to archive, without touching the club',async()=>{
+test('the competition sandbox follows the real flow from the create form to the archive, without touching the club',async()=>{
  const real=club(),before=JSON.stringify(real);
  let doc=createCompetitionSimulation(now,real);
+ assert.equal(doc.state.players.length,16,'sixteen members');assert.equal(doc.state.events.length,0,'no competition until it is created');
+ await assert.rejects(()=>step(doc,'signupAll'),/请先创建比赛/);
+ await assert.rejects(()=>step(doc,'event',{...createPayload('sim-player-1'),tournament:false}),/只能创建比赛/);
+ doc=await step(doc,'event',createPayload('sim-player-1'));
  const e=()=>doc.state.events[0];
- assert.equal(doc.state.players.length,16,'sixteen members');assert.equal(doc.state.bookings.length,4,'four courts');
- assert.equal(e().tournament!.phase,'setup');assert.ok(doc.state.players.every(p=>!real.players.some(r=>r.id===p.id)),'sandbox ids');
- doc=await step(doc,'tournamentSettings',{eventId:e().id,format:'groups',category:'mixed-doubles',scoring:{games:1,points:21},fee:2000});
+ assert.ok(e().tournament);assert.equal(e().matchFormat,'doubles');assert.equal(e().tournament!.category,'mixed-doubles','the form\'s category');assert.ok(e().start>now,'tomorrow, as in the real form');
+ await assert.rejects(()=>step(doc,'event',createPayload('sim-player-1')),/已经有一场比赛/);
+ doc=await step(doc,'signupAll');
+ assert.equal(doc.state.registrations.filter(r=>r.status==='confirmed').length,16,'everyone signed up through court signup');
+ doc=await step(doc,'signup',{playerId:'sim-player-16',cancel:true});doc=await step(doc,'signup',{playerId:'sim-player-16'});
+ doc=await step(doc,'startNow');assert.ok(e().start<=now&&e().end>now);assert.ok(doc.state.bookings.every(b=>b.start===e().start));
+ doc=await step(doc,'tournamentSettings',{eventId:e().id,format:'groups',category:'mixed-doubles',scoring:{games:1,points:15},knockoutScoring:{games:3,points:21},fee:2000});
  const pairs=balancedPairs(doc.state.players.map(p=>({id:p.id,score:1000,gender:p.profile?.gender})),'mixed-doubles');
- assert.equal(pairs.teams.length,8);
  doc=await step(doc,'tournamentDraw',{eventId:e().id,teams:pairs.teams,groups:2,advance:2,seed:5});
  doc=await step(doc,'autoStart');
  const playing=()=>doc.state.matches.filter(m=>m.status==='playing');
  assert.equal(playing().length,4,'every court takes a fixture');
- // The referee scores one match live inside the sandbox; the shortcut then submits the referee's result.
+ // The referee scores one group match live to 15 under the group rule; the shortcut then submits the referee's result.
  const live=playing()[0].id;
  doc=await step(doc,'liveScore',{op:'start',matchId:live});
- for(let i=0;i<21;i++)doc=await step(doc,'liveScore',{op:'point',matchId:live,side:'b'});
+ for(let i=0;i<15;i++)doc=await step(doc,'liveScore',{op:'point',matchId:live,side:'b'});
  assert.equal(doc.live[live].status,'finished');assert.ok(competitionView(doc,now).live[live]);
  doc=await step(doc,'autoScore');
- assert.deepEqual(doc.state.matches.find(m=>m.id===live)!.games,[{a:0,b:21}],'the referee\'s score is kept');
+ assert.deepEqual(doc.state.matches.find(m=>m.id===live)!.games,[{a:0,b:15}],'the referee\'s score is kept');
  for(let round=0;round<10&&e().tournament!.phase==='groups';round++){
   try{doc=await step(doc,'autoStart')}catch{doc=await step(doc,'tournamentKnockout',{eventId:e().id});continue}
   doc=await step(doc,'autoScore');
  }
+ assert.ok(doc.state.matches.filter(m=>m.status==='complete').every(m=>m.games.length===1),'group matches: one game to 15');
  assert.equal(e().tournament!.phase,'knockout');
  for(let round=0;round<5&&!tournamentChampion(e().tournament!,doc.state);round++){doc=await step(doc,'autoStart');doc=await step(doc,'autoScore')}
- assert.ok(tournamentChampion(e().tournament!,doc.state),'a champion');
+ const knockout=e().tournament!.fixtures.filter(f=>f.stage==='knockout'&&f.matchId).map(f=>doc.state.matches.find(m=>m.id===f.matchId)!);
+ assert.ok(knockout.every(m=>m.games.length>=2&&Math.max(...m.games.flatMap(g=>[g.a,g.b]))>=21),'knockout matches: best of three to 21');
  assert.equal(tournamentResults(e().tournament!,doc.state)!.length,8);
+ doc=await step(doc,'settle',{eventId:e().id,confirmed:true,reason:'Entry fees'});assert.equal(doc.state.settlements.at(-1)!.bills.length,16);
  doc=await step(doc,'tournamentArchive',{eventId:e().id,archived:true});assert.ok(e().tournament!.archive);
- await assert.rejects(()=>step(doc,'eventStatus',{eventId:e().id,status:'ended'}),/比赛模拟只允许/);
+ await assert.rejects(()=>step(doc,'blockedWords',{words:[]}),/只允许比赛相关操作/);
  assert.equal(JSON.stringify(real),before,'the real club is untouched');
- const reset=await step(doc,'reset',{matchFormat:'singles'});assert.equal(reset.state.events[0].matchFormat,'singles');assert.equal(reset.state.matches.length,0);assert.equal(reset.revision,doc.revision+1);
+ const reset=await step(doc,'reset');assert.equal(reset.state.events.length,0);assert.equal(reset.state.matches.length,0);assert.equal(reset.revision,doc.revision+1);
 });

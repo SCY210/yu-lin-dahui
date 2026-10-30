@@ -1,6 +1,6 @@
 'use client';
 import {month,type Season} from '../lib/domain/types';
-import {scoreEntryStart} from '../lib/domain/score-entry';import {scoringCap,scoringLabel,type ScoringRule} from '../lib/domain/tournament';
+import {scoreEntryStart} from '../lib/domain/score-entry';import {matchRule,scoringCap,scoringLabel,type ScoringRule,type Tournament} from '../lib/domain/tournament';
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {Checkbox} from '@/components/ui/checkbox';
@@ -11,7 +11,7 @@ import {initialScoreDrafts,scoreEntryPayload} from '../lib/client/score-reminder
 import './score-reminder.css';
 
 type Game={a:number;b:number};
-type Named={id:string;name?:string;title?:string;avatarId?:string;livePlay?:{enabled?:boolean};tournament?:{scoring?:ScoringRule}};
+type Named={id:string;name?:string;title?:string;avatarId?:string;livePlay?:{enabled?:boolean};tournament?:Tournament};
 const sameGames=(x:Game[],y:Game[])=>x.length===y.length&&x.every((g,i)=>g.a===y[i].a&&g.b===y[i].b);
 
 /** Teams face each other with avatars and one score box under each; the viewer's own team is on the left. */
@@ -21,7 +21,7 @@ export default function ScoreDialog({m,ctx,close,pendingMatches=[],choose}:any){
  const [opened,setOpened]=useState(()=>({status:m.status,games:m.games.map((g:Game)=>({a:g.a,b:g.b}))}));
  const [saving,setSaving]=useState(false);
  const event=ctx.data.events.find((e:Named)=>e.id===m.eventId),correcting=opened.status==='complete',live=ctx.data.rounds.find((r:{id:string;live?:boolean})=>r.id===m.roundId)?.live||(!correcting&&event?.livePlay?.enabled);
- const rules=ctx.data.seasons.find((season:Season)=>season.id===month(scoreEntryStart(m,ctx.data)))?.rules??ctx.data.settings.rules,rule:ScoringRule|undefined=event?.tournament?.scoring,ruleFormat=rule&&(rule.games===3?'best3':'single');
+ const rules=ctx.data.seasons.find((season:Season)=>season.id===month(scoreEntryStart(m,ctx.data)))?.rules??ctx.data.settings.rules,rule:ScoringRule|undefined=matchRule(event?.tournament,m.id),ruleFormat=rule&&(rule.games===3?'best3':'single');
  const [format,setFormat]=useState(ruleFormat??(live||m.playMode==='koc'?'single':m.games.length>1?'best3':'single')),[third,setThird]=useState(m.games.length===3),[scores,setScores]=useState(()=>initialScoreDrafts(m)),[error,setError]=useState('');
  const [scoreLineup]=useState(()=>({a:[...m.a],b:[...m.b]}));
  const lineupChanged=JSON.stringify(scoreLineup.a)!==JSON.stringify(m.a)||JSON.stringify(scoreLineup.b)!==JSON.stringify(m.b);

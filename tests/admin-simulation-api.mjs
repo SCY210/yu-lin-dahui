@@ -54,10 +54,13 @@ try{
  // The competition sandbox is a separate document behind the same access checks.
  const activityRow=sql.prepare("SELECT payload FROM settings WHERE id='admin-simulation-v1'").get().payload,clubBefore=await api.load();
  user('real-member');assert.equal((await post({...initialize(),kind:'competition'})).status,403);user('real-owner');
- let cup=await (await post({...initialize(),kind:'competition'})).json();assert.ok(cup.data.events[0].tournament,'a competition');assert.deepEqual(cup.live,{});
+ let cup=await (await post({...initialize(),kind:'competition'})).json();assert.equal(cup.data.events.length,0,'created later with the real form');assert.deepEqual(cup.live,{});
  const read=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.equal(read.revision,cup.revision);
- const settings={kind:'competition',...request(cup,'tournamentSettings',{eventId:cup.data.events[0].id,format:'knockout',category:null,scoring:{games:3,points:21},fee:1500})};
- assert.equal((await post(settings)).status,200);cup=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.equal(cup.data.events[0].tournament.format,'knockout');
+ assert.equal((await post({kind:'competition',...request(cup,'signupAll',{})})).status,400,'nothing to sign up for yet');
+ const advancedBy=cup.data.players[0].id,at=Date.now()+86400000;
+ const created={kind:'competition',...request(cup,'event',{tournament:true,category:'mens-singles',matchFormat:'singles',venue:'Fixture venue',address:'',start:at,end:at+3*3600000,capacity:16,cancelDeadline:at-3600000,note:'',status:'open',bookings:[{name:'1号场',start:at,end:at+3*3600000,pricing:'hourly',cents:690,signupCapacity:16,advancedBy}]})};
+ assert.equal((await post(created)).status,200);cup=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.equal(cup.data.events[0].tournament.category,'mens-singles');
+ assert.equal((await post({kind:'competition',...request(cup,'signupAll',{})})).status,200);cup=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.ok(cup.data.registrations.length>0);
  assert.equal((await post({kind:'competition',...request(cup,'notifyFees',{eventId:'real-event'})})).status,400);
  assert.equal(sql.prepare("SELECT payload FROM settings WHERE id='admin-simulation-v1'").get().payload,activityRow,'the activity sandbox is untouched');assert.deepEqual(await api.load(),clubBefore);
  console.log('PASS admin simulation API: stored owner/admin/tester authorization, member/login refusal, CSRF, isolated persistence, shared admins, durable real scheduler, real member snapshots, legacy upgrade, one-time late points, rollback, idempotence, reset races, byte-identical real club state and the current production pairing odds');
