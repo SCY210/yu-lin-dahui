@@ -11,7 +11,8 @@ import './referee-console.css';
 /** Every court of a competition at once, for an iPad by the courts (docs/LIVE_SCORING.md). It follows each referee's
  * change of ends, so names and scores sit on the side where the players stand. Refreshes every two seconds. */
 export default function LiveScoreboard({e,ctx,close}:{e:Event;ctx:SchedulingContext;close:()=>void}){
- const rule=e.tournament?.scoring??defaultScoring,{scores,error}=useLiveScores(e.id,2000),now=useSecondClock(),root=useRef<HTMLDivElement>(null);
+ const rule=e.tournament?.scoring??defaultScoring,remote=useLiveScores(e.id,2000,!ctx.live),now=useSecondClock(),root=useRef<HTMLDivElement>(null);
+ const scores=ctx.live?.scores??remote.scores,error=ctx.live?'':remote.error;
  const fixtures=e.tournament?.fixtures??[];
  const matches=ctx.data.matches.filter(m=>m.eventId===e.id&&fixtures.some(f=>f.matchId===m.id)&&(m.status==='playing'||scores[m.id]&&scores[m.id].status!=='finished'||scores[m.id]&&now-scores[m.id].updatedAt<10*60000));
  useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==='Escape')close()};window.addEventListener('keydown',key);return ()=>window.removeEventListener('keydown',key)},[close]);

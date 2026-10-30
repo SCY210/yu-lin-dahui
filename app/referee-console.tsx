@@ -14,12 +14,14 @@ const cardKinds:CardKind[]=['warning','yellow','red','black'];
  * that side's last point back. Start, pause, change ends and cards sit below; once a side has won, the result is
  * submitted as the match score. */
 export default function RefereeConsole({e,m,ctx,close}:{e:Event;m:Match;ctx:SchedulingContext;close:()=>void}){
- const rule=e.tournament?.scoring??defaultScoring,{scores,error:pollError,put}=useLiveScores(e.id,3000),now=useSecondClock();
+ // The sandbox passes its own scores and transport in ctx.live; otherwise the live score endpoint is polled.
+ const rule=e.tournament?.scoring??defaultScoring,remote=useLiveScores(e.id,3000,!ctx.live),now=useSecondClock();
+ const scores=ctx.live?.scores??remote.scores,pollError=ctx.live?'':remote.error,put=ctx.live?()=>{}:remote.put,transport=ctx.live?.send??sendLiveOp;
  const live:LiveScore|undefined=scores[m.id],tally=liveTally(rule,live?.events??[]),status=live?.status??'ready';
  const [error,setError]=useState(''),[sheet,setSheet]=useState(false),[cardSide,setCardSide]=useState<Side>('a'),[cardPlayer,setCardPlayer]=useState(''),[cardKind,setCardKind]=useState<CardKind>('warning');
  const queue=useRef(Promise.resolve()),pending=useRef<{side:Side;timer:ReturnType<typeof setTimeout>}|null>(null);
  // Operations go out one at a time in tap order; each reply is the newest state.
- const run=(op:LiveOpBody)=>{queue.current=queue.current.then(async()=>{try{put(await sendLiveOp({...op,matchId:m.id} as LiveOp));setError('')}catch(err){setError(err instanceof Error?err.message:'操作失败，请重试')}})};
+ const run=(op:LiveOpBody)=>{queue.current=queue.current.then(async()=>{try{put(await transport({...op,matchId:m.id} as LiveOp));setError('')}catch(err){setError(err instanceof Error?err.message:'操作失败，请重试')}})};
  const tap=(side:Side)=>{
   if(pending.current?.side===side){clearTimeout(pending.current.timer);pending.current=null;run({op:'undo',side});return}
   if(pending.current){clearTimeout(pending.current.timer);run({op:'point',side:pending.current.side})}

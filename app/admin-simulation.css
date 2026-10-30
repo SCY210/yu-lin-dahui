@@ -1,1 +1,9 @@
-.simulation-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.simulation-entry>div{flex:1 1 260px}.simulation-entry h2{font-size:20px;margin:12px 0 6px}.simulation-entry button,.admin-simulation button{min-height:44px}.admin-simulation{display:grid;gap:16px;min-width:0}.admin-simulation>.ghost{justify-self:start}.simulation-heading h1{font-size:clamp(22px,5vw,32px);margin:14px 0}.simulation-heading p{overflow-wrap:anywhere}.simulation-roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;padding:12px 0}.simulation-roster>span{padding:10px;border:1px solid var(--border);border-radius:10px}.simulation-loading{display:grid;gap:14px}
+.simulation-entry{display:flex;justify-content:center;margin:20px 0 8px}.simulation-entry button{font-size:13px;opacity:.75;padding:6px 14px}.simulation-entry button,.admin-simulation button{min-height:44px}.admin-simulation{display:grid;gap:16px;min-width:0}.admin-simulation>.ghost{justify-self:start}.simulation-heading h1{font-size:clamp(22px,5vw,32px);margin:14px 0}.simulation-heading p{overflow-wrap:anywhere}.simulation-roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;padding:12px 0}.simulation-roster>span{padding:10px;border:1px solid var(--border);border-radius:10px}.simulation-loading{display:grid;gap:14px}
+
+/* Sandbox chooser and the competition sandbox (app/admin-simulation.tsx). */
+.simulation-chooser{display:grid;gap:12px;justify-items:start}
+.simulation-choices{display:grid;gap:12px;width:100%;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.simulation-choice{display:grid;gap:6px;padding:18px;border-radius:16px;border:1px solid var(--border);background:var(--card);color:inherit;text-align:left;min-height:110px}
+.simulation-choice strong{font-size:18px}
+.simulation-choice span{font-size:14px;opacity:.75}
+.simulation-steps{margin:8px 0;padding-left:22px;display:grid;gap:4px;font-size:14px}
