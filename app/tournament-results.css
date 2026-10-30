@@ -1,0 +1,12 @@
+/* Competition results and past competitions (app/tournament-results.tsx). */
+.tournament-results{display:grid;gap:12px}
+.tournament-results h2{display:flex;align-items:center;gap:8px;margin:0}
+.tournament-podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin:0;padding:0;list-style:none}
+.tournament-podium li{display:grid;gap:4px;justify-items:center;padding:14px 10px;border-radius:16px;border:1px solid var(--border);text-align:center;overflow-wrap:anywhere}
+.tournament-podium li>span:first-child{font-size:30px;line-height:1}
+.tournament-podium .is-place-1{border:2px solid #d4a017;background:color-mix(in srgb,#d4a017 10%,transparent)}
+.past-tournaments{display:grid;gap:10px}
+.past-tournament{display:grid;gap:6px;width:100%;padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--card);color:inherit;text-align:left}
+.past-tournament-title{display:grid;gap:2px}
+.past-tournament-title small{opacity:.7}
+.past-tournament-champion{font-weight:700;overflow-wrap:anywhere}

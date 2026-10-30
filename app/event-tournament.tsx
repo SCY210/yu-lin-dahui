@@ -8,6 +8,7 @@ import {eventFormat} from '../lib/domain/match-format';
 import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryLabels,type TournamentFixture} from '../lib/domain/tournament';
 import {balancedPairs} from '../lib/domain/tournament-pairing';
 import TournamentSettings from './tournament-settings';
+import TournamentResults from './tournament-results';
 import RefereeConsole from './referee-console';
 import LiveScoreboard from './live-scoreboard';
 import type {SchedulingContext} from './event-scheduling';
@@ -65,6 +66,7 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
  return <div className="event-tournament">
   <section className="card"><p className="eyebrow">{singles?'单打比赛':(t.category?categoryLabels[t.category]:'双打比赛')+' · 固定搭档'}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?<>先打组内单循环，每组前 {t.phase==='setup'?advance:t.advance} 名晋级。小组按胜场、净胜分、总得分排序；完全同分按抽签顺序。淘汰赛按小组名次交叉安排，人数不足整签位时自动轮空。</>:format==='knockout'?'单败淘汰，按修为排种子，种子队在签位不足时轮空。':'所有队伍互相打一场，按胜场、净胜分、总得分排名；完全同分按抽签顺序。'}单打和双打战绩分别进入各自榜单。</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}{t.phase!=='setup'&&<button type="button" className="secondary" onClick={()=>setBoard(true)}>实时比分大屏</button>}
   </section>
+  <TournamentResults e={e} ctx={ctx} manager={!ctx.readOnly&&canScheduleEvent(data.me,e)}/>
   <TournamentSettings key={e.id+':'+t.phase+':'+(t.fee??'')} e={e} ctx={ctx} organiser={organiser}/>
   {manager&&active&&!started&&<Disclosure label={t.phase==='setup'?'选择参赛者与分组':'重新抽签（尚未开打）'} defaultOpen={t.phase==='setup'}>
    <section className="card tournament-setup"><h3>{singles?'选择正式报名的参赛者':'指定双打固定搭档'}</h3><p className="hint">至少 4 {singles?'位选手':'组搭档'}，最多 32 {singles?'位选手':'组搭档'}。请先在活动接龙完成正式报名。</p>
