@@ -1,5 +1,4 @@
 import {eventRankingEnabled} from './event-ranking';
-import {canManageEvent} from './permissions';
 import {isPractice,eventFormat} from './match-format';
 import {eventStatusAt} from './event-lifecycle';
 import {month,type Account,type Event,type State} from './types';
@@ -32,7 +31,8 @@ export function isAwardVotingOpen(s:Pick<State,'matches'>,e:Event,now=Date.now()
 }
 
 export function canCastAwardVote(s:VotingState&Pick<State,'matches'>,e:Event,a:Account,now=Date.now()):boolean{
- return isAwardVotingOpen(s,e,now)&&(canManageEvent(a,e)||awardCandidateIds(s,e.id,now).includes(a.playerId));
+/** Only participants vote: being an administrator or the creator gives no ballot, since MVP votes award season points. */
+ return isAwardVotingOpen(s,e,now)&&awardCandidateIds(s,e.id,now).includes(a.playerId);
 }
 
 /** The final MVP of an activity once voting has closed: everyone tied for the most votes (at least one). */

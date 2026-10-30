@@ -1,6 +1,6 @@
 # Social features
 
-Post-match voting now consists only of MVP. Eligible participants, activity creators and administrators have one vote per activity, which is final once cast (it cannot be changed or withdrawn), and cannot vote for themselves. The activity must have concluded and must not be cancelled. Late score entry does not prevent voting. See [MVP-only voting](MVP_ONLY_VOTING.md).
+Post-match voting now consists only of MVP. Only participants vote (administrators and creators too, but only when they took part); each has one vote per activity, which is final once cast (it cannot be changed or withdrawn), and cannot vote for themselves. The activity must have concluded and must not be cancelled. Late score entry does not prevent voting. See [MVP-only voting](MVP_ONLY_VOTING.md).
 
 Style-tag voting and other award categories are retired. Their historical rows remain stored but are not displayed or writable through current voting commands.
 

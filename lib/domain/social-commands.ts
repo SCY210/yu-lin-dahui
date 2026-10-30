@@ -116,7 +116,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             if (!isAwardVotingOpen(s, e, now))
                 fail('活动尚未打完，请在活动结束后评选');
             if (!canCastAwardVote(s, e, a, now))
-                fail('403: 仅本活动正式报名或实际参加的球友、活动创建者和管理员可以投票');
+                fail('403: 仅本活动正式报名或实际参加的球友可以投票');
             const mine = (v: State['awardVotes'][number]) => v.eventId === e.id && v.voterId === a.id && v.category === p.category;
             // A cast MVP vote is final (docs/MVP_ONLY_VOTING.md). Repeating the same vote, as a retried request does,
             // changes nothing; changing or withdrawing it is refused. Only a vote counted for this activity is final: a
