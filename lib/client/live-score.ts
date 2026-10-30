@@ -17,12 +17,12 @@ export async function fetchLiveScores(eventId:string):Promise<LiveScore[]>{
 
 /** Live scores of a competition, refreshed every `every` ms while the page is visible. `put` merges a newer score
  * from the referee's own operations without waiting for the next poll. */
-export function useLiveScores(eventId:string,every=2000){
+export function useLiveScores(eventId:string,every=2000,enabled=true){
  const [scores,setScores]=useState<Record<string,LiveScore>>({}),[error,setError]=useState('');
  const alive=useRef(true);
  const put=(score:LiveScore)=>setScores(current=>(current[score.matchId]?.version??-1)>=score.version?current:{...current,[score.matchId]:score});
  useEffect(()=>{
-  alive.current=true;let timer:ReturnType<typeof setTimeout>|undefined;
+  alive.current=true;let timer:ReturnType<typeof setTimeout>|undefined;if(!enabled)return ()=>{alive.current=false};
   const tick=async()=>{
    if(document.visibilityState==='visible'){
     try{const list=await fetchLiveScores(eventId);if(!alive.current)return;setError('');setScores(current=>{const next={...current};for(const s of list)if((next[s.matchId]?.version??-1)<=s.version)next[s.matchId]=s;return next})}
@@ -32,7 +32,7 @@ export function useLiveScores(eventId:string,every=2000){
   };
   void tick();
   return ()=>{alive.current=false;if(timer)clearTimeout(timer)};
- },[eventId,every]);
+ },[eventId,every,enabled]);
  return {scores,error,put};
 }
 

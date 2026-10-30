@@ -11,13 +11,14 @@ export type SimulationDocument={version:1|2;revision:number;state:State;requests
 export type SimulationView={revision:number;data:ClubData};
 const commands=new Set(['eventRanking','pointsParticipation','noShow','noShowArrived','pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','liveSwap','liveNext','schedulingMode','pointsNext','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
 /** Copy member display/strength snapshots into a closed graph with sandbox-only IDs. */
-export function createSimulation(now:number,club?:State):SimulationDocument{
+/** limit: how many members to copy (twelve for an activity, sixteen for a competition). */
+export function createSimulation(now:number,club?:State,limit=12):SimulationDocument{
  const s=emptyState(),start=Math.floor(now/1800000)*1800000,end=start+6*3600000;
  s.settings.initialized=true;s.settings.name='排场模拟活动';s.settings.ownerAccountId='sim-admin';
- const memberIds=new Set(club?.accounts.map(a=>a.playerId)),members=club?.players.filter(p=>p.enabled&&memberIds.has(p.id)).slice(0,12),ratings=club?realmSnapshot(club,now):null;
+ const memberIds=new Set(club?.accounts.map(a=>a.playerId)),members=club?.players.filter(p=>p.enabled&&memberIds.has(p.id)).slice(0,limit),ratings=club?realmSnapshot(club,now):null;
  if(members&&!members.length)fail('暂无可用于模拟的真实球友');
  if(club)s.settings.rules=structuredClone(club.settings.rules);
- for(let i=0;i<(members?.length??12);i++){
+ for(let i=0;i<(members?.length??limit);i++){
   const id='sim-player-'+(i+1),account=i?'sim-account-'+(i+1):'sim-admin';
   const source=members?.[i],rating=source?ratings!.get(source.id)!.score:realmPolicy.start;
   s.accounts.push({id:account,email:'',role:i?'member':'admin',playerId:id});

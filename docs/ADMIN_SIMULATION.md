@@ -4,7 +4,7 @@ Live doubles use the same winner preference as production, without a consecutive
 
 Rotating live matches share production's bounded partner-repetition cost: prefer new partners when strength is close, retain the balanced pairing for large differences, and preserve fixed-partner mode. No separate simulation-only pairing algorithm or win-limit is introduced.
 
-Activities offers a simulation entry to the club owner, administrators and authorized member testers. Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox. Testers also manage
+Activities offers a small simulation button at the bottom of the page to the club owner, administrators and authorized member testers. The simulation page first asks which sandbox to open: an activity, or a competition (see Competition sandbox below). Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox. Testers also manage
 ranking and scheduling for their own real activities; see [Tester ranked activities](TESTER_RANKED_EVENTS.md). Their member role and other administrator restrictions remain unchanged.
 
 Initialization snapshots up to twelve enabled, account-backed club members in
@@ -53,3 +53,28 @@ The sandbox uses the current production domain commands, including per-court con
 The owner may grant or revoke a member's independent `simulationTester` capability through the audited `simulationAccess` command. Testers retain the `member` role and all existing real-club data visibility, event permissions and account restrictions. They gain no real points, rating, account, role, export or group-management authority. No display name or client-supplied role grants access.
 
 The sandbox entry and route use the server-projected capability. Every sandbox read, initialization and mutation checks the stored account, and the conditional write rechecks admin/tester authorization. Revocation invalidates reads and writes immediately; ordinary member projection never exposes administrator account lists or audit history. Administrators and authorized testers share the same isolated sandbox with revision conflict protection. Specific grants are production account data and are never committed as public name or account-ID lists.
+
+## Competition sandbox
+
+The competition sandbox runs a whole competition on member snapshots (`lib/competition-simulation.ts`). It covers
+format, category, scoring and entry fee, the draw, starting fixtures on courts, referees, live referee scoring, the
+knockout, results and the archive. It copies up to sixteen enabled, account-backed members, with the same snapshot
+rules as the activity sandbox. All of them are confirmed for a competition with four courts that waits for its format
+and draw. Reset can choose doubles or singles.
+
+It is a separate settings row (`admin-simulation-competition-v1`), behind the same access checks, revisions and request
+receipts as the activity sandbox. Requests name it with `kind: 'competition'` (`GET /api/simulation?kind=competition`).
+Only the competition commands, score entry and the fee preview run inside it.
+
+Two shortcuts make the whole flow quick:
+
+- **Start ready fixtures** puts the next ready fixtures on every free court.
+- **Finish matches in play** records a random result for every match in play. The result follows the scoring rule, and
+  the stronger side by realm score wins more often. A match the referee finished live keeps the referee's score.
+
+Live referee scoring keeps its point log inside the sandbox document instead of the `live_scores` table. The referee
+page and the board use the same components through the scheduling context (`ctx.live`). Nothing reaches the real
+club, live scores, rankings, fees or notifications.
+
+Tests: `tests/competition-simulation.test.ts` covers the full flow and `tests/admin-simulation-api.mjs` the
+competition kind.
