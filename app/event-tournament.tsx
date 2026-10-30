@@ -8,6 +8,8 @@ import {eventFormat} from '../lib/domain/match-format';
 import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryLabels,type TournamentFixture} from '../lib/domain/tournament';
 import {balancedPairs} from '../lib/domain/tournament-pairing';
 import TournamentSettings from './tournament-settings';
+import RefereeConsole from './referee-console';
+import LiveScoreboard from './live-scoreboard';
 import type {SchedulingContext} from './event-scheduling';
 import MatchCard from './match-card';
 import TournamentBracket from './tournament-bracket';
@@ -36,7 +38,9 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
  // Balanced partners by 修为 (lib/domain/tournament-pairing.ts); the selects below stay editable afterwards.
  const autoPair=()=>{const result=balancedPairs(eligible.map(id=>({id,score:realm(id),gender:genderOf(id)})),t.category);setPairs(result.teams);setUnpaired(result.left)};
  const label=(id:string|null|undefined)=>id? t.teams.find(x=>x.id===id)?.players.map(name).join(' / ')??'待定':'轮空';
- const [selectedFixture,setSelectedFixture]=useState('');
+ const [selectedFixture,setSelectedFixture]=useState(''),[refereeMatch,setRefereeMatch]=useState(''),[board,setBoard]=useState(false);
+ // Any enabled member who does not play in the fixture can referee it (lib/domain/tournament-commands.ts).
+ const refereeChoices=(playing:string[])=>data.players.filter(p=>p.enabled&&!p.guestEventId&&!playing.includes(p.id)).map(p=>p.id);
  const selectedMatch=t.fixtures.find(f=>f.stage==='knockout'&&f.id===selectedFixture)??t.fixtures.find(f=>f.stage==='knockout'&&data.matches.some(m=>m.id===f.matchId&&m.status==='playing'));
  const champion=tournamentChampion(t,data),started=t.fixtures.some(f=>f.matchId);
  const teams=singles?selected.filter(id=>eligible.includes(id)).map(id=>[id]):pairs;
@@ -53,11 +57,13 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
    <div className="row"><strong>{f.stage==='group'?'小组第 '+f.round+' 轮':'第 '+(f.slot+1)+' 场'}</strong><span className="badge">{m?.status==='playing'?'正在比赛':m?.status==='complete'?'已完成':winner?'轮空晋级':sides.a&&sides.b?'待开赛':'等待晋级'}</span></div>
    <div className="tournament-opponents"><span className={winner===sides.a?'winner':''}>{sides.a===undefined?source(f.fromA):label(sides.a)}</span><b>{m?.scoreA!=null?m.scoreA+' : '+m.scoreB:'VS'}</b><span className={winner===sides.b?'winner':''}>{sides.b===undefined?source(f.fromB):label(sides.b)}</span></div>
    {manager&&active&&!m&&sides.a&&sides.b&&<button type="button" className="secondary" disabled={busy||now<e.start} onClick={()=>start(f)}>安排开赛</button>}
+   {(f.referee||manager&&active)&&<div className="tournament-referee">{manager&&active&&m?.status!=='complete'?<label>裁判<select value={f.referee??''} disabled={busy} onChange={event=>ctx.send('tournamentReferee',{eventId:e.id,fixtureId:f.id,playerId:event.target.value||null})}><option value="">未指定</option>{refereeChoices(t.teams.filter(team=>team.id===sides.a||team.id===sides.b).flatMap(team=>team.players)).map(id=><option key={id} value={id}>{name(id)}</option>)}</select></label>:<span>裁判 · {name(f.referee!)}</span>}</div>}
+   {m&&m.status==='playing'&&!ctx.readOnly&&(manager||f.referee===data.me.playerId)&&<button type="button" className="primary" onClick={()=>setRefereeMatch(m.id)}>裁判记分</button>}
    {m&&<Disclosure label={m.status==='playing'?'录入本场比分':'查看赛果 / 修正比分'} defaultOpen={m.status==='playing'}><MatchCard m={m} ctx={{...ctx,readOnly:ctx.readOnly||f.stage==='group'&&t.phase==='knockout'}}/></Disclosure>}
   </article>;
  };
  return <div className="event-tournament">
-  <section className="card"><p className="eyebrow">{singles?'单打比赛':(t.category?categoryLabels[t.category]:'双打比赛')+' · 固定搭档'}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?<>先打组内单循环，每组前 {t.phase==='setup'?advance:t.advance} 名晋级。小组按胜场、净胜分、总得分排序；完全同分按抽签顺序。淘汰赛按小组名次交叉安排，人数不足整签位时自动轮空。</>:format==='knockout'?'单败淘汰，按修为排种子，种子队在签位不足时轮空。':'所有队伍互相打一场，按胜场、净胜分、总得分排名；完全同分按抽签顺序。'}单打和双打战绩分别进入各自榜单。</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}
+  <section className="card"><p className="eyebrow">{singles?'单打比赛':(t.category?categoryLabels[t.category]:'双打比赛')+' · 固定搭档'}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?<>先打组内单循环，每组前 {t.phase==='setup'?advance:t.advance} 名晋级。小组按胜场、净胜分、总得分排序；完全同分按抽签顺序。淘汰赛按小组名次交叉安排，人数不足整签位时自动轮空。</>:format==='knockout'?'单败淘汰，按修为排种子，种子队在签位不足时轮空。':'所有队伍互相打一场，按胜场、净胜分、总得分排名；完全同分按抽签顺序。'}单打和双打战绩分别进入各自榜单。</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}{t.phase!=='setup'&&<button type="button" className="secondary" onClick={()=>setBoard(true)}>实时比分大屏</button>}
   </section>
   <TournamentSettings key={e.id+':'+t.phase+':'+(t.fee??'')} e={e} ctx={ctx} organiser={organiser}/>
   {manager&&active&&!started&&<Disclosure label={t.phase==='setup'?'选择参赛者与分组':'重新抽签（尚未开打）'} defaultOpen={t.phase==='setup'}>
@@ -72,5 +78,7 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
   {t.groups.map((group,index)=>playerId&&!t.fixtures.some(f=>f.stage==='group'&&f.group===index&&matchesFilter(f))?null:<Disclosure key={index+':'+t.phase+':'+playerId} label={(format==='round-robin'?'循环赛':String.fromCharCode(65+index)+' 组')+' · '+group.length+' '+(singles?'人':'队')} defaultOpen={!!playerId||t.phase==='groups'}><section className="tournament-group"><div className="tournament-table-scroll"><table className="tournament-table"><caption>{format==='round-robin'?'循环赛':String.fromCharCode(65+index)+' 组'}排名</caption><thead><tr><th>名次 / 队伍</th><th>场</th><th>胜</th><th>负</th><th>净胜</th></tr></thead><tbody>{groupStandings(t,data,index).map((row,i)=><tr key={row.id} className={format==='groups'&&i<t.advance?'qualifying':''}><th scope="row">{i+1}. {label(row.id)}{format==='groups'&&i<t.advance&&<small>晋级区</small>}</th><td>{row.played}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.difference}</td></tr>)}</tbody></table></div><div className="tournament-fixtures">{t.fixtures.filter(f=>f.stage==='group'&&f.group===index&&matchesFilter(f)).map(fixture)}</div></section></Disclosure>)}
   {manager&&active&&format==='groups'&&t.phase==='groups'&&<section className="card"><button type="button" className="primary" disabled={busy||!groupComplete(t,data)} onClick={()=>open('确认晋级名单并生成淘汰赛','tournamentKnockout',{eventId:e.id},[],undefined,'按当前小组排名取各组前 '+t.advance+' 名。请先核对比分；生成后小组赛比分封存。')}>生成淘汰赛对战表</button><p className="hint">全部小组赛录分完成后开放。</p></section>}
   {t.phase==='knockout'&&<section className="card"><div className="row"><h2>淘汰赛对战表</h2>{manager&&active&&format==='groups'&&!t.fixtures.some(f=>f.stage==='knockout'&&f.matchId)&&<button type="button" className="ghost" disabled={busy} onClick={()=>open('返回小组赛','tournamentReopen',{eventId:e.id},[],undefined,'清除尚未开打的淘汰赛签位，保留所有小组赛比分，可修正后重新生成晋级名单。')}>返回小组赛</button>}</div>{playerId?<div className="tournament-fixtures">{t.fixtures.filter(f=>f.stage==='knockout'&&matchesFilter(f)).map(fixture)}</div>:<TournamentBracket t={t} data={data} name={name} selected={selectedMatch?.id} onSelect={f=>setSelectedFixture(f.id)}/>} {!playerId&&selectedMatch&&<div className="tournament-selected-match"><h3>所选对局 · {selectedMatch.round===Math.max(...t.fixtures.filter(f=>f.stage==='knockout').map(f=>f.round))?'决赛':'淘汰赛第 '+selectedMatch.round+' 轮'}</h3>{fixture(selectedMatch)}</div>}</section>}
+  {refereeMatch&&data.matches.some(m=>m.id===refereeMatch)&&<RefereeConsole e={e} m={data.matches.find(m=>m.id===refereeMatch)!} ctx={ctx} close={()=>setRefereeMatch('')}/>}
+  {board&&<LiveScoreboard e={e} ctx={ctx} close={()=>setBoard(false)}/>}
  </div>;
 }

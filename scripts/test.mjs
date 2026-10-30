@@ -42,7 +42,7 @@ if (!unitOnly) {
 
     'event-date-repair-api', 'settlement-api', 'requested-thursday-split-api',
     'write-retry-api', 'club-read-api', 'requested-event-merge-api',
-    'trial-cleanup-api', 'push-api', 'fee-reminder-sweep-api', 'bounty-reminder-sweep-api', 'auth-business.integration',
+    'trial-cleanup-api', 'push-api', 'fee-reminder-sweep-api', 'bounty-reminder-sweep-api', 'live-score-api', 'auth-business.integration',
   ];
   for (const suite of suites) run([`tests/${suite}.mjs`]);
 }

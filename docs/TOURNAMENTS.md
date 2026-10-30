@@ -1,6 +1,6 @@
 # Group and knockout tournaments
 
-Use Create competition on Home or Activities. A competition is a distinct event
+Use Create competition on Home or Activities. Live referee scoring and the all-courts board: docs/LIVE_SCORING.md. A competition is a distinct event
 with the existing signups, venue bookings, time-based expenses and permissions.
 It supports singles or fixed-pair doubles; practice and ordinary scheduling remain
 separate and unchanged.

@@ -1,7 +1,7 @@
 import {fail,type Event,type Match} from './types';
 
 export type TournamentTeam={id:string;players:string[]};
-export type TournamentFixture={id:string;stage:'group'|'knockout';group?:number;round:number;slot:number;a?:string;b?:string;fromA?:string;fromB?:string;matchId?:string};
+export type TournamentFixture={id:string;stage:'group'|'knockout';group?:number;round:number;slot:number;a?:string;b?:string;fromA?:string;fromB?:string;matchId?:string;/** The player assigned to referee this fixture on their phone (docs/LIVE_SCORING.md). */referee?:string};
 /** groups: round robin groups, then a knockout. knockout: single elimination from the draw. round-robin: everyone plays
  * everyone once in one table. Competitions created before formats existed are groups. */
 export type TournamentFormat='groups'|'knockout'|'round-robin';

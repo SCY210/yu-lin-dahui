@@ -120,6 +120,13 @@
       "when": 1792019000000,
       "tag": "0016_incremental_club_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1792540000000,
+      "tag": "0017_live_scores",
+      "breakpoints": true
     }
   ]
 }

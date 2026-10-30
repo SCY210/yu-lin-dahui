@@ -43,3 +43,5 @@ export const accountNoticeReceipts=sqliteTable('accountNoticeReceipts',{id:text(
 
 // Opaque browser receipts bind later notification-permission reports to a device.
 export const notificationDevices=sqliteTable('notification_devices',{id:text('id').primaryKey(),accountId:text('account_id').notNull().references(()=>accounts.id,{onDelete:'cascade'}),subscriptionId:text('subscription_id').notNull(),phoneEligible:integer('phone_eligible').notNull().default(0),active:integer('active').notNull().default(1),createdAt:integer('created_at').notNull()},t=>[uniqueIndex('notification_devices_account_subscription').on(t.accountId,t.subscriptionId)]);
+/** Live referee scores (drizzle/0017_live_scores.sql, docs/LIVE_SCORING.md). */
+export const liveScores=sqliteTable('live_scores',{matchId:text('match_id').primaryKey(),eventId:text('event_id').notNull(),payload:payload(),version:integer('version').notNull(),updatedAt:integer('updated_at').notNull()},t=>[index('live_scores_event').on(t.eventId)]);
