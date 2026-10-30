@@ -14,7 +14,7 @@ await build({stdin:{contents:`export {GET,POST} from './app/api/club/route';expo
  builder.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'fixture'}));builder.onResolve({filter:/(?:^|\/)auth$/},()=>({path:'auth',namespace:'fixture'}));
  builder.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({loader:'js',contents:path==='env'?'export const env=globalThis.__streakFixture.env;':'export const getAppUser=async()=>globalThis.__streakFixture.user;export const passwordEnabled=async()=>true;'}));
 }}]});
-await build({entryPoints:['app/ranking-view.tsx'],outfile:'.test-output/winning-streak-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*'],loader:{'.css':'empty'},plugins:[{name:'streak-ui-shells',setup(builder){
+await build({entryPoints:['app/ranking-view.tsx'],outfile:'.test-output/winning-streak-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','lucide-react'],loader:{'.css':'empty'},plugins:[{name:'streak-ui-shells',setup(builder){
  builder.onResolve({filter:/^\.\//},a=>a.importer.replaceAll('\\','/').endsWith('/app/ranking-view.tsx')&&!a.path.endsWith('.css')?{path:a.path,namespace:'ui'}:undefined);
  builder.onLoad({filter:/.*/,namespace:'ui'},({path})=>({loader:'js',contents:path==='./disclosure'?`export default function Disclosure({children}){return children}`:path==='./avatar'?`export const Avatar=()=>null;`:path==='./realm-badge'?`export default function Badge(){return null}export const PlacementBadge=()=>null;`:path==='./month-picker'?`export const QuarterPicker=()=>null,YearPicker=()=>null;`:`export default function Shell(){return null}`}));
 }}]});

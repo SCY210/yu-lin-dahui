@@ -65,3 +65,18 @@
 /* Streak signs (bagua, swords, clouds, rune rings) reach up to about 11px beyond the avatar; keep the name and
    realm tag clear of them. Every row gets the same space so names stay aligned. */
 .leaderboard-row>.ranking-person{padding-left:10px}
+
+/* Points breakdown (docs/RANKING_POINTS_BREAKDOWN.md): a toggle under the total and a panel across the whole row. */
+.rv-breakdown-toggle{display:inline-flex;align-items:center;gap:2px;min-height:44px;padding:0 4px;border:0;background:transparent;color:#735098;font:inherit;font-size:13px;cursor:pointer}
+.rv-breakdown-toggle svg{transition:transform .15s}
+.rv-breakdown-toggle[aria-expanded=true] svg{transform:rotate(180deg)}
+.rv-breakdown-toggle:focus-visible{outline:3px solid #a897e9;outline-offset:2px;border-radius:6px}
+.rv-breakdown{grid-column:1/-1;min-width:0;padding:12px 14px;border:1px solid #e4ddeb;border-radius:12px;background:#fcfaff;color:#625073;font-size:14px;line-height:1.5}
+.rv-breakdown dl{display:grid;gap:6px;margin:0}
+.rv-breakdown dl>div,.rv-breakdown-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.rv-breakdown dt{min-width:0;color:#7f728c}
+.rv-breakdown dd{margin:0;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rv-breakdown dl+.rv-breakdown-total{margin-top:8px;padding-top:8px;border-top:1px solid #e4ddeb}
+.rv-breakdown-total{font-weight:700}
+.rv-breakdown-note{margin:8px 0 0;color:#8a739b;font-size:12px}
+.wuxia-theme .rv-breakdown-toggle{color:#7a5232}.wuxia-theme .rv-breakdown{background:#fbf6ea;border-color:#e0cfaa;color:#5f4630}.wuxia-theme .rv-breakdown dl+.rv-breakdown-total{border-top-color:#e0cfaa}
