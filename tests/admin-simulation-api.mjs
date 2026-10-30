@@ -51,5 +51,14 @@ try{
  assert.equal(toggled.status,200,JSON.stringify(await toggled.clone().json()));assert.equal(oddsLoads,0,'no full club load for the odds');
  assert.deepEqual(JSON.parse(sql.prepare("SELECT payload FROM settings WHERE id='admin-simulation-v1'").get().payload).state.settings.pairingOdds,[{eventId:'sim-event',defaults:[{players:['sim-player-1'],targets:['sim-player-2'],percent:100}],conditions:[]}],'carried onto the sandbox players');
  assert.ok(!JSON.stringify(await (await api.GET()).json()).includes('pairingOdds'),'never in the simulation view');
+ // The competition sandbox is a separate document behind the same access checks.
+ const activityRow=sql.prepare("SELECT payload FROM settings WHERE id='admin-simulation-v1'").get().payload,clubBefore=await api.load();
+ user('real-member');assert.equal((await post({...initialize(),kind:'competition'})).status,403);user('real-owner');
+ let cup=await (await post({...initialize(),kind:'competition'})).json();assert.ok(cup.data.events[0].tournament,'a competition');assert.deepEqual(cup.live,{});
+ const read=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.equal(read.revision,cup.revision);
+ const settings={kind:'competition',...request(cup,'tournamentSettings',{eventId:cup.data.events[0].id,format:'knockout',category:null,scoring:{games:3,points:21},fee:1500})};
+ assert.equal((await post(settings)).status,200);cup=await (await api.GET(new Request(origin+'/api/simulation?kind=competition'))).json();assert.equal(cup.data.events[0].tournament.format,'knockout');
+ assert.equal((await post({kind:'competition',...request(cup,'notifyFees',{eventId:'real-event'})})).status,400);
+ assert.equal(sql.prepare("SELECT payload FROM settings WHERE id='admin-simulation-v1'").get().payload,activityRow,'the activity sandbox is untouched');assert.deepEqual(await api.load(),clubBefore);
  console.log('PASS admin simulation API: stored owner/admin/tester authorization, member/login refusal, CSRF, isolated persistence, shared admins, durable real scheduler, real member snapshots, legacy upgrade, one-time late points, rollback, idempotence, reset races, byte-identical real club state and the current production pairing odds');
 }finally{sql.close();delete globalThis.__simulationApiTest}

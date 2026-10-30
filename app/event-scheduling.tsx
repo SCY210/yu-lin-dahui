@@ -1,4 +1,5 @@
 'use client';
+import type {LiveOp,LiveScore} from '../lib/domain/live-score';
 import EventRanking from './event-ranking';
 import PointsAttendance from './points-attendance';
 import EventTournament from './event-tournament';
@@ -27,7 +28,7 @@ import MatchPlayerFilter from './match-player-filter';
 import {eventMatchPlayerIds,matchIncludesPlayer} from '../lib/client/match-player-filter';
 import {currentRoundSelection} from '../lib/client/lineup-sync';
 type FormOpen=(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:(v:Record<string,unknown>)=>Record<string,unknown>,description?:string)=>void;
-export type SchedulingContext={matchPlayerId?:string;data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
+export type SchedulingContext={/** The competition sandbox keeps live scores in its own document (lib/competition-simulation.ts). */live?:{scores:Record<string,LiveScore>;send:(op:LiveOp)=>Promise<LiveScore>};matchPlayerId?:string;data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
 const compareRounds=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefined?a.pointsSlot-b.pointsSlot:0)||a.start-b.start||a.id.localeCompare(b.id);
 export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canScheduleEvent(ctx.data.me,e);
