@@ -7,3 +7,4 @@
 .simulation-choice strong{font-size:18px}
 .simulation-choice span{font-size:14px;opacity:.75}
 .simulation-steps{margin:8px 0;padding-left:22px;display:grid;gap:4px;font-size:14px}
+.simulation-signups{display:grid;gap:6px}.simulation-signups .row{align-items:center;gap:8px}

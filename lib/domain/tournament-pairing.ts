@@ -16,7 +16,9 @@ export function balancedPairs(players:PairingCandidate[],category?:TournamentCat
   const m=men.slice(0,n).sort(byScore),w=women.slice(0,n).sort(byScore).reverse();
   teams=m.map((x,i)=>[x,w[i]]);
  }else{
-  const n=players.length-players.length%2,sorted=players.slice(0,n).sort(byScore);left=players.slice(n);
+  // Men's doubles pair men only; anyone else waits in `left`.
+  if(category==='mens-doubles'){left=players.filter(p=>p.gender!=='male');players=players.filter(p=>p.gender==='male')}
+  const n=players.length-players.length%2,sorted=players.slice(0,n).sort(byScore);left=[...players.slice(n),...left];
   for(let i=0;i<n/2;i++)teams.push([sorted[i],sorted[n-1-i]]);
  }
  const total=(t:Team)=>t[0].score+t[1].score,mean=teams.reduce((sum,t)=>sum+total(t),0)/(teams.length||1),cost=(t:Team)=>(total(t)-mean)**2;

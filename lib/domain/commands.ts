@@ -9,7 +9,7 @@ import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
 import {applyTournament} from './tournament-commands';
-import {newTournament,assertTournamentScore} from './tournament';
+import {newTournament,assertTournamentScore,matchRule,categoryFits} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
@@ -63,7 +63,7 @@ export function authorized(a: Account, action: string) { if (!['bonusSeen', 'gue
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
-    event: z.object({ ranked:z.boolean().optional(), tournament:z.boolean().optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), advancedBy: pid, handovers: z.array(z.object({ at: time, advancedBy: pid })).min(1).max(20).optional() })).min(1).max(20), practiceBallBy: pid.optional() }),
+    event: z.object({ ranked:z.boolean().optional(), tournament:z.boolean().optional(), /** A competition's category (lib/domain/tournament.ts); open singles has none. */category:z.enum(['mens-singles','mens-doubles','mixed-doubles']).optional(), title: text.optional(), matchFormat:z.enum(['singles','doubles','practice']).default('doubles'), start: time, end: time, venue: text, address: z.string().max(300), capacity: z.number().int().min(1).max(500), practiceShuttleCents:cents.optional(), practiceBallCount:z.number().int().min(0).max(10000).optional(), signupDeadline: time.optional(), cancelDeadline: time, note: z.string().max(2000), status: z.enum(['draft', 'open']), bookings: z.array(z.object({ name: text, start: time, end: time, pricing: z.enum(['hourly', 'total']), cents, signupCapacity: z.number().int().min(1).max(500).optional(), advancedBy: pid, handovers: z.array(z.object({ at: time, advancedBy: pid })).min(1).max(20).optional() })).min(1).max(20), practiceBallBy: pid.optional() }),
     eventStatus: z.object({ eventId: pid, status: z.enum(['draft', 'open', 'locked', 'live', 'ended', 'cancelled']) }),
     deleteEvent: z.object({ eventId: pid, reason }), restoreEvent: z.object({ eventId: pid, reason }),
     eventRanking: z.object({eventId:pid,ranked:z.boolean(),expectedRanked:z.boolean()}),
@@ -183,11 +183,11 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
-            const { bookings, practiceShuttleCents, practiceBallCount, practiceBallBy, tournament, ...details } = p;
+            const { bookings, practiceShuttleCents, practiceBallCount, practiceBallBy, tournament, category, ...details } = p;
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
-            if(tournament){e.tournament=newTournament();e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
+            if(tournament){e.tournament=newTournament();if(category){if(!categoryFits(category,p.matchFormat==='singles'))fail('项目与单打 / 双打不一致');e.tournament.category=category}e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
             // New activities record who advanced every court slot and expense (docs/FEE_ADVANCES.md).
             e.feeAdvances = true;
             s.events.push(e);
@@ -570,7 +570,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('实时排场按一局结束，请每局录入一次比分');
             if (m.playMode === 'koc' && games.length > 1)
                 fail('个人轮转采用一局制，每局结束后重新排搭档');
-            if (!matchEvent.tournament?.scoring && games.some(g => !validScore(g.a, g.b, rules)))
+            if (!matchRule(matchEvent.tournament, m.id) && games.some(g => !validScore(g.a, g.b, rules)))
                 fail('终局比分不符合目标分、领先分与封顶规则');
             if (games.length > 1) {
                 let aw = 0, bw = 0;

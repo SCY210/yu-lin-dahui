@@ -56,25 +56,35 @@ The sandbox entry and route use the server-projected capability. Every sandbox r
 
 ## Competition sandbox
 
-The competition sandbox runs a whole competition on member snapshots (`lib/competition-simulation.ts`). It covers
-format, category, scoring and entry fee, the draw, starting fixtures on courts, referees, live referee scoring, the
-knockout, results and the archive. It copies up to sixteen enabled, account-backed members, with the same snapshot
-rules as the activity sandbox. All of them are confirmed for a competition with four courts that waits for its format
-and draw. Reset can choose doubles or singles.
+The competition sandbox debugs a competition end to end without opening a real one (`lib/competition-simulation.ts`).
+It follows the real flow and runs it on the real pages:
+
+1. **Create.** The sandbox starts with up to sixteen member snapshots, taken with the same rules as the activity
+   sandbox, and no competition. The organiser creates it with the real create form: category, time, venue and courts.
+2. **Sign up.** Members sign up through the same court signup as the real page. The sandbox can sign up or cancel any
+   member, or sign everyone up at once.
+3. **Run.** The real activity page takes over: signups, the competition tab (settings, draw, fixtures, referees,
+   referee scoring, knockout, results and archive) and the fee tab (entry fee confirmation and payment marks).
+
+A competition is created for tomorrow, as in the real form. "Move to the start" shifts the whole competition, with its
+courts and signups, so it starts now. Only one competition exists at a time; reset clears it and refreshes the member
+snapshots.
 
 It is a separate settings row (`admin-simulation-competition-v1`), behind the same access checks, revisions and request
 receipts as the activity sandbox. Requests name it with `kind: 'competition'` (`GET /api/simulation?kind=competition`).
-Only the competition commands, score entry and the fee preview run inside it.
+Its document keeps its progress until it is reset. Only competition creation, signups, fees and the activity commands
+run inside it, never club-wide commands.
 
-Two shortcuts make the whole flow quick:
+Two shortcuts make the flow quick:
 
 - **Start ready fixtures** puts the next ready fixtures on every free court.
-- **Finish matches in play** records a random result for every match in play. The result follows the scoring rule, and
-  the stronger side by realm score wins more often. A match the referee finished live keeps the referee's score.
+- **Finish matches in play** records a random result for every match in play. The result follows the rule of that
+  match's stage, and the stronger side by realm score wins more often. A match the referee finished live keeps the
+  referee's score.
 
 Live referee scoring keeps its point log inside the sandbox document instead of the `live_scores` table. The referee
 page and the board use the same components through the scheduling context (`ctx.live`). Nothing reaches the real
 club, live scores, rankings, fees or notifications.
 
-Tests: `tests/competition-simulation.test.ts` covers the full flow and `tests/admin-simulation-api.mjs` the
-competition kind.
+Tests: `tests/competition-simulation.test.ts` runs the full flow from the create form to the archive.
+`tests/admin-simulation-api.mjs` covers the competition kind, and `tests/admin-simulation-ui.mjs` the chooser.

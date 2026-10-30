@@ -1,7 +1,7 @@
 'use client';
 import {Archive,Trophy} from 'lucide-react';
 import type {Event} from '../lib/domain/types';
-import {categoryLabels,formatLabels,tournamentFormat,type Tournament} from '../lib/domain/tournament';
+import {categoryName,formatLabels,tournamentFormat,type Tournament} from '../lib/domain/tournament';
 import {tournamentResults,type TournamentArchive} from '../lib/domain/tournament-results';
 import type {SchedulingContext} from './event-scheduling';
 import './tournament-results.css';
@@ -35,7 +35,7 @@ export function PastTournaments({events,onOpen}:{events:Event[];onOpen:(id:strin
  const champion=(t:Tournament)=>t.archive!.results.filter(r=>r.place===1).map(r=>r.players.map(p=>p.name).join(' / ')).join('、');
  return <section className="event-group past-tournaments"><div className="section-title"><h2>往届比赛</h2><span className="badge">{past.length}</span></div>
   {past.map(e=>{const t=e.tournament!;return <button type="button" key={e.id} className="past-tournament" onClick={()=>onOpen(e.id)}>
-   <span className="past-tournament-title"><strong>{e.title}</strong><small>{day.format(e.start)} · {formatLabels[tournamentFormat(t)]}{t.category?' · '+categoryLabels[t.category]:''} · {t.teams.length} 队</small></span>
+   <span className="past-tournament-title"><strong>{e.title}</strong><small>{day.format(e.start)} · {formatLabels[tournamentFormat(t)]}{' · '+categoryName(t,e.matchFormat==='singles')} · {t.teams.length} 队</small></span>
    <span className="past-tournament-champion">🏆 {champion(t)}</span>
   </button>})}
  </section>;

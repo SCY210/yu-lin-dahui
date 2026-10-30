@@ -15,8 +15,9 @@ function fixture(singles=false,count=8){
  return {s,e,a:s.accounts[0],teams};
 }
 test('competition creation keeps ordinary forms and practice intact',async()=>{
- const {s,a}=fixture(),form=newEventForm(now,true);assert.equal(form.title,'创建比赛');assert.ok(!form.fields.find(f=>f.key==='matchFormat')!.options!.some(o=>o[0]==='practice'));
- const payload=form.convert!({...form.values,courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),venue:'Fixture venue'});await apply(s,a,form.action,payload,now);assert.equal(s.events[1].tournament!.phase,'setup');assert.match(s.events[1].title,/双打比赛$/);assert.equal(s.events[1].pointsPlan,undefined);
+ const {s,a}=fixture(),form=newEventForm(now,true);assert.equal(form.title,'创建比赛');assert.equal(form.fields.find(f=>f.key==='matchFormat'),undefined,'a competition picks its category instead');assert.deepEqual(form.fields.find(f=>f.key==='category')!.options!.map(o=>o[0]),['singles','mens-singles','mens-doubles','mixed-doubles']);
+ const payload=form.convert!({...form.values,courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),venue:'Fixture venue'});await apply(s,a,form.action,payload,now);assert.equal(s.events[1].tournament!.phase,'setup');assert.match(s.events[1].title,/双打比赛$/);assert.equal(s.events[1].pointsPlan,undefined);assert.equal(s.events[1].tournament!.category,'mens-doubles','the default category');assert.deepEqual(s.events[1].tournament!.knockoutScoring,{games:3,points:21});
+ await assert.rejects(()=>apply(s,a,'event',{...payload,matchFormat:'singles'},now),/项目与单打/);const singles=form.convert!({...form.values,category:'mens-singles',courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),venue:'Fixture venue'});assert.equal(singles.matchFormat,'singles');assert.equal(singles.category,'mens-singles');assert.equal(form.convert!({...form.values,category:'singles',courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),venue:'Fixture venue'}).category,undefined,'open singles has no category');
  const ordinary=newEventForm(now);assert.equal(ordinary.values.tournament,false);assert.ok(ordinary.fields[0].options!.some(o=>o[0]==='practice'));
  await assert.rejects(()=>apply(s,a,'event',{...payload,matchFormat:'practice',note:'Practice'},now),/只能选择/);
 });

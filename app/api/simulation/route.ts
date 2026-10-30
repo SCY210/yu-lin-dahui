@@ -20,7 +20,7 @@ async function simulationUser(){
 type Kind=z.infer<typeof kindSchema>;
 const keyOf=(kind:Kind)=>kind==='competition'?competitionSimulationKey:simulationKey;
 const viewOf=(doc:SimulationDocument,now:number)=>(doc as CompetitionSimulationDocument).kind==='competition'?competitionView(doc as CompetitionSimulationDocument,now):simulationView(doc,now);
-async function readDocument(kind:Kind='activity'){const row=await raw().prepare('SELECT payload FROM settings WHERE id=?').bind(keyOf(kind)).first<{payload:string}>();if(!row)return null;const doc=JSON.parse(row.payload) as SimulationDocument;if(![1,2].includes(doc.version)||!Number.isSafeInteger(doc.revision)||!doc.state?.events?.length||!Array.isArray(doc.requests))throw new Error('Invalid simulation document');return doc}
+async function readDocument(kind:Kind='activity'){const row=await raw().prepare('SELECT payload FROM settings WHERE id=?').bind(keyOf(kind)).first<{payload:string}>();if(!row)return null;const doc=JSON.parse(row.payload) as SimulationDocument;if(![1,2].includes(doc.version)||!Number.isSafeInteger(doc.revision)||!Array.isArray(doc.state?.events)||kind==='activity'&&!doc.state.events.length||!Array.isArray(doc.requests))throw new Error('Invalid simulation document');return doc}
 /** Only what the sandbox needs to follow production pairing odds, without loading the club's history. */
 async function pairingOddsSource():Promise<Pick<State,'events'|'settings'>>{
  const row=await raw().prepare('SELECT payload FROM settings WHERE id=?').bind('club').first<{payload:string}>();
@@ -34,7 +34,8 @@ export async function POST(req:Request){
  try{
   assertWriteRequest(req);const accountId=await simulationUser(),p=requestSchema.parse(await readJsonBody(req));
   if(p.action==='initialize'){
-   const existing=await readDocument(p.kind);if(existing?.version===2&&existing.state.events[0].end>Date.now())return response(viewOf(existing,Date.now()));
+   const existing=await readDocument(p.kind);// The competition sandbox keeps its progress until reset; the activity sandbox renews once its activity is over.
+   if(existing?.version===2&&(p.kind==='competition'||existing.state.events[0].end>Date.now()))return response(viewOf(existing,Date.now()));
    const doc=p.kind==='competition'?createCompetitionSimulation(Date.now(),await load()):createSimulation(Date.now(),await load());
    if(existing){doc.revision=existing.revision+1;doc.state.revision=doc.revision;await raw().prepare(`UPDATE settings SET payload=? WHERE id=? AND json_extract(payload,'$.version') IN (1,2) AND json_extract(payload,'$.revision')=? AND EXISTS(SELECT 1 FROM accounts WHERE id=? AND ${accessSql})`).bind(JSON.stringify(doc),keyOf(p.kind),existing.revision,accountId).run()}
    else await raw().prepare(`INSERT INTO settings(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM accounts WHERE id=? AND ${accessSql}) ON CONFLICT(id) DO NOTHING`).bind(keyOf(p.kind),JSON.stringify(doc),accountId).run();

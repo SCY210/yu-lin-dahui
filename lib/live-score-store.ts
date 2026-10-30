@@ -1,6 +1,6 @@
 import {raw} from './store';
 import {applyLiveOp,canRefereeMatch,type LiveOp,type LiveScore} from './domain/live-score';
-import {defaultScoring} from './domain/tournament';
+import {defaultScoring,matchRule} from './domain/tournament';
 import {eventStatusAt} from './domain/event-lifecycle';
 import type {Account,Event,Match} from './domain/types';
 
@@ -33,7 +33,7 @@ export async function applyLiveScore(account:Pick<Account,'id'|'role'|'playerId'
   if(!prior&&match.status!=='playing')throw new LiveScoreError('请先在对战表中安排开赛',409);
   if(match.status==='complete'&&op.op!=='swap')throw new LiveScoreError('比分已经提交，如需修改请在对战表中修正比分',409);
   let next:LiveScore;
-  try{next=applyLiveOp(prior,op,event.tournament.scoring??defaultScoring,{matchId:match.id,eventId:event.id},now)}catch(error){throw new LiveScoreError(error instanceof Error?error.message:'操作无效',409)}
+  try{next=applyLiveOp(prior,op,matchRule(event.tournament,match.id)??defaultScoring,{matchId:match.id,eventId:event.id},now)}catch(error){throw new LiveScoreError(error instanceof Error?error.message:'操作无效',409)}
   const write=prior
    ?await db.prepare('UPDATE live_scores SET payload=?,version=?,updated_at=? WHERE match_id=? AND version=?').bind(JSON.stringify(next),next.version,now,match.id,prior.version).run()
    :await db.prepare('INSERT INTO live_scores(match_id,event_id,payload,version,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(match_id) DO NOTHING').bind(match.id,event.id,JSON.stringify(next),next.version,now).run();

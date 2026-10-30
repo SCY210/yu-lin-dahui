@@ -1,0 +1,31 @@
+/* All-courts board (app/live-scoreboard.tsx): the app's theme colours, one card per court, sides left and right. */
+.live-board{position:fixed;inset:0;z-index:80;display:grid;grid-template-rows:auto 1fr;gap:16px;padding:max(16px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 24px;overflow:auto;color:var(--foreground);background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--primary) 14%,var(--background)),var(--background) 60%)}
+.live-board-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.live-board-top h2{margin:0;font-size:clamp(20px,2.6vw,30px)}
+.live-board-top small{color:var(--muted-foreground)}
+.live-board-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:clamp(12px,2vw,20px);align-content:start}
+.board-court{display:grid;gap:10px;padding:clamp(12px,1.8vw,20px);border-radius:22px;background:var(--card);border:1px solid var(--border);box-shadow:0 8px 24px color-mix(in srgb,var(--foreground) 8%,transparent)}
+.board-court.is-playing{border-color:color-mix(in srgb,var(--primary) 55%,var(--border));box-shadow:0 8px 28px color-mix(in srgb,var(--primary) 22%,transparent)}
+.board-court-head{display:flex;align-items:center;gap:10px;font-size:clamp(13px,1.5vw,17px);color:var(--muted-foreground)}
+.board-court-head strong{color:var(--foreground);font-size:clamp(15px,1.8vw,20px)}
+.board-state{margin-left:auto;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--foreground) 6%,transparent);font-variant-numeric:tabular-nums}
+.board-court.is-playing .board-state{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+.board-court.is-paused .board-state{background:#f59e0b26;color:#b45309}
+.board-court-body{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(8px,1.5vw,18px)}
+.board-team{display:grid;gap:6px;min-width:0}
+.board-team.is-left{justify-items:start;text-align:left}
+.board-team.is-right{justify-items:end;text-align:right}
+.board-avatars{display:flex}
+.board-avatars .avatar+.avatar{margin-left:-12px}
+.avatar.board-avatar{width:clamp(44px,7vw,76px);height:clamp(44px,7vw,76px);border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px var(--card)}
+.board-names{display:grid;gap:2px;font-weight:700;font-size:clamp(14px,1.8vw,20px);overflow-wrap:anywhere;line-height:1.25}
+.board-team.is-winner .board-names{color:var(--primary)}
+.board-score{display:grid;justify-items:center;gap:4px}
+.board-digits{display:flex;align-items:baseline;gap:clamp(6px,1vw,12px);font:800 clamp(44px,7vw,96px)/1 ui-rounded,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.board-digits i{font-style:normal;font-size:.55em;color:var(--muted-foreground)}
+.board-digits .is-winner{color:var(--primary)}
+.board-games{display:flex;gap:6px;font-size:clamp(12px,1.4vw,16px);color:var(--muted-foreground)}
+.board-games span{padding:1px 8px;border-radius:8px;background:color-mix(in srgb,var(--foreground) 6%,transparent);font-variant-numeric:tabular-nums}
+.board-final{color:var(--muted-foreground)}
+.live-board-empty{color:var(--muted-foreground);text-align:center;padding:40px 0}
+@media(max-width:520px){.board-court-body{grid-template-columns:1fr auto 1fr;gap:6px}.board-avatars .avatar+.avatar{margin-left:-14px}}

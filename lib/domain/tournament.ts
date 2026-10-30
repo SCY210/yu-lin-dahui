@@ -6,18 +6,27 @@ export type TournamentFixture={id:string;stage:'group'|'knockout';group?:number;
 /** groups: round robin groups, then a knockout. knockout: single elimination from the draw. round-robin: everyone plays
  * everyone once in one table. Competitions created before formats existed are groups. */
 export type TournamentFormat='groups'|'knockout'|'round-robin';
-/** Doubles may be men's or mixed (one man and one woman per team); unset doubles take anyone. */
-export type TournamentCategory='mens-doubles'|'mixed-doubles';
+/** Singles is open to everyone unless men's singles; doubles are men's or mixed (one man and one woman per team).
+ * Doubles competitions created before categories have none and take anyone. */
+export type TournamentCategory='mens-singles'|'mens-doubles'|'mixed-doubles';
 /** Games per match (1, or best of 3), points to win a game, and the cap after deuce (docs/TOURNAMENTS.md). */
 export type ScoringRule={games:1|3;points:11|15|21};
-export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;scoring?:ScoringRule;/** Entry fee per player in cents; set, it replaces the court and shuttle split. */fee?:number;/** Set when archived: the final results as they stood (lib/domain/tournament-results.ts). */archive?:TournamentArchive};
+export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;/** The group stage (and round robin) rule. */scoring?:ScoringRule;/** The knockout rule; unset, the knockout follows `scoring`. */knockoutScoring?:ScoringRule;/** Entry fee per player in cents; set, it replaces the court and shuttle split. */fee?:number;/** Set when archived: the final results as they stood (lib/domain/tournament-results.ts). */archive?:TournamentArchive};
 export const defaultScoring:ScoringRule={games:3,points:21};
 export const emptyTournament=():Tournament=>({phase:'setup',teams:[],groups:[],advance:2,fixtures:[]});
 /** New competitions: groups then knockout, best of three games to 21, until the organisers choose otherwise. */
-export const newTournament=():Tournament=>({...emptyTournament(),format:'groups',scoring:{...defaultScoring}});
+export const newTournament=():Tournament=>({...emptyTournament(),format:'groups',scoring:{...defaultScoring},knockoutScoring:{...defaultScoring}});
+/** The rule of a stage: group fixtures use `scoring`, knockout fixtures `knockoutScoring` (docs/TOURNAMENTS.md). */
+export function stageRule(t:Pick<Tournament,'scoring'|'knockoutScoring'>,stage:TournamentFixture['stage']){return stage==='knockout'?t.knockoutScoring??t.scoring:t.scoring}
+/** The rule of one competition match, or undefined for competitions without rules and other matches. */
+export function matchRule(t:Pick<Tournament,'scoring'|'knockoutScoring'|'fixtures'>|undefined,matchId:string){const f=t?.fixtures.find(f=>f.matchId===matchId);return t&&f?stageRule(t,f.stage):undefined}
 export const tournamentFormat=(t:Tournament)=>t.format??'groups';
 export const formatLabels:Record<TournamentFormat,string>={groups:'小组赛 → 淘汰赛',knockout:'单败淘汰赛','round-robin':'单循环赛'};
-export const categoryLabels:Record<TournamentCategory,string>={'mens-doubles':'男双','mixed-doubles':'混双'};
+export const categoryLabels:Record<TournamentCategory,string>={'mens-singles':'男单','mens-doubles':'男双','mixed-doubles':'混双'};
+/** What the competition is, for titles and lists: 单打, 男单, 男双, 混双, or 双打 for doubles without a category. */
+export const categoryName=(t:Pick<Tournament,'category'>,singles:boolean)=>t.category?categoryLabels[t.category]:singles?'单打':'双打';
+/** Whether a category fits the activity's singles or doubles format. */
+export const categoryFits=(category:TournamentCategory,singles:boolean)=>(category==='mens-singles')===singles;
 /** After deuce a game goes on until one side leads by two, and the side reaching the cap wins outright (21 → 30). */
 export const scoringCap=(r:ScoringRule)=>r.points===21?30:r.points===15?21:15;
 export const scoringLabel=(r:ScoringRule)=>(r.games===3?'三局两胜':'一局定胜负')+' · '+r.points+' 分制（'+(r.points-1)+' 平后领先 2 分，'+(scoringCap(r)-1)+' 平后先到 '+scoringCap(r)+' 分胜）';
@@ -30,7 +39,9 @@ type Gendered={id:string;name:string;profile?:{gender?:string};guestGender?:stri
 const gender=(p:Gendered)=>p.profile?.gender??p.guestGender;
 /** Why a team does not fit the category, or null. Gender comes from the player profile (or a guest's gender). */
 export function categoryProblem(category:TournamentCategory|undefined,team:Gendered[]){
- if(!category||team.length!==2)return null;
+ if(!category)return null;
+ if(category==='mens-singles')return team.some(p=>gender(p)!=='male')?'男单只限男球友：'+team.filter(p=>gender(p)!=='male').map(p=>p.name).join('、')+' 的资料性别不是男':null;
+ if(team.length!==2)return null;
  const missing=team.filter(p=>!['male','female'].includes(gender(p)??''));
  if(category==='mens-doubles'&&team.some(p=>gender(p)!=='male'))return '男双只限男球友：'+team.filter(p=>gender(p)!=='male').map(p=>p.name).join('、')+' 的资料性别不是男';
  if(category==='mixed-doubles'){
@@ -68,7 +79,7 @@ export function assertTournamentScore(s:TournamentData,e:Event,m:Match,a:number,
  const t=e.tournament;if(!t)return;
  const f=t.fixtures.find(f=>f.matchId===m.id);if(!f)fail('比赛不属于当前赛事对战表');
  if(voiding)fail('赛事对局不能作废或弃权，请录入有效比分');
- const rule=t.scoring;
+ const rule=stageRule(t,f.stage);
  if(rule&&games.length){
   if(rule.games===3&&games.length<2)fail('本赛事三局两胜，请录入每一局的比分');
   if(rule.games===1&&games.length>1)fail('本赛事一局定胜负，只录入一局');

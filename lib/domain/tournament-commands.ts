@@ -8,11 +8,11 @@ import {validateRound} from './grouping';
 import {fail,month,type State,type Account,type Match} from './types';
 import {isClubOwner} from './ownership';
 import {tournamentResults} from './tournament-results';
-import {categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type TournamentFixture} from './tournament';
-const id=z.string().min(1).max(100);
+import {categoryFits,categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type TournamentFixture} from './tournament';
+const id=z.string().min(1).max(100),rule=z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict();
 const schemas={
  tournamentDraw:z.object({eventId:id,teams:z.array(z.array(id).min(1).max(2)).min(2).max(32),groups:z.number().int().min(2).max(8).default(2),advance:z.number().int().min(1).max(4).default(2),seed:z.number().int().min(1).max(2147483647),/** Knockout only: teams are already in seed order (strongest first) instead of drawn at random. */seeded:z.boolean().optional()}),
- tournamentSettings:z.object({eventId:id,format:z.enum(['groups','knockout','round-robin']),category:z.enum(['mens-doubles','mixed-doubles']).nullable(),scoring:z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict(),fee:z.number().int().min(0).max(100000).nullable()}),
+ tournamentSettings:z.object({eventId:id,format:z.enum(['groups','knockout','round-robin']),category:z.enum(['mens-singles','mens-doubles','mixed-doubles']).nullable(),scoring:rule,/** The knockout rule; omitted, the knockout follows `scoring`. */knockoutScoring:rule.optional(),fee:z.number().int().min(0).max(100000).nullable()}),
  tournamentKnockout:z.object({eventId:id}),tournamentReopen:z.object({eventId:id}),
  tournamentStart:z.object({eventId:id,fixtureId:id,courtId:id}),
  tournamentReferee:z.object({eventId:id,fixtureId:id,playerId:id.nullable()}),
@@ -46,12 +46,15 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   const p=c.payload;
   if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 只有群主和管理员可以设置赛制和报名费');
   if(e.status==='cancelled')fail('比赛已取消');
-  const category=teamSize(e)===2?p.category??undefined:undefined;
-  const changed=p.format!==tournamentFormat(t)||category!==t.category||JSON.stringify(p.scoring)!==JSON.stringify(t.scoring);
+  const category=p.category??undefined,singles=teamSize(e)===1;
+  if(category&&!categoryFits(category,singles))fail(singles?'单打比赛只能选择单打或男单':'双打比赛只能选择男双或混双');
+  if(!singles&&!category&&t.category)fail('双打比赛请选择男双或混双');
+  const knockoutScoring=p.knockoutScoring??p.scoring;
+  const changed=p.format!==tournamentFormat(t)||category!==t.category||JSON.stringify(p.scoring)!==JSON.stringify(t.scoring)||JSON.stringify(knockoutScoring)!==JSON.stringify(t.knockoutScoring??t.scoring);
   if(changed&&t.phase!=='setup')fail('抽签后不能更改赛制、项目或计分规则；可以继续调整报名费');
-  t.format=p.format;t.scoring=p.scoring;if(category)t.category=category;else delete t.category;
+  t.format=p.format;t.scoring=p.scoring;t.knockoutScoring=knockoutScoring;if(category)t.category=category;else delete t.category;
   if(p.fee===null)delete t.fee;else t.fee=p.fee;
-  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,fee:p.fee}});return true;
+  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,knockoutScoring,fee:p.fee}});return true;
  }
  if(c.action==='tournamentArchive'){
   // One click files a finished competition under past competitions with its results frozen, names included.
@@ -78,7 +81,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
    if(format==='round-robin'&&p.teams.length>16)fail('单循环最多 16 队');
    let seed=p.seed>>>0;const shuffled=p.teams.map(players=>({id:crypto.randomUUID(),players}));
    if(!(format==='knockout'&&p.seeded))for(let i=shuffled.length-1;i>0;i--){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const j=seed%(i+1);[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]}
-   const settings={format:t.format,category:t.category,scoring:t.scoring,fee:t.fee};
+   const settings={format:t.format,category:t.category,scoring:t.scoring,knockoutScoring:t.knockoutScoring,fee:t.fee};
    if(format==='knockout'){e.tournament={...settings,phase:'knockout',teams:shuffled,groups:[],advance:1,fixtures:bracket(seededFirstRound(shuffled.map(team=>team.id)))};break}
    const groups=format==='round-robin'?[shuffled.map(team=>team.id)]:Array.from({length:p.groups},()=>[] as string[]);
    if(format==='groups')shuffled.forEach((team,i)=>groups[i%p.groups].push(team.id));
