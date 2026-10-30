@@ -8,6 +8,7 @@ A post-match game for points matches, chosen by the club. The scheduler assigns 
 - The draw is a fixed hash of the activity and the member (`drawnBounty`), so every refresh and device shows the same offer, and nothing is stored until the member answers.
 - The member accepts or declines once (`bountyRespond`, own account only). The offer stays open until the member's first game of the activity starts, so nobody can accept after seeing how they play, and closes at the end of the activity. Declining costs nothing.
 - The app pops the offer up once per visit after other dialogs (`app/bounty-offer.tsx`). Closing it only postpones the answer: the offer stays at the top of the home page and on the activity page (`app/bounty-card.tsx`).
+- Each bounty kind opens the pop-up with its own animated xianxia scene and seal (`app/bounty-effects.tsx`): flying swords arriving one by one for the win streak, a lightning strike that splits the ground for the rout, a golden koi leaping over the dragon gate for the upset, and two qi orbs clashing into a turning taiji for the deuce. The scene is decorative and hidden from screen readers. Every element rests on its final frame, so with reduced motion the finished scene shows without movement.
 
 ## Challenges
 

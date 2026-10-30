@@ -1,0 +1,91 @@
+/* Bounty popup scenes (app/bounty-effects.tsx). Each element's resting style is its final frame; the keyframes only
+ * bring it there, so reduced motion shows the finished scene without movement. */
+.bounty-fx{--fx:#7fe3ff;--fx-deep:#0b1f3a;position:relative;overflow:hidden;width:100%;aspect-ratio:240/132;margin:0 0 4px;border-radius:14px;background:radial-gradient(ellipse at 50% 120%,color-mix(in srgb,var(--fx) 30%,transparent),transparent 62%),linear-gradient(165deg,var(--fx-deep),color-mix(in srgb,var(--fx-deep) 70%,#000));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fx) 35%,transparent),0 10px 28px color-mix(in srgb,var(--fx-deep) 45%,transparent);isolation:isolate}
+.bounty-fx svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.bounty-fx svg *{transform-box:view-box}
+.bounty-fx-streak{--fx:#7fe3ff;--fx-deep:#0b2240}
+.bounty-fx-rout{--fx:#c9a8ff;--fx-deep:#1b1236}
+.bounty-fx-upset{--fx:#ffcf5a;--fx-deep:#3d1508}
+.bounty-fx-deuce{--fx:#ff8a7a;--fx-deep:#121a20}
+
+/* Shared: rising qi motes, the scene name and the seal that stamps down last. */
+.fx-motes circle{fill:var(--fx);opacity:.55;animation:fx-mote 4.8s ease-in calc(var(--i) * -.8s) infinite}
+@keyframes fx-mote{0%{transform:translateY(0);opacity:0}20%{opacity:.7}100%{transform:translateY(-120px);opacity:0}}
+.bounty-fx-name{position:absolute;left:12px;bottom:9px;color:var(--fx);font:700 13px/1 'STKaiti','KaiTi','Kaiti SC','楷体',serif;letter-spacing:4px;text-shadow:0 0 8px color-mix(in srgb,var(--fx) 70%,transparent);animation:fx-name .8s ease-out .9s both}
+@keyframes fx-name{from{opacity:0;letter-spacing:14px}}
+.bounty-fx-seal{position:absolute;right:10px;bottom:8px;display:grid;place-items:center;width:40px;height:40px;border-radius:7px;background:#b3261e;color:#fff3e0;font:700 26px/1 'STKaiti','KaiTi','Kaiti SC','楷体',serif;box-shadow:0 0 0 2px #fff3e0 inset,0 0 0 4px #b3261e inset,0 4px 14px #0008;transform:rotate(-6deg);animation:fx-stamp .45s cubic-bezier(.3,1.6,.5,1) 1.15s both}
+.bounty-fx-seal::after{content:'';position:absolute;inset:-6px;border-radius:12px;border:2px solid #e2483d;opacity:0;animation:fx-ink .6s ease-out 1.35s}
+@keyframes fx-stamp{from{opacity:0;transform:scale(2.4) rotate(-18deg)}70%{opacity:1;transform:scale(.9) rotate(-4deg)}}
+@keyframes fx-ink{from{opacity:.9;transform:scale(.8)}to{opacity:0;transform:scale(1.6)}}
+
+/* 连胜 · 万剑连环 */
+.fx-ring{fill:none;stroke:var(--fx);stroke-width:1;stroke-dasharray:3 7;opacity:.45;transform-origin:124px 66px;animation:fx-spin 14s linear infinite}
+.fx-ring.is-inner{stroke-dasharray:1 5;opacity:.3;animation-direction:reverse;animation-duration:9s}
+@keyframes fx-spin{to{transform:rotate(360deg)}}
+.fx-sword{animation:fx-sword-in .55s cubic-bezier(.2,.9,.3,1) calc(.15s + var(--i) * .14s) both,fx-hover 2.6s ease-in-out calc(1.6s + var(--i) * .22s) infinite}
+.fx-blade{fill:#e9fbff;filter:drop-shadow(0 0 3px var(--fx))}
+.fx-guard,.fx-hilt{fill:var(--fx)}
+.fx-trail{stroke:var(--fx);stroke-width:2;stroke-linecap:round;opacity:.25;animation:fx-trail .9s ease-out calc(.15s + var(--i) * .14s) both}
+@keyframes fx-sword-in{from{transform:translateX(-220px);opacity:0}70%{transform:translateX(9px);opacity:1}}
+@keyframes fx-trail{from{opacity:0}30%{opacity:.95}}
+@keyframes fx-hover{50%{transform:translateX(3px) translateY(-2px)}}
+
+/* 大胜 · 雷霆破军 */
+.fx-clouds ellipse{fill:#3a2b63;opacity:.9;animation:fx-cloud 6s ease-in-out infinite alternate}
+.fx-clouds ellipse:nth-child(2){fill:#45347a;animation-delay:-2s}
+@keyframes fx-cloud{to{transform:translateX(8px)}}
+.fx-bolt,.fx-bolt-glow{fill:none;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:130;stroke-dashoffset:0}
+.fx-bolt{stroke:#fbf7ff;stroke-width:3;animation:fx-strike .28s ease-in .35s both,fx-flicker 3.2s steps(1) 1.6s infinite}
+.fx-bolt.is-branch{stroke-width:1.6;opacity:.8;stroke-dasharray:30;animation-name:fx-branch,fx-flicker;animation-delay:.5s,1.6s;animation-duration:.18s,3.2s}
+@keyframes fx-branch{from{stroke-dashoffset:30}}
+.fx-bolt-glow{stroke:var(--fx);stroke-width:10;opacity:.35;animation:fx-strike .28s ease-in .35s both,fx-flicker 3.2s steps(1) 1.6s infinite}
+@keyframes fx-strike{from{stroke-dashoffset:130}}
+@keyframes fx-flicker{0%,100%{opacity:1}4%{opacity:.2}8%{opacity:1}12%{opacity:.4}}
+.fx-flash{fill:#f4ecff;opacity:0;pointer-events:none;animation:fx-flash .5s ease-out .6s}
+@keyframes fx-flash{from{opacity:.8}to{opacity:0}}
+.fx-cracks path{fill:none;stroke:var(--fx);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:60;stroke-dashoffset:0;opacity:.85;animation:fx-crack .5s ease-out .62s both}
+@keyframes fx-crack{from{stroke-dashoffset:60}}
+.fx-shock{fill:none;stroke:var(--fx);stroke-width:2;opacity:0;transform-origin:118px 104px;animation:fx-shock 1s ease-out .62s,fx-shock 1s ease-out 1.6s infinite}
+.fx-shock.is-late{animation-delay:.8s,2.2s;animation-duration:1.2s}
+@keyframes fx-shock{from{opacity:.9;transform:scale(.1)}to{opacity:0;transform:scale(1)}}
+.fx-shard{fill:#cbb8ef;opacity:0;animation:fx-shard .9s cubic-bezier(.2,.7,.4,1) .62s}
+@keyframes fx-shard{from{opacity:1;transform:translate(0,0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(160deg)}}
+
+/* 以弱胜强 · 鲤跃龙门 */
+.fx-waves path{fill:#a8321a;opacity:.9;animation:fx-wave 3s linear infinite}
+.fx-waves .is-back{fill:#d2552c;opacity:.75;animation-duration:2.2s;animation-direction:reverse}
+@keyframes fx-wave{to{transform:translateX(-60px)}}
+.fx-gate path,.fx-gate rect{fill:#d8a43c;stroke:#7a3d0c;stroke-width:1}
+.fx-gate path:last-child{fill:none;stroke:#d8a43c;stroke-width:2}
+.fx-koi{transform:translate(178px,22px) rotate(-8deg);animation:fx-leap 1.1s cubic-bezier(.35,.1,.3,1) .2s both,fx-float 2.8s ease-in-out 1.6s infinite}
+.fx-koi-body{fill:#ffcf5a;stroke:#fff1c2;stroke-width:.8;filter:drop-shadow(0 0 5px #ffb12e)}
+.fx-koi-eye{fill:#5a1d06}
+.fx-koi-fin{fill:none;stroke:#ff7a3a;stroke-width:1.6;stroke-linecap:round}
+@keyframes fx-leap{0%{transform:translate(48px,118px) rotate(-62deg);opacity:0}8%{opacity:1}45%{transform:translate(112px,34px) rotate(-30deg)}70%{transform:translate(170px,14px) rotate(4deg)}100%{transform:translate(178px,22px) rotate(-8deg)}}
+@keyframes fx-float{50%{transform:translate(178px,18px) rotate(-4deg)}}
+.fx-rays{fill:#ffe39a;opacity:.5;transform:translate(178px,22px);animation:fx-rays-in .6s ease-out .95s both,fx-rays 16s linear 1.55s infinite}
+@keyframes fx-rays-in{from{opacity:0;transform:translate(178px,22px) scale(.2)}}
+@keyframes fx-rays{from{transform:translate(178px,22px) rotate(0)}to{transform:translate(178px,22px) rotate(360deg)}}
+.fx-drop{fill:#ffd9a0;opacity:0;animation:fx-drop .8s ease-out .22s}
+@keyframes fx-drop{from{opacity:1;transform:translate(0,0)}to{opacity:0;transform:translate(var(--dx),var(--dy))}}
+
+/* 鏖战 · 两仪鏖战 */
+.bounty-fx-deuce .is-yang{fill:#ff8a7a}
+.bounty-fx-deuce .is-yin{fill:#5cc8ff}
+.fx-orb-in{opacity:0;filter:drop-shadow(0 0 6px currentColor)}
+.fx-orb-in.is-yang{color:#ff8a7a;animation:fx-rush-left .62s cubic-bezier(.5,0,.8,.4) .1s}
+.fx-orb-in.is-yin{color:#5cc8ff;animation:fx-rush-right .62s cubic-bezier(.5,0,.8,.4) .1s}
+@keyframes fx-rush-left{from{opacity:1;transform:translateX(-130px)}to{opacity:1;transform:translateX(-4px)}}
+@keyframes fx-rush-right{from{opacity:1;transform:translateX(130px)}to{opacity:1;transform:translateX(4px)}}
+.fx-sparks path{stroke:#fff3d6;stroke-width:2;stroke-linecap:round;opacity:0;animation:fx-spark .55s ease-out .7s}
+@keyframes fx-spark{from{opacity:1;stroke-dasharray:4 30;stroke-dashoffset:0}to{opacity:0;stroke-dasharray:4 30;stroke-dashoffset:-14}}
+.fx-taiji-wrap{transform-origin:120px 62px;animation:fx-born .5s cubic-bezier(.3,1.5,.5,1) .72s both}
+.fx-taiji{transform-origin:120px 62px;filter:drop-shadow(0 0 8px #ffffff40);animation:fx-spin 7s linear infinite}
+@keyframes fx-born{from{opacity:0;transform:scale(0) rotate(-120deg)}}
+.fx-orbit{transform-origin:120px 62px;animation:fx-orbit-in .5s ease-out .95s both,fx-spin 3.4s linear 1.45s infinite reverse}
+.fx-orb{filter:drop-shadow(0 0 6px #fff8)}
+@keyframes fx-orbit-in{from{opacity:0;transform:scale(.4)}}
+
+@media (prefers-reduced-motion:reduce){
+ .bounty-fx *,.bounty-fx *::after{animation:none!important}
+}
