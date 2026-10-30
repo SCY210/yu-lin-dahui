@@ -1,6 +1,6 @@
 # MVP-only post-match voting
 
-Post-match voting offers only MVP. Each eligible account has one vote per activity and cannot vote for itself. A cast vote is final: it cannot be changed or withdrawn (see below). Existing participation, activity-end and cancellation rules remain.
+Post-match voting offers only MVP. Each eligible account has one vote per activity and cannot vote for itself. A cast vote is final: it cannot be changed or withdrawn (see below). Only participants vote: an account whose player signed up formally, has begun attendance or finished a match in the activity (`awardCandidateIds`). Administrators and the activity creator have no ballot unless they took part, since MVP votes award season points. Activity-end and cancellation rules remain.
 
 Other award categories and style-tag voting are closed in the server command boundary. The activity page has one MVP ballot without category switching, four-award progress or a style-voting panel. Player profiles no longer show style-vote results. Future award reminders describe MVP only.
 
