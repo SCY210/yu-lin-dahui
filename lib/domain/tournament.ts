@@ -1,4 +1,5 @@
 import {fail,type Event,type Match} from './types';
+import type {TournamentArchive} from './tournament-results';
 
 export type TournamentTeam={id:string;players:string[]};
 export type TournamentFixture={id:string;stage:'group'|'knockout';group?:number;round:number;slot:number;a?:string;b?:string;fromA?:string;fromB?:string;matchId?:string;/** The player assigned to referee this fixture on their phone (docs/LIVE_SCORING.md). */referee?:string};
@@ -9,7 +10,7 @@ export type TournamentFormat='groups'|'knockout'|'round-robin';
 export type TournamentCategory='mens-doubles'|'mixed-doubles';
 /** Games per match (1, or best of 3), points to win a game, and the cap after deuce (docs/TOURNAMENTS.md). */
 export type ScoringRule={games:1|3;points:11|15|21};
-export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;scoring?:ScoringRule;/** Entry fee per player in cents; set, it replaces the court and shuttle split. */fee?:number};
+export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;scoring?:ScoringRule;/** Entry fee per player in cents; set, it replaces the court and shuttle split. */fee?:number;/** Set when archived: the final results as they stood (lib/domain/tournament-results.ts). */archive?:TournamentArchive};
 export const defaultScoring:ScoringRule={games:3,points:21};
 export const emptyTournament=():Tournament=>({phase:'setup',teams:[],groups:[],advance:2,fixtures:[]});
 /** New competitions: groups then knockout, best of three games to 21, until the organisers choose otherwise. */
