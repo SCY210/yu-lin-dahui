@@ -3,7 +3,7 @@
   "name": "yu-lin-dahui",
   "main": "./build/sites-worker.ts",
   "version_metadata": {"binding":"CF_VERSION_METADATA"},
-  "triggers": {"crons":["0 * * * *"]},
+  "triggers": {"crons":["0 * * * *","10,20,30,40,50 * * * *"]},
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
