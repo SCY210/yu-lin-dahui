@@ -14,6 +14,7 @@ const schemas={
  tournamentSettings:z.object({eventId:id,format:z.enum(['groups','knockout','round-robin']),category:z.enum(['mens-doubles','mixed-doubles']).nullable(),scoring:z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict(),fee:z.number().int().min(0).max(100000).nullable()}),
  tournamentKnockout:z.object({eventId:id}),tournamentReopen:z.object({eventId:id}),
  tournamentStart:z.object({eventId:id,fixtureId:id,courtId:id}),
+ tournamentReferee:z.object({eventId:id,fixtureId:id,playerId:id.nullable()}),
 };
 /** One round robin per group: every team meets every other once (circle method). */
 function roundRobin(group:string[],g:number){
@@ -88,6 +89,15 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   case 'tournamentReopen':{
    if(tournamentFormat(t)!=='groups'||t.phase!=='knockout'||t.fixtures.some(f=>f.stage==='knockout'&&f.matchId))fail('淘汰赛已开打，不能返回小组赛');
    t.fixtures=t.fixtures.filter(f=>f.stage==='group');t.phase='groups';break;
+  }
+  case 'tournamentReferee':{
+   // Any member may referee a fixture they do not play in; they then score it live on their phone (docs/LIVE_SCORING.md).
+   const p=c.payload,f=t.fixtures.find(f=>f.id===p.fixtureId)??fail('对阵不存在');
+   if(p.playerId===null){delete f.referee;break}
+   if(!s.players.some(x=>x.id===p.playerId&&x.enabled)||!s.accounts.some(x=>x.playerId===p.playerId))fail('裁判需要是有账号的球友');
+   const sides=fixtureSides(t,s,f),playing=t.teams.filter(team=>team.id===sides.a||team.id===sides.b).flatMap(team=>team.players);
+   if(playing.includes(p.playerId))fail('参赛选手不能给自己的比赛当裁判');
+   f.referee=p.playerId;break;
   }
   case 'tournamentStart':{
    const p=c.payload,f=t.fixtures.find(f=>f.id===p.fixtureId)??fail('对阵不存在');

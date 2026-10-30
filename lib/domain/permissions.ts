@@ -13,6 +13,8 @@ export function canScheduleEvent(account:Pick<Account,'id'|'role'|'simulationTes
  * Resolve the account's own player and active signup from stored data. A proxy
  * signup, match team or client-supplied eventId never grants account authority.
  */
+/** The player assigned to referee this competition match. */
+export function isMatchReferee(a:Pick<Account,'playerId'>,e:Event,matchId:unknown){return typeof matchId==='string'&&!!e.tournament?.fixtures.some(f=>f.matchId===matchId&&f.referee===a.playerId)}
 export function canRecordScore(s:Pick<State,'registrations'>,a:Pick<Account,'id'|'role'|'playerId'>,event:Event){
  if(event.deletedAt!==undefined||isPractice(event))return false;
  if(canManageEvent(a,event))return true;
@@ -30,7 +32,7 @@ export function canSwapLivePlayers(s:Pick<State,'registrations'|'players'>,a:Pic
 }
 
 const rankedManagementActions=new Set(['pointsStart','pointsNext','liveStart','livePause','generate','planPoints','publishPoints','publish','start','schedulingMode','playSettings','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart']);
-const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentReferee','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
@@ -50,7 +52,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  if(isPractice(event)&&['pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','playSettings','handicap','challengeMatch'].includes(action))fail('练球活动不生成比赛或积分，请使用活动接龙和费用功能');
  if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
  if(action==='score'||action==='liveNext'){
-  if(!canRecordScore(s,a,event))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或管理员可以录入比分':'403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
+  if(!canRecordScore(s,a,event)&&!(action==='score'&&isMatchReferee(a,event,p.matchId)))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或管理员可以录入比分':'403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
  }else if(action==='liveSwap'){
   if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以交换上场人员');
  }else if(action==='pointsLate'){
