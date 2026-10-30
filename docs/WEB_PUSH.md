@@ -1,6 +1,6 @@
 # Activity Web Push
 
-The activity assistant also supports personal signup, promotion, material schedule changes, published matches, confirmed fees and eligible post-event voting. See [ACTIVITY_REMINDERS.md](ACTIVITY_REMINDERS.md) for recipient rules, inbox, preferences and the explicit timing limitation.
+The activity assistant also supports personal signup, promotion, material schedule changes, published matches, confirmed fees, eligible post-event voting and bounty offers (docs/BOUNTIES.md). See [ACTIVITY_REMINDERS.md](ACTIVITY_REMINDERS.md) for recipient rules, inbox, preferences and the explicit timing limitation.
 
 Members opt in separately on each device under **右上角「提醒」→ 提醒偏好与设备设置**. No permission is requested automatically. The explicit button calls the browser permission dialog, registers the existing service worker and uploads the device subscription to the authenticated site. The user can turn it off or send a test to the current device. Each account may register up to five devices.
 
