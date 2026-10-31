@@ -59,7 +59,7 @@ test('organisers assign a referee who is not playing; the referee may score that
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=Array.from({length:6},(_,i)=>({id:i?'member'+i:'owner',email:'',playerId:'p'+i,role:i?'member' as const:'admin' as const}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:a.playerId,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
- const e:Event={id:'t',creatorId:'owner',title:'Fictional competition',matchFormat:'singles',tournament:newTournament(),start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:6,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
+ const e:Event={id:'t',creatorId:'owner',title:'Fictional competition',matchFormat:'singles',tournament:{...newTournament(),autoArrange:false},start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:6,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
  e.tournament!.format='knockout';s.events=[e];s.bookings=[{id:'court0',eventId:e.id,name:'Court 0',start:e.start,end:e.end,pricing:'total',cents:0}];
  s.registrations=s.players.slice(0,4).map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
  const [owner,,,,referee,stranger]=s.accounts;

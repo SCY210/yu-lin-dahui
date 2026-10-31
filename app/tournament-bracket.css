@@ -1,1 +1,23 @@
-.event-tournament>.card{min-width:0;max-width:100%}.knockout-chart{min-width:0;max-width:100%}.knockout-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}.knockout-tools .hint{flex:1 1 260px;margin:8px 0}.knockout-tools .actions{gap:6px;align-items:center;flex-wrap:wrap}.knockout-tools button{min-width:44px;min-height:44px;padding:8px 10px}.knockout-tools [aria-live]{font-size:13px;min-width:42px;text-align:center;font-variant-numeric:tabular-nums}.knockout-viewport{width:100%;min-width:0;max-width:100%;overflow:auto;overscroll-behavior-x:contain;border:1px solid var(--border);border-radius:14px;margin-top:14px;background:var(--background);scrollbar-width:thin;touch-action:pan-x pan-y;max-height:75vh;min-height:180px}.knockout-viewport:focus-visible{outline:2px solid var(--primary);outline-offset:3px}.knockout-size{position:relative;min-width:0}.knockout-canvas{position:absolute;left:0;top:0;transform-origin:top left}.knockout-lines{position:absolute;inset:0;pointer-events:none;overflow:visible}.knockout-lines path{fill:none;stroke:currentColor;color:var(--muted-foreground);stroke-width:1.5;opacity:.65;stroke-linejoin:round}.knockout-column-title{position:absolute;top:18px;text-align:center;font-size:14px;margin:0!important;line-height:28px;display:flex;align-items:center;justify-content:center;gap:6px}.knockout-column-title.is-final{font-size:18px}.knockout-node{position:absolute;display:flex!important;flex-direction:column;align-items:stretch!important;justify-content:flex-start;text-align:left!important;padding:0!important;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--foreground);overflow:hidden;box-shadow:0 3px 10px #00000008;line-height:1.25;font-family:inherit}.knockout-node:hover,.knockout-node.is-selected{outline:2px solid var(--primary);outline-offset:2px}.knockout-node.is-playing{border:2px solid var(--primary)}.knockout-node.is-final{border-width:2px;box-shadow:0 0 0 3px #b29a591c}.knockout-node-status{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;font-size:10px;background:color-mix(in srgb,var(--foreground) 5%,var(--card));height:24px;flex:0 0 24px}.knockout-node-status small{font-size:10px;opacity:.7}.knockout-team{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-height:0;padding:4px 8px;border-top:1px solid var(--border);font-size:12px}.knockout-team>span{display:flex;flex-direction:column;min-width:0;gap:2px}.knockout-team>span>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knockout-team>b{font-size:17px;min-width:24px;text-align:center;font-variant-numeric:tabular-nums}.knockout-team.is-winner{font-weight:700;background:color-mix(in srgb,var(--primary) 9%,var(--card))}.tournament-selected-match{margin-top:20px;min-width:0}.tournament-selected-match>h3{font-size:16px}.tournament-selected-match .tournament-match{max-width:620px}@media(prefers-reduced-motion:reduce){.knockout-viewport{scroll-behavior:auto}}
+/* Knockout draw sheet (app/tournament-bracket.tsx): entries on both edges, lines meeting at the final. */
+.draw-sheet{display:grid;gap:8px;min-width:0}
+.draw-sheet-tools{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.draw-sheet-tools .hint{margin:0}
+.draw-sheet-scroll{overflow-x:auto;border-radius:14px;background:var(--card);border:1px solid var(--border);padding:6px 4px}
+.draw-sheet.is-compact .draw-sheet-scroll{border:0;padding:0;background:transparent}
+.draw-sheet-svg{display:block;height:auto}
+.draw-line{fill:none;stroke:color-mix(in srgb,var(--foreground) 28%,transparent);stroke-width:1.4}
+.draw-line.is-won{stroke:var(--primary);stroke-width:2.6}
+.draw-line.is-live{stroke:#f59e0b;stroke-width:2.6;stroke-dasharray:6 4;animation:draw-live 1s linear infinite}
+@keyframes draw-live{to{stroke-dashoffset:-20}}
+.draw-entry{font-size:13px;font-weight:600;fill:var(--foreground)}
+.draw-entry.is-empty{fill:var(--muted-foreground);font-weight:400}
+.draw-seed{fill:#d4372c;font-weight:800}
+.draw-champion{font-size:15px;font-weight:800;fill:var(--primary)}
+.draw-junction{cursor:pointer}
+.draw-junction rect{fill:transparent}
+.draw-junction.is-selected rect{fill:color-mix(in srgb,var(--primary) 12%,transparent)}
+.draw-junction.is-final circle{fill:var(--card);stroke:var(--primary);stroke-width:2}
+.draw-junction.is-final.is-live circle{stroke:#f59e0b}
+.draw-winner{font-size:10px;font-weight:700;fill:var(--primary)}
+.draw-score{font-size:9.5px;fill:var(--muted-foreground);font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.draw-line.is-live{animation:none}}

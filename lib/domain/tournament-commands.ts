@@ -5,18 +5,19 @@ import {authorizeEventAction} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import {teamSize,isPractice} from './match-format';
 import {validateRound} from './grouping';
-import {fail,month,type State,type Account,type Match} from './types';
+import {fail,month,type State,type Account,type Match,type Event} from './types';
 import {isClubOwner} from './ownership';
 import {tournamentResults} from './tournament-results';
 import {categoryFits,categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type TournamentFixture} from './tournament';
 const id=z.string().min(1).max(100),rule=z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict();
 const schemas={
  tournamentDraw:z.object({eventId:id,teams:z.array(z.array(id).min(1).max(2)).min(2).max(32),groups:z.number().int().min(2).max(8).default(2),advance:z.number().int().min(1).max(4).default(2),seed:z.number().int().min(1).max(2147483647),/** Knockout only: teams are already in seed order (strongest first) instead of drawn at random. */seeded:z.boolean().optional()}),
- tournamentSettings:z.object({eventId:id,format:z.enum(['groups','knockout','round-robin']),category:z.enum(['mens-singles','mens-doubles','mixed-doubles']).nullable(),scoring:rule,/** The knockout rule; omitted, the knockout follows `scoring`. */knockoutScoring:rule.optional(),fee:z.number().int().min(0).max(100000).nullable()}),
+ tournamentSettings:z.object({eventId:id,format:z.enum(['groups','knockout','round-robin']),category:z.enum(['mens-singles','mens-doubles','mixed-doubles']).nullable(),scoring:rule,/** The knockout rule; omitted, the knockout follows `scoring`. */knockoutScoring:rule.optional(),/** Prize costs in cents; omitted, they stay as they are. */prizes:z.object({first:z.number().int().min(0).max(1000000),second:z.number().int().min(0).max(1000000),third:z.number().int().min(0).max(1000000)}).strict().optional()}),
  tournamentKnockout:z.object({eventId:id}),tournamentReopen:z.object({eventId:id}),
  tournamentStart:z.object({eventId:id,fixtureId:id,courtId:id}),
  tournamentReferee:z.object({eventId:id,fixtureId:id,playerId:id.nullable()}),
  tournamentArchive:z.object({eventId:id,archived:z.boolean()}),
+ tournamentArrange:z.object({eventId:id}),
 };
 /** One round robin per group: every team meets every other once (circle method). */
 function roundRobin(group:string[],g:number){
@@ -38,6 +39,44 @@ export function seededFirstRound(seeds:string[]){
  let order=[0];while(order.length<size){const n=order.length*2;order=order.flatMap(i=>[i,n-1-i])}
  return Array.from({length:size/2},(_,i)=>({a:seeds[order[i*2]],b:seeds[order[i*2+1]]}));
 }
+/** Puts one ready fixture on a court: both sides known, the court booked now and free, the players not on court. */
+function startFixture(s:State,e:Event,f:TournamentFixture,courtId:string,now:number){
+ const t=e.tournament!;
+ if(f.matchId)fail('409: 这场比赛已开始，请刷新');
+ if(f.stage==='group'&&t.phase!=='groups')fail('小组赛已封存');
+ const sides=fixtureSides(t,s,f);if(!sides.a||!sides.b)fail('请等待前序赛果；轮空无需开赛');
+ const ta=t.teams.find(x=>x.id===sides.a)!,tb=t.teams.find(x=>x.id===sides.b)!;
+ const court=s.bookings.find(x=>x.id===courtId&&x.eventId===e.id)??fail('场地不存在');
+ if(s.matches.some(m=>m.status==='playing'&&s.bookings.some(b=>b.id===m.courtId&&b.name===court.name&&(b.venue??s.events.find(x=>x.id===b.eventId)?.venue)===(court.venue??e.venue))))fail('这片场地正在比赛');
+ if(now<e.start||now>=e.end||now<court.start||now>=court.end)fail('当前不在赛事或场地预约时间内');
+ const roundId=crypto.randomUUID(),m:Match={id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,a:[...ta.players],b:[...tb.players],status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:true,enteredBy:null,games:[]};
+ validateRound(s,e.id,now,0,[m]);
+ s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...m.a,...m.b],rest:[],seed:1});markRanked(m,e);s.matches.push(m);f.matchId=m.id;
+ if(!s.seasons.some(x=>x.id===month(now)))s.seasons.push({id:month(now),rules:{...s.settings.rules},version:1});
+}
+/** The system schedules the competition (docs/TOURNAMENTS.md): every free court booked now takes the ready fixture
+ * whose teams have played least and waited longest, so everyone plays about as often and nobody sits out for long.
+ * Earlier rounds go first, and a player already on court waits. Returns the started fixtures. */
+export function arrangeFixtures(s:State,e:Event,now:number){
+ const t=e.tournament;if(!t||t.archive||t.phase==='setup'||e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start||now>=e.end)return [];
+ const own=s.matches.filter(m=>m.eventId===e.id),started:TournamentFixture[]=[];
+ const teamOf=(id:string)=>t.teams.find(x=>x.id===id)!,players=(f:TournamentFixture)=>{const {a,b}=fixtureSides(t,s,f);return a&&b?[...teamOf(a).players,...teamOf(b).players]:null};
+ const played=(id:string)=>own.filter(m=>m.status==='complete'&&[...m.a,...m.b].includes(id)).length;
+ const rested=(id:string)=>Math.max(e.start,...own.filter(m=>[...m.a,...m.b].includes(id)).map(m=>m.end??now));
+ for(;;){
+  const busyCourts=new Set(s.matches.filter(m=>m.status==='playing').map(m=>m.courtId)),onCourt=new Set(s.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b]));
+  const court=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busyCourts.has(b.id)).sort((a,b)=>a.name.localeCompare(b.name,'zh'))[0];if(!court)break;
+  const ready=t.fixtures.filter(f=>!f.matchId&&(f.stage==='knockout'||t.phase==='groups')).flatMap(f=>{const ids=players(f);return ids&&!ids.some(id=>onCourt.has(id))?[{f,ids}]:[]});
+  if(!ready.length)break;
+  const minRound=Math.min(...ready.map(x=>x.f.round+(x.f.stage==='knockout'?100:0)));
+  const pick=ready.filter(x=>x.f.round+(x.f.stage==='knockout'?100:0)===minRound).sort((x,y)=>x.ids.reduce((n,id)=>n+played(id),0)-y.ids.reduce((n,id)=>n+played(id),0)||Math.max(...x.ids.map(rested))-Math.max(...y.ids.map(rested))||(x.f.group??0)-(y.f.group??0)||x.f.slot-y.f.slot)[0];
+  // The court's referee stays on for its next fixture unless they play in it.
+  const last=t.fixtures.filter(f=>f.referee&&own.some(m=>m.id===f.matchId&&m.courtId===court.id)).sort((x,y)=>(own.find(m=>m.id===y.matchId)?.start??0)-(own.find(m=>m.id===x.matchId)?.start??0))[0];
+  if(!pick.f.referee&&last?.referee&&!pick.ids.includes(last.referee))pick.f.referee=last.referee;
+  try{startFixture(s,e,pick.f,court.id,now);started.push(pick.f)}catch{break}
+ }
+ return started;
+}
 export async function applyTournament(s:State,a:Account,action:string,input:unknown,now:number){
  const c=parseDomainCommand(schemas,action,input);if(!c)return false;
  const p=c.payload;authorizeEventAction(s,a,action,p);
@@ -51,10 +90,10 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   if(!singles&&!category&&t.category)fail('双打比赛请选择男双或混双');
   const knockoutScoring=p.knockoutScoring??p.scoring;
   const changed=p.format!==tournamentFormat(t)||category!==t.category||JSON.stringify(p.scoring)!==JSON.stringify(t.scoring)||JSON.stringify(knockoutScoring)!==JSON.stringify(t.knockoutScoring??t.scoring);
-  if(changed&&t.phase!=='setup')fail('抽签后不能更改赛制、项目或计分规则；可以继续调整报名费');
+  if(changed&&t.phase!=='setup')fail('抽签后不能更改赛制、项目或计分规则；可以继续调整奖品');
   t.format=p.format;t.scoring=p.scoring;t.knockoutScoring=knockoutScoring;if(category)t.category=category;else delete t.category;
-  if(p.fee===null)delete t.fee;else t.fee=p.fee;
-  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,knockoutScoring,fee:p.fee}});return true;
+  if(p.prizes)t.prizes=p.prizes;
+  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,knockoutScoring,prizes:p.prizes??null}});return true;
  }
  if(c.action==='tournamentArchive'){
   // One click files a finished competition under past competitions with its results frozen, names included.
@@ -81,7 +120,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
    if(format==='round-robin'&&p.teams.length>16)fail('单循环最多 16 队');
    let seed=p.seed>>>0;const shuffled=p.teams.map(players=>({id:crypto.randomUUID(),players}));
    if(!(format==='knockout'&&p.seeded))for(let i=shuffled.length-1;i>0;i--){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const j=seed%(i+1);[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]}
-   const settings={format:t.format,category:t.category,scoring:t.scoring,knockoutScoring:t.knockoutScoring,fee:t.fee};
+   const settings={format:t.format,category:t.category,scoring:t.scoring,knockoutScoring:t.knockoutScoring,prizes:t.prizes,autoArrange:t.autoArrange};
    if(format==='knockout'){e.tournament={...settings,phase:'knockout',teams:shuffled,groups:[],advance:1,fixtures:bracket(seededFirstRound(shuffled.map(team=>team.id)))};break}
    const groups=format==='round-robin'?[shuffled.map(team=>team.id)]:Array.from({length:p.groups},()=>[] as string[]);
    if(format==='groups')shuffled.forEach((team,i)=>groups[i%p.groups].push(team.id));
@@ -115,20 +154,9 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
    if(playing.includes(p.playerId))fail('参赛选手不能给自己的比赛当裁判');
    f.referee=p.playerId;break;
   }
-  case 'tournamentStart':{
-   const p=c.payload,f=t.fixtures.find(f=>f.id===p.fixtureId)??fail('对阵不存在');
-   if(f.matchId)fail('409: 这场比赛已开始，请刷新');
-   if(f.stage==='group'&&t.phase!=='groups')fail('小组赛已封存');
-   const sides=fixtureSides(t,s,f);if(!sides.a||!sides.b)fail('请等待前序赛果；轮空无需开赛');
-   const ta=t.teams.find(x=>x.id===sides.a)!,tb=t.teams.find(x=>x.id===sides.b)!;
-   const court=s.bookings.find(x=>x.id===p.courtId&&x.eventId===e.id)??fail('场地不存在');
-   if(s.matches.some(m=>m.status==='playing'&&s.bookings.some(b=>b.id===m.courtId&&b.name===court.name&&(b.venue??s.events.find(x=>x.id===b.eventId)?.venue)===(court.venue??e.venue))))fail('这片场地正在比赛');
-   if(now<e.start||now>=e.end||now<court.start||now>=court.end)fail('当前不在赛事或场地预约时间内');
-   const roundId=crypto.randomUUID(),m:Match={id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,a:[...ta.players],b:[...tb.players],status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:true,enteredBy:null,games:[]};
-   validateRound(s,e.id,now,0,[m]);
-   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...m.a,...m.b],rest:[],seed:1});markRanked(m,e);s.matches.push(m);f.matchId=m.id;
-   if(!s.seasons.some(x=>x.id===month(now)))s.seasons.push({id:month(now),rules:{...s.settings.rules},version:1});break;
-  }
+  case 'tournamentStart':{const p=c.payload;startFixture(s,e,t.fixtures.find(f=>f.id===p.fixtureId)??fail('对阵不存在'),p.courtId,now);break}
+  case 'tournamentArrange':{if(!arrangeFixtures(s,e,now).length)fail(now<e.start?'比赛还没开始':'没有可以开赛的对阵或空闲场地');break}
  }
+ if(['tournamentDraw','tournamentKnockout'].includes(c.action)&&e.tournament?.autoArrange)arrangeFixtures(s,e,now);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'赛事安排',changes:{eventId:e.id}});return true;
 }

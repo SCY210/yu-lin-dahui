@@ -29,3 +29,11 @@ body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
  body .shell.app-compact .brand span{letter-spacing:1px}
  body .shell.app-compact .section-title{flex-direction:row;align-items:center;flex-wrap:wrap}
 }
+/* Activities: title with its guide and art on one line, then both create buttons side by side. */
+.heading-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:10px}
+.heading-actions button{min-height:46px;padding:0 12px;white-space:nowrap}
+.heading:has(.heading-actions){display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;row-gap:0}
+.heading:has(.heading-actions) .decorated-title{gap:12px;width:100%;justify-content:space-between}
+.heading:has(.heading-actions) .decorated-title>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.heading:has(.heading-actions) .decorated-title h1{margin:0}
+.heading:has(.heading-actions) .racket-art{width:64px;height:58px;max-width:64px}

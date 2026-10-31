@@ -2,8 +2,7 @@ import {apply} from './domain/commands';
 import {isEventAction} from './domain/permissions';
 import {createSimulation,simulationView,type SimulationDocument,type SimulationView} from './admin-simulation';
 import {applyLiveOp,finalGames,liveOpInput,liveTally,type LiveScore} from './domain/live-score';
-import {defaultScoring,finishedGame,fixtureSides,matchRule,scoringCap,type ScoringRule} from './domain/tournament';
-import {activityNoticeVersion} from './activity-notice';
+import {defaultScoring,finishedGame,matchRule,scoringCap,type ScoringRule} from './domain/tournament';
 import {realmSnapshot} from './domain/realm-rating';
 import {fail,type Account,type State} from './domain/types';
 
@@ -39,11 +38,9 @@ function randomGames(rule:ScoringRule,aStronger:number,random:()=>number){
  }
  return games;
 }
-/** A member signs up as they would on the real page: on the first court with room for the whole competition. */
-async function signUp(s:State,account:Account,eventId:string,now:number){
- const courts=s.bookings.filter(b=>b.eventId===eventId),taken=(id:string)=>s.registrations.filter(r=>r.status==='confirmed'&&r.bookingSignups?.some(x=>x.bookingId===id&&x.status==='confirmed')).length;
- const court=courts.find(b=>taken(b.id)<(b.signupCapacity??Infinity))??courts[0]??fail('比赛没有场地');
- await apply(s,account,'courtRegister',{bookingId:court.id,playerId:account.playerId,arrival:court.start,departure:court.end,note:'',noticeAccepted:true,noticeVersion:activityNoticeVersion},now);
+/** A member signs up for the whole competition, as on the real page (app/tournament-signup.tsx). */
+async function signUp(s:State,account:Account,e:State['events'][number],now:number){
+ await apply(s,account,'register',{eventId:e.id,playerId:account.playerId,arrival:e.start,departure:e.end,note:''},now);
 }
 
 /** One sandbox operation, run by the sandbox owner account unless it acts for a member (signup). */
@@ -63,8 +60,8 @@ export async function changeCompetitionSimulation(doc:CompetitionSimulationDocum
    const ids=action==='signup'?[String(payload.playerId)]:s.players.map(p=>p.id);
    for(const id of ids){
     const account=s.accounts.find(x=>x.playerId===id)??fail('球友不存在'),r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===id&&r.status!=='cancelled');
-    if(action==='signup'&&payload.cancel===true){if(!r)fail('这位球友没有报名');for(const slot of r.bookingSignups??[])if(slot.status!=='cancelled')await apply(s,account,'courtCancel',{bookingId:slot.bookingId,playerId:id,reason:'模拟取消报名'},now);continue}
-    if(!r)await signUp(s,account,e.id,now);
+    if(action==='signup'&&payload.cancel===true){if(!r)fail('这位球友没有报名');await apply(s,account,'cancel',{eventId:e.id,playerId:id,reason:'模拟取消报名'},now);continue}
+    if(!r)await signUp(s,account,e,now);
    }
   }else if(action==='startNow'){
    // Moves the whole competition so it starts now, as if its day had come; nothing else changes.
@@ -79,17 +76,8 @@ export async function changeCompetitionSimulation(doc:CompetitionSimulationDocum
    if(m.status==='complete'&&op.op!=='swap')fail('比分已经提交');
    try{next.live[m.id]=applyLiveOp(next.live[m.id]??null,op,matchRule(t,m.id)??defaultScoring,{matchId:m.id,eventId:e.id},now)}catch(error){fail(error instanceof Error?error.message:'操作无效')}
   }else if(action==='autoStart'){
-   // Free courts take the ready fixtures in order: group fixtures by round, knockout fixtures by round.
-   const busy=new Set(s.matches.filter(m=>m.status==='playing').map(m=>m.courtId)),playing=new Set(s.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b]));
-   const ready=t.fixtures.filter(f=>!f.matchId&&(f.stage==='knockout'||t.phase==='groups')).sort((x,y)=>x.round-y.round||(x.group??0)-(y.group??0)||x.slot-y.slot);
-   let started=0;
-   for(const f of ready){
-    const court=s.bookings.find(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busy.has(b.id));if(!court)break;
-    const {a:ta,b:tb}=fixtureSides(t,s,f);if(!ta||!tb)continue;
-    const ids=t.teams.filter(x=>x.id===ta||x.id===tb).flatMap(x=>x.players);if(ids.some(id=>playing.has(id)))continue;
-    await apply(s,a,'tournamentStart',{eventId:e.id,fixtureId:f.id,courtId:court.id},now);busy.add(court.id);ids.forEach(id=>playing.add(id));started++;
-   }
-   if(!started)fail(now<e.start?'比赛还没开始，可先“快进到开赛”':'没有可以开赛的对阵：请先抽签、录完进行中的比赛，或生成淘汰赛');
+   // The same arrangement the system runs after every result (arrangeFixtures).
+   await apply(s,a,'tournamentArrange',{eventId:e.id},now);
   }else if(action==='autoScore'){
    const ratings=realmSnapshot(s,now),strength=(ids:string[])=>ids.reduce((sum,id)=>sum+(ratings.get(id)?.score??1000),0)/ids.length;
    let seed=(next.revision*2654435761+requestId.length)>>>0;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};

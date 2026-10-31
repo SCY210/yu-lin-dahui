@@ -1,0 +1,16 @@
+/* Competition signup (app/tournament-signup.tsx). */
+.tournament-signup{display:grid;gap:16px}
+.tournament-signup-card{display:grid;gap:12px}
+.tournament-signup-card h2{display:flex;align-items:center;gap:8px;margin:0}
+.tournament-signup-card .hint{margin:0}
+.tournament-signup-me{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.tournament-signup-me .primary{min-height:48px;padding:0 28px}
+.tournament-signup-me .badge.is-confirmed{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+.tournament-entrants{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px;margin:0;padding:0;list-style:none}
+.tournament-entrants li{display:flex;align-items:center;gap:6px;min-width:0}
+.tournament-entrant{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:6px 8px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:inherit;text-align:left}
+.tournament-entrant strong{overflow-wrap:anywhere}
+.tournament-entrant-index{font-size:12px;color:var(--muted-foreground)}
+.tournament-entrants.is-waiting .tournament-entrant{opacity:.75}
+.tournament-courts{display:grid;gap:8px}
+.tournament-courts small{display:flex;align-items:center;gap:4px;color:var(--muted-foreground)}

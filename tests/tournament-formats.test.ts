@@ -5,7 +5,7 @@ import {emptyState,type Event} from '../lib/domain/types';
 import {newTournament,finishedGame,fixtureSides,tournamentChampion,groupStandings,categoryProblem} from '../lib/domain/tournament';
 import {seededFirstRound} from '../lib/domain/tournament-commands';
 import {balancedPairs} from '../lib/domain/tournament-pairing';
-import {calculateSettlement} from '../lib/domain/money';
+import {calculateSettlement,competitionCosts} from '../lib/domain/money';
 
 const now=Date.parse('2030-10-10T13:00:00Z');
 /** A fictional competition: `owner` is the club owner, `admin` an administrator, `creator` a member who created it. */
@@ -13,14 +13,14 @@ function fixture(singles=false,count=8,genders:string[]=[]){
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
  s.accounts=Array.from({length:count},(_,i)=>({id:i===0?'owner':i===1?'admin':i===2?'creator':'member'+i,email:'',playerId:'p'+i,role:i<2?'admin' as const:'member' as const}));
  s.players=s.accounts.map((a,i)=>({id:a.playerId,name:'Fictional '+i,ownerId:a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',...(genders[i]?{profile:{gender:genders[i] as 'male',years:1,hand:'right' as const,preference:'all' as const,style:'',equipment:''}}:{})}));
- const e:Event={id:'t',creatorId:'creator',title:'Fictional competition',matchFormat:singles?'singles':'doubles',tournament:newTournament(),start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:count,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
+ const e:Event={id:'t',creatorId:'creator',title:'Fictional competition',matchFormat:singles?'singles':'doubles',tournament:{...newTournament(),autoArrange:false},start:now-3600000,end:now+24*3600000,venue:'Fixture venue',address:'',capacity:count,note:'',signupDeadline:now,cancelDeadline:now-86400000,status:'open',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
  s.events=[e];s.bookings=[0,1].map(i=>({id:'court'+i,eventId:e.id,name:'Court '+i,start:e.start,end:e.end,pricing:'total',cents:1380}));
  s.registrations=s.players.map((p,i)=>({id:'reg'+i,eventId:e.id,playerId:p.id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
  const teams=singles?s.players.map(p=>[p.id]):Array.from({length:count/2},(_,i)=>['p'+i*2,'p'+(i*2+1)]);
  const by=(id:string)=>s.accounts.find(a=>a.id===id)!;
  return {s,e,owner:by('owner'),admin:by('admin'),creator:by('creator'),teams};
 }
-const settings=(e:Event,fields:Record<string,unknown>={})=>({eventId:e.id,format:'groups',category:null,scoring:{games:3,points:21},fee:null,...fields});
+const settings=(e:Event,fields:Record<string,unknown>={})=>({eventId:e.id,format:'groups',category:null,scoring:{games:3,points:21},...fields});
 const win={a:2,b:0,games:[{a:21,b:15},{a:21,b:12}]};
 
 test('games follow the scoring rule: two clear points after deuce, the cap wins outright',()=>{
@@ -30,14 +30,14 @@ test('games follow the scoring rule: two clear points after deuce, the cap wins 
  assert.ok(finishedGame({games:1,points:15},21,20),'15-point games cap at 21');assert.ok(finishedGame({games:1,points:11},15,14));
 });
 
-test('only the owner and administrators choose the format, category, scoring and fee, and only before the draw',async()=>{
+test('only the owner and administrators choose the format, category, scoring and prizes, and only before the draw',async()=>{
  const {s,e,owner,admin,creator,teams}=fixture();
- await assert.rejects(()=>apply(s,creator,'tournamentSettings',settings(e,{fee:2000}),now),/403/);
- await apply(s,admin,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21},fee:2000}),now);
- assert.deepEqual([e.tournament!.format,e.tournament!.scoring,e.tournament!.fee],['round-robin',{games:1,points:21},2000]);
+ await assert.rejects(()=>apply(s,creator,'tournamentSettings',settings(e,{prizes:{first:2000,second:1000,third:500}}),now),/403/);
+ await apply(s,admin,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21},prizes:{first:2000,second:1000,third:500}}),now);
+ assert.deepEqual([e.tournament!.format,e.tournament!.scoring,e.tournament!.prizes],['round-robin',{games:1,points:21},{first:2000,second:1000,third:500}]);
  await apply(s,owner,'tournamentDraw',{eventId:e.id,teams,seed:3},now);
- await assert.rejects(()=>apply(s,owner,'tournamentSettings',settings(e,{format:'knockout',scoring:{games:1,points:21},fee:2000}),now),/抽签后不能更改赛制/);
- await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21},fee:2500}),now);assert.equal(e.tournament!.fee,2500,'the fee can still change');
+ await assert.rejects(()=>apply(s,owner,'tournamentSettings',settings(e,{format:'knockout',scoring:{games:1,points:21}}),now),/抽签后不能更改赛制/);
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21},prizes:{first:3000,second:1000,third:500}}),now);assert.equal(e.tournament!.prizes!.first,3000,'prizes can still change');
  assert.equal(e.tournament!.format,'round-robin','the draw keeps the settings');
 });
 
@@ -97,13 +97,16 @@ test('balanced pairing evens out the team totals and mixes one man with one woma
  for(const team of result.teams)assert.deepEqual(team.map(id=>mixed.find(p=>p.id===id)!.gender).sort(),['female','male']);
 });
 
-test('an entry fee replaces the court split and can be confirmed before the competition ends',async()=>{
+test('the entry fee is courts, shuttles and prizes over the entrants, rounded up to a euro, never a split',async()=>{
  const {s,e,owner}=fixture(true,4);
  s.registrations[3].status='waitlist';
- await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',fee:3000}),now);
+ // Two courts at 13.80, 18 shuttles at 2.00, and prizes of 30 + 15 + 7.50: 124.10 over three entrants.
+ s.costs.push({id:'balls',eventId:e.id,type:'ball',name:'Fixture shuttles',pricing:'unit',cents:200,tubeCount:1,used:18,start:null,end:null,bearer:'members'});
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',prizes:{first:3000,second:1500,third:750}}),now);
+ const costs=competitionCosts(s,e);assert.deepEqual([costs.courts,costs.shuttles,costs.prizes,costs.total,costs.fee],[2760,3600,5250,11610,3900]);
  const bill=calculateSettlement(s,e,now);
- assert.deepEqual(bill.bills.map(b=>[b.playerId,b.total]),[['p0',3000],['p1',3000],['p2',3000]],'confirmed entrants only');
- assert.equal(bill.total,9000);assert.equal(bill.detail[0].name,'报名费');
+ assert.deepEqual(bill.bills.map(b=>[b.playerId,b.total]),[['p0',3900],['p1',3900],['p2',3900]],'confirmed entrants only, 116.10 / 3 rounded up');
+ assert.equal(bill.total,11700);assert.equal(bill.expenseTotal,11610);assert.equal(bill.roundingDifference,90);assert.deepEqual(bill.detail.map(d=>d.name),['场地费','球费','冠亚季奖品']);
  await apply(s,owner,'settle',{eventId:e.id,confirmed:true,reason:'Entry fees'},now);
  assert.equal(s.settlements.at(-1)!.confirmed,true);
 });
@@ -133,4 +136,22 @@ test('the group stage and the knockout follow their own scoring rule',async()=>{
  await assert.rejects(()=>apply(s,owner,'score',{matchId:final.matchId!,a:11,b:6},clock+60000),/三局两胜/);
  await apply(s,owner,'score',{matchId:final.matchId!,...win},clock+60000);
  assert.equal(s.matches.find(m=>m.id===final.matchId)!.status,'complete');
+});
+
+test('the system puts ready fixtures on free courts after the draw and after every result',async()=>{
+ const {s,e,owner}=fixture(true,6);e.tournament!.autoArrange=true;
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21}}),now);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed:4},now);
+ const t=e.tournament!,playing=()=>s.matches.filter(m=>m.status==='playing');
+ assert.equal(playing().length,2,'both courts take a first-round fixture');assert.notEqual(playing()[0].courtId,playing()[1].courtId);
+ assert.ok(playing().every(m=>t.fixtures.find(f=>f.matchId===m.id)!.round===1),'the first round goes first');
+ let clock=now;
+ for(let i=0;i<20&&playing().length;i++){
+  clock+=60000;const m=playing()[0];await apply(s,owner,'score',{matchId:m.id,a:21,b:15},clock);
+  const onCourt=new Set(playing().flatMap(x=>[...x.a,...x.b]));
+  assert.ok(new Set(playing().map(x=>x.courtId)).size===playing().length,'one match per court');
+  assert.ok(playing().every(x=>[...x.a,...x.b].every(id=>[...onCourt].filter(o=>o===id).length===1)),'nobody plays twice at once');
+ }
+ assert.equal(s.matches.filter(m=>m.status==='complete').length,15,'every fixture was arranged and played without anyone starting it by hand');
+ await assert.rejects(()=>apply(s,owner,'tournamentArrange',{eventId:e.id},clock),/没有可以开赛/);
 });
