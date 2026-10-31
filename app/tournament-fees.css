@@ -8,3 +8,4 @@
 .tournament-fee-line span{display:grid}
 .tournament-fee-line small{color:var(--muted-foreground);font-size:12px}
 .tournament-fee-line:last-of-type{border-bottom:0;font-weight:700}
+.tournament-fee-payee{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--foreground) 5%,transparent)}.tournament-fee-payee span{color:var(--muted-foreground)}.tournament-fee-payee small{color:#b45309}

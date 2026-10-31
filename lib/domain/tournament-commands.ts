@@ -3,12 +3,12 @@ import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
-import {teamSize,isPractice} from './match-format';
+import {automaticEventTitle,eventFormat,teamSize,isPractice} from './match-format';
 import {validateRound} from './grouping';
 import {fail,month,type State,type Account,type Match,type Event} from './types';
 import {isClubOwner} from './ownership';
 import {tournamentResults} from './tournament-results';
-import {categoryFits,categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type Tournament,type TournamentFixture} from './tournament';
+import {qualifiers,categoryFits,categoryName,categoryProblem,fixtureSides,groupComplete,tournamentFormat,type Tournament,type TournamentFixture} from './tournament';
 const id=z.string().min(1).max(100),rule=z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict();
 const schemas={
  tournamentDraw:z.object({eventId:id,teams:z.array(z.array(id).min(1).max(2)).min(2).max(32),groups:z.number().int().min(2).max(8).default(2),advance:z.number().int().min(1).max(4).default(2),seed:z.number().int().min(1).max(2147483647),/** Knockout only: teams are already in seed order (strongest first) instead of drawn at random. */seeded:z.boolean().optional()}),
@@ -42,9 +42,7 @@ export function seededFirstRound(seeds:string[]){
 /** The knockout from the group tables: group winners first, then runners-up, in standard seeding so the best can
  * only meet late; first-round opponents come from different groups where possible. */
 export function generateKnockout(t:Tournament,s:Pick<State,'matches'>){
- const tables=t.groups.map((_,i)=>groupStandings(t,s,i)),seeds:string[]=[];
- for(let rank=0;rank<t.advance;rank++)for(const table of tables)if(table[rank])seeds.push(table[rank].id);
- const first=seededFirstRound(seeds),groupOf=(id:string|undefined)=>t.groups.findIndex(g=>g.includes(id??''));
+ const first=seededFirstRound(qualifiers(t,s)),groupOf=(id:string|undefined)=>t.groups.findIndex(g=>g.includes(id??''));
  for(let i=0;i<first.length;i++){const pair=first[i];if(!pair.a||!pair.b||groupOf(pair.a)!==groupOf(pair.b))continue;
   const j=first.findIndex((other,j)=>j!==i&&other.a&&other.b&&groupOf(pair.a)!==groupOf(other.b)&&groupOf(other.a)!==groupOf(pair.b));
   if(j>=0)[pair.b,first[j].b]=[first[j].b,pair.b];
@@ -109,6 +107,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   const changed=p.format!==tournamentFormat(t)||category!==t.category||JSON.stringify(p.scoring)!==JSON.stringify(t.scoring)||JSON.stringify(knockoutScoring)!==JSON.stringify(t.knockoutScoring??t.scoring);
   if(changed&&t.phase!=='setup')fail('抽签后不能更改赛制、项目或计分规则；可以继续调整奖品');
   t.format=p.format;t.scoring=p.scoring;t.knockoutScoring=knockoutScoring;if(category)t.category=category;else delete t.category;
+  if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e),categoryName(t,singles));
   if(p.prizes)t.prizes=p.prizes;
   s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:c.action,reason:'比赛设置',changes:{eventId:e.id,format:p.format,category:category??null,scoring:p.scoring,knockoutScoring,prizes:p.prizes??null}});return true;
  }

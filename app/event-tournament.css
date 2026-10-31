@@ -50,3 +50,4 @@
 .tournament-live-info i{font-style:normal;color:var(--muted-foreground)}
 .tournament-live-row .primary{min-height:44px;white-space:nowrap}
 .tournament-pair.is-flagged{padding:8px;border-radius:12px;background:#f59e0b1a;outline:2px solid #f59e0b80}.tournament-pair-flag{display:block;font-weight:500;font-size:12px;color:#b45309}
+.tournament-walkover{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.tournament-walkover small{color:var(--muted-foreground);width:100%}

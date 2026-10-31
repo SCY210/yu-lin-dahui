@@ -5,8 +5,9 @@ import {canScheduleEvent} from '../lib/domain/permissions';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventFormat} from '../lib/domain/match-format';
-import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryName,type TournamentFixture} from '../lib/domain/tournament';
+import {groupStandings,groupComplete,fixtureSides,fixtureWinner,tournamentChampion,tournamentFormat,formatLabels,categoryName,defaultScoring,matchRule,type TournamentFixture} from '../lib/domain/tournament';
 import {balancedPairs,pairingFlags} from '../lib/domain/tournament-pairing';
+import {walkoverGames} from '../lib/domain/live-score';
 import TournamentSettings from './tournament-settings';
 import TournamentResults from './tournament-results';
 import RefereeConsole from './referee-console';
@@ -81,6 +82,7 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
    {/* Live scoring needs an assigned referee; until then the organisers are asked to assign one above. */}
    {m&&m.status==='playing'&&!ctx.readOnly&&f.referee&&(manager||f.referee===data.me.playerId)&&<button type="button" className="primary" onClick={()=>setRefereeMatch(m.id)}>裁判记分</button>}
    {m&&m.status==='playing'&&!f.referee&&<p className="hint">先指定裁判，才能用手机逐分记分；也可以直接录入比分。</p>}
+   {m&&m.status==='playing'&&manager&&active&&<div className="tournament-walkover"><small>有一方缺席或退赛？</small>{(['a','b'] as const).map(side=>{const games=walkoverGames(matchRule(t,m.id)??defaultScoring,side==='a'?'b':'a');return <button key={side} type="button" className="ghost danger" disabled={busy} onClick={()=>open('判 '+m[side].map(name).join(' / ')+' 弃权','score',{matchId:m.id,a:games[0].a,b:games[0].b,games,reason:'弃权：'+m[side].map(name).join(' / ')},[],undefined,'对方按计分规则直接获胜（'+games.map(g=>g.a+':'+g.b).join('，')+'），积分榜和对阵图照常推进。')}>判 {m[side].map(name).join(' / ')} 弃权</button>})}</div>}
    {m&&<Disclosure label={m.status==='playing'?'录入本场比分':'查看赛果 / 修正比分'} defaultOpen={m.status==='playing'}><MatchCard m={m} ctx={{...ctx,readOnly:ctx.readOnly||f.stage==='group'&&t.phase==='knockout'}}/></Disclosure>}
   </article>;
  };

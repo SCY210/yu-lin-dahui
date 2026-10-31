@@ -76,9 +76,9 @@ receipts as the activity sandbox. Requests name it with `kind: 'competition'` (`
 Its document keeps its progress until it is reset. Only competition creation, signups, fees and the activity commands
 run inside it, never club-wide commands.
 
-Two shortcuts make the flow quick:
+Fixtures go on courts exactly as in a real competition: the system arranges them after the draw, the knockout and
+every result, and the page's own arrangement button starts any that are ready. One shortcut makes the flow quick:
 
-- **Start ready fixtures** puts the next ready fixtures on every free court.
 - **Finish matches in play** records a random result for every match in play. The result follows the rule of that
   match's stage, and the stronger side by realm score wins more often. A match the referee finished live keeps the
   referee's score.

@@ -42,7 +42,7 @@ test('the competition sandbox follows the real flow from the create form to the 
  doc=await step(doc,'tournamentDraw',{eventId:e().id,teams:pairs.teams,groups:2,advance:2,seed:5});
  const playing=()=>doc.state.matches.filter(m=>m.status==='playing');
  assert.equal(playing().length,4,'the system puts a fixture on every court after the draw');
- await assert.rejects(()=>step(doc,'autoStart'),/没有可以开赛/);
+ await assert.rejects(()=>step(doc,'tournamentArrange',{eventId:e().id}),/没有可以开赛/);
  // The referee scores one group match live to 15 under the group rule; the shortcut then submits the referee's result.
  const live=playing()[0].id;
  await assert.rejects(()=>step(doc,'liveScore',{op:'start',matchId:live}),/请先为这场比赛指定裁判/);

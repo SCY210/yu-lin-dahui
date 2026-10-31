@@ -60,6 +60,10 @@ export function finalGames(rule:ScoringRule,t:LiveTally){
  return games;
 }
 
+/** A walkover: the side that did not withdraw wins every game it needs 21:0 (15:0, 11:0), a valid result under the
+ * rule, so standings and the bracket move on as for any score. */
+export function walkoverGames(rule:ScoringRule,winner:Side){const loser=other(winner);return Array.from({length:Math.ceil(rule.games/2)},()=>({[winner]:rule.points,[loser]:0}) as {a:number;b:number})}
+
 /** Playing time: from the start, without pauses. */
 export function liveElapsed(s:Pick<LiveScore,'startedAt'|'pausedAt'|'pausedMs'>,now:number){
  if(!s.startedAt)return 0;return Math.max(0,(s.pausedAt??now)-s.startedAt-s.pausedMs);

@@ -21,8 +21,8 @@ and generates the full elimination bracket. Higher group places seed first;
 first-round opponents cross groups when possible. Empty slots are explicit byes.
 Future opponents resolve from preceding results, and the final winner is shown.
 
-Redraws are allowed only before the first match. Group scores are sealed after
-qualifying; an entirely unstarted knockout bracket can be removed to correct them.
+Redraws are allowed only before the first match. Group scores that would change the
+qualifiers are sealed once the knockout is drawn; an entirely unstarted knockout bracket can be removed to correct them.
 A correction cannot change a winner once the next dependent match has started.
 Tournament fixtures cannot be voided through ordinary activity controls; this
 initial release requires valid completed scores and does not implement withdrawals
@@ -88,6 +88,22 @@ Tests: `tests/tournament-formats.test.ts`.
   lists all its teams first, ranked with avatars and their record, and then its fixtures as compact rows. A fixture
   opens its own screen with start, referee and score controls, so closing it returns to the same place on the page.
   After a referee submits a result, the referee page offers the next match on the same court.
+
+## Rules that keep the competition consistent
+
+- **Title.** A competition's automatic title is its date and category, for example "October 31 · mixed doubles competition" in Chinese. It follows
+  changes of time and category.
+- **Field fixed at the draw.** After the draw, members can no longer sign up, and drawn players cannot withdraw
+  themselves; the organisers withdraw them and record a walkover for their remaining matches.
+- **Entry fee by players.** Before the draw the entry fee is shared by the confirmed signups; after it, by the drawn
+  players only, so a signup left out of the draw does not pay. The fee tab shows who collects it (the activity's fee
+  recipient, set there by the organisers).
+- **Walkover.** For a match in play, organisers can record that one side withdrew. The other side wins every game it
+  needs 21:0 (15:0 or 11:0), a valid result, so standings and the bracket move on (`walkoverGames`).
+- **Players told where to play.** Whenever a competition match is put on a court, by the system or by hand, its
+  players get a reminder and push with the court and opponents.
+- **Corrections.** A group score can still be corrected after the knockout is drawn, as long as the qualifiers and
+  their order stay the same (`qualifiers`). A knockout winner cannot change once the next match has started.
 
 ## Bracket presentation
 

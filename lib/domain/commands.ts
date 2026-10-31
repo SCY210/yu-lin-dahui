@@ -9,7 +9,9 @@ import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
 import {applyTournament,arrangeFixtures,advanceAfterGroups} from './tournament-commands';
-import {newTournament,assertTournamentScore,matchRule,categoryFits} from './tournament';
+import {newTournament,assertTournamentScore,matchRule,categoryFits,categoryName} from './tournament';
+/** The automatic title, naming a competition's category (10月31日 · 混双比赛). */
+const autoTitle=(e:Event)=>automaticEventTitle(e.start,eventFormat(e),e.tournament?categoryName(e.tournament,eventFormat(e)==='singles'):undefined);
 import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
 import { parseDomainCommand } from './command-contract';
@@ -187,7 +189,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
             else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
-            if(tournament){e.tournament=newTournament();if(category){if(!categoryFits(category,p.matchFormat==='singles'))fail('项目与单打 / 双打不一致');e.tournament.category=category}e.title=automaticEventTitle(e.start,p.matchFormat)+'比赛';delete e.pointsPlan}
+            if(tournament){e.tournament=newTournament();if(category){if(!categoryFits(category,p.matchFormat==='singles'))fail('项目与单打 / 双打不一致');e.tournament.category=category}if(e.automaticTitle)e.title=autoTitle(e);delete e.pointsPlan}
             // New activities record who advanced every court slot and expense (docs/FEE_ADVANCES.md).
             e.feeAdvances = true;
             s.events.push(e);
@@ -241,7 +243,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 fail('上限不能低于当前正式人数，请先调整报名名单');
             if(p.matchFormat&&p.matchFormat!==eventFormat(e)){if(s.matches.some(m=>m.eventId===e.id&&m.status!=='cancelled'))fail('已有分组或比赛，不能更改活动类型');e.matchFormat=p.matchFormat;e.automaticTitle=true;e.pointsChoice=undefined;e.livePlay=undefined;e.pointsPlan=undefined;e.playMode='balanced';e.identityMode='off';}
             if(isPractice(e))e.practiceShuttleCents=p.practiceShuttleCents??e.practiceShuttleCents??200;
-            Object.assign(e, { title: p.title??(e.automaticTitle?automaticEventTitle(e.start,eventFormat(e)):e.title), venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
+            Object.assign(e, { title: p.title??(e.automaticTitle?autoTitle(e):e.title), venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
             promote(s, e, now);
             break;
         }
@@ -281,7 +283,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
-            if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
+            if(e.automaticTitle)e.title=autoTitle(e);
             break;
         }
         case 'bookingEdit': {
@@ -319,7 +321,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
             e.end = Math.max(e.end, p.end);
             e.cancelDeadline = cancellationDeadline(e);
-            if(e.automaticTitle)e.title=automaticEventTitle(e.start,eventFormat(e));
+            if(e.automaticTitle)e.title=autoTitle(e);
             promoteBooking(s, e, b, now);
             break;
         }
@@ -342,6 +344,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const old = s.registrations.find(r => r.eventId === e.id && r.playerId === p.playerId);
             if (!manager && (!old || old.status === 'cancelled') && signupClosed(e, now))
                 fail('报名已截止（活动开始前 ' + signupCloseHours + ' 小时），请联系活动创建者');
+            if(e.tournament&&e.tournament.phase!=='setup'&&!manager&&(!old||old.status==='cancelled'))fail('比赛已抽签，报名已截止');
             if (old?.bookingSignups)
                 fail('请在对应的场地时段修改接龙');
             if (old && old.status !== 'cancelled') {
@@ -366,6 +369,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!manager)
                 own(p.playerId);
             const r = reg(e.id, p.playerId);
+            // A drawn player leaving would break the draw; the organisers record a walkover instead.
+            if(e.tournament&&e.tournament.phase!=='setup'&&e.tournament.teams.some(team=>team.players.includes(p.playerId))&&!manager)fail('已抽签进入对阵，退赛请联系组织者');
             if (r.bookingSignups)
                 fail('请在对应的场地时段取消接龙');
             if (r.status === 'cancelled')

@@ -64,7 +64,7 @@ function SimulationSession({kind,accountId,back,retry}:{kind:Kind;accountId:stri
  </div>;
 }
 
-const steps=['用正式的「创建比赛」表单建比赛：项目、时间、球馆、场地','球友报名（可一键全员报名），到点后可「快进到开赛」','群主或管理员设置赛制、小组赛和淘汰赛计分、报名费','选人（双打可按修为自动配对）并抽签','开赛、指定裁判，用「裁判记分」逐分记分，或一键录完','生成淘汰赛，决出冠军后在费用页确认报名费、查看成绩并归档'];
+const steps=['用正式的「创建比赛」表单建比赛：项目、时间、球馆、场地','球友报名（可一键全员报名），到点后可「快进到开赛」','群主或管理员设置赛制、小组赛和淘汰赛计分、报名费','选人（双打可按修为自动配对）并抽签','系统自动排场；指定裁判后用「裁判记分」逐分记分，或一键录完','小组赛结束自动生成淘汰赛；决出冠军后确认报名费、查看成绩并归档'];
 type Action=(name:string,payload:Record<string,unknown>)=>Promise<unknown>;
 /** The competition sandbox runs the real flow on sandbox data: the real create form, member signups, and the real
  * activity page with its signup, competition and fee tabs. Shortcuts sign everyone up, move the competition to now,
@@ -85,7 +85,7 @@ function CompetitionBody({view,ctx,busy,error,back,form,setForm,danger,setDanger
    <div className="actions">{!e&&<button type="button" className="primary" disabled={busy} onClick={create}>创建比赛</button>}
     {e&&count<data.players.length&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('signupAll')}>全员报名</button>}
     {e&&clock<e.start&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('startNow')}>快进到开赛</button>}
-    {e?.tournament&&e.tournament.phase!=='setup'&&<><button type="button" className="primary" disabled={busy} onClick={()=>run('autoStart')}>一键开赛空闲场地</button><button type="button" className="secondary" disabled={busy} onClick={()=>run('autoScore')}>一键录完进行中比赛</button></>}
+    {e?.tournament&&e.tournament.phase!=='setup'&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('autoScore')}>一键录完进行中比赛</button>}
     <button type="button" className="ghost" disabled={busy} onClick={()=>setForm({title:'重置模拟比赛',action:'reset',values:{expectedRevision:view.revision},fields:[],description:'清除模拟比赛和报名，重新取全部正式球友的资料快照。真实活动不受影响。'})}>重置模拟比赛</button></div>
    <p className="hint">一键录分按双方修为随机生成符合该阶段计分规则的比分；裁判已记完的比赛按裁判比分提交。</p></section>
   {error&&<p className="connection-note" role="alert">{error}</p>}
