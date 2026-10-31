@@ -611,7 +611,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             replayRating(s, now);
             if (firstCompletion && !unstarted && m.earlyScoreAt===undefined)
                 finishLiveMatch(s, matchEvent, m, now);
-            if(firstCompletion&&m.earlyScoreAt===undefined)advanceScheduledCourts(s,matchEvent,now);
+            if(firstCompletion&&m.earlyScoreAt===undefined)advanceScheduledCourts(s,matchEvent,now,true);
             // A competition puts its next fixtures on the freed court straight away (lib/domain/tournament-commands.ts).
             if(firstCompletion&&matchEvent.tournament?.autoArrange){advanceAfterGroups(s,matchEvent,now);arrangeFixtures(s,matchEvent,now)}
             break;
@@ -639,7 +639,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             replayRating(s, now);
             if (wasPlaying)
                 finishLiveMatch(s, event(m.eventId), m, now);
-            if(wasPlaying)advanceScheduledCourts(s,event(m.eventId),now);
+            if(wasPlaying)advanceScheduledCourts(s,event(m.eventId),now,true);
             break;
         }
         case 'cost': {
