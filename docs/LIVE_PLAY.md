@@ -2,17 +2,17 @@
 
 Each court advances independently after a valid single-game score. A finished court waits for the Start grouping button (`liveNext`), available to signed-up players, the organiser and administrators. Other courts keep playing. Scores and lineup commands use the existing optimistic, idempotent D1 transactions.
 
-## Winner preference without a win limit
+## Winner preference with a two-win break
 
 Available doubles winners are preferred for their next game. Waiting players fill the remaining places as a queue: whoever has waited longest since their previous game goes first, then fewer appearances. The selected four use the existing strength, gender and match-history pairing algorithm; the winners may remain partners or be split. Fixed-partner mode keeps complete pairs intact.
 
 To improve strength, variety or avoid a rematch, the pairing may swap a selected bench player for one whose wait differs by at most one game, so nobody is passed over for more than about one extra game.
 
-Until October 2026 the queue counted appearances first. Winners who stayed on through a run then had more games than everyone else. After losing, they sat out until the others caught up. On three courts with sixteen players and four on the bench, simulations showed runs of 8-13 games started without them, against a bench turnover of about two games. With the queue the longest run is about 4-6 games, and team strength differences are unchanged. The trade-off is that a pair on a long winning run plays more games in total; there is still no win limit.
-
 Rotating live doubles now include partner repetition in the strength comparison, rather than only as a final tie-breaker. Each immediately repeated pair costs 24 Elo-equivalent points; historical pair uses contribute 4 each, capped at 16 for frequency. The combined live partnership penalty is capped at 40. Thus a modest strength difference can permit new partners, while a large mismatch cannot be justified by unlimited repetition penalties. Gender safeguards still rank first. Fixed partners, singles and planned scheduling do not opt into this additional cost. History is indexed once and each candidate uses only map lookups.
 
-There is no two-win limit and no automatic break caused by consecutive wins. Retention is a preference, not an eligibility lock. Recent losers and winners waiting at another idle court remain candidates when substitutes are scarce. Four available players can keep playing without an override flag; five- and six-player groups can rotate without waiting for nonexistent substitutes. Other courts' waiting winners are used only after unreserved candidates. Players currently playing elsewhere are always excluded.
+After two consecutive retained wins, each winning player must leave the court for one complete game. The personal run follows `liveRetained`, so changing partners on court does not reset it. A loss resets it, and a new turn from the bench starts at one. This affects live doubles rotation only; ranking streaks, rewards, singles and tournament scheduling are unchanged.
+
+The score transaction persists a `two-wins` break. The player is excluded from automatic selection, winner reservations and manual lineup substitutions at every venue. Ready-again, disabling the voluntary-rest preference, pause/restart and `allowSame` cannot bypass it. A later-started game at the same venue must finish before the break releases; finishing a game that was already in progress does not count. When substitutes are insufficient, the court waits, including four-player groups. Fixed teams are never split to fill a court.
 
 Availability still respects signup/booking windows, disabled or stopped participants, absence holds and explicit voluntary breaks. The fix does not bypass these independent controls or split fixed partners. If fewer than four genuinely available players (or fewer than two complete fixed teams) remain, the court waits. Singles retain their existing explicit same-player option.
 
@@ -20,7 +20,7 @@ Availability still respects signup/booking windows, disabled or stopped particip
 
 The retired `reason: 'win-limit'` rest entries may remain in persisted JSON, but are ignored immediately by server selection and manual-lineup eligibility. Normal responses omit them so old tabs do not display the obsolete forced-break status. Scoring clears old entries as part of its normal transaction. No reset, record deletion or separate production-data migration is needed. The same compatibility behavior applies to saved simulation documents.
 
-New scores never create win-limit breaks. Only an explicit non-consecutive-play preference creates a voluntary break; the ready-again action can end it. A legacy win-limit entry cannot prevent ready-again, prevent disabling that preference, reserve a court or lock a player out of matching.
+New scores use the distinct `two-wins` reason for the current mandatory rule. Legacy `win-limit` entries remain ignored rather than being resurrected. Voluntary breaks keep their existing ready-again control; mandatory breaks do not. No migration of historical scores is performed.
 
 ## Current lineup corrections and refresh
 
@@ -32,8 +32,8 @@ An organiser may start live play or switch an expired activity to live mode afte
 
 Overtime games store their actual start and completion timestamps. Activity dates, booking intervals, registration times and fee allocation durations remain unchanged. The usual end-time projection and voting rules remain clock-based. Expired activities never restart through background maintenance: overtime games require an explicit action. Conditional reads retain the existing activity-end boundary, so clients see the transition without a new polling policy or database migration.
 
-The historical retained-player marker can still describe personal winning runs, but it no longer controls eligibility. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
+The retained-player marker describes the current personal on-court run and controls the two-win break. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
 
 ## Simulation and validation
 
-Simulation uses the same domain commands and view in its isolated document. Tests cover 4/5/6-player repeated games, repeated fixed-team wins, imported legacy win-limit rows, manual substitution, cross-idle-court fallback, voluntary rest, busy-player exclusion, scoped response compatibility, persistence, rollback, idempotence and concurrent next-game requests. Simulation tests also verify that real club state remains unchanged.
+Simulation uses the same domain commands and view in its isolated document. Tests cover mandatory breaks with 4/5/6 players, fixed-team wins, restart and manual-lineup bypass prevention, staggered courts, return from rest, imported legacy win-limit rows, manual substitution, cross-idle-court fallback, voluntary rest, busy-player exclusion, scoped response compatibility, persistence, rollback, idempotence and concurrent next-game requests. Simulation tests also verify that real club state remains unchanged.

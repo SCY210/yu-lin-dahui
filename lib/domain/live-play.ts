@@ -41,7 +41,10 @@ export function livePresentIds(s:Pick<State,'players'|'registrations'|'bookings'
 }
 export function liveResting(e:Event,playerId:string,venue?:string){
  // Old deployed win-limit records must not lock people out after this rule is retired.
- return !!e.livePlay?.rest.some(rest=>rest.reason!=='win-limit'&&rest.playerId===playerId&&(!venue||rest.venue===venue));
+ return !!e.livePlay?.rest.some(rest=>rest.reason!=='win-limit'&&rest.playerId===playerId&&(rest.reason==='two-wins'||!venue||rest.venue===venue));
+}
+export function liveMandatoryRest(e:Event,playerId:string){
+ return !!e.livePlay?.rest.some(rest=>rest.playerId===playerId&&rest.reason==='two-wins');
 }
 const winners=(m:Match)=>m.status==='complete'&&m.scoreA!==null&&m.scoreB!==null&&m.scoreA!==m.scoreB?(m.scoreA>m.scoreB?m.a:m.b):[];
 /** Personal wins follow the retained-player marker, not teams or simultaneous court timings.
@@ -199,8 +202,12 @@ export function finishLiveMatch(s:State,e:Event,m:Match,now:number){
  let completion=config.completions.find(c=>c.venue===venue);
  if(!completion){completion={venue,count:0};config.completions.push(completion)}completion.count++;
  config.rest=config.rest.filter(rest=>rest.reason!=='win-limit'&&(rest.venue!==venue||m.start===null||m.start<rest.after));
- for(const playerId of [...m.a,...m.b])if(config.preferences.some(p=>p.playerId===playerId&&p.avoidConsecutive)){
-  config.rest=config.rest.filter(p=>p.playerId!==playerId||p.venue!==venue);config.rest.push({playerId,venue,after:m.end??now});
+ const streaks=eventFormat(e)==='doubles'?liveWinStreaks(s,e):new Map<string,number>();
+ const won=new Set(winners(m));
+ for(const playerId of [...m.a,...m.b]){
+  const mandatory=won.has(playerId)&&(streaks.get(playerId)??0)>=2;
+  if(!mandatory&&!config.preferences.some(p=>p.playerId===playerId&&p.avoidConsecutive))continue;
+  config.rest=config.rest.filter(p=>p.playerId!==playerId||p.venue!==venue);config.rest.push({playerId,venue,after:m.end??now,...(mandatory?{reason:'two-wins' as const}:{})});
  }
  fillLiveCourts(s,e,Math.max(now,m.end??now));
 }
@@ -242,8 +249,11 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
   const p=command.payload;
   config.preferences=config.preferences.filter(pref=>pref.playerId!==p.playerId);
   config.preferences.push({playerId:p.playerId,avoidConsecutive:p.avoidConsecutive});
-  if(!p.avoidConsecutive)config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId);
- }else config.rest=config.rest.filter(rest=>rest.playerId!==command.payload.playerId);
+  if(!p.avoidConsecutive)config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId||rest.reason==='two-wins');
+ }else{
+  if(liveMandatoryRest(e,command.payload.playerId))fail('连续赢两局后须轮休一局，下一局结束后自动恢复上场资格');
+  config.rest=config.rest.filter(rest=>rest.playerId!==command.payload.playerId);
+ }
  fillLiveCourts(s,e,now,command.action==='liveStart'?{allowSame:true}:undefined);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:action==='livePreference'?'调整连续上场意愿':action==='liveReady'?'轮休后准备上场':'实时公平排场',changes:p});
  return true;

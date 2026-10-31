@@ -41,5 +41,11 @@ try{
  await act(()=>ui.update(React.createElement(LivePlay,{e:tinyData.events[0],ctx:{...ctx,data:tinyData}})));
  const continueButton=ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队');assert.ok(continueButton);assert.equal(continueButton.props.disabled,false,'four available players are not blocked by the old win limit or same-lineup rule');
  assert.ok(!text(ui.toJSON()).includes('两连胜，轮休一局'));
- console.log('PASS live court order UI: playing and waiting courts keep their number order, and 开始组队 targets its own court');
+ tinyEvent.livePlay.rest=tiny.players.slice(0,2).map(p=>({playerId:p.id,venue:tinyEvent.venue,after:now,reason:'two-wins'}));
+ const forcedData=projectClubState(tiny,tinyOwner,month(now),new Date(now).getUTCFullYear(),now+2);
+ await act(()=>ui.update(React.createElement(LivePlay,{e:forcedData.events[0],ctx:{...ctx,data:forcedData}})));
+ assert.ok(text(ui.toJSON()).includes('两连胜，轮休一局'));
+ assert.ok(!ui.root.findAllByType('button').some(b=>text(b.children)==='休息好了'),'mandatory rest offers no early ready button');
+ assert.equal(ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队').props.disabled,true,'insufficient substitutes leave the court waiting');
+ console.log('PASS live court order UI: stable court order, correct next target, legacy compatibility and mandatory two-win rest controls');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=original.window;globalThis.document=original.document;delete globalThis.IS_REACT_ACT_ENVIRONMENT}
