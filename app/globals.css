@@ -57,7 +57,7 @@ body [data-sonner-toaster][data-sonner-theme]{--success-bg:#eef0ff;--success-bor
 
 /* Shared club surfaces and controls. Generated artwork remains decorative. */
 :root{--background:#f7f8fc;--foreground:#20243b;--primary:#5146d8;--border:#e3e6f0;--muted-foreground:#69708a;--radius:1rem}
-body{background:radial-gradient(ellipse at 80% 0%,#eae8fb66,transparent 48%),var(--background);font-family:Inter,'Segoe UI','Microsoft YaHei',sans-serif;-webkit-font-smoothing:antialiased}
+html{min-height:100%;background:radial-gradient(ellipse at 80% 0%,#eae8fb66,transparent 48%) no-repeat,var(--background)}body{background:transparent;font-family:Inter,'Segoe UI','Microsoft YaHei',sans-serif;-webkit-font-smoothing:antialiased}
 .shell{max-width:1180px;padding:32px 40px 126px}
 .topbar{padding-bottom:24px;margin-bottom:26px;border-bottom:1px solid #e2e4ef}
 .brand{font-size:26px;letter-spacing:.5px;color:#252644}

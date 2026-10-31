@@ -5,3 +5,9 @@
 .wuxia-theme .visual-theme-picker select{border-radius:2px}
 @media(max-width:850px){.ui-theme-toolbar{width:calc(100% - 48px)}}
 @media(max-width:600px){.ui-theme-toolbar{width:calc(100% - 36px);margin-top:10px}.visual-theme-picker select{min-width:115px;min-height:38px}}
+/* In the club the picker is an icon in the header row; the separate toolbar row above the page is not shown. */
+body:has(.shell.app-compact) .ui-theme-toolbar{display:none}
+.visual-theme-picker.is-compact{position:relative;display:inline-grid;place-items:center;width:42px;height:42px;margin:0;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--primary)}
+.visual-theme-picker.is-compact select{position:absolute;inset:0;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:0;opacity:0;cursor:pointer}
+.visual-theme-picker.is-compact:focus-within{outline:2px solid var(--ring);outline-offset:2px}
+.wuxia-theme .visual-theme-picker.is-compact{border-radius:4px;border-color:#cfc3ab;background:#8d34290d;color:var(--cinnabar)}
