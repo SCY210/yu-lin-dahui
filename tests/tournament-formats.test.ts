@@ -205,3 +205,16 @@ test('a group score can still be corrected after the knockout is drawn when the 
  await apply(s,owner,'score',{matchId:group.matchId!,a:21,b:15},clock+1000);
  await assert.rejects(()=>apply(s,owner,'score',{matchId:group.matchId!,a:15,b:21},clock+2000),/改变出线名单/);
 });
+
+test('competition scores come from the referee and the organisers, not the players',async()=>{
+ // Six seeded singles: p3 meets p4 in the first round; both and the referee p5 are ordinary members.
+ const {s,e,owner}=fixture(true,6);e.tournament!.autoArrange=true;
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'knockout',scoring:{games:1,points:21}}),now);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed:1,seeded:true},now);
+ const m=s.matches.find(x=>[...x.a,...x.b].includes('p3'))!,account=(id:string)=>s.accounts.find(a=>a.playerId===id)!;
+ assert.ok(m&&[...m.a,...m.b].includes('p4'));
+ await assert.rejects(()=>apply(s,account('p3'),'score',{matchId:m.id,a:21,b:10},now+60000),/403/);
+ const f=e.tournament!.fixtures.find(x=>x.matchId===m.id)!;await apply(s,owner,'tournamentReferee',{eventId:e.id,fixtureId:f.id,playerId:'p5'},now);
+ await apply(s,account('p5'),'score',{matchId:m.id,a:21,b:10},now+60000);
+ assert.equal(s.matches.find(x=>x.id===m.id)!.status,'complete','the assigned referee may');
+});

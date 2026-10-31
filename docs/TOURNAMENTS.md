@@ -102,6 +102,8 @@ Tests: `tests/tournament-formats.test.ts`.
   needs 21:0 (15:0 or 11:0), a valid result, so standings and the bracket move on (`walkoverGames`).
 - **Players told where to play.** Whenever a competition match is put on a court, by the system or by hand, its
   players get a reminder and push with the court and opponents.
+- **Who scores.** In a competition, scores come from the match's assigned referee and the organisers (creator, owner
+  and administrators). Players cannot enter or correct their own scores, and are not prompted to.
 - **Corrections.** A group score can still be corrected after the knockout is drawn, as long as the qualifiers and
   their order stay the same (`qualifiers`). A knockout winner cannot change once the next match has started.
 

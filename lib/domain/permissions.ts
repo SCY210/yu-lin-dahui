@@ -18,6 +18,8 @@ export function isMatchReferee(a:Pick<Account,'playerId'>,e:Event,matchId:unknow
 export function canRecordScore(s:Pick<State,'registrations'>,a:Pick<Account,'id'|'role'|'playerId'>,event:Event){
  if(event.deletedAt!==undefined||isPractice(event))return false;
  if(canManageEvent(a,event))return true;
+ // A competition's scores come from its referees (isMatchReferee, checked per match) and its organisers, never the players.
+ if(event.tournament)return false;
  if(['draft','cancelled'].includes(event.status))return false;
  return s.registrations.some(r=>r.eventId===event.id&&r.playerId===a.playerId&&
   (r.bookingSignups?r.bookingSignups.some(row=>['confirmed','waitlist'].includes(row.status)):['confirmed','waitlist'].includes(r.status)));
