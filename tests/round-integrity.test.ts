@@ -82,14 +82,14 @@ async function live(count=12,courts=2){
 }
 const players=(m:Match)=>[...m.a,...m.b];
 
-test('live play: a scored court waits for 开始组队, which retains winners and permits the same four when short',async()=>{
+test('live play: a scored court waits for 开始组队, which sends everyone off and permits the same four when short',async()=>{
  const {s,e}=await live(12,2),[first]=s.matches.filter(m=>m.status==='playing'),member=s.accounts.find(a=>a.playerId===first.a[0])!;
  const bench=s.players.map(p=>p.id).filter(id=>!s.matches.some(m=>m.status==='playing'&&players(m).includes(id)));
  await apply(s,member,'score',{matchId:first.id,a:21,b:19},e.start+15*minute);
  assert.ok(!s.matches.some(m=>m.status==='playing'&&m.courtId===first.courtId),'no next game on its own');
  assert.equal(hasEmptyLiveCourt(s,e,e.start+16*minute),false,'the clock does not treat a waiting court as work');
  await apply(s,member,'liveNext',{eventId:e.id,courtId:first.courtId},e.start+16*minute);
- const next=s.matches.find(m=>m.status==='playing'&&m.courtId===first.courtId)!;assert.ok(first.a.every(id=>players(next).includes(id)));assert.equal(players(next).filter(id=>bench.includes(id)).length,2);
+ const next=s.matches.find(m=>m.status==='playing'&&m.courtId===first.courtId)!;assert.ok(players(first).every(id=>!players(next).includes(id)));assert.equal(players(next).filter(id=>bench.includes(id)).length,4);
  const outsider={id:'outsider',email:'',role:'member' as const,playerId:'nobody'};s.accounts.push(outsider);
  await apply(s,member,'score',{matchId:next.id,a:21,b:19},e.start+30*minute);
  await assert.rejects(()=>apply(s,outsider,'liveNext',{eventId:e.id,courtId:first.courtId},e.start+31*minute),/403/);
