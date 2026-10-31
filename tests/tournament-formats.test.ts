@@ -164,6 +164,28 @@ test('the system puts ready fixtures on free courts after the draw and after eve
  await assert.rejects(()=>apply(s,owner,'tournamentArrange',{eventId:e.id},clock),/没有可以开赛/);
 });
 
+test('on three courts nobody waits much longer than two matches between their group matches',async()=>{
+ // Nine singles in one round robin; every pairing takes its own fixed 10-20 minutes. Picking only the fairest-looking
+ // fixture now left players without a free opponent for 35+ minutes; playing each choice out keeps it within 30.
+ for(const seed of [1,2,3]){
+  const {s,e,owner}=fixture(true,9);e.tournament!.autoArrange=true;
+  s.bookings.push({...s.bookings[0],id:'court2',name:'Court 2'});
+  await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21}}),now);
+  await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed},now);
+  const length=(ids:string[])=>600000+[...ids].sort().join().split('').reduce((h,c)=>(h*31+c.charCodeAt(0)+seed)%600000,7);
+  const free=new Map(s.players.map(p=>[p.id,now])),seen=new Set<string>();let longest=0;
+  const note=()=>{for(const m of s.matches)if(m.status==='playing'&&!seen.has(m.id)){seen.add(m.id);for(const id of [...m.a,...m.b])longest=Math.max(longest,m.start!-free.get(id)!)}};
+  note();
+  for(let i=0;i<40;i++){
+   const playing=s.matches.filter(m=>m.status==='playing');if(!playing.length)break;
+   const m=playing.sort((x,y)=>x.start!+length([...x.a,...x.b])-y.start!-length([...y.a,...y.b]))[0],end=m.start!+length([...m.a,...m.b]);
+   await apply(s,owner,'score',{matchId:m.id,a:21,b:15},end);for(const id of [...m.a,...m.b])free.set(id,end);note();
+  }
+  assert.equal(s.matches.filter(m=>m.status==='complete').length,36,'every fixture was played');
+  assert.ok(longest<=30*60000,'seed '+seed+': longest wait '+Math.round(longest/60000)+' minutes');
+ }
+});
+
 test('after the draw the field is fixed, the fee follows the drawn players and the title names the category',async()=>{
  const {s,e,owner,creator}=fixture(true,6);e.automaticTitle=true;e.title='old';
  await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',category:'mens-singles',scoring:{games:1,points:21}}),now);

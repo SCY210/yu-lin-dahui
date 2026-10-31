@@ -80,10 +80,18 @@ Tests: `tests/tournament-formats.test.ts`.
   the courts below. Shuttle and partner options, activity details and bringing a friend are not offered. Court
   occupancy sits at the bottom of the signup tab of activities and competitions.
 - **System scheduling.** Competitions created now have `autoArrange`. After the draw, after the knockout is generated
-  and after every result, every free court booked at that moment takes a ready fixture (`arrangeFixtures`). Earlier
-  rounds go first; within a round, the fixture whose players have played least and waited longest goes first, so
-  everyone plays about as often. Nobody is put on two courts at once, and a court's referee stays on for its next
-  fixture unless they play in it. Organisers can also run the arrangement by hand, or start a fixture on a chosen court.
+  and after every result, every free court booked at that moment takes a ready fixture (`arrangeFixtures`), one whose
+  players are all off court. Nobody is put on two courts at once, and a court's referee stays on for its next fixture
+  unless they play in it. Organisers can also run the arrangement by hand, or start a fixture on a chosen court.
+  - *Group stage.* Opponents are fixed, so the fixture that looks fairest now can leave a player whose remaining
+    opponents are all on court waiting for a long time later. Round order is therefore not enforced. The four
+    longest-waiting ready fixtures are each played out to the end of the group stage, every match taking the average
+    length so far (15 minutes before any result), and the one whose longest wait is shortest goes on court; ties go
+    to the smallest sum of squared waits (`bestGroupFixture` in `lib/domain/tournament-schedule.ts`). On three courts
+    this cut the longest wait between a player's matches from about 40 to about 25 minutes in simulated round robins.
+  - *Knockout.* Earlier rounds go first; within a round, the teams that have played least and rested longest.
+  - Some waiting is structural: with two groups of four on three courts, one group always has a fixture waiting, and
+    its free pair can only play each other once. A court is never held empty to wait for a better fixture.
 - **Page layout.** Matches on court are pinned to the top of the competition page, with the referee button. Each group
   lists all its teams first, ranked with avatars and their record, and then its fixtures as compact rows. A fixture
   opens its own screen with start, referee and score controls, so closing it returns to the same place on the page.

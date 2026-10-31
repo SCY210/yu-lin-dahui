@@ -8,6 +8,7 @@ import {validateRound} from './grouping';
 import {fail,month,type State,type Account,type Match,type Event} from './types';
 import {isClubOwner} from './ownership';
 import {tournamentResults} from './tournament-results';
+import {bestGroupFixture} from './tournament-schedule';
 import {qualifiers,categoryFits,categoryName,categoryProblem,fixtureSides,groupComplete,tournamentFormat,type Tournament,type TournamentFixture} from './tournament';
 const id=z.string().min(1).max(100),rule=z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict();
 const schemas={
@@ -69,22 +70,40 @@ function startFixture(s:State,e:Event,f:TournamentFixture,courtId:string,now:num
  s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...m.a,...m.b],rest:[],seed:1});markRanked(m,e);s.matches.push(m);f.matchId=m.id;
  if(!s.seasons.some(x=>x.id===month(now)))s.seasons.push({id:month(now),rules:{...s.settings.rules},version:1});
 }
-/** The system schedules the competition (docs/TOURNAMENTS.md): every free court booked now takes the ready fixture
- * whose teams have played least and waited longest, so everyone plays about as often and nobody sits out for long.
- * Earlier rounds go first, and a player already on court waits. Returns the started fixtures. */
+/** The system schedules the competition (docs/TOURNAMENTS.md): every free court booked now takes a ready fixture, one
+ * whose players are all off court. In the group stage the opponents are fixed, so the pick is the one that keeps the
+ * longest wait to the end of the group stage shortest (lib/domain/tournament-schedule.ts), not the one that only looks
+ * fairest now. In the knockout earlier rounds go first, then the teams that have played least and rested longest.
+ * Returns the started fixtures. */
 export function arrangeFixtures(s:State,e:Event,now:number){
  const t=e.tournament;if(!t||t.archive||t.phase==='setup'||e.deletedAt!==undefined||['draft','cancelled'].includes(e.status)||now<e.start||now>=e.end)return [];
  const own=s.matches.filter(m=>m.eventId===e.id),started:TournamentFixture[]=[];
  const teamOf=(id:string)=>t.teams.find(x=>x.id===id)!,players=(f:TournamentFixture)=>{const {a,b}=fixtureSides(t,s,f);return a&&b?[...teamOf(a).players,...teamOf(b).players]:null};
  const played=(id:string)=>own.filter(m=>m.status==='complete'&&[...m.a,...m.b].includes(id)).length;
  const rested=(id:string)=>Math.max(e.start,...own.filter(m=>[...m.a,...m.b].includes(id)).map(m=>m.end??now));
+ // A match is expected to last as long as the finished ones did on average; a quarter of an hour before any result.
+ const done=own.filter(m=>m.status==='complete'&&m.end),length=done.length?done.reduce((n,m)=>n+m.end!-(m.start??m.end!),0)/done.length:900000;
+ const index=new Map(t.teams.map((team,i)=>[team.id,i]));
  for(;;){
-  const busyCourts=new Set(s.matches.filter(m=>m.status==='playing').map(m=>m.courtId)),onCourt=new Set(s.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b]));
-  const court=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busyCourts.has(b.id)).sort((a,b)=>a.name.localeCompare(b.name,'zh'))[0];if(!court)break;
+  const live=s.matches.filter(m=>m.status==='playing'),busyCourts=new Set(live.map(m=>m.courtId)),onCourt=new Set(live.flatMap(m=>[...m.a,...m.b]));
+  const booked=s.bookings.filter(b=>b.eventId===e.id&&b.start<=now&&b.end>now).sort((a,b)=>a.name.localeCompare(b.name,'zh'));
+  const court=booked.find(b=>!busyCourts.has(b.id));if(!court)break;
   const ready=t.fixtures.filter(f=>!f.matchId&&(f.stage==='knockout'||t.phase==='groups')).flatMap(f=>{const ids=players(f);return ids&&!ids.some(id=>onCourt.has(id))?[{f,ids}]:[]});
   if(!ready.length)break;
-  const minRound=Math.min(...ready.map(x=>x.f.round+(x.f.stage==='knockout'?100:0)));
-  const pick=ready.filter(x=>x.f.round+(x.f.stage==='knockout'?100:0)===minRound).sort((x,y)=>x.ids.reduce((n,id)=>n+played(id),0)-y.ids.reduce((n,id)=>n+played(id),0)||Math.max(...x.ids.map(rested))-Math.max(...y.ids.map(rested))||(x.f.group??0)-(y.f.group??0)||x.f.slot-y.f.slot)[0];
+  let pick:typeof ready[number];
+  if(t.phase==='groups'){
+   // A team on court is free when its match is expected to end, a court when its match is.
+   const ends=(ids:string[])=>{const m=live.find(m=>m.eventId===e.id&&[...m.a,...m.b].some(id=>ids.includes(id)));return m?Math.max(now,(m.start??now)+length):null};
+   const teamFree=t.teams.map(team=>ends(team.players)??Math.max(...team.players.map(rested)));
+   const courtFree=booked.map(b=>{const m=live.find(m=>m.courtId===b.id);return m?Math.max(now,(m.start??now)+length):now});
+   const pairing=(f:TournamentFixture)=>({f,a:index.get(f.a!)!,b:index.get(f.b!)!});
+   const pending=t.fixtures.filter(f=>f.stage==='group'&&!f.matchId).map(pairing),candidates=ready.map(x=>({...pairing(x.f),x}));
+   const chosen=bestGroupFixture(candidates,pending.map(p=>candidates.find(c=>c.f===p.f)??p),teamFree,courtFree,now,length);
+   pick=chosen.x;
+  }else{
+   const round=Math.min(...ready.map(x=>x.f.round)),total=(x:typeof ready[number])=>x.ids.reduce((n,id)=>n+played(id),0);
+   pick=ready.filter(x=>x.f.round===round).sort((x,y)=>total(x)-total(y)||Math.max(...x.ids.map(rested))-Math.max(...y.ids.map(rested))||x.f.slot-y.f.slot)[0];
+  }
   // The court's referee stays on for its next fixture unless they play in it.
   const last=t.fixtures.filter(f=>f.referee&&own.some(m=>m.id===f.matchId&&m.courtId===court.id)).sort((x,y)=>(own.find(m=>m.id===y.matchId)?.start??0)-(own.find(m=>m.id===x.matchId)?.start??0))[0];
   if(!pick.f.referee&&last?.referee&&!pick.ids.includes(last.referee))pick.f.referee=last.referee;
