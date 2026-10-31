@@ -38,7 +38,7 @@ export type Cost={advancedBy?:string;id:string;eventId:string;type:'ball'|'other
 export type Bill={playerId:string;court:number;ball:number;other:number;total:number;minutes:number};
 export type Settlement={expenseTotal?:number;roundingDifference?:number;id:string;eventId:string;version:number;created:number;reason:string;confirmed:boolean;total:number;subsidy:number;unallocated:number;bills:Bill[];/** advances/transfers/collector: the fee-advance settlement of this version (lib/domain/fee-transfers.ts); absent
  * when some court or expense has no recorded advancer, in which case bills are paid as before. */
-advances?:{playerId:string;cents:number}[];transfers?:{from:string;to:string;cents:number}[];collector?:string;
+advances?:{playerId:string;cents:number;paid?:number}[];transfers?:{from:string;to:string;cents:number}[];collector?:string;
 detail:{item?:string;type?:'court'|'ball'|'other';roundingDifference?:number;name:string;start:number;end:number;cents:number;shares:Record<string,number>;subsidy:number;unallocated:number;estimated:boolean}[]};
 /** to: for a transfer between members (fee advances), the player who received it; playerId is the payer. */
 export type Payment={to?:string;id:string;eventId:string;playerId:string;cents:number;method:string;at:number;reason:string;actor:string};

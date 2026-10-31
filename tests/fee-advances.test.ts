@@ -104,3 +104,21 @@ test('transfer planning balances exactly and needs at most one transfer fewer th
   }
  }
 });
+
+test('advancers are shown what they actually paid; per-person rounding is spread over them, not skewed to the longest part',async()=>{
+ // One court booked in two parts at 6.90 €/hour (Alice 2 h, Bob 1 h) and 7 € of balls from Carol, eight players all
+ // three hours. Each share is 20.70/8 + 7/8 = 3.4625 €, rounded up to 3.47; the 6 cents above the costs used to make
+ // the advances 13.84 / 6.88 / 7.04.
+ const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId=owner.id;
+ const accounts=[owner,alice,bob,carol,...[4,5,6,7].map(i=>({id:'m'+i,email:'',role:'member' as const,playerId:'p'+i}))];s.accounts=accounts.map(a=>({...a}));
+ s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
+ await apply(s,owner,'event',{title:'虚构分段订场',matchFormat:'doubles',start,end,venue:'虚构球馆',address:'',capacity:8,cancelDeadline:start-86400000,note:'',status:'open',
+  bookings:[{name:'1号场',start,end:start+2*hour,pricing:'hourly',cents:690,advancedBy:'p1'},{name:'1号场',start:start+2*hour,end,pricing:'hourly',cents:690,advancedBy:'p2'}]},start-2*86400000);
+ const e=s.events[0];
+ s.accounts.forEach((a,i)=>s.registrations.push({id:'r'+i,eventId:e.id,playerId:a.playerId,sequence:i,status:'confirmed',arrival:start,departure:end,registeredAt:start-86400000,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
+ await apply(s,owner,'cost',{eventId:e.id,type:'ball',name:'虚构球',pricing:'unit',cents:700,used:1,start:null,end:null,bearer:'members',advancedBy:'p3',reason:'耗球'},after);
+ const v=calculateSettlement(s,e,after),billed=v.bills.reduce((n,b)=>n+b.total,0);
+ assert.deepEqual(v.advances!.map(a=>[a.playerId,a.paid??a.cents]),[['p1',1380],['p2',690],['p3',700]],'what each advancer actually paid');
+ assert.equal(v.advances!.reduce((n,a)=>n+a.cents,0),billed,'repayments still balance what members owe');
+ assert.ok(v.advances!.every(a=>Math.abs(a.cents-(a.paid??a.cents))<=4),'only the rounding cents are added');
+});
