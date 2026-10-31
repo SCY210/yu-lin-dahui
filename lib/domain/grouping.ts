@@ -53,7 +53,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
    key+=(left<right?left+'/'+right:right+'/'+left)+';';
   }
   const cached=costCache.get(key);if(cached)return cached;
-  let variety=0,mismatches=0,rematches=0,cohorts=0;const gaps:number[]=[];
+  let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
    mismatches+=genderMismatches(s,a,b,rating);
@@ -63,10 +63,11 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
    for(const team of [a,b]){
     if(['mentor','carry'].includes(e.identityMode??''))variety-=Math.abs(rating(team[0])-rating(team[1]))*.6;
    }
-   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b]);
+   // As in live rotation: a block from one game counts like a repeated foursome, and repeated partners cost strength.
+   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b])+history.blocks([...a,...b]);partners+=history.partnerPenalty(a,b);
    variety+=history.variety(a,b,e.playMode==='koc'?1800:350);
   }
-  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts);costCache.set(key,result);return result;
+  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts,partners);costCache.set(key,result);return result;
  };
  // Check all three pairings on each court, including the unchanged one.
  // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.
