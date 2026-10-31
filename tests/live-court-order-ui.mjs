@@ -47,5 +47,17 @@ try{
  assert.ok(text(ui.toJSON()).includes('两连胜，轮休一局'));
  assert.ok(!ui.root.findAllByType('button').some(b=>text(b.children)==='休息好了'),'mandatory rest offers no early ready button');
  assert.equal(ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队').props.disabled,true,'insufficient substitutes leave the court waiting');
- console.log('PASS live court order UI: stable court order, correct next target, legacy compatibility and mandatory two-win rest controls');
+ const bench=()=>ui.root.find(n=>n.type==='div'&&n.props.className==='rest');
+ assert.ok(text(bench()).includes('场下球友 · 4 人'),'resting players remain counted as off court');
+ assert.ok(text(bench()).includes('2 人待上场 · 2 人轮休中'));
+ const profiles=bench().findAllByType('button').filter(b=>b.props.className==='group-player-profile');
+ assert.equal(profiles.length,4,'all off-court avatars and profile links stay visible');
+ const restingIds=new Set(tiny.players.slice(0,2).map(p=>p.id));
+ for(const p of tiny.players){const chip=bench().find(n=>n.type==='div'&&typeof n.props.className==='string'&&n.props.className.startsWith('group-player ')&&text(n).includes(p.name));assert.equal(chip.findAllByType('button').some(b=>b.props.className==='group-player-swap'),!restingIds.has(p.id),'only ready bench players have swap controls');if(restingIds.has(p.id))assert.ok(text(chip).includes('两连胜，轮休一局'))}
+ tinyEvent.livePlay.rest.push({playerId:tiny.players[2].id,venue:tinyEvent.venue,after:now});
+ const voluntaryData=projectClubState(tiny,tinyOwner,month(now),new Date(now).getUTCFullYear(),now+2);
+ await act(()=>ui.update(React.createElement(LivePlay,{e:voluntaryData.events[0],ctx:{...ctx,data:voluntaryData}})));
+ assert.ok(text(bench()).includes('场下球友 · 4 人'));assert.ok(text(bench()).includes('1 人待上场 · 3 人轮休中'));
+ assert.equal(bench().findAllByType('button').filter(b=>b.props.className==='group-player-swap').length,1,'voluntary rest is visible but cannot be swapped onto court either');
+ console.log('PASS live court order UI: stable court order, next target, legacy compatibility, visible off-court totals and protected mandatory/voluntary rest controls');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=original.window;globalThis.document=original.document;delete globalThis.IS_REACT_ACT_ENVIRONMENT}

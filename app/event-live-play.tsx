@@ -43,9 +43,10 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  // a player on another court). The selection belongs to the exact lineup it was made on.
  const lineup=JSON.stringify(liveLineupSnapshot(data,e.id)),fixed=e.pointsChoice?.selectedMode==='fixed';
  const changeable=lineupEditor&&!!config?.enabled&&active&&hasStarted&&!fixed;
- const bench=present.filter(id=>!playingIds.has(id)&&!liveResting(e,id));
+ const bench=present.filter(id=>!playingIds.has(id));
+ const readyBench=bench.filter(id=>!liveResting(e,id));
  const onCourt=(id:string)=>current.some(m=>[...m.a,...m.b].includes(id)&&editableLiveLineup(e,data.rounds.find((r:Round)=>r.id===m.roundId),m));
- const currentSelected=changeable&&selected&&selected.lineup===lineup&&(onCourt(selected.playerId)||bench.includes(selected.playerId))?selected:null;
+ const currentSelected=changeable&&selected&&selected.lineup===lineup&&(onCourt(selected.playerId)||readyBench.includes(selected.playerId))?selected:null;
  // 开始组队 on a court that is waiting (liveNext): anyone signed up, the organiser or an administrator. When only the
  // players of the last game here are available, the button keeps them on purpose instead.
  const scorer=!ctx.readOnly&&active&&hasStarted&&!!config?.enabled&&!config.paused&&(manager||canRecordScore(data,data.me,e));
@@ -84,7 +85,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
    <p className="hint">{courts.length} 片场地 · {current.length} 场进行中{waitingCourts.length?' · '+waitingCourts.length+' 片等待下一局':''}</p>
    <div className="courts-grid live-current-courts">{[...courts.map(b=>({key:courtKey(b),booking:b as Court|undefined,match:current.find(m=>courtKey(matchCourt(m))===courtKey(b))})),...current.filter(m=>!courts.some(b=>courtKey(b)===courtKey(matchCourt(m)))).map(m=>({key:m.id,booking:undefined,match:m as Match|undefined}))].map(({key,booking:b,match:m})=>m?(matchIncludesPlayer(m,playerId)&&<MatchCard key={key} m={m} ctx={ctx} interactive={changeable} selected={currentSelected?.playerId??''} onSelect={swap}/>):b&&waitingCourts.includes(b)&&(()=>{const next=nextGame(b);return <section className="card live-court-waiting" key={key}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{!config?.enabled?'到活动开始时间自动显示对局。':eventFormat(e)==='doubles'?'胜者优先留场，连赢两局必须下场轮休一局；替补不足时等待。':'场下球友优先；仅剩原班人马时可选择继续。'}</p>{next.can&&<div className="actions"><button type="button" className="primary" disabled={busy||!next.enough} onClick={()=>send('liveNext',{eventId:e.id,courtId:b.id,...(next.onlySame?{allowSame:true}:{})})}>{next.onlySame?'继续原班人马':'开始组队'}</button></div>}{next.can&&!next.enough&&<p className="hint">可上场的人数不足 {courtPlayers(e)} 人。</p>}</section>})())}</div>
    <details className="round-lineup-help"><summary>实时对局{changeable?' · 换人说明':' · 说明'}</summary><p className="hint">{changeable?'点击两位球友旁的交换图标换人：可交换同场搭档、与场下球友交换，或与另一片场地的球友交换。录入比分前随时可换，只调整当前对局，下一局仍按轮换安排。':fixed?'固定搭档不能单局交换成员。':'录入比分即结束本局，再点“开始组队”安排下一局。'}</p></details>
-   {!playerId&&<div className="rest"><strong>场下球友 · {bench.length} 人</strong><div className="actions">{bench.map(id=><GroupPlayer key={id} id={id} ctx={ctx} interactive={changeable} selected={currentSelected?.playerId??''} onSelect={swap}/>)}</div></div>}
+   {!playerId&&<div className="rest"><strong>场下球友 · {bench.length} 人</strong><p className="hint">{readyBench.length} 人待上场{bench.length>readyBench.length?` · ${bench.length-readyBench.length} 人轮休中`:''}</p><div className="actions">{bench.map(id=><GroupPlayer key={id} id={id} ctx={ctx} role={liveMandatoryRest(e,id)?'两连胜，轮休一局':liveResting(e,id)?'轮休中':undefined} interactive={changeable&&readyBench.includes(id)} selected={currentSelected?.playerId??''} onSelect={swap}/>)}</div></div>}
   </Disclosure>
   {!current.length&&!courts.length&&<p className="empty">目前没有可用场地。活动进行期间，创建者可安排空闲场地。</p>}
   {roster.some(r=>r.playerId===data.me.playerId)&&<section className="card live-my-rest"><h3>我的上场与轮休</h3>{roster.filter(r=>r.playerId===data.me.playerId).map(playerRow)}</section>}
