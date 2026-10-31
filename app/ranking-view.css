@@ -80,3 +80,25 @@
 .rv-breakdown-total{font-weight:700}
 .rv-breakdown-note{margin:8px 0 0;color:#8a739b;font-size:12px}
 .wuxia-theme .rv-breakdown-toggle{color:#7a5232}.wuxia-theme .rv-breakdown{background:#fbf6ea;border-color:#e0cfaa;color:#5f4630}.wuxia-theme .rv-breakdown dl+.rv-breakdown-total{border-top-color:#e0cfaa}
+
+.rv-my-ranking{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 18px;margin:18px 0;padding:16px 18px;border:1px solid #d8cce9;border-radius:14px;background:#f6f2fc;color:#625073}
+.rv-my-ranking-info{min-width:0;flex:1 1 210px}
+.rv-my-ranking-label{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;font-size:14px;font-weight:700}
+.rv-my-ranking-label>span{font-size:12px;font-weight:400;color:#7f728c}
+.rv-my-ranking-stats{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin-top:5px;font-variant-numeric:tabular-nums}
+.rv-my-ranking-stats>strong{font-size:24px;line-height:1.4;color:#5e3eb1}
+.rv-my-ranking-stats>span{font-size:13px;color:#7f728c}
+.rv-my-ranking-stats>b{font-size:14px}
+.rv-my-ranking-empty{display:flex;flex-wrap:wrap;gap:4px 10px;margin:7px 0 0;font-size:15px}
+.rv-my-ranking-empty>span{font-size:13px;color:#7f728c}
+.rv-locate-me{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:10px 14px;border:1px solid #d8cce9;border-radius:10px;background:#fff;color:#5e3eb1;font:inherit;font-size:14px;font-weight:650;cursor:pointer;white-space:nowrap}
+.rv-locate-me:hover{background:#eee7f6}
+.rv-locate-me:focus-visible,.leaderboard-row.is-me:focus{outline:3px solid #8d71c6;outline-offset:3px}
+.leaderboard-row.is-me{scroll-margin-block:24px 110px}
+.wuxia-theme .rv-my-ranking{background:#f5edd9;border-color:#c9ae70;border-radius:4px;color:#5f4630}
+.wuxia-theme .rv-my-ranking-stats>strong{color:#83552c}
+.wuxia-theme .rv-my-ranking-label>span,.wuxia-theme .rv-my-ranking-stats>span,.wuxia-theme .rv-my-ranking-empty>span{color:#78674b}
+.wuxia-theme .rv-locate-me{background:#fffaf0;border-color:#c9ae70;border-radius:4px;color:#7a5232}
+.wuxia-theme .rv-locate-me:hover{background:#eee0bc}
+.wuxia-theme .rv-locate-me:focus-visible,.wuxia-theme .leaderboard-row.is-me:focus{outline-color:#9b712c}
+@media(max-width:600px){.rv-my-ranking{padding:14px}.rv-my-ranking-info{flex-basis:100%}.rv-locate-me{width:100%}}

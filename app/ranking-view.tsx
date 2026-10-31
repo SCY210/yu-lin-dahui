@@ -2,8 +2,8 @@
 import Disclosure from './disclosure';
 import type {ClubData} from '../lib/contracts/club';
 import {Avatar} from './avatar';
-import {useState} from 'react';
-import {ChevronDown} from 'lucide-react';
+import {useRef,useState} from 'react';
+import {ChevronDown,LocateFixed} from 'lucide-react';
 import RealmBadge,{PlacementBadge} from './realm-badge';
 import {QuarterPicker,YearPicker} from './month-picker';
 import {rankingQuarter,quarterLabel} from '../lib/ranking-quarter';
@@ -22,6 +22,14 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
  const pendingPeriod=annual?data.rankingYear!==year:data.rankingQuarter!==quarter;
  // Singles and doubles scores are displayed on separate boards.
  const rows=pendingPeriod?[]:((singles?(annual?data.singlesAnnualLeaderboard:data.singlesQuarterlyLeaderboard):(annual?data.annualLeaderboard:data.quarterlyLeaderboard))??[]);
+ const myRow=rows.find((r:ClubData['quarterlyLeaderboard'][number])=>r.playerId===data.me.playerId);
+ const myRowRef=useRef<HTMLDivElement>(null);
+ const locateMe=()=>{
+  const target=myRowRef.current;
+  if(!target)return;
+  target.focus({preventScroll:true});
+  target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
+ };
  const scope=annual?year+'年':quarterLabel(quarter);
  const rule=data.seasons.find((s:any)=>s.id===period)?.rules??data.settings.rules;
  const player=(r:any)=>data.players.find((p:any)=>p.id===r.playerId)??{name:r.name};
@@ -41,9 +49,16 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
     <div className="rv-control-actions"><button type="button" className="ghost" aria-pressed={detailed} onClick={()=>setDetailed(!detailed)}>{detailed?'简洁排名':'详细数据'}</button><FeatureGuide topic={annual?'annualRanking':'ranking'} rules={rule} label="积分怎么算"/></div>
    </div>
   </div>
+  {data.me.playerId&&<section className="rv-my-ranking" aria-label="我的排名">
+   <div className="rv-my-ranking-info" role="status">
+    <span className="rv-my-ranking-label">我的排名<span>{scope} · {singles?'单打':'双打'}</span></span>
+    {pendingPeriod?<p className="rv-my-ranking-empty">正在读取我的排名…</p>:myRow?<div className="rv-my-ranking-stats"><strong>第 {myRow.rank} 名</strong><span>/ {rows.length} 位球友</span><b>{myRow.points} 积分</b></div>:<p className="rv-my-ranking-empty">暂未上榜<span>当前榜单还没有你的排名</span></p>}
+   </div>
+   {myRow&&<button type="button" className="rv-locate-me" onClick={locateMe} aria-controls="rv-my-ranking-row"><LocateFixed size={17} aria-hidden="true"/>定位到我</button>}
+  </section>}
   <RankingPodium leaders={leaders} rankingRows={rows} players={data.players} onProfile={onProfile} loading={pendingPeriod}/>
   <section className="card ranking-card"><div className="section-title"><h2>全部排名</h2><span className="badge">{rows.length} 位球友</span></div>
-   {rows.map((r:any)=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')} key={r.playerId}>
+   {rows.map((r:ClubData['quarterlyLeaderboard'][number])=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')} key={r.playerId} ref={r.playerId===data.me.playerId?myRowRef:undefined} id={r.playerId===data.me.playerId?'rv-my-ranking-row':undefined} tabIndex={r.playerId===data.me.playerId?-1:undefined} role={r.playerId===data.me.playerId?'group':undefined} aria-label={r.playerId===data.me.playerId?`我的排名，第 ${r.rank} 名，共 ${rows.length} 位球友`:undefined}>
     <b className={'rank rank-'+(r.rank-1)}>{r.rank}</b>
     {<button type="button" className="pp-rank-avatar-link" aria-label={'查看'+r.name+'的球员档案'} onClick={()=>onProfile?.(r.playerId)}><Avatar p={player(r)} size="ranking-avatar"/></button>}
     <div className="ranking-person"><strong><button type="button" className="rv-name-link" onClick={()=>onProfile?.(r.playerId)} aria-label={'查看'+r.name+'的球员档案'}>{r.name}</button>{r.playerId===data.me.playerId&&<span className="me-label">我</span>}</strong><div className="rv-realm-meta">{placing(r)?<PlacementBadge className="rv-realm-badge" games={realmScore(r)?.ratedGames} total={realmScore(r)?.placementGames} />:<RealmBadge className="rv-realm-badge" realm={realm(r)} stage={realmScore(r)?.stage} />}</div>{detailed&&placing(r)&&realmScore(r)&&<div className="rv-progress"><span>修为 {realmScore(r).score??1000} · 定级完成后显示境界</span></div>}{detailed&&!placing(r)&&realmScore(r)&&<div className="rv-progress" aria-label={`${realm(r)}修为 ${realmScore(r).score}，境界进度 ${realmScore(r).progressPercent}%`}><span className="rv-progress-track" aria-hidden="true"><span style={{width:realmScore(r).progressPercent+'%'}}/></span><span>修为 {realmScore(r).score??1000} · {realmScore(r).progressPercent}%</span></div>}<small>{r.games}局计分 · {r.wins}胜 {r.losses}负</small>{detailed&&r.total!==r.games&&<small>实际比赛 {r.total} 局</small>}</div>
