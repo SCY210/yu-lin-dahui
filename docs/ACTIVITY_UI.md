@@ -23,7 +23,7 @@ Home replaces the doubles quarterly preview with current-game cards above the si
 The signup tab holds only the court signup, guest levels, cancelled signups and court occupancy at the bottom. It no longer has the disclosures for shuttle and partner options, activity details or bringing a friend. Their contents moved:
 
 - **Edit activity and activity status.** These are in the organiser's "manage activity" menu at the top, together with deleting. Competitions gain these controls there as well.
-- **Description and free-cancellation deadline.** These show under the title. The deadline shows only until it passes.
+- **Description.** The description shows under the title; a practice session already shows it in its practice card. The free-cancellation deadline was a duplicate: the cancel dialog shows it.
 - **Shuttle choice and voting.** These are a disclosure on the fees tab, labelled "practice shuttles" for practice sessions.
 - **Partner mode and its vote.** These stay in the grouping/matches tab, where they already were.
 - **Bringing a friend.** Each court card's add-friend action already offers this.
