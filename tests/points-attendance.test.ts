@@ -30,7 +30,7 @@ test('whole-group option uses the bench only, and a late singles signup affects 
  const f=fixture(4,true);await apply(f.s,f.a,'pointsStart',start(f.s),now);const p=late(f.s.matches[0]);await apply(f.s,f.a,'pointsLate',p,now+1000);assert.equal(singlesLeaderboard(f.s,'2030-10',now+2000).find(r=>r.playerId===p.playerId)!.points,-1);assert.equal(doublesLeaderboard(f.s,'2030-10',now+2000).find(r=>r.playerId===p.playerId)!.points,0);
 });
 test('members, stale teams, ended activities, scored matches and wrong event IDs cannot mutate attendance or points',async()=>{
- const {s,a}=fixture();const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[1],'pointsStart',start(s),now),/403/);assert.deepEqual(s,before);await apply(s,a,'pointsStart',start(s),now);const m=s.matches[0],p=late(m),started=structuredClone(s),outsider=s.accounts.find(x=>![...m.a,...m.b].includes(x.playerId))!;await assert.rejects(()=>apply(s,outsider,'pointsLate',{...p,eventId:'forged'},now+1000),/403/);assert.deepEqual(s,started);await assert.rejects(()=>apply(s,a,'pointsLate',{...p,expectedA:[...p.expectedA].reverse()},now+1000),/409/);assert.deepEqual(s,started);
+ const {s,a}=fixture();const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[1],'pointsStart',start(s),now),/403/);assert.deepEqual(s,before);await apply(s,a,'pointsStart',start(s),now);const m=s.matches[0],p=late(m),started=structuredClone(s),outsider={id:'stranger',email:'',role:'member' as const,playerId:'not-signed-up'};await assert.rejects(()=>apply(s,outsider,'pointsLate',{...p,eventId:'forged'},now+1000),/403/);assert.deepEqual(s,started);await assert.rejects(()=>apply(s,a,'pointsLate',{...p,expectedA:[...p.expectedA].reverse()},now+1000),/409/);assert.deepEqual(s,started);
  await apply(s,a,'score',{matchId:m.id,a:21,b:19},now+1000);const scored=structuredClone(s);await assert.rejects(()=>apply(s,a,'pointsLate',p,now+2000),/已完成/);assert.deepEqual(s,scored);await assert.rejects(()=>apply(s,a,'pointsPresence',{eventId:'e',playerId:p.playerId,status:'arrived'},s.events[0].end),/活动进行时/);assert.deepEqual(s,scored);
 });
 test('late replacement respects other current courts and never changes a completed score or creates an extra live round after scoring correction',async()=>{
@@ -43,16 +43,17 @@ test('a due preplanned draft can replace a late player, then publish and start w
 test('normal live refill clears a stale waiting notice without charging another point',async()=>{
  const {s,a}=fixture(4);await apply(s,a,'pointsStart',start(s),now);const p=late(s.matches[0]);await apply(s,a,'pointsLate',p,now+1000);await apply(s,a,'pointsPresence',{eventId:'e',playerId:p.playerId,status:'arrived'},now+2000);await apply(s,a,'liveStart',{eventId:'e'},now+3000);assert.equal(s.events[0].pointsSession!.waiting.length,0);assert.equal(s.matches.filter(m=>m.status==='playing').length,1);assert.equal(attendancePointAdjustments(s).reduce((n,g)=>n+g.delta,0),-1);
 });
-test('everyone is present by default; a player of the same match can report a late player, who can report their own arrival',async()=>{
+test('everyone is present by default; anyone confirmed for the activity can report a late player, who can report their own arrival',async()=>{
  const {s,a}=fixture();await apply(s,a,'pointsStart',start(s),now);
  const m=s.matches.find(m=>m.status==='playing')!,members=[...m.a,...m.b].filter(id=>id!=='p0'),lateId=members[0],reporter=s.accounts.find(x=>x.playerId===members[1])!,outsider=s.accounts.find(x=>x.id!=='owner'&&![...m.a,...m.b].includes(x.playerId))!;
  const lateInput={matchId:m.id,playerId:lateId,expectedA:[...m.a],expectedB:[...m.b],replacement:'player' as const};
  assert.ok(livePresentIds(s,s.events[0],now).length===8,'nobody needs to confirm arrival to be scheduled');
  const before=structuredClone(s);
- await assert.rejects(()=>apply(s,outsider,'pointsLate',lateInput,now+1000),/403/,'a player of another match cannot report');
+ const stranger={id:'stranger',email:'',role:'member' as const,playerId:'not-signed-up'};
+ await assert.rejects(()=>apply(s,stranger,'pointsLate',lateInput,now+1000),/403/,'someone not signed up cannot report');
  await assert.rejects(()=>apply(s,s.accounts.find(x=>x.playerId===lateId)!,'pointsLate',lateInput,now+1000),/403/,'the late player cannot report themselves');
  assert.deepEqual(s,before);
- await apply(s,reporter,'pointsLate',lateInput,now+1000);assert.equal(awaitingArrival(s.events[0],lateId),true);
+ assert.ok(reporter);await apply(s,outsider,'pointsLate',lateInput,now+1000);assert.equal(awaitingArrival(s.events[0],lateId),true,'a confirmed player of another match may report');
  await assert.rejects(()=>apply(s,outsider,'pointsPresence',{eventId:'e',playerId:lateId,status:'arrived'},now+2000),/403/);
  await assert.rejects(()=>apply(s,s.accounts.find(x=>x.playerId===lateId)!,'pointsPresence',{eventId:'e',playerId:lateId,status:'clear-late'},now+2000),/403/,'only organisers refund a mistaken mark');
  await apply(s,s.accounts.find(x=>x.playerId===lateId)!,'pointsPresence',{eventId:'e',playerId:lateId,status:'arrived'},now+2000);

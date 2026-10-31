@@ -53,3 +53,5 @@ body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
 .heading:has(.heading-actions) .decorated-title h1{margin:0}
 .heading:has(.heading-actions) .racket-art{width:64px;height:58px;max-width:64px}
 .error-dialog [data-slot=dialog-title]{display:flex;align-items:center;gap:8px;color:#c0392b}.error-dialog-messages{display:grid;gap:6px;color:var(--foreground)}.error-dialog-messages p{margin:0}
+/* Activity description under the title (moved out of the signup tab). */
+.event-heading .event-note{margin:8px 0 0;color:var(--muted-foreground);font-size:14px;line-height:1.6}
