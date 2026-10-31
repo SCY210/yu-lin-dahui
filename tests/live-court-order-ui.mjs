@@ -45,18 +45,18 @@ try{
  const forcedData=projectClubState(tiny,tinyOwner,month(now),new Date(now).getUTCFullYear(),now+2);
  await act(()=>ui.update(React.createElement(LivePlay,{e:forcedData.events[0],ctx:{...ctx,data:forcedData}})));
  assert.ok(!text(ui.toJSON()).includes('两连胜，轮休一局'));
- assert.ok(!ui.root.findAllByType('button').some(b=>text(b.children)==='休息好了'),'mandatory rest offers no early ready button');
- assert.equal(ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队').props.disabled,true,'insufficient substitutes leave the court waiting');
+ assert.ok(!ui.root.findAllByType('button').some(b=>text(b.children)==='休息好了'),'a retired two-win break is no rest');
+ assert.equal(ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队').props.disabled,false,'retired two-win breaks do not block the court');
  const bench=()=>ui.root.find(n=>n.type==='div'&&n.props.className==='rest');
  assert.ok(text(bench()).includes('场下球友 · 4 人'),'resting players remain counted as off court');
  assert.ok(!text(bench()).includes('轮休'),'off-court names have no rest labels');
  const profiles=bench().findAllByType('button').filter(b=>b.props.className==='group-player-profile');
  assert.equal(profiles.length,4,'all off-court avatars and profile links stay visible');
- for(const p of tiny.players){const chip=bench().find(n=>n.type==='div'&&typeof n.props.className==='string'&&n.props.className.startsWith('group-player ')&&text(n).includes(p.name));assert.ok(chip.findAllByType('button').some(b=>b.props.className==='group-player-swap'),'automatic two-win breaks do not prevent manual selection');assert.ok(!text(chip).includes('轮休'))}
+ for(const p of tiny.players){const chip=bench().find(n=>n.type==='div'&&typeof n.props.className==='string'&&n.props.className.startsWith('group-player ')&&text(n).includes(p.name));assert.ok(chip.findAllByType('button').some(b=>b.props.className==='group-player-swap'),'retired two-win breaks do not prevent manual selection');assert.ok(!text(chip).includes('轮休'))}
  tinyEvent.livePlay.rest.push({playerId:tiny.players[2].id,venue:tinyEvent.venue,after:now});
  const voluntaryData=projectClubState(tiny,tinyOwner,month(now),new Date(now).getUTCFullYear(),now+2);
  await act(()=>ui.update(React.createElement(LivePlay,{e:voluntaryData.events[0],ctx:{...ctx,data:voluntaryData}})));
  assert.ok(text(bench()).includes('场下球友 · 4 人'));assert.ok(!text(bench()).includes('轮休'));
- assert.equal(bench().findAllByType('button').filter(b=>b.props.className==='group-player-swap').length,3,'voluntary rest remains protected while automatic rest allows manual swaps');
- console.log('PASS live court order UI: stable court order, next target, legacy compatibility, visible off-court totals and manual two-win override and protected voluntary rest');
+ assert.equal(bench().findAllByType('button').filter(b=>b.props.className==='group-player-swap').length,3,'voluntary rest remains protected while retired two-win breaks are ignored');
+ console.log('PASS live court order UI: stable court order, next target, legacy compatibility, ignored two-win breaks, visible off-court totals and protected voluntary rest');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=original.window;globalThis.document=original.document;delete globalThis.IS_REACT_ACT_ENVIRONMENT}
