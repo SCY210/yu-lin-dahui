@@ -13,6 +13,8 @@ Combined decoration size fell from 2,227,114 to 87,402 bytes (96.08%). Determini
 
 The racket's maximum CSS width is 116px and the shuttlecock's 170px; their WebP sources support roughly three times that density. Alpha was compared to resized sources during the original optimization. Recheck actual rendering after asset changes.
 
+The landscape background uses `public/wuxia-hero.webp` at its original 2171 x 724 resolution. Encoding the existing `public/wuxia-hero.png` with Sharp WebP (`quality: 88`, `effort: 6`) reduces the transferred image from 2,260,846 to 153,996 bytes (93.19%). The PNG remains available as the source; both home and sign-in CSS use the WebP. The server-rendered head preloads only the selected theme's main illustration, so its download starts before the application data and client rendering finish. The compressed landscape was visually compared with the source.
+
 ## Original generation instructions
 
 Both original decorations were generated with the built-in image generator. Generation provenance does not itself establish exclusive copyright or guarantee third-party clearance. Keep source licenses for vendored assets and review any replacement asset's rights.

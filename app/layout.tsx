@@ -39,6 +39,7 @@ export default async function RootLayout({
  const brand=themeBrand((await cookies()).get(BRAND_COOKIE)?.value);
  return (
     <html lang="zh-CN" className={brand.theme+'-theme'} suppressHydrationWarning>
+      <head><link rel="preload" as="image" href={brand.theme==='wuxia'?'/wuxia-hero.webp':'/shuttlecock.webp'} fetchPriority="high"/></head>
       <body className="antialiased"><VisualThemeProvider initialTheme={brand.theme}><div className="ui-theme-toolbar"><ThemeSwitcher/></div><AppRuntime/>{children}<footer className="legal-footer" aria-label="网站说明与隐私"><p>{siteNatureStatement}</p><a href="/terms">网站说明与使用规则</a><a href="/privacy">隐私说明</a></footer></VisualThemeProvider></body>
     </html>
   );

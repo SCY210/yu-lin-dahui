@@ -4,11 +4,11 @@ import {seasonPointsPolicy,type WinningStreaks} from '../lib/domain/season-point
 import {useVisibleAvatarMotion} from '../lib/client/visible-avatar-motion';
 import './avatar-fire.css';
 type AvatarPlayer={name?:string;avatarId?:string;winningStreak?:WinningStreaks;losingStreak?:WinningStreaks};
-function AvatarImage({p,size=''}:{p?:AvatarPlayer;size?:string}){
+function AvatarImage({p,size='',eager=false}:{p?:AvatarPlayer;size?:string;eager?:boolean}){
  const [failedId,setFailedId]=useState<string|null>(null);
  const name=p?.name??'球友',avatarId=p?.avatarId;
  const custom=!!avatarId&&avatarId!==failedId;
- return <img className={'avatar '+size} src={custom?'/api/photos/'+avatarId:'/default-avatar.svg'} alt={name+'的头像'} loading="lazy" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
+ return <img className={'avatar '+size} src={custom?'/api/photos/'+avatarId:'/default-avatar.svg'} alt={name+'的头像'} loading={eager?'eager':'lazy'} decoding="async" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
 }
 
 /** A winning streak shows a different cultivation sign as it grows, each with its own word on the seal:
@@ -107,7 +107,7 @@ function StormArt({tier}:{tier:number}){
  </>;
 }
 
-export function Avatar({p,size=''}:{p?:AvatarPlayer;size?:string}){
+export function Avatar({p,size='',eager=false}:{p?:AvatarPlayer;size?:string;eager?:boolean}){
  const streak=p?.winningStreak,wins=streak?Math.max(streak.singles,streak.doubles):0,onFire=wins>=seasonPointsPolicy.streak.start;
  const lost=p?.losingStreak,losses=lost?Math.max(lost.singles,lost.doubles):0,stormy=!onFire&&losses>=losingTiers[0].losses;
  const ref=useRef<HTMLSpanElement>(null),moving=useVisibleAvatarMotion(ref,onFire||stormy);
@@ -117,13 +117,13 @@ export function Avatar({p,size=''}:{p?:AvatarPlayer;size?:string}){
   const lossTier=losingTier(losses),loss=losingTiers[lossTier-1];
   const lossLabel=loss.name+' · '+[lost.singles>=losingTiers[0].losses?'单打 '+lost.singles+' 连败':'',lost.doubles>=losingTiers[0].losses?'双打 '+lost.doubles+' 连败':''].filter(Boolean).join(' · ');
   return <span ref={ref} className={'avatar avatar-fire-shell '+size} title={lossLabel} data-moving={moving?'true':'false'} data-mood="loss" data-tier={lossTier}>
-   <AvatarImage p={{...p,name:(p?.name??'球友')+' · '+lossLabel}} size="avatar-fire-image"/>
+   <AvatarImage p={{...p,name:(p?.name??'球友')+' · '+lossLabel}} size="avatar-fire-image" eager={eager}/>
    {lossTier===3&&<span className="al-strike" aria-hidden="true"/>}
    <svg className="avatar-fire-art" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><StormArt tier={lossTier}/></svg>
    <span className="avatar-fire-seal" aria-hidden="true"><span className="af-seal-word">{loss.seal(losses)}</span></span>
   </span>;
  }
- const img=<AvatarImage p={onFire?{...p,name:(p?.name??'球友')+' · '+label}:p} size={onFire?'avatar-fire-image':size}/>;
+ const img=<AvatarImage p={onFire?{...p,name:(p?.name??'球友')+' · '+label}:p} size={onFire?'avatar-fire-image':size} eager={eager}/>;
  if(!onFire||!info)return img;
  return <span ref={ref} className={'avatar avatar-fire-shell '+size} title={label} data-moving={moving?'true':'false'} data-tier={tier}>
   {tier===3&&<svg className="avatar-fire-art avatar-fire-back" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><BaguaBack/></svg>}

@@ -20,7 +20,9 @@ JPEG/PNG/WebP uploads receive structural/dimension validation. The maximum side 
 
 Uploads require an unchecked-by-default image-rights acknowledgement, checked again on the server before storage. The audit records the uploader's acknowledgement and policy version. This is evidence of the uploader's statement, not proof of consent from each depicted person.
 
-Photo reads authenticate/authorize every time and use private, no-store, Vary: Cookie, and nosniff. Logout/account changes do not rely on cached private images.
+Photo reads authenticate and authorize every time. Successful image GETs use `private, no-cache, must-revalidate`, a viewer-bound ETag, `Vary: Cookie`, and `nosniff`. The browser may retain image bytes, but cannot reuse them for a new request without server validation, including after logout or an account/permission change. Authorized unchanged reads return 304 without downloading the object again. Denied, missing and failed reads remain `private, no-store`; no private photos enter the service worker or a shared cache.
+
+Uploads use immutable `media/<UUID>` keys. Photo deletion removes its database row before object cleanup, so a previous validator cannot bypass deletion. Out-of-band object repairs or replacements must write a new key and update photo metadata rather than replace bytes under an existing key; the validator binds the stored key, ID, creation time, media type and size. Removing only an object without its database record is not a supported deletion procedure.
 
 Cross-tab session notifications contain only a change type and random identifier. Other tabs clear private snapshots/password inputs and verify new cookies with the server; history-cache restoration also revalidates. The PWA caches only the public offline fallback.
 
@@ -28,7 +30,7 @@ Existing uploaded image bytes can contain EXIF/location or other embedded metada
 
 ## Response headers
 
-The Worker applies MIME-sniffing protection, restricted referrer information/device permissions, HSTS, and a CSP restricting objects, base URLs, forms, and embedding to this site and official preview hosts. Private entry/API responses are not cached; static asset policies remain intact.
+The Worker applies MIME-sniffing protection, restricted referrer information/device permissions, HSTS, and a CSP restricting objects, base URLs, forms, and embedding to this site and official preview hosts. Private entry/API responses use `no-store`, except successful photo GETs that require authenticated revalidation before browser reuse; static asset policies remain intact.
 
 The CSP preserves Vinext inline bootstrap compatibility. It is not a nonce-based complete script whitelist. React escapes user text; map URLs use a fixed external domain and encoded parameters; image links use fixed API paths.
 

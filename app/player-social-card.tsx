@@ -10,6 +10,7 @@ function RacketMark({large=false}:{large?:boolean}){
 
 export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfile}:{player:any;stats:any;photo:any;avatar:ReactNode;self:boolean;onProfile:()=>void}){
  const [flipped,setFlipped]=useState(false),[failedPhoto,setFailedPhoto]=useState<string|null>(null);
+ const [requestedPhoto,setRequestedPhoto]=useState<string|null>(null);
  const tilt=useRef<HTMLDivElement>(null),front=useRef<HTMLButtonElement>(null),back=useRef<HTMLDivElement>(null);
  const [turn,setTurn]=useState<'out'|'in'|null>(null);
  const turning=useRef(false),target=useRef(false),restoreFocus=useRef(false);
@@ -23,7 +24,11 @@ export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfi
   const control=flipped?back.current:front.current;
   if(control&&!control.closest('[inert]'))control.focus({preventScroll:true});
  },[flipped,turn]);
+ // Upgrade the existing image on intent so the hidden back can load during the
+ // flip, without a second preload request or a cache of protected image bytes.
+ function preparePhoto(){if(photo)setRequestedPhoto(photo.id)}
  function flip(next:boolean){
+  if(next)preparePhoto();
   if(turning.current||next===flipped)return;reset();target.current=next;restoreFocus.current=true;
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFlipped(next);return}
   turning.current=true;setTurn('out');
@@ -36,7 +41,7 @@ export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfi
   tilt.current?.style.setProperty('--pc-glow-x',`${x*100}%`);tilt.current?.style.setProperty('--pc-glow-y',`${y*100}%`);
  }
  function reset(){tilt.current?.style.setProperty('--pc-rx','0deg');tilt.current?.style.setProperty('--pc-ry','0deg')}
- return <article className={'pc-scene'+(flipped?' pc-scene--flipped':'')+(turn?' pc-scene--turn-'+turn:'')} aria-busy={!!turn} aria-label={player.name+'的球友卡片'} onPointerMove={move} onPointerLeave={reset}>
+ return <article className={'pc-scene'+(flipped?' pc-scene--flipped':'')+(turn?' pc-scene--turn-'+turn:'')} aria-busy={!!turn} aria-label={player.name+'的球友卡片'} onPointerEnter={preparePhoto} onPointerDown={preparePhoto} onFocusCapture={preparePhoto} onPointerMove={move} onPointerLeave={reset}>
   <div className="pc-tilt" ref={tilt}><div className="pc-rotor">
    <div className="pc-face pc-front" hidden={flipped} aria-hidden={flipped} inert={flipped}>
     <button type="button" ref={front} className="pc-front-trigger" aria-label={'翻转'+player.name+'的卡片，查看战拍'} aria-expanded={flipped} onClick={()=>{flip(true)}}>
@@ -53,7 +58,7 @@ export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfi
    <div ref={back} className="pc-face pc-back" hidden={!flipped} role="group" tabIndex={flipped?0:-1} aria-label={player.name+'的战拍卡片，轻点翻回正面'} aria-hidden={!flipped} inert={!flipped} onClick={event=>{if((event.target as HTMLElement).closest('button,a'))return;flip(false)}} onKeyDown={event=>{if(event.target===event.currentTarget&&['Enter',' '].includes(event.key)){event.preventDefault();flip(false)}}}>
     <div className="pc-back-heading"><span>本命战拍</span><span className="pc-back-hint"><RotateCcw size={13} aria-hidden="true"/>轻点翻回</span></div>
     <strong className="pc-back-name">{player.name}</strong>
-    <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={'/api/photos/'+photo.id} alt={player.name+'的战拍照片'} loading="lazy" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
+    <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={'/api/photos/'+photo.id} alt={player.name+'的战拍照片'} loading={flipped||requestedPhoto===photo.id?'eager':'lazy'} decoding="async" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
     <strong className="pc-weapon-model" title={profile.racket}>{profile.racket||'战拍尚未填写'}</strong>
     <div className="pc-weapon-details"><span><span>拍线</span><strong title={profile.strings}>{profile.strings||'尚未填写'}</strong></span><span><span>磅数</span><strong>{tensionLabel(profile)||'尚未填写'}</strong></span></div>
     <p className={'pc-back-motto'+(!motto?' pc-unfilled':'')} title={motto}>{motto?'“'+motto+'”':'尚未填写个人口号'}</p>
