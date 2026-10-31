@@ -55,10 +55,13 @@ page. Creators who are not administrators can still draw and run the competition
   the board follow the rule of the match's stage. Score entry asks for every game, rejects unfinished games, and
   replaces the club's own target and cap for these matches. Competitions without a rule keep the club rules, and a
   knockout without its own rule follows the group rule.
-- **Partners.** Doubles partners are fixed for the whole competition. The auto-balance button pairs the strongest with the
-  weakest by realm score, then swaps members between teams while that brings the team totals closer
-  (`lib/domain/tournament-pairing.ts`). Mixed doubles only swap within a gender. Players left without a partner are
-  listed. The organisers can edit every pair before the draw, or assign all pairs by hand.
+- **Partners.** Doubles partners are fixed for the whole competition. The auto-balance button pairs every confirmed
+  entrant: the strongest with the weakest by realm score, then swaps members between teams while that brings the team
+  totals closer (`lib/domain/tournament-pairing.ts`). Only an odd player out is left over. In mixed doubles, when there
+  are more men than women, the men with the lowest realm score take the women's places (and the strongest women the
+  men's places in the opposite case); mixed teams of two men or two women are accepted. Teams with a stand-in, and teams
+  whose total is more than 150 from the average, are highlighted with the reason, recomputed while the owner or an
+  administrator edits the pairs by hand (`pairingFlags`). Men's doubles pair men only.
 - **Entry fee.** A competition is paid by a compulsory entry fee, never split. The fee is the competition's courts,
   its shuttles and other expenses, and the prize costs for champion, runner-up and third place, divided by the
   confirmed entrants and rounded up to a whole euro (`competitionCosts` and `entryFeeSettlement` in
@@ -88,11 +91,16 @@ Tests: `tests/tournament-formats.test.ts`.
 
 ## Bracket presentation
 
-The knockout is a draw sheet (`app/tournament-bracket.tsx`). Every first-round entry is a line on the left or right
-edge; seeds show their number (or group letter) in red, and byes are marked. Lines join pairs round by round toward
-the final in the middle. The lines a winner has travelled are highlighted, matches in play pulse, and each decided
-junction names its winner and score, with the champion above the final. Selecting a junction opens that fixture. The
-sheet fits the screen, with an option for its full size.
+The knockout is a draw sheet read left to right, like a printed draw (`app/tournament-bracket.tsx`). Column headers
+name the rounds (1/8, quarter-finals, semi-finals, final, champion). The first column lists every entry with its draw
+number and seed (the seed number in a seeded knockout, the group and place after groups), byes included. Each later
+column shows who went through, with the game scores under the line, and the last column the champion. A match in play
+is highlighted: both teams' lines, the bracket joining them, and the place its winner will take, with the court.
+Tapping a match opens it. The sheet scrolls sideways on a phone.
+
+With `autoArrange`, the knockout is drawn by itself as soon as the last group result is in (`advanceAfterGroups`,
+audited as the system), with group winners seeded first in standard seeding so the top two can only meet in the
+final, and first-round opponents from different groups where possible. The system then starts it on free courts.
 
 ## Live board
 

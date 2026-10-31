@@ -78,16 +78,19 @@ export default function EventTournament({e,ctx}:{e:Event;ctx:SchedulingContext})
    <div className="tournament-opponents"><span className={winner===sides.a?'winner':''}>{sides.a===undefined?source(f.fromA):label(sides.a)}</span><b>{m?.scoreA!=null?m.scoreA+' : '+m.scoreB:'VS'}</b><span className={winner===sides.b?'winner':''}>{sides.b===undefined?source(f.fromB):label(sides.b)}</span></div>
    {manager&&active&&!m&&sides.a&&sides.b&&<button type="button" className="secondary" disabled={busy||now<e.start} onClick={()=>start(f)}>安排开赛</button>}
    {(f.referee||manager&&active)&&<div className="tournament-referee">{manager&&active&&m?.status!=='complete'?<label>裁判<select value={f.referee??''} disabled={busy} onChange={event=>ctx.send('tournamentReferee',{eventId:e.id,fixtureId:f.id,playerId:event.target.value||null})}><option value="">未指定</option>{refereeChoices(t.teams.filter(team=>team.id===sides.a||team.id===sides.b).flatMap(team=>team.players)).map(id=><option key={id} value={id}>{name(id)}</option>)}</select></label>:<span>裁判 · {name(f.referee!)}</span>}</div>}
-   {m&&m.status==='playing'&&!ctx.readOnly&&(manager||f.referee===data.me.playerId)&&<button type="button" className="primary" onClick={()=>setRefereeMatch(m.id)}>裁判记分</button>}
+   {/* Live scoring needs an assigned referee; until then the organisers are asked to assign one above. */}
+   {m&&m.status==='playing'&&!ctx.readOnly&&f.referee&&(manager||f.referee===data.me.playerId)&&<button type="button" className="primary" onClick={()=>setRefereeMatch(m.id)}>裁判记分</button>}
+   {m&&m.status==='playing'&&!f.referee&&<p className="hint">先指定裁判，才能用手机逐分记分；也可以直接录入比分。</p>}
    {m&&<Disclosure label={m.status==='playing'?'录入本场比分':'查看赛果 / 修正比分'} defaultOpen={m.status==='playing'}><MatchCard m={m} ctx={{...ctx,readOnly:ctx.readOnly||f.stage==='group'&&t.phase==='knockout'}}/></Disclosure>}
   </article>;
  };
  return <div className="event-tournament">
   <section className="card"><p className="eyebrow">{categoryName(t,singles)+(singles?' 比赛':' · 固定搭档')}</p><h2>{formatLabels[format]}</h2><p className="hint">{format==='groups'?'组内单循环，每组前 '+(t.phase==='setup'?advance:t.advance)+' 名进淘汰赛':format==='knockout'?'单败淘汰，按修为排种子':'全部队伍互打一场，按积分排名'}{t.autoArrange&&t.phase!=='setup'?' · 系统自动排场':''}</p>{champion&&<p className="tournament-champion">🏆 冠军 · {label(champion)}</p>}{t.phase!=='setup'&&<div className="actions"><button type="button" className="secondary" onClick={()=>setBoard(true)}>实时比分大屏</button>{manager&&active&&<button type="button" className="secondary" disabled={busy||now<e.start} onClick={()=>ctx.send('tournamentArrange',{eventId:e.id})}>系统安排空闲场地</button>}</div>}
   </section>
-  {playingNow.length>0&&<section className="card tournament-live"><h3>正在比赛 · {playingNow.length} 场</h3><div className="tournament-live-list">{playingNow.map(({f,m})=>{const court=data.bookings.find(b=>b.id===m.courtId)?.name??'场地',canRef=!ctx.readOnly&&(manager||f.referee===data.me.playerId);return <div key={m.id} className="tournament-live-row">
+  {playingNow.length>0&&<section className="card tournament-live"><h3>正在比赛 · {playingNow.length} 场</h3><div className="tournament-live-list">{playingNow.map(({f,m})=>{const court=data.bookings.find(b=>b.id===m.courtId)?.name??'场地',canRef=!ctx.readOnly&&!!f.referee&&(manager||f.referee===data.me.playerId);return <div key={m.id} className="tournament-live-row">
    <button type="button" className="tournament-live-info" onClick={()=>setOpenFixture(f.id)}><small>{court}{f.referee?' · 裁判 '+name(f.referee):''}</small><span>{m.a.map(name).join(' / ')} <i>vs</i> {m.b.map(name).join(' / ')}</span></button>
    {canRef&&<button type="button" className="primary" onClick={()=>setRefereeMatch(m.id)}>裁判记分</button>}
+   {!f.referee&&manager&&!ctx.readOnly&&<button type="button" className="secondary" onClick={()=>setOpenFixture(f.id)}>指定裁判</button>}
   </div>})}</div></section>}
   <TournamentResults e={e} ctx={ctx} manager={!ctx.readOnly&&canScheduleEvent(data.me,e)}/>
   <TournamentSettings key={e.id+':'+t.phase+':'+JSON.stringify(t.prizes??null)} e={e} ctx={ctx} organiser={organiser}/>

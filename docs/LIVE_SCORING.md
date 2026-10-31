@@ -6,9 +6,11 @@ iPad (`lib/domain/live-score.ts`, `app/referee-console.tsx`, `app/live-scoreboar
 ## Referees
 
 The competition's creator, the owner and administrators assign a referee to each fixture (`tournamentReferee`). Any
-enabled member with an account may referee a fixture they do not play in. The assigned referee, the creator, the owner
-and administrators can open the referee page once the fixture has been started on a court. The referee may also submit
-that match's final score, even without a signup of their own.
+enabled member with an account may referee a fixture they do not play in. Live scoring needs an assigned referee: the
+referee button appears only then, and the server refuses live operations on a fixture without one. Until a referee is
+assigned, organisers see a button to assign one, and the score can still be entered directly. Once assigned, the
+referee, the creator, the owner and administrators can open the referee page. A court's referee carries over to the
+next fixture the system starts on that court, unless they play in it.
 
 ## The referee page
 
@@ -16,26 +18,33 @@ that match's final score, even without a signup of their own.
 - **Points.** A tap on a side's score adds a point to that side. A double tap takes back that side's last point,
   including a point it received from a red card against the other side. Taps go out one at a time in order.
 - **Pause.** The clock stops while paused, and no points can be scored. Resume continues the clock.
-- **Change ends.** Swaps the two sides on the referee page and on the board, so names and scores sit where the
-  players stand. The page prompts for the interval at 11 in a game to 21, and for changing ends at the midpoint of the
-  deciding game.
+- **Break and change of ends.** When a side first reaches the midpoint of a game (11 of 21, 8 of 15, 6 of 11), a
+  60-second break starts. A countdown dialog asks the players to change ends, and the referee page and the board swap
+  the two sides by themselves (`breaks`, `currentBreak`, `sidesSwapped`). The referee can end the break early. There is
+  no manual change-ends button.
 - **Cards.** Each card shows its explanation before it is given, and may name one player of a doubles team. The last
   card can be withdrawn.
   - **Warning:** a spoken caution, no effect on the score.
   - **Yellow card:** a formal warning, no effect on the score.
   - **Red card:** a fault, and the opponents score a point.
   - **Black card:** disqualification. The opponents win the match.
-- **End.** Games follow the competition's scoring rule (docs/TOURNAMENTS.md). The match ends when a side has won the
-  majority of games, or at a black card. An undo reopens it. The referee then submits the result once, as an ordinary
-  match score, which updates standings, the bracket, the leaderboard and realm scores. After a black card, the
-  opponents are recorded as winning the unfinished game with the fewest points that finish it, and any game they still
-  needed at 21:0 (or 15:0, 11:0). The saved result is therefore always valid under the rule.
+- **End.** Games follow the rule of the match's stage (docs/TOURNAMENTS.md). The match ends when a side has won the
+  majority of games, or at a black card. Five seconds later the result is submitted automatically as an ordinary match
+  score, which updates standings, the bracket, the leaderboard and realm scores; a double tap before then takes the
+  last point back and cancels it. After a black card, the opponents are recorded as winning the unfinished game with
+  the fewest points that finish it, and any game they still needed at 21:0 (or 15:0, 11:0). The saved result is
+  therefore always valid under the rule. After the result, the page offers the next match on the same court.
+- **Errors.** Every error, here and anywhere in the app, opens a dialog that must be closed (`app/error-dialog.tsx`).
+- **Rotation.** The score digits size themselves to their panel, so turning the phone and back never pushes them out.
 
 ## The board
 
-The live board button on the competition page shows every court with a started or recently finished match: the team names,
-finished games, the current game score and the match clock. It follows each court's change of ends, refreshes every
-two seconds while visible, and has a full-screen button for an iPad.
+The live board shows the draw sheet with matches in play highlighted, the group tables during the group stage, and one
+card per match in play. Each card shows the teams with avatars, finished games, the current score, the match clock, the
+midpoint break countdown with the change of ends, and every warning and card given in the match, with the player and
+its effect. The sides follow each court's change of ends. A finished match leaves the board, whether the referee or
+anyone else entered its score. The board refreshes every two seconds while visible and has a full-screen button for an
+iPad.
 
 ## Storage and cost
 

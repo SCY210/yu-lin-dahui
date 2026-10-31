@@ -43,6 +43,11 @@ try{
  assert.equal(live.events.filter(x=>x.type==='point').length,5);assert.equal(live.version,6);assert.equal(Math.max(...results.map(r=>r.version)),6);
  assert.ok(queries.every(q=>/live_scores|FROM matches WHERE id=|FROM events WHERE id=/.test(q)),'a tap reads only its match, activity and live row');
  await api.applyLiveScore(referee,{op:'swap',matchId});assert.equal((await api.liveScores(e.id))[0].swapped,true);
+ // A started fixture without a referee cannot be scored live.
+ const saved=sql.prepare('SELECT payload FROM events WHERE id=?').get(e.id).payload,stored=JSON.parse(saved);delete stored.tournament.fixtures.find(f=>f.matchId===matchId).referee;
+ sql.prepare('UPDATE events SET payload=? WHERE id=?').run(JSON.stringify(stored),e.id);
+ await assert.rejects(()=>api.applyLiveScore(owner,{op:'point',matchId,side:'a'}),e=>e.status===409&&/指定裁判/.test(e.message));
+ sql.prepare('UPDATE events SET payload=? WHERE id=?').run(saved,e.id);
  // The second fixture has not been started: it cannot be scored live yet.
  await assert.rejects(()=>api.applyLiveScore(owner,{op:'start',matchId:second.matchId??'none'}),e=>e.status===404);
  console.log('PASS live score store: referee and organisers only, start before points, concurrent taps all counted, single-row reads and writes');

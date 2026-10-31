@@ -4,7 +4,7 @@ import {apply} from '../lib/domain/commands';
 import {emptyState,type Event} from '../lib/domain/types';
 import {newTournament,finishedGame,fixtureSides,tournamentChampion,groupStandings,categoryProblem} from '../lib/domain/tournament';
 import {seededFirstRound} from '../lib/domain/tournament-commands';
-import {balancedPairs} from '../lib/domain/tournament-pairing';
+import {balancedPairs,pairingFlags} from '../lib/domain/tournament-pairing';
 import {calculateSettlement,competitionCosts} from '../lib/domain/money';
 
 const now=Date.parse('2030-10-10T13:00:00Z');
@@ -93,8 +93,14 @@ test('balanced pairing evens out the team totals and mixes one man with one woma
  assert.ok(Math.max(...totals)-Math.min(...totals)<=0,'totals '+totals.join());
  const odd=balancedPairs([...players,{id:'late',score:1000}]);assert.deepEqual(odd.left,['late'],'the last given waits for a partner');
  const mixed=[...players.slice(0,5).map(p=>({...p,gender:'male'})),...players.slice(5).map(p=>({...p,gender:'female'})),{id:'w9',score:1650,gender:'female'}];
- const result=balancedPairs(mixed,'mixed-doubles');assert.equal(result.teams.length,4);assert.deepEqual(result.left,['p4']);
- for(const team of result.teams)assert.deepEqual(team.map(id=>mixed.find(p=>p.id===id)!.gender).sort(),['female','male']);
+ // Nine players: the last one waits. Five men and three women remain, so the weakest man stands in for a woman.
+ const result=balancedPairs(mixed,'mixed-doubles');assert.equal(result.teams.length,4);assert.deepEqual(result.left,['w9']);
+ const genders=result.teams.map(team=>team.map(id=>mixed.find(p=>p.id===id)!.gender).sort().join());
+ assert.equal(genders.filter(g=>g==='female,male').length,3);assert.equal(genders.filter(g=>g==='male,male').length,1);
+ const standIn=result.teams.findIndex(team=>team.includes('p4'));assert.ok(standIn>=0,'the man with the lowest score stands in');
+ assert.deepEqual(result.flags.map(f=>f.team),[standIn],'only the stand-in team is flagged');assert.match(result.flags[0].reason,/顶女位/);
+ // Hand-made pairs are flagged when a team total is far from the others.
+ assert.deepEqual(pairingFlags([[{id:'a',score:1600},{id:'b',score:1600}],[{id:'c',score:1000},{id:'d',score:1000}],[{id:'e',score:1300},{id:'f',score:1300}]]).map(f=>f.team),[0,1]);
 });
 
 test('the entry fee is courts, shuttles and prizes over the entrants, rounded up to a euro, never a split',async()=>{
@@ -120,7 +126,7 @@ test('men\'s singles only takes men, doubles must keep a category, and partners 
  await apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:'mens-doubles'}),now);
  await assert.rejects(()=>apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:null}),now),/请选择男双或混双/);
  const pairs=balancedPairs([{id:'m1',score:1200,gender:'male'},{id:'w1',score:1500,gender:'female'},{id:'m2',score:1000,gender:'male'}],'mens-doubles');
- assert.deepEqual(pairs,{teams:[['m1','m2']],left:['w1']});
+ assert.deepEqual([pairs.teams,pairs.left],[[['m1','m2']],['w1']]);
 });
 
 test('the group stage and the knockout follow their own scoring rule',async()=>{

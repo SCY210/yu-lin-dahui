@@ -22,8 +22,9 @@ export default function TournamentBracket({t,data,name,selected,onSelect,compact
  const playing=(f:TournamentFixture|undefined)=>!!f&&match(f)?.status==='playing';
  const parentOf=(f:TournamentFixture)=>knockout.find(p=>p.fromA===f.id||p.fromB===f.id);
  const score=(f:TournamentFixture)=>{const m=match(f);if(m?.status!=='complete')return '';const {a}=fixtureSides(t,data,f),flip=fixtureWinner(t,data,f)!==a;return (m.games.length?m.games:[{a:m.scoreA??0,b:m.scoreB??0}]).map(g=>flip?g.b+'–'+g.a:g.a+'–'+g.b).join(', ')};
- // Leaf i sits at row i; a fixture of round r covers 2^r leaves and its line runs through their middle.
- const mid=(round:number,slot:number)=>headH+((slot+.5)*2**round)*cellH;
+ // Names sit on a line at the bottom of their cell. Entry i's line closes row i; a fixture of round r covers 2^r
+ // entries and its winner's line lies halfway between the lines of its two entries.
+ const line=(round:number,slot:number)=>headH+((slot+.5)*2**round+.5)*cellH;
  const height=headH+size*cellH+(compact?8:24),width=(rounds+1)*colW;
  const leaves=first.flatMap(f=>{const {a,b}=fixtureSides(t,data,f);return [{f,team:a},{f,team:b}]});
  const champion=fixtureWinner(t,data,byRound(rounds)[0]);
@@ -38,7 +39,7 @@ export default function TournamentBracket({t,data,name,selected,onSelect,compact
      </div>})}
     {knockout.map(f=>{
      // The bracket joining this match's two entries, and the place its winner takes in the next column.
-     const y1=mid(f.round-1,f.slot*2),y2=mid(f.round-1,f.slot*2+1),y=mid(f.round,f.slot),x=f.round*colW,m=match(f),winner=fixtureWinner(t,data,f),live=m?.status==='playing',next=parentOf(f);
+     const y1=line(f.round-1,f.slot*2),y2=line(f.round-1,f.slot*2+1),y=line(f.round,f.slot),x=f.round*colW,m=match(f),winner=fixtureWinner(t,data,f),live=m?.status==='playing',next=parentOf(f);
      const court=live?data.bookings?.find(b=>b.id===m!.courtId)?.name:undefined;
      return <div key={f.id}>
       <div className={'draw-join'+(live?' is-live':winner?' is-won':'')} style={{left:x-1,top:y1,height:y2-y1}}/>
@@ -48,7 +49,7 @@ export default function TournamentBracket({t,data,name,selected,onSelect,compact
       {score(f)&&<span className="draw-score" style={{left:x+8,top:y+3,width:colW-12}}>{score(f)}</span>}
      </div>;
     })}
-    {champion&&<div className="draw-champion" style={{left:rounds*colW+8,top:mid(rounds,0)+22,width:colW-12}}>🏆 冠军</div>}
+    {champion&&<div className="draw-champion" style={{left:rounds*colW+8,top:line(rounds,0)+22,width:colW-12}}>🏆 冠军</div>}
    </div>
   </div>
  </div>;
