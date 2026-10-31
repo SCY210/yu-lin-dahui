@@ -24,12 +24,32 @@ test('extra preplanned singles and fixed doubles preserve their team format and 
  for(const fixed of [false,true]){const {s,e,a}=await fixture(fixed?'doubles':'singles',fixed),teams=structuredClone(e.pointsChoice?.teams);await apply(s,a,'pointsNext',payload(s),now+16*minute);const added=s.matches.filter(m=>m.roundId===s.rounds.at(-1)!.id);assert.equal(added.length,2);for(const m of added)for(const team of [m.a,m.b]){assert.equal(team.length,fixed?2:1);if(fixed)assert.ok(teams!.some(t=>t.length===team.length&&t.every(id=>team.includes(id))))}assert.deepEqual(e.pointsChoice?.teams,teams)}
 });
 test('expired, wrong-mode, unauthorized and unavailable attempts preserve the whole state',async()=>{
- for(const kind of ['ended','clock-ended','wrong-mode','member','no-courts','no-players','short-time','practice','tournament','deleted','future-score']){
+ // Past the end or short of time is overtime now (see the next test); closing the activity early still stops it.
+ for(const kind of ['ended','wrong-mode','member','no-courts','no-players','practice','tournament','deleted','future-score']){
   const {s,e,a}=await fixture();let at=now+16*minute,actor=a;
   if(kind==='playing'){s.matches[0].status='playing';s.rounds[0].status='playing'}
   if(kind==='published'){s.matches[0].status='published';s.rounds[0].status='published'}
   if(kind==='ended')e.status='ended';if(kind==='clock-ended')at=e.end;if(kind==='wrong-mode')e.schedulingMode='round';if(kind==='member')actor=s.accounts[1];if(kind==='no-courts')s.bookings=[];if(kind==='no-players')s.players.forEach(p=>p.enabled=false);if(kind==='short-time')e.end=at+4*minute;if(kind==='practice')e.matchFormat='practice';if(kind==='tournament')e.tournament={status:'draft'} as never;if(kind==='deleted')e.deletedAt=now;if(kind==='future-score')s.matches[0].end=at+minute;
   const before=structuredClone(s);await assert.rejects(()=>apply(s,actor,'pointsNext',payload(s),at),kind);assert.deepEqual(s,before,kind);
+ }
+});
+
+test('临时加一轮 keeps going past the scheduled end with the final phase, and only explicit actions start it',async()=>{
+ for(const kind of ['after-end','short-time']){
+  const {s,e,a}=await fixture();let at=e.end+5*minute;
+  if(kind==='short-time'){at=now+16*minute;e.end=at+4*minute}
+  await apply(s,a,'pointsNext',payload(s),at);
+  const round=s.rounds.at(-1)!,added=s.matches.filter(m=>m.roundId===round.id);
+  assert.equal(round.overtime,true,kind);assert.equal(round.duration,15,'an overtime round keeps the usual length');
+  assert.equal(round.status,'playing',kind+': free courts start it at once');assert.ok(added.length&&added.every(m=>m.status==='playing'&&m.start===at));
+  // Another one after it: published for later, started by the next score, never by background maintenance.
+  await apply(s,a,'pointsNext',payload(s),at+minute);
+  const later=s.rounds.at(-1)!,queued=s.matches.filter(m=>m.roundId===later.id);
+  assert.equal(later.overtime,true);assert.ok(queued.every(m=>m.status==='published'));
+  const {scheduledCourtProgress}=await import('../lib/domain/scheduled-courts');
+  for(const m of added)await apply(s,a,'score',{matchId:m.id,a:21,b:17},Math.max(at,e.end)+20*minute);
+  assert.ok(queued.some(m=>s.matches.find(x=>x.id===m.id)!.status==='playing'),kind+': scoring the overtime round starts the next one');
+  assert.equal(scheduledCourtProgress(s,e,e.end+60*minute).ready.length,0,'maintenance after the end starts nothing');
  }
 });
 
