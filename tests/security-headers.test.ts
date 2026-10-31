@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import config from '../next.config';
 import {securityHeaders,secureResponse} from '../lib/security-headers';
+import {photoCacheControl} from '../lib/photo-cache';
 
 test('应用响应关闭类型猜测、危险插件及跨站表单，保留当前脚本渲染与合法预览',()=>{
  const headers=new Headers(securityHeaders.map(h=>[h.key,h.value]));
@@ -30,4 +31,15 @@ test('统一头配置覆盖所有路径，HTML和API不保留敏感缓存，静�
  const privateGroups=groups.filter(g=>g.headers.some(h=>h.key==='Cache-Control'));
  assert.deepEqual(privateGroups.map(g=>g.source).sort(),['/','/api/:path*']);
  assert.ok(privateGroups.every(g=>g.headers.find(h=>h.key==='Cache-Control')!.value==='private, no-store'));
+});
+
+test('only successful validated photo GETs retain private browser revalidation',()=>{
+ const base={'Cache-Control':photoCacheControl,'ETag':'"photo-v1-'+'a'.repeat(64)+'"','Vary':'Cookie','Content-Type':'image/png'};
+ const response=(path='/api/photos/id',method='GET',status=200,headers:Record<string,string>=base)=>secureResponse(new Response(null,{status,headers}),new Request('https://example.test'+path,{method}));
+ for(const status of [200,304])assert.equal(response(undefined,undefined,status).headers.get('Cache-Control'),photoCacheControl);
+ assert.equal(response(undefined,undefined,200,{...base,Vary:'RSC, Cookie'}).headers.get('Cache-Control'),photoCacheControl);
+ for(const path of ['/','/api','/api/club','/api/photos','/api/photos/id/extra','/api/photos/id/'])assert.equal(response(path).headers.get('Cache-Control'),'private, no-store');
+ for(const method of ['POST','HEAD','DELETE'])assert.equal(response(undefined,method).headers.get('Cache-Control'),'private, no-store');
+ for(const status of [201,301,400,401,403,404,429,503])assert.equal(response(undefined,undefined,status).headers.get('Cache-Control'),'private, no-store');
+ for(const headers of [{...base,ETag:'"unknown"'},{...base,Vary:'Accept-Encoding'},{...base,'Content-Type':'text/html'},{...base,'Cache-Control':'public, max-age=3600'}])assert.equal(response(undefined,undefined,200,headers).headers.get('Cache-Control'),'private, no-store');
 });

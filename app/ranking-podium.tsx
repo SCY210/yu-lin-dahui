@@ -75,7 +75,7 @@ export default function RankingPodium({leaders, rankingRows, players, onProfile,
         const rankLabel = `${tied ? '并列' : ''}${title}`;
         const info = <>
           <span className="rp-crown-space" aria-hidden="true">{row.rank === 1 && <Crown className="rp-crown"/>}</span>
-          <Avatar p={player} size="rp-avatar"/>
+          <Avatar p={player} size="rp-avatar" eager/>
           <strong className="rp-name">{row.name}</strong>
         </>;
         return <article key={row.playerId} className={`rp-slot rp-${slot} rp-metal-${row.rank}`} aria-label={`${row.name}，${rankLabel}，${row.points} 积分`}>

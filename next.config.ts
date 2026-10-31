@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   async headers(){return [
     {source:'/:path*',headers:securityHeaders},
     {source:'/',headers:[{key:'Cache-Control',value:'private, no-store'}]},
+    // Vinext keeps explicit route response headers. Photo GETs opt into private
+    // revalidation; this remains the default for missing headers and errors.
     {source:'/api/:path*',headers:[{key:'Cache-Control',value:'private, no-store'}]},
   ]},
 };

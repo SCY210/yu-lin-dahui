@@ -41,7 +41,7 @@ export default function ScoreDialog({m,ctx,close,pendingMatches=[],choose}:any){
  const correct=()=>{setOpened({status:'complete',games:m.games.map((g:Game)=>({a:g.a,b:g.b}))});setScores(initialScoreDrafts(m));setFormat(ruleFormat??(m.games.length>1?'best3':'single'));setThird(m.games.length===3);setError('')};
  const team=(side:'a'|'b')=><div className={'score-team'+(side===mySide?' is-my-team':'')}>
    <span className="score-team-label">{teamLabel(side)}</span>
-   {m[side].map((id:string)=><span key={id} className="score-team-player"><Avatar p={player(id)} size="score-avatar"/><span>{ctx.name(id)}</span></span>)}
+   {m[side].map((id:string)=><span key={id} className="score-team-player"><Avatar p={player(id)} size="score-avatar" eager/><span>{ctx.name(id)}</span></span>)}
   </div>;
  const teams=<div className="score-teams">{team(sides[0])}<span className="score-team-vs" aria-hidden="true">VS</span>{team(sides[1])}</div>;
  return <Dialog open historyCloseBlocked={ctx.busy} onOpenChange={open=>{if(!open&&!ctx.busy)close()}}><DialogContent className="app-dialog simple-score-dialog"><DialogHeader><DialogTitle>{savedByOther?'这局已录入比分':correcting?'修正比赛结果':'录入本局比分'}</DialogTitle><DialogDescription className="simple-score-context">{court}{title?' · '+title:''}{rule?' · '+scoringLabel(rule):''}</DialogDescription></DialogHeader>

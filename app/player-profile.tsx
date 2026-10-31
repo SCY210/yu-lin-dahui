@@ -4,7 +4,7 @@ import Disclosure from './disclosure';
 import RealmProgress from './realm-progress';
 import RealmBadge, {PlacementBadge} from './realm-badge';
 import {Avatar} from './avatar';
-import {lazy} from 'react';
+import {lazy,type ComponentProps} from 'react';
 import {Activity, Flame, Pencil, Trophy, UserRound} from 'lucide-react';
 import {choice, number, text} from './ui';
 const AvatarEditor=lazy(()=>import('./avatar-editor'));
@@ -21,7 +21,7 @@ const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手
 const preferences:Record<string,string> = {doubles:'双打', singles:'单打', mixed:'混双', all:'都可以'};
 const optional = (key:string, label:string) => ({...text(key, label), optional:true});
 
-function ProfileAvatar({p}:any) {return <Avatar p={p} size="pp-avatar"/>;}
+function ProfileAvatar({p}:Pick<ComponentProps<typeof Avatar>,'p'>) {return <Avatar p={p} size="pp-avatar" eager/>;}
 
 function Fact({label, value}: {label:string; value:unknown}) {
   const filled = value !== null && value !== undefined && String(value).trim() !== '';

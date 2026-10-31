@@ -1,3 +1,5 @@
+import {isPhotoEtag,photoCacheControl} from './photo-cache';
+
 // Limit embedding to this site and the official hosts used by Sites previews.
 // Script/style restrictions need per-request nonces for Vinext's inline bootstrap.
 export const securityHeaders=[
@@ -14,7 +16,12 @@ export function secureResponse(response:Response,request:Request):Response {
  const headers=new Headers(response.headers);
  for(const {key,value} of securityHeaders)headers.set(key,value);
  const pathname=new URL(request.url).pathname;
-  if(pathname==='/'||pathname==='/api'||pathname.startsWith('/api/'))headers.set('Cache-Control','private, no-store');
+ const validatedPhoto=request.method==='GET'&&/^\/api\/photos\/[^/]+$/.test(pathname)
+  &&(response.status===200||response.status===304)&&isPhotoEtag(headers.get('ETag'))
+  &&/^image\/(jpeg|png|webp)$/.test(headers.get('Content-Type')??'')
+  &&headers.get('Cache-Control')===photoCacheControl
+  &&(headers.get('Vary')??'').split(',').some(value=>value.trim().toLowerCase()==='cookie');
+  if((pathname==='/'||pathname==='/api'||pathname.startsWith('/api/'))&&!validatedPhoto)headers.set('Cache-Control','private, no-store');
   if(pathname==='/sw.js'){
    headers.set('Cache-Control','no-cache');headers.set('Service-Worker-Allowed','/');
   }
