@@ -48,3 +48,18 @@
 .referee-break-card strong{font-size:22px}
 .referee-break-card p{margin:0;opacity:.85}
 .referee-break-clock{font:800 64px/1 ui-monospace,monospace;color:#ffcf5a}
+/* A card given is shown full screen, so the referee can raise the phone like the real card; a tap puts it away. */
+.referee-card-show{position:fixed;inset:0;z-index:47;display:grid;grid-template-rows:1fr auto auto;justify-items:center;align-items:center;gap:14px;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));background:#141414;color:#fff;cursor:pointer}
+.referee-card-face{display:flex;align-items:flex-start;justify-content:flex-start;width:min(78vw,calc((100dvh - 190px)*.68));aspect-ratio:2/3;padding:16px 18px;border-radius:min(5vw,22px);box-shadow:0 18px 50px #000c,inset 0 0 0 1px #ffffff26;animation:referee-card-raise .32s cubic-bezier(.2,.9,.3,1.2)}
+.referee-card-face span{font-size:clamp(18px,5vw,28px);font-weight:800;letter-spacing:.12em;opacity:.55}
+.referee-card-show.is-warning .referee-card-face{background:#eef0f3;color:#1d2433}
+.referee-card-show.is-yellow .referee-card-face{background:#ffd60a;color:#4a3a00}
+.referee-card-show.is-red .referee-card-face{background:#e5383b;color:#fff}
+.referee-card-show.is-black .referee-card-face{background:#050505;color:#fff;box-shadow:0 18px 50px #000c,0 0 0 3px #f5f5f5}
+.referee-card-caption{display:grid;gap:4px;text-align:center}
+.referee-card-caption strong{font-size:clamp(22px,6vw,34px);line-height:1.2;overflow-wrap:anywhere}
+.referee-card-caption span{font-size:16px;opacity:.8}
+.referee-card-close{min-height:44px;padding:0 28px;border:1px solid #ffffff59;border-radius:999px;background:transparent;color:#fff}
+@keyframes referee-card-raise{from{transform:translateY(24px) rotate(-6deg) scale(.86);opacity:0}}
+@media(prefers-reduced-motion:reduce){.referee-card-face{animation:none}}
+@media(orientation:landscape) and (max-height:500px){.referee-card-show{grid-template-columns:auto auto;grid-template-rows:1fr auto;column-gap:28px}.referee-card-face{grid-row:1/3;width:auto;height:min(80dvh,360px)}.referee-card-close{grid-column:2}}

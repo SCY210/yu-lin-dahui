@@ -22,6 +22,8 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
  const scores=ctx.live?.scores??remote.scores,put=ctx.live?()=>{}:remote.put,transport=ctx.live?.send??sendLiveOp;
  const live:LiveScore|undefined=scores[m.id],tally=liveTally(rule,live?.events??[]),status=live?.status??'ready';
  const [sheet,setSheet]=useState(false),[cardSide,setCardSide]=useState<Side>('a'),[cardPlayer,setCardPlayer]=useState(''),[cardKind,setCardKind]=useState<CardKind>('warning'),[skipped,setSkipped]=useState(0),[countdown,setCountdown]=useState<number|null>(null);
+ // The card just given, shown full screen so the referee can hold the phone up like the real card.
+ const [shown,setShown]=useState<{kind:CardKind;side:Side;playerId?:string}|null>(null);
  const queue=useRef(Promise.resolve()),pending=useRef<{side:Side;timer:ReturnType<typeof setTimeout>}|null>(null),submitted=useRef('');
  // Operations go out one at a time in tap order; each reply is the newest state. Errors open the error dialog.
  const run=(op:LiveOpBody)=>{queue.current=queue.current.then(async()=>{try{put(await transport({...op,matchId:m.id} as LiveOp))}catch(err){showError(err instanceof Error?err.message:'操作失败，请重试')}})};
@@ -77,10 +79,15 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
    {m[cardSide].length>1&&<label>球员<select value={cardPlayer} onChange={event=>setCardPlayer(event.target.value)}><option value="">整队</option>{m[cardSide].map(id=><option key={id} value={id}>{ctx.name(id)}</option>)}</select></label>}
    <div className="referee-card-kinds">{cardKinds.map(kind=><label key={kind} className={'referee-card-kind is-'+kind}><input type="radio" name="card" checked={cardKind===kind} onChange={()=>setCardKind(kind)}/><span className={'card-chip is-'+kind} aria-hidden="true"/><span><strong>{cardRules[kind].label} · {cardRules[kind].effect}</strong><small>{cardRules[kind].detail}</small></span></label>)}</div>
    <div className="referee-sheet-actions">
-    <button type="button" className="primary" onClick={()=>{run({op:'card',side:cardSide,kind:cardKind,...(cardPlayer?{playerId:cardPlayer}:{})});setSheet(false)}}>出示{cardRules[cardKind].label}</button>
+    <button type="button" className="primary" onClick={()=>{run({op:'card',side:cardSide,kind:cardKind,...(cardPlayer?{playerId:cardPlayer}:{})});setSheet(false);setShown({kind:cardKind,side:cardSide,...(cardPlayer?{playerId:cardPlayer}:{})})}}>出示{cardRules[cardKind].label}</button>
     <button type="button" className="ghost" disabled={!(live?.events??[]).some(x=>x.type==='card')} onClick={()=>{run({op:'uncard'});setSheet(false)}}>撤销上一张牌</button>
     <button type="button" className="ghost" onClick={()=>setSheet(false)}>取消</button>
    </div>
+  </div>}
+  {shown&&<div className={'referee-card-show is-'+shown.kind} role="alertdialog" aria-label={'出示'+cardRules[shown.kind].label} onClick={()=>setShown(null)}>
+   <div className="referee-card-face"><span>{cardRules[shown.kind].label}</span></div>
+   <div className="referee-card-caption"><strong>{shown.playerId?ctx.name(shown.playerId):team(shown.side)}</strong><span>{cardRules[shown.kind].label} · {cardRules[shown.kind].effect}</span></div>
+   <button type="button" className="referee-card-close" onClick={()=>setShown(null)}>收起</button>
   </div>}
  </div>;
 }

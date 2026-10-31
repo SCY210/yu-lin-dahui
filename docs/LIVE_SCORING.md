@@ -23,7 +23,9 @@ next fixture the system starts on that court, unless they play in it.
   the two sides by themselves (`breaks`, `currentBreak`, `sidesSwapped`). The referee can end the break early. There is
   no manual change-ends button.
 - **Cards.** Each card shows its explanation before it is given, and may name one player of a doubles team. The last
-  card can be withdrawn.
+  card can be withdrawn. Giving a card fills the phone screen with that card in its colour, with the player or team
+  and the effect underneath, so the referee can hold the phone up like the real card. In landscape the card sits beside
+  the text. A tap anywhere puts it away.
   - **Warning:** a spoken caution, no effect on the score.
   - **Yellow card:** a formal warning, no effect on the score.
   - **Red card:** a fault, and the opponents score a point.
