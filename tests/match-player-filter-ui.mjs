@@ -44,7 +44,7 @@ try{
  const other={...e,id:'other'};data.events.push(other);await act(()=>ui.update(React.createElement(Scheduling,{e:other,ctx})));assert.equal(ui.root.findByProps({'aria-label':'对局筛选'}).findByType('select').props.value,'','activity switch clears unrelated filter');
  // Future tournament fixtures filter by their resolved teams even before a Match exists.
  e.tournament={phase:'groups',teams:[{id:'A',players:['p0','p1']},{id:'B',players:['p2','p3']},{id:'C',players:['p5','p8']},{id:'D',players:['p4','p6']}],groups:[['A','B','C','D']],advance:2,fixtures:[{id:'f0',stage:'group',group:0,round:1,slot:0,a:'A',b:'B'},{id:'f1',stage:'group',group:0,round:2,slot:0,a:'A',b:'C'}]};
- data.matches=[];data.rounds=[];await mount();await choose('p5');assert.equal(ui.root.findAll(n=>typeof n.props.className==='string'&&n.props.className.startsWith('tournament-match ')).length,1);
+ data.matches=[];data.rounds=[];await mount();await choose('p5');assert.equal(ui.root.findAll(n=>typeof n.props.className==='string'&&n.props.className.startsWith('fixture-row')).length,1);
  await choose('p7');assert.ok(text(ui.toJSON()).includes('暂时没有已确定的对局'));
  console.log('PASS match-player filter: both teams, future/past/live/cancelled matches, guests, retired participants, no-match/rest, original numbering/global start guard, reset and no data writes');
 }finally{if(ui)await act(()=>ui.unmount());assert.equal(listeners.size,0);Object.assign(globalThis,{window:original.window,document:original.document,IS_REACT_ACT_ENVIRONMENT:original.act})}

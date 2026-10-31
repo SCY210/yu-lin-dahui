@@ -8,7 +8,7 @@ import {applyBounty} from './bounties';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
-import {applyTournament} from './tournament-commands';
+import {applyTournament,arrangeFixtures} from './tournament-commands';
 import {newTournament,assertTournamentScore,matchRule,categoryFits} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
@@ -607,6 +607,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (firstCompletion && !unstarted && m.earlyScoreAt===undefined)
                 finishLiveMatch(s, matchEvent, m, now);
             if(firstCompletion&&m.earlyScoreAt===undefined)advanceScheduledCourts(s,matchEvent,now);
+            // A competition puts its next fixtures on the freed court straight away (lib/domain/tournament-commands.ts).
+            if(firstCompletion&&matchEvent.tournament?.autoArrange)arrangeFixtures(s,matchEvent,now);
             break;
         }
         case 'matchScoring': {
@@ -739,12 +741,12 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         case 'settle': {
             const p = command.payload;
             const e = event(p.eventId);
-            if (p.confirmed && e.tournament?.fee === undefined && now < e.end && (usesAutomaticAttendance(e) || s.attendance.some(x => x.eventId === e.id && x.end === null)))
+            if (p.confirmed && !e.tournament && now < e.end && (usesAutomaticAttendance(e) || s.attendance.some(x => x.eventId === e.id && x.end === null)))
                 fail('请等待活动结束，再确认正式分摊');
             const result = p.confirmed ? calculateSettlement(s, e, now) : calculateSettlementPreview(s, e, now);
             if (p.confirmed && result.unallocated)
                 fail('仍有待分配费用，请通过费用承担设置指定群补贴或核对参加时间');
-            if (p.confirmed && e.feeAdvances && e.tournament?.fee === undefined && !result.transfers)
+            if (p.confirmed && e.feeAdvances && !e.tournament && !result.transfers)
                 fail('请先为每个场地时段和费用填写垫付人，再确认分摊');
             const latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
             if (p.confirmed && latest && sameSettlement(result, latest))

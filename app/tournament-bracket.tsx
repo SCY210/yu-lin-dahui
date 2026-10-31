@@ -1,29 +1,62 @@
 'use client';
-import {useRef,useState} from 'react';
-import {Trophy,ZoomIn,ZoomOut,Maximize2} from 'lucide-react';
+import {useState} from 'react';
+import {Maximize2,Minimize2} from 'lucide-react';
 import type {Tournament,TournamentFixture,TournamentData} from '../lib/domain/tournament';
-import {fixtureSides,fixtureWinner} from '../lib/domain/tournament';
-import {tournamentBracketLayout,bracketCard} from '../lib/client/tournament-bracket-layout';
+import {fixtureSides,fixtureWinner,tournamentFormat} from '../lib/domain/tournament';
 import './tournament-bracket.css';
 
-type Props={t:Tournament;data:TournamentData;name:(id:string)=>string;selected?:string;onSelect:(f:TournamentFixture)=>void};
-export default function TournamentBracket({t,data,name,selected,onSelect}:Props){
- const viewport=useRef<HTMLDivElement>(null),[scale,setScale]=useState(1),layout=tournamentBracketLayout(t.fixtures);
- const team=(id:string|null|undefined,source:string|undefined)=>id?t.teams.find(team=>team.id===id)?.players.map(name)??['待定']:id===undefined?[source?(()=>{const f=t.fixtures.find(f=>f.id===source);return f?'第 '+f.round+' 轮第 '+(f.slot+1)+' 场胜者':'待晋级'})():'待晋级']:['轮空'];
- const fit=()=>setScale(Math.max(.05,Math.min(1,((viewport.current?.clientWidth??900)-16)/layout.width)));
- return <div className="knockout-chart">
-  <div className="knockout-tools"><p className="hint">左右两侧逐轮晋级，在中间会师决赛。点击对局查看详情；手机可横向滑动。</p><div className="actions" role="group" aria-label="对战表缩放"><button type="button" className="secondary" aria-label="缩小对战表" disabled={scale<=.2} onClick={()=>setScale(Math.max(.2,scale-.2))}><ZoomOut size={16}/></button><span aria-live="polite">{Math.round(scale*100)}%</span><button type="button" className="secondary" aria-label="放大对战表" disabled={scale>=1.4} onClick={()=>setScale(Math.min(1.4,scale+.2))}><ZoomIn size={16}/></button><button type="button" className="secondary" onClick={fit}><Maximize2 size={16}/>全图</button><button type="button" className="ghost" onClick={()=>setScale(1)}>原大</button></div></div>
-  <div className="knockout-viewport" ref={viewport} role="region" aria-label="淘汰赛树状对战表，可横向滚动" tabIndex={0}>
-   <div className="knockout-size" style={{width:layout.width*scale,height:layout.height*scale}}><div className="knockout-canvas" style={{width:layout.width,height:layout.height,transform:`scale(${scale})`}}>
-    <svg className="knockout-lines" width={layout.width} height={layout.height} aria-hidden="true">{layout.links.map(link=><path key={link.from+':'+link.to} d={link.path}/>)}</svg>
-    {layout.nodes.filter((node,i,all)=>all.findIndex(n=>n.x===node.x)===i).map(node=><h3 className={'knockout-column-title '+(node.side==='final'?'is-final':'')} key={node.x} style={{left:node.x,width:bracketCard.width}}>{node.side==='final'&&<Trophy size={22}/>} {node.label}</h3>)}
-    {layout.nodes.map(node=>{const f=node.fixture,{a,b}=fixtureSides(t,data,f),winner=fixtureWinner(t,data,f),m=data.matches.find(m=>m.id===f.matchId),namesA=team(a,f.fromA),namesB=team(b,f.fromB);
-     return <button type="button" key={f.id} className={'knockout-node '+(node.side==='final'?'is-final ':'')+(m?.status==='playing'?'is-playing ':'')+(selected===f.id?'is-selected':'')} style={{left:node.x,top:node.y,width:bracketCard.width,height:bracketCard.height}} onClick={()=>onSelect(f)} aria-label={node.label+' 第'+(f.slot+1)+'场：'+namesA.join(' / ')+' 对 '+namesB.join(' / ')} aria-pressed={selected===f.id}>
-      <span className="knockout-node-status">{m?.status==='playing'?'● 正在比赛':m?.status==='complete'?'已完成':winner?'轮空晋级':a&&b?'待开赛':'等待晋级'}<small>第 {f.slot+1} 场</small></span>
-      {([{id:a,names:namesA,score:m?.scoreA},{id:b,names:namesB,score:m?.scoreB}]).map((side,i)=><span key={i} className={'knockout-team '+(side.id&&winner===side.id?'is-winner':'')}><span>{side.names.map((name,index)=><span key={index}>{name}</span>)}</span><b>{side.score??'—'}</b></span>)}
-     </button>;
-    })}
-   </div></div>
+type Props={t:Tournament;data:TournamentData;name:(id:string)=>string;selected?:string;onSelect?:(f:TournamentFixture)=>void;compact?:boolean};
+type Child={kind:'leaf';team:string|null|undefined;y:number;x:number}|{kind:'fixture';f:TournamentFixture;y:number;x:number};
+const rowH=30,labelW=168,colW=38,top=34;
+
+/** The knockout as a draw sheet (docs/TOURNAMENTS.md): every first-round entry is a line on the left or right edge,
+ * and lines join pairs round by round toward the final in the middle. Lines a winner has travelled are highlighted,
+ * matches in play pulse, and each decided junction names its winner, so progress reads at a glance on a phone or the
+ * board. Selecting a junction picks that fixture. */
+export default function TournamentBracket({t,data,name,selected,onSelect,compact=false}:Props){
+ const [fit,setFit]=useState(true);
+ const knockout=t.fixtures.filter(f=>f.stage==='knockout');if(!knockout.length)return null;
+ const rounds=Math.max(...knockout.map(f=>f.round)),final=knockout.find(f=>f.round===rounds)!;
+ const byId=new Map(knockout.map(f=>[f.id,f])),seeded=tournamentFormat(t)==='knockout';
+ const teamName=(id:string|null|undefined)=>id===null?'轮空':id?t.teams.find(x=>x.id===id)?.players.map(name).join(' / ')??'待定':'待定';
+ const seedOf=(id:string)=>{if(seeded){const i=t.teams.findIndex(x=>x.id===id);return i>=0&&i<8?String(i+1):''}const g=t.groups.findIndex(group=>group.includes(id));return g>=0?String.fromCharCode(65+g):''};
+ const playing=(f:TournamentFixture)=>data.matches.some(m=>m.id===f.matchId&&m.status==='playing');
+ const score=(f:TournamentFixture)=>{const m=data.matches.find(m=>m.id===f.matchId&&m.status==='complete');return m?(m.games.length>1?m.games.map(g=>g.a+'-'+g.b).join(' '):m.scoreA+'-'+m.scoreB):''};
+ // Leaves on each side in draw order; a fixture sits halfway between its two children.
+ const rows={left:0,right:0},lines:{d:string;won:boolean;live:boolean}[]=[],labels:{x:number;y:number;text:string;seed:string;anchor:'start'|'end';empty:boolean}[]=[],junctions:{f:TournamentFixture;x:number;y:number;anchor:'start'|'end'}[]=[];
+ const width=2*(labelW+rounds*colW)+(rounds>1?0:colW),half=width/2;
+ const xOf=(round:number,side:'left'|'right')=>{const x=labelW+round*colW;return side==='left'?x:width-x};
+ const place=(child:{team?:string|null;f?:TournamentFixture},side:'left'|'right'):Child=>{
+  if(child.f){
+   const f=child.f,{a,b}=fixtureSides(t,data,f),kids=[f.fromA?{f:byId.get(f.fromA)}:{team:a},f.fromB?{f:byId.get(f.fromB)}:{team:b}].map(k=>place(k,side)),y=(kids[0].y+kids[1].y)/2,x=xOf(f.round,side),winner=fixtureWinner(t,data,f);
+   for(const k of kids){const from=k.kind==='leaf'?k.team:fixtureWinner(t,data,k.f);lines.push({d:`M${k.x} ${k.y}H${x}V${y}`,won:!!winner&&from===winner,live:playing(f)})}
+   junctions.push({f,x,y,anchor:side==='left'?'start':'end'});
+   return {kind:'fixture',f,x,y};
+  }
+  const y=top+rows[side]++*rowH+rowH/2,x=side==='left'?labelW:width-labelW,team=child.team;
+  labels.push({x:side==='left'?labelW-8:width-labelW+8,y,text:teamName(team),seed:team?seedOf(team):'',anchor:side==='left'?'end':'start',empty:!team});
+  return {kind:'leaf',team,x,y};
+ };
+ // The final's two halves go left and right; a two-team final has one entry on each side.
+ const {a:fa,b:fb}=fixtureSides(t,data,final),left=place(final.fromA?{f:byId.get(final.fromA)}:{team:fa},'left'),right=place(final.fromB?{f:byId.get(final.fromB)}:{team:fb},'right');
+ const fy=(left.y+right.y)/2,champion=fixtureWinner(t,data,final);
+ for(const [k,from] of [[left,left.kind==='leaf'?left.team:fixtureWinner(t,data,left.f)],[right,right.kind==='leaf'?right.team:fixtureWinner(t,data,right.f)]] as const)lines.push({d:`M${k.x} ${k.y}H${half}V${fy}`,won:!!champion&&from===champion,live:playing(final)});
+ const height=top+Math.max(rows.left,rows.right)*rowH+16;
+ const pick=(f:TournamentFixture)=>onSelect?.(f);
+ return <div className={'draw-sheet'+(compact?' is-compact':'')}>
+  {!compact&&<div className="draw-sheet-tools"><p className="hint">两侧逐轮晋级，在中间会师决赛。高亮线是胜者走过的路，闪动的是正在进行的比赛；点交汇处查看该场。</p><button type="button" className="ghost" onClick={()=>setFit(!fit)}>{fit?<><Maximize2 size={15}/>原大</>:<><Minimize2 size={15}/>适应屏幕</>}</button></div>}
+  <div className="draw-sheet-scroll" role="region" aria-label="淘汰赛对阵图" tabIndex={0}>
+   <svg className="draw-sheet-svg" viewBox={`0 0 ${width} ${height}`} width={fit||compact?'100%':width} style={fit||compact?undefined:{minWidth:width}} role="img" aria-label={'淘汰赛对阵图'+(champion?'，冠军 '+teamName(champion):'')}>
+    <text className="draw-champion" x={half} y={18} textAnchor="middle">{champion?'🏆 '+teamName(champion):rounds>1?'决赛':''}</text>
+    {lines.map((l,i)=><path key={i} d={l.d} className={'draw-line'+(l.won?' is-won':'')+(l.live?' is-live':'')}/>)}
+    {labels.map((l,i)=><text key={i} x={l.x} y={l.y+4} textAnchor={l.anchor} className={'draw-entry'+(l.empty?' is-empty':'')}>{l.anchor==='end'&&l.seed&&<tspan className="draw-seed">{l.seed} </tspan>}{l.text.length>14?l.text.slice(0,13)+'…':l.text}{l.anchor==='start'&&l.seed&&<tspan className="draw-seed"> {l.seed}</tspan>}</text>)}
+    {junctions.map(({f,x,y,anchor})=>{const winner=fixtureWinner(t,data,f),s=score(f);return <g key={f.id} className={'draw-junction'+(selected===f.id?' is-selected':'')+(playing(f)?' is-live':'')} onClick={()=>pick(f)}>
+     <rect x={anchor==='start'?x-colW:x} y={y-13} width={colW} height={26} rx={6}/>
+     {winner&&f.id!==final.id&&<text x={anchor==='start'?x+4:x-4} y={y-5} textAnchor={anchor} className="draw-winner">{teamName(winner).slice(0,8)}</text>}
+     {s&&<text x={anchor==='start'?x+4:x-4} y={y+12} textAnchor={anchor} className="draw-score">{s}</text>}
+    </g>})}
+    <g className={'draw-junction is-final'+(selected===final.id?' is-selected':'')+(playing(final)?' is-live':'')} onClick={()=>pick(final)}><circle cx={half} cy={fy} r={7}/>{score(final)&&<text x={half} y={fy+22} textAnchor="middle" className="draw-score">{score(final)}</text>}</g>
+   </svg>
   </div>
  </div>;
 }

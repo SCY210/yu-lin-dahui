@@ -17,7 +17,7 @@ export function ballCents(c:{pricing:string;cents:number;tubeCount:number;used:n
 export function legacyTubeUnitCents(c:{pricing:string;cents:number;tubeCount:number}){return c.pricing==='tube'&&c.tubeCount>0&&c.cents%c.tubeCount===0?c.cents/c.tubeCount:null}
 export function bookingCents(b:{pricing:string;cents:number;start:number;end:number}){return b.pricing==='total'?b.cents:Math.round(b.cents*(b.end-b.start)/3600000)}
 export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,'id'|'version'|'created'|'reason'|'confirmed'>{
- if(e.tournament?.fee!==undefined)return entryFeeSettlement(s,e,e.tournament.fee);
+ if(e.tournament)return entryFeeSettlement(s,e);
  // Every lookup below reads only this activity's rows. Narrowing them once keeps the organiser's fee previews of all
  // activities linear in the club's history instead of rescanning every activity's rows per player and segment.
  const own=<T extends {eventId:string}>(rows:T[])=>rows.filter(row=>row.eventId===e.id);
@@ -59,12 +59,21 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  if(bills.reduce((a,b)=>a+b.total,0)+subsidy+unallocated!==total)fail('对账失败');
  return withFeeTransfers(s,e,equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate));
 }
-/** A competition with an entry fee (docs/TOURNAMENTS.md): every confirmed entrant owes the same fee, and courts and
- * shuttles are no longer split. The organisers can change the fee; a new confirmation is a new version as usual. */
-function entryFeeSettlement(s:State,e:Event,fee:number){
- const ids=[...new Set(s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].sort();
- const shares=Object.fromEntries(ids.map(id=>[id,fee])),total=fee*ids.length;
- return {eventId:e.id,bills:ids.map(playerId=>({playerId,court:0,ball:0,other:fee,total:fee,minutes:0})),detail:[{item:'entry-fee',name:'报名费',type:'other' as const,start:e.start,end:e.end,cents:total,shares,subsidy:0,unallocated:0,estimated:false}],total,subsidy:0,unallocated:0};
+/** What a competition costs (docs/TOURNAMENTS.md): its courts, its shuttles and other expenses, and the prizes for
+ * the top three. The entry fee is that total divided by the confirmed entrants, rounded up to a whole euro. */
+export function competitionCosts(s:Pick<State,'bookings'|'costs'|'registrations'>,e:Event){
+ const courts=s.bookings.filter(b=>b.eventId===e.id).reduce((n,b)=>n+bookingCents(b),0);
+ const shuttles=s.costs.filter(c=>c.eventId===e.id).reduce((n,c)=>n+(c.type==='ball'?ballCents(c):c.cents),0);
+ const p=e.tournament?.prizes,prizes=p?p.first+p.second+p.third:0,total=courts+shuttles+prizes;
+ const entrants=[...new Set(s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].sort();
+ const fee=entrants.length?Math.ceil(total/entrants.length/100)*100:0;
+ return {courts,shuttles,prizes,total,entrants,fee};
+}
+/** A competition is paid by a compulsory entry fee, never split: every confirmed entrant owes the same fee. What the
+ * rounding up collects above the costs is recorded as roundingDifference. A new confirmation is a new version. */
+function entryFeeSettlement(s:State,e:Event){
+ const c=competitionCosts(s,e),total=c.fee*c.entrants.length,line=(item:string,name:string,cents:number)=>({item,name,type:'other' as const,start:e.start,end:e.end,cents,shares:{},subsidy:0,unallocated:0,estimated:false});
+ return {eventId:e.id,bills:c.entrants.map(playerId=>({playerId,court:0,ball:0,other:c.fee,total:c.fee,minutes:0})),detail:[line('courts','场地费',c.courts),line('shuttles','球费',c.shuttles),line('prizes','冠亚季奖品',c.prizes)],total,subsidy:0,unallocated:0,expenseTotal:c.total,roundingDifference:total-c.total};
 }
 /** When every court slot and expense records who advanced it, the split also says who transfers what to whom
  * (lib/domain/fee-transfers.ts). The collector is the activity's fee recipient when that is a member. */

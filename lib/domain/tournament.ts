@@ -11,11 +11,11 @@ export type TournamentFormat='groups'|'knockout'|'round-robin';
 export type TournamentCategory='mens-singles'|'mens-doubles'|'mixed-doubles';
 /** Games per match (1, or best of 3), points to win a game, and the cap after deuce (docs/TOURNAMENTS.md). */
 export type ScoringRule={games:1|3;points:11|15|21};
-export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;/** The group stage (and round robin) rule. */scoring?:ScoringRule;/** The knockout rule; unset, the knockout follows `scoring`. */knockoutScoring?:ScoringRule;/** Entry fee per player in cents; set, it replaces the court and shuttle split. */fee?:number;/** Set when archived: the final results as they stood (lib/domain/tournament-results.ts). */archive?:TournamentArchive};
+export type Tournament={phase:'setup'|'groups'|'knockout';teams:TournamentTeam[];groups:string[][];advance:number;fixtures:TournamentFixture[];format?:TournamentFormat;category?:TournamentCategory;/** The group stage (and round robin) rule. */scoring?:ScoringRule;/** The knockout rule; unset, the knockout follows `scoring`. */knockoutScoring?:ScoringRule;/** Prize costs in cents for the champion, runner-up and third place; they go into the entry fee (lib/domain/money.ts). */prizes?:{first:number;second:number;third:number};/** Left by competitions from before the entry fee was computed; ignored. */fee?:number;/** The system puts ready fixtures on free courts after the draw, the knockout and every result. */autoArrange?:boolean;/** Set when archived: the final results as they stood (lib/domain/tournament-results.ts). */archive?:TournamentArchive};
 export const defaultScoring:ScoringRule={games:3,points:21};
 export const emptyTournament=():Tournament=>({phase:'setup',teams:[],groups:[],advance:2,fixtures:[]});
 /** New competitions: groups then knockout, best of three games to 21, until the organisers choose otherwise. */
-export const newTournament=():Tournament=>({...emptyTournament(),format:'groups',scoring:{...defaultScoring},knockoutScoring:{...defaultScoring}});
+export const newTournament=():Tournament=>({...emptyTournament(),autoArrange:true,format:'groups',scoring:{...defaultScoring},knockoutScoring:{...defaultScoring}});
 /** The rule of a stage: group fixtures use `scoring`, knockout fixtures `knockoutScoring` (docs/TOURNAMENTS.md). */
 export function stageRule(t:Pick<Tournament,'scoring'|'knockoutScoring'>,stage:TournamentFixture['stage']){return stage==='knockout'?t.knockoutScoring??t.scoring:t.scoring}
 /** The rule of one competition match, or undefined for competitions without rules and other matches. */

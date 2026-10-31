@@ -7,3 +7,45 @@
 .tournament-settings-form label{display:grid;gap:4px}
 .tournament-settings-form .hint{margin:0}
 .tournament-referee{display:flex;align-items:center;gap:8px;font-size:14px}.tournament-referee label{display:flex;align-items:center;gap:8px;flex:1}.tournament-referee select{flex:1;min-height:40px;min-width:0}
+.tournament-prizes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border:0;margin:0;padding:0}.tournament-prizes legend{margin-bottom:4px}.tournament-prizes label{display:grid;gap:4px}
+/* Group stage: every team of a group first, ranked, then its fixtures. */
+.tournament-group{display:grid;gap:12px}
+.tournament-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tournament-group-head h2{margin:0}
+.tournament-group-head span{color:var(--muted-foreground);font-size:14px}
+.tournament-group-teams{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.tournament-group-teams li{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;border:1px solid var(--border)}
+.tournament-group-teams li.is-qualifying{border-color:color-mix(in srgb,var(--primary) 45%,var(--border));background:color-mix(in srgb,var(--primary) 6%,transparent)}
+.tournament-group-rank{font-weight:800;width:1.4em;text-align:center;color:var(--muted-foreground)}
+.is-qualifying .tournament-group-rank{color:var(--primary)}
+.tournament-group-avatars{display:flex}
+.tournament-group-avatars .avatar+.avatar{margin-left:-10px}
+.tournament-group-name{font-weight:700;overflow-wrap:anywhere;min-width:0}
+.tournament-group-name small{display:block;font-weight:400;font-size:11px;color:var(--primary)}
+.tournament-group-record{text-align:right;font-size:14px;white-space:nowrap}
+.tournament-group-record small{display:block;color:var(--muted-foreground);font-size:12px}
+/* Compact fixture rows; a tap opens the fixture's own screen. */
+.tournament-fixtures:has(.fixture-row){display:grid;grid-template-columns:1fr;gap:6px}
+.fixture-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:inherit;text-align:left;font-size:14px}
+.fixture-row.is-playing{border-color:#f59e0b;background:#f59e0b14}
+.fixture-row.is-done{opacity:.8}
+.fixture-side{overflow-wrap:anywhere;min-width:0}
+.fixture-side.is-right{text-align:right}
+.fixture-side.is-winner{font-weight:800;color:var(--primary)}
+.fixture-mid{text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fixture-mid small{color:var(--muted-foreground)}
+.fixture-row.is-playing .fixture-mid small{color:#b45309;font-weight:700}
+.fixture-sheet{position:fixed;inset:0;z-index:70;display:grid;grid-template-rows:auto 1fr;background:var(--background);overflow:hidden}
+.fixture-sheet-bar{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 12px 10px;border-bottom:1px solid var(--border);background:var(--card)}
+.fixture-sheet-body{overflow:auto;padding:14px 12px max(24px,env(safe-area-inset-bottom))}
+.fixture-sheet-body .tournament-match{max-width:640px;margin:0 auto}
+/* Matches on court now, pinned to the top of the competition. */
+.tournament-live{display:grid;gap:8px;border-color:color-mix(in srgb,#f59e0b 50%,var(--border))}
+.tournament-live h3{margin:0}
+.tournament-live-list{display:grid;gap:6px}
+.tournament-live-row{display:flex;align-items:center;gap:8px}
+.tournament-live-info{display:grid;flex:1;min-width:0;gap:2px;padding:6px 10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:inherit;text-align:left}
+.tournament-live-info small{color:#b45309;font-weight:700}
+.tournament-live-info span{overflow-wrap:anywhere;font-size:14px}
+.tournament-live-info i{font-style:normal;color:var(--muted-foreground)}
+.tournament-live-row .primary{min-height:44px;white-space:nowrap}

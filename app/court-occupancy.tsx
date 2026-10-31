@@ -26,3 +26,10 @@ export default function CourtOccupancy({e,bookings,registrations,name}:{e:Event;
   {courts.length>1&&emptyMs>0&&<p className="occupancy-footnote">累计空档按各场地分别相加，同一时间两片场地空着会分别计时。</p>}
  </section>;
 }
+
+/** The bottom of an activity's or competition's signup tab (app/event-view.tsx): its courts' occupancy, for the
+ * creator only (the server projects canViewCourtOccupancy). */
+export function SignupOccupancy({e,bookings,registrations,name}:{e:Event&{canViewCourtOccupancy?:boolean};bookings:Booking[];registrations:Registration[];name:(id:string)=>string}){
+ if(e.canViewCourtOccupancy!==true)return null;
+ return <CourtOccupancy e={e} bookings={bookings.filter(b=>b.eventId===e.id).sort((a,b)=>a.start-b.start||a.name.localeCompare(b.name))} registrations={registrations} name={name}/>;
+}

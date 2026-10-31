@@ -59,24 +59,45 @@ page. Creators who are not administrators can still draw and run the competition
   weakest by realm score, then swaps members between teams while that brings the team totals closer
   (`lib/domain/tournament-pairing.ts`). Mixed doubles only swap within a gender. Players left without a partner are
   listed. The organisers can edit every pair before the draw, or assign all pairs by hand.
-- **Entry fee.** When the owner or an administrator sets a fee per player, the fee settlement no longer splits courts
-  and shuttles. Every confirmed entrant owes the same fee (`entryFeeSettlement` in `lib/domain/money.ts`). The fee can
-  be confirmed before the competition ends, and the usual payment marks and reminders apply. The fee can still change
-  after the draw, and a new confirmation is a new version.
+- **Entry fee.** A competition is paid by a compulsory entry fee, never split. The fee is the competition's courts,
+  its shuttles and other expenses, and the prize costs for champion, runner-up and third place, divided by the
+  confirmed entrants and rounded up to a whole euro (`competitionCosts` and `entryFeeSettlement` in
+  `lib/domain/money.ts`). The owner and administrators set the prize costs in the competition settings; the organiser
+  records shuttles on the fee tab. What rounding up collects above the costs is recorded as the version's rounding
+  difference. The fee tab (`app/tournament-fees.tsx`) shows only this breakdown, the fee, the confirmation, payment
+  marks and the unpaid reminder; none of the activity split rules apply. The fee can be confirmed before the
+  competition ends, and a change of entrants or costs asks for a new confirmation.
 
 Tests: `tests/tournament-formats.test.ts`.
 
+## Signup, scheduling and the competition page
+
+- **Signup.** A competition has one signup for the whole event (`app/tournament-signup.tsx`). Entrants never pick a
+  court or a time slot; when the field is full, later entrants wait in order. Organisers can sign members up and manage
+  the courts below. Shuttle and partner options, activity details and bringing a friend are not offered. Court
+  occupancy sits at the bottom of the signup tab of activities and competitions.
+- **System scheduling.** Competitions created now have `autoArrange`. After the draw, after the knockout is generated
+  and after every result, every free court booked at that moment takes a ready fixture (`arrangeFixtures`). Earlier
+  rounds go first; within a round, the fixture whose players have played least and waited longest goes first, so
+  everyone plays about as often. Nobody is put on two courts at once, and a court's referee stays on for its next
+  fixture unless they play in it. Organisers can also run the arrangement by hand, or start a fixture on a chosen court.
+- **Page layout.** Matches on court are pinned to the top of the competition page, with the referee button. Each group
+  lists all its teams first, ranked with avatars and their record, and then its fixtures as compact rows. A fixture
+  opens its own screen with start, referee and score controls, so closing it returns to the same place on the page.
+  After a referee submits a result, the referee page offers the next match on the same court.
+
 ## Bracket presentation
 
-The elimination draw is a connected tree. Its two halves advance from the left
-and right toward a central final, using persisted fixture dependencies. Nodes
-show both teams, scores, the winner and live status. Selecting a fixture reveals
-the existing start and score controls below the chart. All viewers can explore
-the diagram; server-side management and scoring permissions remain unchanged.
+The knockout is a draw sheet (`app/tournament-bracket.tsx`). Every first-round entry is a line on the left or right
+edge; seeds show their number (or group letter) in red, and byes are marked. Lines join pairs round by round toward
+the final in the middle. The lines a winner has travelled are highlighted, matches in play pulse, and each decided
+junction names its winner and score, with the champion above the final. Selecting a junction opens that fixture. The
+sheet fits the screen, with an option for its full size.
 
-The chart scrolls within its own region on small screens, with zoom, fit-all and
-original-size controls. It never rearranges the bracket into an unconnected
-vertical list. Group standings and all tournament rules remain unchanged.
+## Live board
+
+The live board shows the draw sheet with its progress, the group tables during the group stage, and one card per
+match in play. A finished match leaves the board, whether the referee or anyone else entered its score.
 
 ## Results and archive
 

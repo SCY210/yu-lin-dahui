@@ -13,7 +13,7 @@ const cardKinds:CardKind[]=['warning','yellow','red','black'];
 /** The referee's phone for one court (docs/LIVE_SCORING.md): tap a side's score for a point, double-tap it to take
  * that side's last point back. Start, pause, change ends and cards sit below; once a side has won, the result is
  * submitted as the match score. */
-export default function RefereeConsole({e,m,ctx,close}:{e:Event;m:Match;ctx:SchedulingContext;close:()=>void}){
+export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;ctx:SchedulingContext;close:()=>void;onNext?:(matchId:string)=>void}){
  // The sandbox passes its own scores and transport in ctx.live; otherwise the live score endpoint is polled.
  const rule=matchRule(e.tournament,m.id)??defaultScoring,remote=useLiveScores(e.id,3000,!ctx.live),now=useSecondClock();
  const scores=ctx.live?.scores??remote.scores,pollError=ctx.live?'':remote.error,put=ctx.live?()=>{}:remote.put,transport=ctx.live?.send??sendLiveOp;
@@ -31,6 +31,8 @@ export default function RefereeConsole({e,m,ctx,close}:{e:Event;m:Match;ctx:Sche
  const team=(side:Side)=>m[side].map(ctx.name).join(' / ');
  const cards=(side:Side)=>(live?.events??[]).flatMap(x=>x.type==='card'&&x.side===side?[x]:[]);
  const submit=()=>{const games=finalGames(rule,tally);ctx.send('score',{matchId:m.id,a:games[0].a,b:games[0].b,games,reason:'裁判实时记分'});};
+ // After the result, the system has usually put the next fixture on this court; the referee goes straight to it.
+ const next=ctx.data.matches.find(x=>x.id!==m.id&&x.status==='playing'&&x.courtId===m.courtId);
  const elapsed=live?liveElapsed(live,now):0,court=ctx.data.bookings.find(b=>b.id===m.courtId)?.name??'比赛场地';
  return <div className="referee-console" role="dialog" aria-modal="true" aria-label={'裁判记分 · '+court}>
   <header className="referee-top">
@@ -56,6 +58,7 @@ export default function RefereeConsole({e,m,ctx,close}:{e:Event;m:Match;ctx:Sche
    <button type="button" className="secondary" disabled={status==='ready'||status==='finished'} onClick={()=>setSheet(true)}><ShieldAlert size={18}/>判罚</button>
    {status==='finished'&&m.status!=='complete'&&<button type="button" className="primary" disabled={ctx.busy} onClick={submit}>提交比分</button>}
    {m.status==='complete'&&<span className="referee-done">比分已提交</span>}
+   {m.status==='complete'&&next&&onNext&&<button type="button" className="primary" onClick={()=>onNext(next.id)}>本场地下一场：{next.a.map(ctx.name).join(' / ')} vs {next.b.map(ctx.name).join(' / ')}</button>}
   </footer>
   {sheet&&<div className="referee-sheet" role="dialog" aria-label="判罚">
    <h3>判罚</h3>

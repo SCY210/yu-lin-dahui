@@ -1,0 +1,10 @@
+/* Competition entry fee (app/tournament-fees.tsx). */
+.tournament-fees{display:grid;gap:16px}
+.tournament-fee-summary{display:grid;gap:10px}
+.tournament-fee-headline{display:grid;justify-items:center;gap:2px;padding:14px;border-radius:16px;background:color-mix(in srgb,var(--primary) 10%,transparent)}
+.tournament-fee-headline strong{font-size:36px;line-height:1.1}
+.tournament-fee-headline small{color:var(--muted-foreground)}
+.tournament-fee-line{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)}
+.tournament-fee-line span{display:grid}
+.tournament-fee-line small{color:var(--muted-foreground);font-size:12px}
+.tournament-fee-line:last-of-type{border-bottom:0;font-weight:700}
