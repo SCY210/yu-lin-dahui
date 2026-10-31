@@ -41,14 +41,17 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
  const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap);
  return <>
   <div className="heading rv-heading">
-   <div className="rv-title"><p className="eyebrow">{(annual?'年度':'季度')+(singles?'单打':'双打')}</p><h1>{(annual?'年度':'季度')+(singles?'单打榜':'双打榜')}</h1></div>
+   <div className="rv-title"><h1>{(annual?'年度':'季度')+(singles?'单打榜':'双打榜')}</h1></div>
    <div className="rv-period-switch" role="group" aria-label="排行榜周期"><button type="button" aria-pressed={!annual} onClick={()=>setRankingPeriod?.('quarterly')}>季度榜</button><button type="button" aria-pressed={annual} onClick={()=>setRankingPeriod?.('annual')}>年度榜</button></div>
    <div className="rv-period-switch rv-format-switch" role="group" aria-label="排行榜类型"><button type="button" aria-pressed={!singles} onClick={()=>setRankingFormat?.('all')}>双打榜</button><button type="button" aria-pressed={singles} onClick={()=>setRankingFormat?.('singles')}>单打榜</button></div>
+   {/* Three rows: title and period, format and the two actions, then the date picker. */}
+   <div className="rv-control-actions"><button type="button" className="ghost" aria-pressed={detailed} onClick={()=>setDetailed(!detailed)}>{detailed?'简洁排名':'详细数据'}</button><FeatureGuide topic={annual?'annualRanking':'ranking'} rules={rule} label="积分怎么算"/></div>
    <div className="actions rv-controls">
     {annual?<YearPicker value={year} onChange={value=>setYear?.(value)}/>:<QuarterPicker value={period} onChange={setPeriod}/>}
-    <div className="rv-control-actions"><button type="button" className="ghost" aria-pressed={detailed} onClick={()=>setDetailed(!detailed)}>{detailed?'简洁排名':'详细数据'}</button><FeatureGuide topic={annual?'annualRanking':'ranking'} rules={rule} label="积分怎么算"/></div>
    </div>
   </div>
+  {/* The top three stay fully in view first; my own rank follows them. */}
+  <RankingPodium leaders={leaders} rankingRows={rows} players={data.players} onProfile={onProfile} loading={pendingPeriod}/>
   {data.me.playerId&&<section className="rv-my-ranking" aria-label="我的排名">
    <div className="rv-my-ranking-info" role="status">
     <span className="rv-my-ranking-label">我的排名<span>{scope} · {singles?'单打':'双打'}</span></span>
@@ -56,7 +59,6 @@ export default function RankingView({data,period,setPeriod,onProfile,rankingPeri
    </div>
    {myRow&&<button type="button" className="rv-locate-me" onClick={locateMe} aria-controls="rv-my-ranking-row"><LocateFixed size={17} aria-hidden="true"/>定位到我</button>}
   </section>}
-  <RankingPodium leaders={leaders} rankingRows={rows} players={data.players} onProfile={onProfile} loading={pendingPeriod}/>
   <section className="card ranking-card"><div className="section-title"><h2>全部排名</h2><span className="badge">{rows.length} 位球友</span></div>
    {rows.map((r:ClubData['quarterlyLeaderboard'][number])=><div className={'leaderboard-row '+(r.playerId===data.me.playerId?'is-me ':'')} key={r.playerId} ref={r.playerId===data.me.playerId?myRowRef:undefined} id={r.playerId===data.me.playerId?'rv-my-ranking-row':undefined} tabIndex={r.playerId===data.me.playerId?-1:undefined} role={r.playerId===data.me.playerId?'group':undefined} aria-label={r.playerId===data.me.playerId?`我的排名，第 ${r.rank} 名，共 ${rows.length} 位球友`:undefined}>
     <b className={'rank rank-'+(r.rank-1)}>{r.rank}</b>

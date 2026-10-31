@@ -1,7 +1,10 @@
 # Ranking points breakdown
 
-The top of each board shows the signed-in player's rank, points and board size,
-with the selected quarter or year and singles/doubles format. **Locate me** scrolls
+Below the top-three podium, each board shows the signed-in player's rank, points and
+board size, with the selected quarter or year and singles/doubles format. The podium
+comes first so the top three are fully visible on a phone. The header uses three rows:
+the board title with the quarterly/annual switch; the doubles/singles switch with the
+details and rules actions; and the period picker. The title is not repeated above it. **Locate me** scrolls
 to and focuses their highlighted row in the full list. It respects reduced-motion
 preferences and leaves room for the mobile navigation. The summary uses the
 server-provided rank, including ties and zero-game players, without changing the
