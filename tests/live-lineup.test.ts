@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {liveAppearances} from '../lib/domain/live-play';
+import {liveAppearances,liveWinStreaks,liveResting} from '../lib/domain/live-play';
+import {liveLineupSnapshot} from '../lib/domain/live-lineup';
 import {emptyState,type Event,type Match} from '../lib/domain/types';
 const now=Date.parse('2030-10-10T15:00:00Z');
 function fixture(singles=false){
@@ -14,6 +15,17 @@ function fixture(singles=false){
 }
 const active=(s:ReturnType<typeof emptyState>)=>s.matches.find(m=>m.status==='playing')!;
 const edit=(m:Match,a=['p4','p5'],b=['p2','p3'])=>({matchId:m.id,a,b,expectedA:[...m.a],expectedB:[...m.b]});
+
+test('confirmed members can manually swap a two-win player back in, clearing only that automatic break',async()=>{
+ const {s,e}=fixture();await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);const held=active(s).a[0];
+ for(let i=1;i<=2;i++){const m=active(s),a=m.a.includes(held);await apply(s,s.accounts[0],'score',{matchId:m.id,a:a?21:19,b:a?19:21},now+i*60000);await apply(s,s.accounts[0],'liveNext',{eventId:e.id,courtId:m.courtId},now+i*60000+1)}
+ const m=active(s);assert.ok(liveResting(e,held));assert.ok(![...m.a,...m.b].includes(held));
+ const others=structuredClone(e.livePlay!.rest.filter(r=>r.playerId!==held)),snapshot=liveLineupSnapshot(s,e.id),before=structuredClone(m);
+ await apply(s,s.accounts[2],'liveSwap',{eventId:e.id,p1:m.a[0],p2:held,expectedLineup:snapshot},now+125000);
+ assert.ok(m.a.includes(held));assert.equal(liveResting(e,held),false);assert.deepEqual(e.livePlay!.rest,others);assert.equal(m.start,before.start);assert.equal(m.id,before.id);
+ const after=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[2],'liveSwap',{eventId:e.id,p1:m.a[0],p2:m.b[0],expectedLineup:snapshot},now+125001),/409/);assert.deepEqual(s,after);
+ await apply(s,s.accounts[0],'score',{matchId:m.id,a:21,b:19},now+180000);assert.equal(liveWinStreaks(s,e).get(held),1,'explicit return from the bench starts a new personal on-court turn');
+});
 test('creator can replace the current lineup, retaining the game and round; only corrected players receive the result',async()=>{
  const {s,e}=fixture();await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);const m=active(s),before=structuredClone(m),count=s.matches.length;
  await apply(s,s.accounts[1],'liveLineup',edit(m),now+1000);

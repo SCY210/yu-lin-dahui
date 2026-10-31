@@ -29,6 +29,10 @@ try{
  stored=await api.load();const third=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>![...third.a,...third.b].includes(id)));assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
  assert.equal(stored.events[0].livePlay.rest.filter(r=>r.reason==='two-wins').length,2,'changing preferences cannot clear mandatory rest');
  const visibleRest=await (await api.GET(new Request(origin+'/api/club?activity='+e.id))).json();assert.equal(visibleRest.events[0].livePlay.rest.filter(r=>r.reason==='two-wins').length,2);
+ const override=await request('liveLineup',{matchId:third.id,expectedA:third.a,expectedB:third.b,a:held,b:third.b});
+ const beforeOverride=await api.load();database.injectFailure(query=>query.startsWith('INSERT INTO commits'));assert.equal((await post(override)).status,503);database.injectFailure(null);assert.deepEqual(await api.load(),beforeOverride,'failed manual override rolls back both lineup and automatic rest');
+ assert.equal((await post(override)).status,200);assert.equal((await post(override)).status,200);
+ stored=await api.load();assert.ok(!stored.events[0].livePlay.rest.some(r=>r.reason==='two-wins'&&held.includes(r.playerId)));assert.deepEqual(stored.matches.find(m=>m.id===third.id).a,held);
  now+=60000;await send('score',{matchId:third.id,a:21,b:19});stored=await api.load();assert.ok(!stored.events[0].livePlay.rest.some(r=>held.includes(r.playerId)),'rest releases after a later game completes');
- console.log('PASS winner API: two-win mandatory rest, protected ready/preferences, legacy compatibility, scoped response, rollback, idempotence and concurrent next-game conflict.');
+ console.log('PASS winner API: two-win automatic rest with explicit manual override, ready/preferences guards, legacy compatibility, scoped response, rollback, idempotence and concurrent next-game conflict.');
 }finally{Date.now=realNow;database.close();delete globalThis.__winnerApi}

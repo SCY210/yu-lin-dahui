@@ -249,7 +249,7 @@ test('winners waiting on another idle court remain usable when this court is sho
  assert.equal(active(s).length,1);assert.deepEqual(participants(active(s)[0]),new Set([...first.a,...other.a]));
 });
 
-test('two-win rest cannot be skipped by ready, preference, lineup edits, or pause/restart; replay starts a new run',async()=>{
+test('automatic two-win rest survives ready, preference and restart; a new turn starts a new run',async()=>{
  const {s,e,owner}=fixture(6);e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:[['p00','p01'],['p02','p03'],['p04','p05']]};await apply(s,owner,'liveStart',{eventId:e.id},now);const held=[...active(s)[0].a];
  for(let i=1;i<=2;i++){const m=active(s)[0],a=held.every(id=>m.a.includes(id));await apply(s,owner,'score',{matchId:m.id,a:a?21:19,b:a?19:21},now+i*60000);await nextGame(s,m.courtId,now+i*60000+1)}
  assert.ok(held.every(id=>liveWinStreaks(s,e).get(id)===2&&liveResting(e,id)));
@@ -257,7 +257,6 @@ test('two-win rest cannot be skipped by ready, preference, lineup edits, or paus
  await apply(s,owner,'livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:false},now+125000);assert.ok(liveResting(e,held[0]));
  await apply(s,owner,'livePause',{eventId:e.id,paused:true},now+126000);await apply(s,owner,'liveStart',{eventId:e.id},now+127000);assert.ok(held.every(id=>liveResting(e,id)));
  const third=active(s)[0];assert.ok(held.every(id=>!participants(third).has(id)));
- await assert.rejects(()=>apply(s,owner,'liveLineup',{matchId:third.id,expectedA:third.a,expectedB:third.b,a:held,b:third.b},now+128000),/轮休状态/);
  await score(s,third.id,now+180000);assert.ok(held.every(id=>!liveResting(e,id)));
  const fourth=active(s)[0];assert.ok(held.every(id=>participants(fourth).has(id)));const a=held.every(id=>fourth.a.includes(id));
  await apply(s,owner,'score',{matchId:fourth.id,a:a?21:19,b:a?19:21},now+240000);assert.ok(held.every(id=>liveWinStreaks(s,e).get(id)===1&&!liveResting(e,id)));

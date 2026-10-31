@@ -46,6 +46,9 @@ export function liveResting(e:Event,playerId:string,venue?:string){
 export function liveMandatoryRest(e:Event,playerId:string){
  return !!e.livePlay?.rest.some(rest=>rest.playerId===playerId&&rest.reason==='two-wins');
 }
+export function liveVoluntaryResting(e:Event,playerId:string,venue?:string){
+ return !!e.livePlay?.rest.some(rest=>rest.reason===undefined&&rest.playerId===playerId&&(!venue||rest.venue===venue));
+}
 const winners=(m:Match)=>m.status==='complete'&&m.scoreA!==null&&m.scoreB!==null&&m.scoreA!==m.scoreB?(m.scoreA>m.scoreB?m.a:m.b):[];
 /** Personal wins follow the retained-player marker, not teams or simultaneous court timings.
  * A new turn from the bench starts at one; changing partners on court preserves the personal run. */
