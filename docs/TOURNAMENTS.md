@@ -109,10 +109,11 @@ Tests: `tests/tournament-formats.test.ts`.
 
 ## Bracket presentation
 
-The knockout is a draw sheet read left to right, like a printed draw (`app/tournament-bracket.tsx`). Column headers
-name the rounds (1/8, quarter-finals, semi-finals, final, champion). The first column lists every entry with its draw
-number and seed (the seed number in a seeded knockout, the group and place after groups), byes included. Each later
-column shows who went through, with the game scores under the line, and the last column the champion. A match in play
+The knockout is a printed draw folded in two (`app/tournament-bracket.tsx`): the top half of the draw runs left to
+right, the bottom half right to left, and both meet at the final in the middle, so the sheet is half as tall. Column
+headers name the round each column plays next (1/8, quarter-finals, semi-finals, final), with the champion in the
+middle. The outer columns list every entry with its draw number and seed (the seed number in a seeded knockout, the group and place after groups), byes included. Each column toward
+the middle shows who went through, with the game scores under the line. A match in play
 is highlighted: both teams' lines, the bracket joining them, and the place its winner will take, with the court.
 Tapping a match opens it. The sheet scrolls sideways on a phone.
 

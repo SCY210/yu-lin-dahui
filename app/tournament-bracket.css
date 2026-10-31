@@ -18,7 +18,6 @@
 .draw-join{position:absolute;width:0;border-right:1.5px solid color-mix(in srgb,var(--foreground) 35%,transparent)}
 .draw-join.is-won{border-right-color:var(--primary)}
 .draw-score{position:absolute;font-size:13px;color:var(--muted-foreground);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.draw-champion{position:absolute;font-weight:800;color:var(--primary)}
 /* A match in play: both teams, the bracket joining them and the place its winner takes. */
 .draw-cell.is-playing{background:#f59e0b1f;border-bottom:2.5px solid #f59e0b}
 .draw-cell.is-playing .draw-names{color:#92400e}
@@ -29,3 +28,12 @@
 @media(prefers-reduced-motion:reduce){.draw-cell.is-live{animation:none}}
 .draw-sheet.is-compact .draw-names{font-size:13px}
 .draw-sheet.is-compact .draw-head{font-size:12px;height:30px}
+/* The bottom half of the draw reads right to left, toward the final in the middle. */
+.draw-cell.is-right{flex-direction:row-reverse;text-align:right;padding:0 8px 4px 6px}
+.draw-cell.is-right .draw-names{justify-items:end}
+.draw-score.is-right{text-align:right}
+.draw-cell.is-final{justify-content:center;text-align:center;padding:0 4px 4px}
+.draw-cell.is-final .draw-names{justify-items:center}
+.draw-score.is-final{text-align:center}
+.draw-head.is-final{color:var(--primary);font-weight:700}
+.draw-champion{display:flex;align-items:flex-end;gap:4px}
