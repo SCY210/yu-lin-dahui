@@ -106,7 +106,15 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   if(['playing','complete','forfeit'].includes(m.status)&&(!m.noShow?.length||m.noShow.includes(id)))counts.set(id,(counts.get(id)??0)+1);
  }
  const appearances=(id:string)=>counts.get(id)??0;
- const fairOrder=(a:string,b:string)=>appearances(a)-appearances(b)||(lastTurns.get(a)??0)-(lastTurns.get(b)??0)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
+ const last=(id:string)=>lastTurns.get(id)??0;
+ // The bench is a queue: whoever has waited longest since their last game goes first, then fewer games. Counting games
+ // first made a player who stayed on through a winning run sit out until everyone else had caught up, often five or
+ // more games in a row on three courts (docs/LIVE_PLAY.md).
+ const fairOrder=(a:string,b:string)=>last(a)-last(b)||appearances(a)-appearances(b)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
+ // Games started since each player's last game; it grows as this call starts games too.
+ const waits=new Map<string,number>();
+ for(const m of s.matches)if(m.eventId===e.id&&m.start!==null&&['playing','complete','forfeit'].includes(m.status))for(const id of present)if(m.start>last(id))waits.set(id,(waits.get(id)??0)+1);
+ const waited=(id:string)=>waits.get(id)??0;
  const liveRounds=new Set(s.rounds.filter(r=>r.eventId===e.id&&r.live).map(r=>r.id));
  const previousByCourt=new Map<string,Match>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null&&!['playing','draft','published'].includes(m.status)){
@@ -133,8 +141,9 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   const retained=new Set(won.filter(id=>reserved.get(id)===key));
   const otherCourt=(id:string)=>reserved.has(id)&&reserved.get(id)!==key;
   const order=(a:string,b:string)=>Number(otherCourt(a))-Number(otherCourt(b))||Number(!retained.has(a))-Number(!retained.has(b))||Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
-  // Keep retained winners locked in; vary only equal-appearance bench candidates using the existing pairing cost.
-  const sameTurn=(a:string,b:string)=>!retained.has(a)&&!retained.has(b)&&otherCourt(a)===otherCourt(b)&&justFinished.has(a)===justFinished.has(b)&&appearances(a)===appearances(b);
+  // Keep retained winners locked in; for strength, variety and rematches the pairing may swap bench candidates whose
+  // waits differ by at most one game, so nobody is passed over for more than about one extra game.
+  const sameTurn=(a:string,b:string)=>!retained.has(a)&&!retained.has(b)&&otherCourt(a)===otherCourt(b)&&justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=1;
   // Retention/bench order is a preference, not an eligibility lock. When short, any available
   // player can fill the court, including recent losers or winners waiting at another idle court.
   const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
@@ -142,7 +151,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
    const candidates=fixed.filter(team=>team.length===2&&team.every(id=>pool.includes(id)))
-    .sort((a,b)=>Number(a.some(otherCourt))-Number(b.some(otherCourt))||Number(!a.some(id=>retained.has(id)))-Number(!b.some(id=>retained.has(id)))||Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(appearances))-Math.max(...b.map(appearances))||order(a[0],b[0]));
+    .sort((a,b)=>Number(a.some(otherCourt))-Number(b.some(otherCourt))||Number(!a.some(id=>retained.has(id)))-Number(!b.some(id=>retained.has(id)))||Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(last))-Math.max(...b.map(last))||order(a[0],b[0]));
    if(candidates.length>=2){
     let chosen=candidates.slice(0,2);
     const cost=(ts:string[][])=>balanceCost([Math.abs(ts[0].reduce((n,id)=>n+rating(id),0)-ts[1].reduce((n,id)=>n+rating(id),0))/2],history.variety(ts[0],ts[1],0),genderMismatches(s,ts[0],ts[1],rating),history.rematches(ts[0],ts[1]),history.cohorts(ts.flat()));
@@ -174,7 +183,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence,liveRetained:participants.filter(id=>retained.has(id))});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
   decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);history.add(match);started.push(match);
-  for(const id of participants){counts.set(id,appearances(id)+1);lastTurns.set(id,now)}
+  for(const id of participants){counts.set(id,appearances(id)+1);lastTurns.set(id,now);waits.set(id,0)}
+  for(const id of present)if(!participants.includes(id))waits.set(id,waited(id)+1);
   clearFilledPointsWaiting(s,e);
   const season=month(now);if(!s.seasons.some(p=>p.id===season))s.seasons.push({id:season,rules:{...s.settings.rules},version:1});
  }

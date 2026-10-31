@@ -182,6 +182,24 @@ for(const format of ['singles','rotate','fixed'] as const)test(`equally entitled
  assert.ok([...next.a,...next.b].filter(id=>!s.players.slice(size*2).some(p=>p.id===id)).length>=(format==='rotate'?3:size),'waiting players retain priority while one position may introduce a new contact');
  if(format==='fixed')assert.ok([next.a,next.b].every(t=>e.pointsChoice!.teams!.some(original=>original.every(id=>t.includes(id)))));
 });
+test('on three courts a player who stayed on through wins does not then sit out game after game',async()=>{
+ // Sixteen players, four on the bench. Counting games first made someone who had won a few in a row wait until
+ // everyone else caught up: seven games started without them here, up to thirteen in simulations. The bench is now a queue.
+ const {s,e,owner}=fixture(16,3);s.players.forEach((p,i)=>{p.rating=p.initialRating=800+(i*37)%600});
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const lastEnd=new Map<string,number>(),seen=new Set<string>();let longest=0,clock=now;
+ const note=()=>{for(const m of active(s))if(!seen.has(m.id)){seen.add(m.id);for(const id of [...m.a,...m.b]){const since=lastEnd.get(id)??now;longest=Math.max(longest,s.matches.filter(x=>x.eventId===e.id&&x.start!==null&&x.start>=since&&x.start<m.start!&&![...x.a,...x.b].includes(id)).length)}}};
+ note();
+ for(let turn=0;turn<45;turn++){
+  const m=active(s).sort((x,y)=>x.start!-y.start!||x.courtId.localeCompare(y.courtId))[0];clock+=60000+(turn*7919)%120000;
+  const strong=m.a.reduce((n,id)=>n+s.players.find(p=>p.id===id)!.rating,0)>=m.b.reduce((n,id)=>n+s.players.find(p=>p.id===id)!.rating,0);
+  await apply(s,s.accounts[1],'score',{matchId:m.id,a:strong?21:17,b:strong?17:21,reason:'本局结束'},clock);
+  for(const id of [...m.a,...m.b])lastEnd.set(id,clock);
+  await nextGame(s,m.courtId,clock);note();
+ }
+ assert.ok(longest<=5,'longest run of games started without a waiting player: '+longest);
+});
+
 test('12 players on two staggered courts meet the whole roster instead of cycling three four-player groups',async()=>{
  const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
  for(let turn=0;turn<48;turn++)for(const m of [...active(s)]){
