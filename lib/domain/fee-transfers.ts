@@ -4,41 +4,59 @@ import type {Handover,Payment,Settlement} from './types';
 /** Fee advances (docs/FEE_ADVANCES.md). Members book courts and buy balls themselves, so a confirmed split is settled
  * by transfers between members instead of everyone paying one recipient: each person's net is what they advanced minus
  * their own share, and the owner also owes the club-subsidised part. This module is shared by the server and the app. */
-export type Advance={playerId:string;cents:number};
+/** cents: what the advancer is repaid; paid: what they actually paid (their receipts), before per-person rounding. */
+export type Advance={playerId:string;cents:number;paid?:number};
 export type Transfer={from:string;to:string;cents:number};
 type Line=Settlement['detail'][number];
 /** Payment method of a marked transfer; its `to` names the receiver. */
 export const transferPayment='transfer';
 
 type AdvanceItem={id:string;advancedBy?:string;start?:number|null;end?:number|null;handovers?:Handover[]};
-/** Splits cents by weight exactly: floors first, then the largest remainders get the cents left, earlier parts on ties. */
-function splitCents(cents:number,weights:number[]){
- const sum=weights.reduce((a,b)=>a+b,0);if(!sum)return weights.map((_,i)=>i?0:cents);
- const parts=weights.map(w=>Math.floor(cents*w/sum));let left=cents-parts.reduce((a,b)=>a+b,0);
- for(const [,i] of weights.map((w,i)=>[cents*w%sum,i]).sort((a,b)=>b[0]-a[0]||a[1]-b[1])){if(left<=0)break;parts[i]++;left--}
+/** Rounds exact amounts to whole cents that add up to `total`: floors first, then the largest remainders get the cents
+ * left, earlier parts on ties. */
+function roundParts(exact:number[],total:number){
+ const parts=exact.map(x=>Math.floor(x+1e-9));let left=total-parts.reduce((a,b)=>a+b,0);
+ for(const [,i] of exact.map((x,i)=>[x-parts[i],i]).sort((a,b)=>b[0]-a[0]||a[1]-b[1])){if(left<=0)break;parts[i]++;left--}
  return parts;
 }
-/** What each advancer is repaid: for every court slot or expense, the members' shares of its lines plus its subsidy.
- * Equal-share rounding therefore goes to the advancer and the totals balance exactly. A court booked in turn repays each
- * booker the part of every line that falls in their time (lib/domain/booking-advancers.ts). Null while anything is still
- * unallocated or an item with a cost has no advancer, so such a split is paid the old way. */
+/** What each advancer is repaid (docs/FEE_ADVANCES.md): what they actually paid, the cost of every court slot, court
+ * part or expense they advanced, so the fees page shows the amounts on their receipts. Shares are rounded per person,
+ * so what members owe for one item can be a few cents off its cost (6.90 among 8 is 0.8625 each); summing those shares
+ * per item showed 13.84/6.88/6.88 instead of 13.80/6.90/6.90. The few cents that per-person rounding collects above or
+ * below the costs in total go to the advancers in proportion to what they paid, so the totals still balance exactly.
+ * A court booked in turn repays each booker the cost of the time they booked (lib/domain/booking-advancers.ts). Null
+ * while anything is still unallocated or an item with a cost has no advancer, so such a split is paid the old way. */
 export function feeAdvances(items:AdvanceItem[],detail:Line[],unallocated:number):Advance[]|null{
  if(unallocated)return null;
- const repaid=new Map<string,{advancedBy?:string;cents:number}>();
+ const repaid=new Map<string,{total:number;parts:{advancedBy?:string;exact:number}[]}>();
+ let collected=0,cost=0;
  for(const line of detail){
   if(!line.item)return null;
-  const cents=Object.values(line.shares).reduce((sum,c)=>sum+c,0)+line.subsidy,item=items.find(x=>x.id===line.item);
-  const parts=item?.handovers?.length&&typeof item.start==='number'&&typeof item.end==='number'?bookingParts({...item,start:item.start,end:item.end}):[{start:line.start,end:line.end,advancedBy:item?.advancedBy}];
-  const amounts=parts.length>1?splitCents(cents,parts.map(p=>Math.max(0,Math.min(p.end,line.end)-Math.max(p.start,line.start)))):[cents];
-  parts.forEach((p,i)=>{const key=line.item+'#'+i,row=repaid.get(key)??{advancedBy:p.advancedBy,cents:0};row.cents+=amounts[i];repaid.set(key,row)});
+  const item=items.find(x=>x.id===line.item);
+  collected+=Object.values(line.shares).reduce((sum,c)=>sum+c,0)+line.subsidy;cost+=line.cents;
+  const booked=!!item?.handovers?.length&&typeof item.start==='number'&&typeof item.end==='number';
+  const parts=booked?bookingParts({...item!,start:item!.start!,end:item!.end!}):[{start:line.start,end:line.end,advancedBy:item?.advancedBy}];
+  const key=booked?line.item:line.item+'#'+repaid.size;
+  const row=repaid.get(key)??{total:0,parts:parts.map(p=>({advancedBy:p.advancedBy,exact:0}))};
+  const weights=parts.map(p=>Math.max(0,Math.min(p.end,line.end)-Math.max(p.start,line.start))),sum=weights.reduce((a,b)=>a+b,0);
+  row.total+=line.cents;
+  parts.forEach((_,i)=>{row.parts[i].exact+=parts.length>1&&sum?line.cents*weights[i]/sum:i?0:line.cents});
+  repaid.set(key,row);
  }
- const by=new Map<string,number>();
- for(const {advancedBy,cents} of repaid.values()){
-  if(!cents)continue;
-  if(!advancedBy)return null;
+ const by=new Map<string,number>();let orphan=false;
+ for(const {total,parts} of repaid.values())roundParts(parts.map(p=>p.exact),total).forEach((cents,i)=>{
+  if(!cents)return;
+  const advancedBy=parts[i].advancedBy;if(!advancedBy){orphan=true;return}
   by.set(advancedBy,(by.get(advancedBy)??0)+cents);
+ });
+ if(orphan)return null;
+ const advancers=[...by.keys()].sort(),paid=advancers.map(id=>by.get(id)!),spent=paid.reduce((a,b)=>a+b,0),extra=collected-cost;
+ if(extra&&spent){
+  const sign=Math.sign(extra);
+  roundParts(paid.map(c=>Math.abs(extra)*c/spent),Math.abs(extra)).forEach((cents,i)=>by.set(advancers[i],paid[i]+sign*cents));
  }
- return [...by].map(([playerId,cents])=>({playerId,cents})).sort((a,b)=>a.playerId.localeCompare(b.playerId));
+ const actual=new Map(advancers.map((id,i)=>[id,paid[i]]));
+ return [...by].map(([playerId,cents])=>({playerId,cents,...(cents!==actual.get(playerId)?{paid:actual.get(playerId)}:{})})).sort((a,b)=>a.playerId.localeCompare(b.playerId));
 }
 
 /** Who transfers how much to whom. With a collector, everyone who owes pays the collector and the collector repays every
