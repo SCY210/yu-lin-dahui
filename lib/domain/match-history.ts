@@ -7,11 +7,12 @@ const pairKey=(a:string,b:string)=>teamKey([a,b]);
 
 /** Index once per scheduling operation, rather than scanning matches per candidate. */
 export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false){
- const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),lastPartner=new Map<string,string>();
+ const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),lastPartner=new Map<string,string>(),lastGame=new Map<string,number>();let games=0;
  const starts=new Map(s.rounds.map(r=>[r.id,r.start]));
  const add=(m:Pick<Match,'a'|'b'>)=>{
   const key=matchupKey(m.a,m.b);matches.set(key,(matches.get(key)??0)+1);
   const group=teamKey([...m.a,...m.b]);groups.set(group,(groups.get(group)??0)+1);
+  games++;for(const id of [...m.a,...m.b])lastGame.set(id,games);
   for(const team of [m.a,m.b])if(team.length===2){
    const key=teamKey(team);partners.set(key,(partners.get(key)??0)+1);
    lastPartner.set(team[0],team[1]);lastPartner.set(team[1],team[0]);
@@ -31,6 +32,9 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   add,
   rematches:(a:string[],b:string[])=>matches.get(matchupKey(a,b))??0,
   cohorts:(ids:string[])=>groups.get(teamKey(ids))??0,
+  /** 1 when three or more of these players come straight from one game together: a block that would only swap partners
+   * (docs/LIVE_PLAY.md, breaking up blocks). */
+  blocks:(ids:string[])=>{const seen=new Map<number,number>();for(const id of ids){const g=lastGame.get(id);if(g!==undefined)seen.set(g,(seen.get(g)??0)+1)}return [...seen.values()].some(n=>n>=3)?1:0},
   unmet,
   /** Separate from whole-game rematches: repeating a pair against NEW opponents still counts.
    * Indexed lookups only. The live balance comparator caps the total at 40 Elo-equivalent points. */
