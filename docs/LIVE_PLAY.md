@@ -4,7 +4,11 @@ Each court advances independently after a valid single-game score. A finished co
 
 ## Winner preference without a win limit
 
-Available doubles winners are preferred for their next game. Waiting players fill the remaining places, favoring fewer appearances and an earlier previous turn. The selected four use the existing strength, gender and match-history pairing algorithm; the winners may remain partners or be split. Fixed-partner mode keeps complete pairs intact.
+Available doubles winners are preferred for their next game. Waiting players fill the remaining places as a queue: whoever has waited longest since their previous game goes first, then fewer appearances. The selected four use the existing strength, gender and match-history pairing algorithm; the winners may remain partners or be split. Fixed-partner mode keeps complete pairs intact.
+
+To improve strength, variety or avoid a rematch, the pairing may swap a selected bench player for one whose wait differs by at most one game, so nobody is passed over for more than about one extra game.
+
+Until October 2026 the queue counted appearances first. Winners who stayed on through a run then had more games than everyone else. After losing, they sat out until the others caught up. On three courts with sixteen players and four on the bench, simulations showed runs of 8-13 games started without them, against a bench turnover of about two games. With the queue the longest run is about 4-6 games, and team strength differences are unchanged. The trade-off is that a pair on a long winning run plays more games in total; there is still no win limit.
 
 Rotating live doubles now include partner repetition in the strength comparison, rather than only as a final tie-breaker. Each immediately repeated pair costs 24 Elo-equivalent points; historical pair uses contribute 4 each, capped at 16 for frequency. The combined live partnership penalty is capped at 40. Thus a modest strength difference can permit new partners, while a large mismatch cannot be justified by unlimited repetition penalties. Gender safeguards still rank first. Fixed partners, singles and planned scheduling do not opt into this additional cost. History is indexed once and each candidate uses only map lookups.
 
