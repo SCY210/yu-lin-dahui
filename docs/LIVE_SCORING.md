@@ -35,9 +35,13 @@ next fixture the system starts on that court, unless they play in it.
   score, which updates standings, the bracket, the leaderboard and realm scores; a double tap before then takes the
   last point back and cancels it. After a black card, the opponents are recorded as winning the unfinished game with
   the fewest points that finish it, and any game they still needed at 21:0 (or 15:0, 11:0). The saved result is
-  therefore always valid under the rule. After the result, the page offers the next match on the same court.
+  therefore always valid under the rule. If the result has not come back six seconds after it was sent (no network, a
+  refused write), the banner offers to send it again. After the result, the page offers the next match on the same court.
 - **Errors.** Every error, here and anywhere in the app, opens a dialog that must be closed (`app/error-dialog.tsx`).
 - **Rotation.** The score digits size themselves to their panel, so turning the phone and back never pushes them out.
+  The page is a column in which the court takes the remaining height, at least 160 px. It used grid rows by position,
+  so the court landed in an auto row whenever the winner banner was absent, and the digits sized to zero: no score showed
+  while a match was in play.
 
 ## The board
 

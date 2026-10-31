@@ -25,6 +25,7 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
  // The card just given, shown full screen so the referee can hold the phone up like the real card.
  const [shown,setShown]=useState<{kind:CardKind;side:Side;playerId?:string}|null>(null);
  const queue=useRef(Promise.resolve()),pending=useRef<{side:Side;timer:ReturnType<typeof setTimeout>}|null>(null),submitted=useRef('');
+ const [sent,setSent]=useState<{key:string;at:number}|null>(null);
  // Operations go out one at a time in tap order; each reply is the newest state. Errors open the error dialog.
  const run=(op:LiveOpBody)=>{queue.current=queue.current.then(async()=>{try{put(await transport({...op,matchId:m.id} as LiveOp))}catch(err){showError(err instanceof Error?err.message:'操作失败，请重试')}})};
  const pause=currentBreak(tally,now),resting=!!pause&&pause.at!==skipped,winner=tally.winner;
@@ -37,10 +38,13 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
  };
  // The result goes in by itself a few seconds after the last point; taking that point back cancels it.
  const key=winner?m.id+':'+JSON.stringify(finalGames(rule,tally)):'';
+ const submit=()=>{submitted.current=key;setSent({key,at:Date.now()});const games=finalGames(rule,tally);ctx.send('score',{matchId:m.id,a:games[0].a,b:games[0].b,games,reason:'裁判实时记分'})};
+ // A submission that has not shown up as a result after a few seconds (no network, a refused write) can be sent again.
+ const stuck=!!winner&&m.status!=='complete'&&sent?.key===key&&now-sent.at>6000;
  useEffect(()=>{
   if(!winner||m.status==='complete'||submitted.current===key){setCountdown(null);return}
   let left=submitDelay;setCountdown(left);
-  const timer=setInterval(()=>{left--;setCountdown(left);if(left>0)return;clearInterval(timer);submitted.current=key;const games=finalGames(rule,tally);ctx.send('score',{matchId:m.id,a:games[0].a,b:games[0].b,games,reason:'裁判实时记分'})},1000);
+  const timer=setInterval(()=>{left--;setCountdown(left);if(left>0)return;clearInterval(timer);submit()},1000);
   return ()=>clearInterval(timer);
  // eslint-disable-next-line react-hooks/exhaustive-deps -- the countdown restarts only when the finished result changes
  },[key,m.status]);
@@ -55,7 +59,7 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
    <div><strong>{court}</strong><small>{scoringLabel(rule)}</small></div>
    <span className={'referee-clock is-'+status} aria-label="比赛用时">{clock(elapsed)}{status==='paused'&&' · 暂停'}</span>
   </header>
-  {winner&&<p className="referee-banner is-final" role="status">{team(winner)} 获胜{tally.disqualified?'（对方黑牌取消资格）':''}{m.status==='complete'?' · 比分已提交':countdown!==null&&countdown>0?' · '+countdown+' 秒后自动提交，连点两下可撤销最后一分':' · 正在提交…'}</p>}
+  {winner&&<p className="referee-banner is-final" role="status">{team(winner)} 获胜{tally.disqualified?'（对方黑牌取消资格）':''}{m.status==='complete'?' · 比分已提交':countdown!==null&&countdown>0?' · '+countdown+' 秒后自动提交，连点两下可撤销最后一分':stuck?' · 比分还没提交成功':' · 正在提交…'}{stuck&&<button type="button" className="referee-retry" onClick={submit}>重新提交比分</button>}</p>}
   <div className="referee-court">{sides.map(side=><button type="button" key={side} className={'referee-side is-'+side} disabled={status==='ready'||status==='paused'||m.status==='complete'} onClick={()=>tap(side)} aria-label={team(side)+' 当前 '+tally.current[side]+' 分，点一下加 1 分，连点两下撤销上一分'}>
    <span className="referee-team">{team(side)}</span>
    <span className="referee-games">{tally.games.map((g,i)=><i key={i}>{g[side]}</i>)}<b>{'●'.repeat(tally.wins[side])}</b></span>

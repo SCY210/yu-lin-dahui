@@ -1,5 +1,7 @@
 /* Referee phone (app/referee-console.tsx). */
-.referee-console{position:fixed;inset:0;z-index:45;display:grid;grid-template-rows:auto auto 1fr auto auto auto;gap:8px;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));background:#0d1117;color:#f5f7fa;overflow:auto}
+/* A column whose court takes the remaining height. Grid rows by position put the court in an auto row whenever the
+   winner banner was absent, which gave the score panel no height and its container-sized digits a size of zero. */
+.referee-console{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;gap:8px;padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));background:#0d1117;color:#f5f7fa;overflow:auto}
 .referee-top{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
 .referee-top small{display:block;font-size:12px;opacity:.7}
 .referee-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#ffffff14;color:inherit;border:0}
@@ -7,7 +9,10 @@
 .referee-clock.is-paused{color:#ffcf5a}
 .referee-banner{margin:0;padding:10px;border-radius:12px;background:#ffcf5a;color:#2a1a00;font-weight:700;text-align:center}
 .referee-banner.is-final{background:#3ecf8e;color:#00210f}
-.referee-court{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;min-height:0}
+.referee-retry{display:block;margin:8px auto 0;min-height:40px;padding:0 16px;border:0;border-radius:10px;background:#00210f;color:#fff;font-weight:700}
+.referee-console>*{flex:none}
+.referee-console>.referee-court{flex:1 1 0;min-height:160px}
+.referee-court{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:8px}
 .referee-side{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;align-items:center;justify-items:center;gap:6px;padding:12px 8px;border-radius:18px;border:0;color:#fff;touch-action:manipulation;user-select:none;-webkit-user-select:none;min-height:0;min-width:0;overflow:hidden}
 .referee-side.is-a{background:linear-gradient(160deg,#1e4fd8,#163a9e)}
 .referee-side.is-b{background:linear-gradient(160deg,#d8431e,#9e2f16)}
@@ -19,7 +24,7 @@
 .referee-games b{color:#ffe066;letter-spacing:2px}
 /* The digits size to the panel itself (container units), so rotating the phone and back never pushes them outside. */
 .referee-score{container-type:size;display:grid;place-items:center;width:100%;height:100%;min-height:0;font:800 1px/1 ui-rounded,system-ui,sans-serif;font-variant-numeric:tabular-nums}
-.referee-score>*{font-size:min(80cqh,44cqw)}
+.referee-score>*{font-size:min(70cqh,68cqw)}
 .referee-cards{display:flex;gap:4px;min-height:22px}
 .card-chip{display:inline-block;width:14px;height:20px;border-radius:3px;box-shadow:0 0 0 1px #0006}
 .card-chip.is-warning{background:#d0d5dd}
@@ -30,6 +35,7 @@
 .referee-error{margin:0;padding:8px;border-radius:10px;background:#e5383b33;color:#ffb3b3;text-align:center}
 .referee-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .referee-actions button{min-height:48px;display:inline-flex;align-items:center;gap:6px}
+.referee-actions .secondary{background:#ffffff14;color:#f5f7fa;border-color:#ffffff33}
 .referee-done{align-self:center;color:#3ecf8e;font-weight:700}
 .referee-sheet{position:fixed;inset:auto 0 0 0;z-index:46;max-height:85vh;overflow:auto;display:grid;gap:10px;padding:16px 16px max(16px,env(safe-area-inset-bottom));border-radius:20px 20px 0 0;background:#161b22;box-shadow:0 -10px 40px #000a}
 .referee-sheet h3{margin:0}
