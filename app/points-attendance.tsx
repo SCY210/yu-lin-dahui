@@ -15,9 +15,10 @@ import './points-attendance.css';
 
 export function MatchArrival({m,ctx}:{m:Match;ctx:CardContext}){
  const e=ctx.data.events.find(e=>e.id===m.eventId);
- const me=ctx.data.me.playerId,manager=!!e&&canManageEvent(ctx.data.me,e);
- if(!e||e.tournament||e.matchFormat==='practice'||ctx.readOnly||!(manager||[...m.a,...m.b].includes(me))||!['draft','published','playing'].includes(m.status)||m.games.length)return null;
- return <ArrivalControl e={e} m={m} ctx={ctx} candidates={[...m.a,...m.b].filter(id=>manager||id!==me)}/>;
+ // Everyone confirmed for the activity may use it, not only the players of this match (the server checks the details).
+ const confirmed=!!e&&(canManageEvent(ctx.data.me,e)||ctx.data.registrations.some(r=>r.eventId===e.id&&r.playerId===ctx.data.me.playerId&&r.status==='confirmed'));
+ if(!e||e.tournament||e.matchFormat==='practice'||ctx.readOnly||!confirmed||!['draft','published','playing'].includes(m.status)||m.games.length)return null;
+ return <ArrivalControl e={e} m={m} ctx={ctx} candidates={[...m.a,...m.b].filter(id=>canManageEvent(ctx.data.me,e)||id!==ctx.data.me.playerId)}/>;
 }
 function ArrivalControl({e,m,ctx,candidates}:{e:Event;m:Match;ctx:CardContext;candidates:string[]}){
  const now=useActivityClock(e);if(!['open','locked','live'].includes(eventStatusAt(e,now)))return null;

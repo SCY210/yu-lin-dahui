@@ -58,8 +58,10 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  }else if(action==='liveSwap'){
   if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以交换上场人员');
  }else if(action==='pointsLate'){
-  const m=s.matches.find(m=>m.id===p.matchId);
-  if(!canManageEvent(a,event)&&!(m&&[...m.a,...m.b].includes(a.playerId)&&a.playerId!==p.playerId))fail('403: 只有同场到场的球友、创建者或管理员可以报告迟到');
+  // Anyone confirmed for the activity may report a late player on any current match (the command also requires them
+  // to be in their signup time now), not just the others in that match; only organisers may mark themselves.
+  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以报告迟到');
+  if(!canManageEvent(a,event)&&a.playerId===p.playerId)fail('403: 不能给自己报告迟到，请让场上球友或组织者操作');
  }else if(action==='pointsParticipation'){
   const player=s.players.find(x=>x.id===p.playerId);
   if(!canManageEvent(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能调整自己或代报名朋友的上场意愿');
