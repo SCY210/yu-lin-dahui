@@ -8,7 +8,7 @@ import React,{act} from 'react';
 import {create} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
 const fixture=globalThis.__clubLineupUi={route:{page:'events',eventId:'event',tab:'rounds'},navigation:{rankingSelection:null,navigate(){},reset(){}},ctx:null,reads:[],posts:[],toasts:[],postStatus:200,queuedReads:[]};
-const themeHooks=(readFileSync('app/club-app.tsx','utf8').match(/import\s*\{([^}]+)\}\s*from\s*['"]\.\/visual-theme['"]/)?.[1]??'useVisualTheme').split(',').map(name=>name.trim()).filter(name=>/^use\w+$/.test(name));
+const themeHooks=(readFileSync('app/club-app.tsx','utf8').match(/import\s*\{([^}]+)\}\s*from\s*['"]\.\/visual-theme['"]/)?.[1]??'useVisualTheme').split(',').map(name=>name.trim()).filter(name=>/^\w+$/.test(name));
 await build({entryPoints:['app/club-app.tsx'],outfile:'.test-output/club-lineup-sync-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'},plugins:[{name:'club-sync-ui',setup(b){
  b.onResolve({filter:/.*/},a=>{
   if(a.path==='sonner')return {path:'toast',namespace:'club-sync'};
@@ -19,7 +19,7 @@ await build({entryPoints:['app/club-app.tsx'],outfile:'.test-output/club-lineup-
   if(a.importer.replaceAll('\\','/').endsWith('/app/club-app.tsx')&&a.path.startsWith('./')&&!a.path.endsWith('.css')&&a.path!=='./form-fields')return {path:a.path,namespace:'club-sync'};
  });
  b.onLoad({filter:/.*/,namespace:'club-sync'},a=>{
-  const content=a.path==='./visual-theme'?themeHooks.map(name=>`export const ${name}=()=>false;`).join('\n')
+  const content=a.path==='./visual-theme'?themeHooks.map(name=>`export const ${name}=()=>${/^use/.test(name)?'false':'null'};`).join('\n')
    :a.path==='toast'?`export const Toaster=()=>null;export const toast=Object.fromEntries(['info','success','error'].map(kind=>[kind,message=>globalThis.__clubLineupUi.toasts.push({kind,message})]));`
    :a.path==='navigation'?`import{createContext}from'react';export const ClubNavigationContext=createContext(null);export const useClubNavigation=()=>({route:globalThis.__clubLineupUi.route,navigation:globalThis.__clubLineupUi.navigation});`
    :a.path==='session'?`export const listenForSessionChanges=()=>({stop(){}});export const notifySessionChange=()=>{};`

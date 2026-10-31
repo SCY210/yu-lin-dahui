@@ -1,7 +1,7 @@
 /* Local visual direction: ink, mineral green, rice paper and cinnabar. */
 html.wuxia-theme{--background:#ece6d8;--foreground:#262a22;--card:#f9f5eb;--card-foreground:#262a22;--primary:#8d3429;--primary-foreground:#fff9eb;--secondary:#e3dbc9;--secondary-foreground:#353a2e;--muted:#e9e1d1;--muted-foreground:#746b59;--accent:#e8ddc7;--accent-foreground:#3e3c2e;--border:#cfc3ab;--input:#bfb196;--ring:#aa7c43;--destructive:#9b372b;--popover:#fbf7ee;--radius:.25rem;--ink:#1e2822;--gold:#b7985f;--paper:#f9f5eb;--cinnabar:#8d3429}
-html{background:var(--background)}
-.wuxia-theme body{background-color:var(--background);background-image:radial-gradient(ellipse at 12% 5%,#faf5e7a3,transparent 47%),repeating-linear-gradient(0deg,#80683c03 0 1px,transparent 1px 4px);color:var(--foreground);font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.75}
+html.wuxia-theme{background-color:var(--background);background-image:radial-gradient(ellipse at 12% 5%,#faf5e7a3,transparent 47%),repeating-linear-gradient(0deg,#80683c03 0 1px,transparent 1px 4px);background-repeat:no-repeat,repeat}
+.wuxia-theme body{background:transparent;color:var(--foreground);font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.75}
 .wuxia-theme h1,.wuxia-theme h2,.wuxia-theme h3,.wuxia-theme h4,.wuxia-theme .brand,.wuxia-theme .pc-player-name,.wuxia-theme .pc-back-name,.wuxia-theme .pc-weapon-model{font-family:'KaiTi','STKaiti','Kaiti SC','Songti SC','SimSun',serif;font-weight:600;letter-spacing:.075em}
 .wuxia-theme h1{font-size:36px}.wuxia-theme h2{font-size:25px}.wuxia-theme h3{font-size:22px}
 .wuxia-theme .shell{max-width:1180px;padding:22px 40px 130px}

@@ -28,6 +28,21 @@ body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
  body .shell.app-compact .brand-lockup .cultivation-ornament-compact{width:34px}
  body .shell.app-compact .brand span{letter-spacing:1px}
  body .shell.app-compact .section-title{flex-direction:row;align-items:center;flex-wrap:wrap}
+ /* Phone header: one tight block so the page content starts high (theme, gift and reminders as 36px icons). */
+ body .shell.app-compact{padding-top:8px}
+ body .shell.app-compact .topbar{margin-bottom:12px;padding-bottom:10px;align-items:center}
+ body .shell.app-compact .brand span{margin-top:2px}
+ body .shell.app-compact .topbar>.reminder-top-actions{gap:4px}
+ body .shell.app-compact .top-icon-row{gap:6px}
+ body .shell.app-compact .top-icon-row>.treasure-icon,
+ body .shell.app-compact .top-icon-row>.visual-theme-picker.is-compact{width:36px;height:36px}
+ body .shell.app-compact .top-icon-row>.reminder-button{width:36px;height:36px;min-height:36px;padding:0;justify-content:center;border-width:1px;border-style:solid;border-radius:12px}
+ body .shell.app-compact .top-icon-row>.reminder-button:not(.has-unread){border-color:var(--border);background:var(--card)}
+ .wuxia-theme body .shell.app-compact .top-icon-row>.reminder-button{border-radius:4px}
+ .wuxia-theme body .shell.app-compact .top-icon-row>.reminder-button:not(.has-unread){border-color:#cfc3ab;background:#8d34290d}
+ body .shell.app-compact .reminder-button .reminder-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ body .shell.app-compact .reminder-button .reminder-count{position:absolute;top:-6px;right:-6px}
+ body .shell.app-compact .topbar .badge{padding:2px 7px;font-size:11px;line-height:1.5}
 }
 /* Activities: title with its guide and art on one line, then both create buttons side by side. */
 .heading-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:10px}

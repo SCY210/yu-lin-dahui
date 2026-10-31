@@ -22,6 +22,6 @@ export default function ReminderButton({accountId,refreshKey,onOpen}:{accountId?
  if(!accountId)return null;
  const label=unread>99?'99+':String(unread);
  return <button type="button" className={'ghost reminder-button'+(unread?' has-unread':'')} onClick={onOpen} aria-label={unread?'提醒，'+unread+' 条未读':'提醒'}>
-  {unread?<BellRing size={18} aria-hidden="true"/>:<Bell size={18} aria-hidden="true"/>}提醒{unread>0&&<span className="reminder-count" aria-hidden="true">{label}</span>}
+  {unread?<BellRing size={18} aria-hidden="true"/>:<Bell size={18} aria-hidden="true"/>}<span className="reminder-label">提醒</span>{unread>0&&<span className="reminder-count" aria-hidden="true">{label}</span>}
  </button>;
 }
