@@ -58,6 +58,7 @@ export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfi
    <div ref={back} className="pc-face pc-back" hidden={!flipped} role="group" tabIndex={flipped?0:-1} aria-label={player.name+'的战拍卡片，轻点翻回正面'} aria-hidden={!flipped} inert={!flipped} onClick={event=>{if((event.target as HTMLElement).closest('button,a'))return;flip(false)}} onKeyDown={event=>{if(event.target===event.currentTarget&&['Enter',' '].includes(event.key)){event.preventDefault();flip(false)}}}>
     <div className="pc-back-heading"><span>本命战拍</span><span className="pc-back-hint"><RotateCcw size={13} aria-hidden="true"/>轻点翻回</span></div>
     <strong className="pc-back-name">{player.name}</strong>
+    {/* eslint-disable-next-line @next/next/no-img-element -- Keep one native, session-authenticated image mounted before and after the flip. */}
     <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={'/api/photos/'+photo.id} alt={player.name+'的战拍照片'} loading={flipped||requestedPhoto===photo.id?'eager':'lazy'} decoding="async" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
     <strong className="pc-weapon-model" title={profile.racket}>{profile.racket||'战拍尚未填写'}</strong>
     <div className="pc-weapon-details"><span><span>拍线</span><strong title={profile.strings}>{profile.strings||'尚未填写'}</strong></span><span><span>磅数</span><strong>{tensionLabel(profile)||'尚未填写'}</strong></span></div>
