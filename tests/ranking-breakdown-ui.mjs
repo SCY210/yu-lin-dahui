@@ -10,7 +10,7 @@ import {create} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
 await build({entryPoints:['app/ranking-view.tsx'],outfile:'.test-output/ranking-breakdown-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','lucide-react'],loader:{'.css':'empty'},plugins:[{name:'ranking-shells',setup(builder){
  builder.onResolve({filter:/^\.\//},a=>a.importer.replaceAll('\\','/').endsWith('/app/ranking-view.tsx')&&!a.path.endsWith('.css')?{path:a.path,namespace:'ui'}:undefined);
- builder.onLoad({filter:/.*/,namespace:'ui'},({path})=>({loader:'js',contents:path==='./disclosure'?`export default function Disclosure({children}){return children}`:path==='./avatar'?`export const Avatar=()=>null;`:path==='./realm-badge'?`export default function Badge(){return null}export const PlacementBadge=()=>null;`:path==='./month-picker'?`export const QuarterPicker=()=>null,YearPicker=()=>null;`:`export default function Shell(){return null}`}));
+ builder.onLoad({filter:/.*/,namespace:'ui'},({path})=>({loader:'js',contents:path==='./disclosure'?`export default function Disclosure({children}){return children}`:path==='./avatar'?`export const Avatar=()=>null;`:path==='./realm-badge'?`export default function Badge(){return null}export const PlacementBadge=()=>null;`:path==='./month-picker'?`export const QuarterPicker=()=>null,YearPicker=()=>null;`:path==='./ranking-podium'?`import {createElement} from 'react';export default function Podium(){return createElement('section',{'aria-label':'积分领奖台'})}`:`export default function Shell(){return null}`}));
 }}]});
 const Ranking=(await import(pathToFileURL(resolve('.test-output/ranking-breakdown-ui.mjs')).href)).default;
 const prior=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
@@ -48,6 +48,7 @@ try{
  console.log('PASS ranking breakdown: collapsed by default, accessible toggle per row, non-zero signed sources adding up to the total, in-progress note, one open at a time, profile links unchanged');
 
  const summary=()=>ui.root.findByProps({className:'rv-my-ranking'});
+ const order=JSON.stringify(ui.toJSON());assert.ok(order.indexOf('积分领奖台')>=0&&order.indexOf('积分领奖台')<order.indexOf('rv-my-ranking'),'the top three come first, my own rank below them');
  const summaryText=()=>text(summary()).replace(/\s+/g,'');
  const locate=()=>ui.root.findAllByType('button').find(button=>button.props.className==='rv-locate-me');
  const update=async props=>{await act(async()=>ui.update(React.createElement(Ranking,{...baseProps,...props})))};

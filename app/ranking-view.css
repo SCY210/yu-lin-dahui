@@ -15,10 +15,10 @@
 .rv-period-switch button { min-height:44px; padding:8px 19px; border:0; border-radius:10px; background:transparent; color:#756a8b; font-weight:650; white-space:nowrap; }
 .rv-period-switch button[aria-pressed=true] { background:#fff; color:#5e3eb1; box-shadow:0 2px 6px #4030520a; }
 .rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker select:focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
-.rv-format-switch { grid-column:1/-1; justify-self:start; }
-.rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px minmax(0,1fr); align-items:center; gap:10px; min-height:48px; }
+.rv-format-switch { grid-column:1; justify-self:start; }
+.rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px; align-items:center; gap:10px; min-height:48px; }
 .rv-controls>button { justify-self:end; white-space:nowrap; }
-.rv-control-actions { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.rv-control-actions { grid-column:2; display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
 .rv-control-actions>button { min-height:44px; white-space:nowrap; }
 .rv-controls .rv-date-picker { box-sizing:border-box; display:grid; grid-template-columns:30px minmax(0,1fr) 30px; width:208px; height:48px; padding:3px; gap:0; flex-shrink:0; }
 .rv-date-picker .month-arrow { width:30px; height:40px; min-height:0; padding:0; }
@@ -41,8 +41,8 @@
  .rv-format-switch { justify-self:stretch; display:grid; grid-template-columns:1fr 1fr; }
  .rv-controls { grid-template-columns:minmax(0,1fr); gap:8px; }
  .rv-controls .rv-date-picker { width:100%; grid-template-columns:36px minmax(0,1fr) 36px; }
- .rv-control-actions { justify-content:space-between; width:100%; }
- .rv-control-actions>button { font-size:14px; }
+ .rv-control-actions { gap:2px; }
+ .rv-control-actions>button { font-size:13px; padding-left:8px; padding-right:8px; }
  .rv-date-picker .month-arrow { width:28px; }
  .rv-date-picker .month-current { font-size:14px; gap:4px; padding:0; }
  .rv-controls>button { padding-left:7px; padding-right:7px; font-size:12px; gap:4px; }
