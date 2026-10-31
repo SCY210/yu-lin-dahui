@@ -59,9 +59,10 @@ The sandbox entry and route use the server-projected capability. Every sandbox r
 The competition sandbox debugs a competition end to end without opening a real one (`lib/competition-simulation.ts`).
 It follows the real flow and runs it on the real pages:
 
-1. **Create.** The sandbox starts with up to sixteen member snapshots, taken with the same rules as the activity
+1. **Create.** The sandbox starts with a snapshot of every enabled member with an account, the same members who can
+   sign up for a real competition, taken with the same rules as the activity
    sandbox, and no competition. The organiser creates it with the real create form: category, time, venue and courts.
-2. **Sign up.** Members sign up through the same court signup as the real page. The sandbox can sign up or cancel any
+2. **Sign up.** Members sign up through the same competition signup as the real page. The sandbox can sign up or cancel any
    member, or sign everyone up at once.
 3. **Run.** The real activity page takes over: signups, the competition tab (settings, draw, fixtures, referees,
    referee scoring, knockout, results and archive) and the fee tab (entry fee confirmation and payment marks).
@@ -75,9 +76,9 @@ receipts as the activity sandbox. Requests name it with `kind: 'competition'` (`
 Its document keeps its progress until it is reset. Only competition creation, signups, fees and the activity commands
 run inside it, never club-wide commands.
 
-Two shortcuts make the flow quick:
+Fixtures go on courts exactly as in a real competition: the system arranges them after the draw, the knockout and
+every result, and the page's own arrangement button starts any that are ready. One shortcut makes the flow quick:
 
-- **Start ready fixtures** puts the next ready fixtures on every free court.
 - **Finish matches in play** records a random result for every match in play. The result follows the rule of that
   match's stage, and the stronger side by realm score wins more often. A match the referee finished live keeps the
   referee's score.

@@ -44,10 +44,8 @@ export function categoryProblem(category:TournamentCategory|undefined,team:Gende
  if(team.length!==2)return null;
  const missing=team.filter(p=>!['male','female'].includes(gender(p)??''));
  if(category==='mens-doubles'&&team.some(p=>gender(p)!=='male'))return '男双只限男球友：'+team.filter(p=>gender(p)!=='male').map(p=>p.name).join('、')+' 的资料性别不是男';
- if(category==='mixed-doubles'){
-  if(missing.length)return '混双需要知道性别，请先在资料里填写：'+missing.map(p=>p.name).join('、');
-  if(gender(team[0])===gender(team[1]))return '混双每队一男一女：'+team.map(p=>p.name).join(' / ');
- }
+ // Mixed doubles: one man and one woman, or a player standing in for the other gender (flagged on the page).
+ if(category==='mixed-doubles'&&missing.length)return '混双需要知道性别，请先在资料里填写：'+missing.map(p=>p.name).join('、');
  return null;
 }
 export type TournamentData={matches:Match[]};
@@ -73,6 +71,8 @@ export function fixtureWinner(t:Tournament,s:TournamentData,f:TournamentFixture)
  if(!a)return b;if(!b)return a;
  const m=s.matches.find(m=>m.id===f.matchId);return m?.status==='complete'?((m.scoreA??0)>(m.scoreB??0)?a:b):undefined;
 }
+/** The teams that qualify from the groups, in seeding order: group winners first, then runners-up. */
+export function qualifiers(t:Tournament,s:TournamentData){const tables=t.groups.map((_,i)=>groupStandings(t,s,i)),seeds:string[]=[];for(let rank=0;rank<t.advance;rank++)for(const table of tables)if(table[rank])seeds.push(table[rank].id);return seeds}
 export function groupComplete(t:Tournament,s:TournamentData){return t.fixtures.some(f=>f.stage==='group')&&t.fixtures.filter(f=>f.stage==='group').every(f=>s.matches.some(m=>m.id===f.matchId&&m.status==='complete'))}
 export function tournamentChampion(t:Tournament,s:TournamentData){if(tournamentFormat(t)==='round-robin')return groupComplete(t,s)?groupStandings(t,s,0)[0]?.id:undefined;const last=t.fixtures.filter(f=>f.stage==='knockout').at(-1);return last?fixtureWinner(t,s,last):undefined}
 export function assertTournamentScore(s:TournamentData,e:Event,m:Match,a:number,b:number,voiding=false,games:{a:number;b:number}[]=[]){
@@ -86,7 +86,12 @@ export function assertTournamentScore(s:TournamentData,e:Event,m:Match,a:number,
   const bad=games.find(g=>!finishedGame(rule,g.a,g.b));if(bad)fail('比分 '+bad.a+':'+bad.b+' 不是完整的一局（'+scoringLabel(rule)+'）');
  }
  if(m.status!=='complete')return;
- if(f.stage==='group'&&t.phase==='knockout')fail('已生成淘汰赛，请先返回小组赛再修正比分');
+ // Once the knockout is drawn a group score may still be corrected, as long as the qualifiers and their order stay
+ // the same; otherwise the knockout would no longer match the tables.
+ if(f.stage==='group'&&t.phase==='knockout'){
+  const corrected={matches:s.matches.map(x=>x.id===m.id?{...x,status:'complete' as const,scoreA:a,scoreB:b,games:games.length?games:[{a,b}]}:x)};
+  if(qualifiers(t,corrected).join()!==qualifiers(t,s).join())fail('这样修改会改变出线名单，淘汰赛已开打，不能再改');
+ }
  const winnerChanged=(a>b)!==((m.scoreA??0)>(m.scoreB??0));
  if(winnerChanged&&t.fixtures.some(x=>(x.fromA===f.id||x.fromB===f.id)&&x.matchId))fail('后续淘汰赛已开打，不能更换晋级选手');
 }

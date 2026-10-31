@@ -60,12 +60,14 @@ export function calculateSettlement(s:State,e:Event,now:number):Omit<Settlement,
  return withFeeTransfers(s,e,equalFeeAmounts(s,e,now,{eventId:e.id,bills,detail,total,subsidy,unallocated},allocate));
 }
 /** What a competition costs (docs/TOURNAMENTS.md): its courts, its shuttles and other expenses, and the prizes for
- * the top three. The entry fee is that total divided by the confirmed entrants, rounded up to a whole euro. */
+ * the top three. The entry fee is that total divided by the entrants (the drawn players once drawn, the confirmed
+ * signups before), rounded up to a whole euro. */
 export function competitionCosts(s:Pick<State,'bookings'|'costs'|'registrations'>,e:Event){
  const courts=s.bookings.filter(b=>b.eventId===e.id).reduce((n,b)=>n+bookingCents(b),0);
  const shuttles=s.costs.filter(c=>c.eventId===e.id).reduce((n,c)=>n+(c.type==='ball'?ballCents(c):c.cents),0);
- const p=e.tournament?.prizes,prizes=p?p.first+p.second+p.third:0,total=courts+shuttles+prizes;
- const entrants=[...new Set(s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].sort();
+ const t=e.tournament,drawn=t&&t.phase!=='setup'&&t.teams.length?t.teams.flatMap(team=>team.players):null;
+ const p=t?.prizes,prizes=p?p.first+p.second+p.third:0,total=courts+shuttles+prizes;
+ const entrants=[...new Set(drawn??s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].sort();
  const fee=entrants.length?Math.ceil(total/entrants.length/100)*100:0;
  return {courts,shuttles,prizes,total,entrants,fee};
 }

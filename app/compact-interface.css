@@ -37,3 +37,4 @@ body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
 .heading:has(.heading-actions) .decorated-title>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .heading:has(.heading-actions) .decorated-title h1{margin:0}
 .heading:has(.heading-actions) .racket-art{width:64px;height:58px;max-width:64px}
+.error-dialog [data-slot=dialog-title]{display:flex;align-items:center;gap:8px;color:#c0392b}.error-dialog-messages{display:grid;gap:6px;color:var(--foreground)}.error-dialog-messages p{margin:0}

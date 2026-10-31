@@ -1,5 +1,5 @@
 /* All-courts board (app/live-scoreboard.tsx): the app's theme colours, one card per court, sides left and right. */
-.live-board{position:fixed;inset:0;z-index:80;display:grid;grid-template-rows:auto;align-content:start;gap:16px;padding:max(16px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 24px;overflow:auto;color:var(--foreground);background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--primary) 14%,var(--background)),var(--background) 60%)}
+.live-board{position:fixed;inset:0;z-index:45;display:grid;grid-template-rows:auto;align-content:start;gap:16px;padding:max(16px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 24px;overflow:auto;color:var(--foreground);background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--primary) 14%,var(--background)),var(--background) 60%)}
 .live-board-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .live-board-top h2{margin:0;font-size:clamp(20px,2.6vw,30px)}
 .live-board-top small{color:var(--muted-foreground)}
@@ -38,3 +38,11 @@
 .board-group li.is-qualifying{background:color-mix(in srgb,var(--primary) 10%,transparent)}
 .board-group li span{font-weight:800;color:var(--muted-foreground)}
 .board-group li small{color:var(--muted-foreground)}
+/* Midpoint break and the match's warnings and cards. */
+.board-break{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 12px;border-radius:14px;background:#f59e0b26;color:#92400e;font-size:clamp(15px,1.8vw,20px)}
+.board-break strong{font-variant-numeric:tabular-nums}
+.board-cards{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:clamp(12px,1.4vw,15px)}
+.board-cards li{display:flex;align-items:center;gap:8px;color:var(--muted-foreground)}
+.board-cards strong{color:var(--foreground)}
+.board-cards .card-chip{display:inline-block;width:12px;height:17px;border-radius:2px;box-shadow:0 0 0 1px #0004}
+.board-cards .card-chip.is-warning{background:#d0d5dd}.board-cards .card-chip.is-yellow{background:#ffd60a}.board-cards .card-chip.is-red{background:#e5383b}.board-cards .card-chip.is-black{background:#111}

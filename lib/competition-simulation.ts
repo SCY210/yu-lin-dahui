@@ -16,12 +16,13 @@ export type CompetitionSimulationDocument=SimulationDocument&{kind:'competition'
 export type CompetitionSimulationView=SimulationView&{live:Record<string,LiveScore>};
 /** Signups and fees outside the event action list that the real competition page uses. */
 const memberActions=new Set(['event','courtRegister','courtCancel','register','cancel','feePaid','feeTransferPaid']);
-const shortcuts=new Set(['liveScore','signup','signupAll','startNow','autoStart','autoScore']);
+const shortcuts=new Set(['liveScore','signup','signupAll','startNow','autoScore']);
 const players=16;
 
-/** Up to sixteen member snapshots and no competition yet. */
+/** Every enabled member with an account, as on the real signup, and no competition yet. Without a club (tests), a
+ * fictional roster of sixteen. */
 export function createCompetitionSimulation(now:number,club:State|undefined):CompetitionSimulationDocument{
- const base=createSimulation(now,club,players),s=base.state;
+ const base=createSimulation(now,club,club?club.players.length:players),s=base.state;
  s.settings.name='比赛模拟';s.events=[];s.bookings=[];s.registrations=[];delete s.settings.pairingOdds;
  return {...base,kind:'competition',live:{}};
 }
@@ -73,11 +74,9 @@ export async function changeCompetitionSimulation(doc:CompetitionSimulationDocum
   }else if(action==='liveScore'){
    const op=liveOpInput.parse(payload),m=s.matches.find(m=>m.id===op.matchId&&t.fixtures.some(f=>f.matchId===m.id))??fail('比赛不存在');
    if(!next.live[m.id]&&m.status!=='playing')fail('请先在对战表中安排开赛');
+   if(!t.fixtures.find(f=>f.matchId===m.id)?.referee)fail('请先为这场比赛指定裁判');
    if(m.status==='complete'&&op.op!=='swap')fail('比分已经提交');
    try{next.live[m.id]=applyLiveOp(next.live[m.id]??null,op,matchRule(t,m.id)??defaultScoring,{matchId:m.id,eventId:e.id},now)}catch(error){fail(error instanceof Error?error.message:'操作无效')}
-  }else if(action==='autoStart'){
-   // The same arrangement the system runs after every result (arrangeFixtures).
-   await apply(s,a,'tournamentArrange',{eventId:e.id},now);
   }else if(action==='autoScore'){
    const ratings=realmSnapshot(s,now),strength=(ids:string[])=>ids.reduce((sum,id)=>sum+(ratings.get(id)?.score??1000),0)/ids.length;
    let seed=(next.revision*2654435761+requestId.length)>>>0;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};

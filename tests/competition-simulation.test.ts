@@ -26,7 +26,7 @@ function createPayload(by:string){
 test('the competition sandbox follows the real flow from the create form to the archive, without touching the club',async()=>{
  const real=club(),before=JSON.stringify(real);
  let doc=createCompetitionSimulation(now,real);
- assert.equal(doc.state.players.length,16,'sixteen members');assert.equal(doc.state.events.length,0,'no competition until it is created');
+ assert.equal(doc.state.players.length,18,'every member with an account, as on the real signup');assert.equal(doc.state.events.length,0,'no competition until it is created');
  await assert.rejects(()=>step(doc,'signupAll'),/请先创建比赛/);
  await assert.rejects(()=>step(doc,'event',{...createPayload('sim-player-1'),tournament:false}),/只能创建比赛/);
  doc=await step(doc,'event',createPayload('sim-player-1'));
@@ -38,22 +38,27 @@ test('the competition sandbox follows the real flow from the create form to the 
  doc=await step(doc,'signup',{playerId:'sim-player-16',cancel:true});doc=await step(doc,'signup',{playerId:'sim-player-16'});
  doc=await step(doc,'startNow');assert.ok(e().start<=now&&e().end>now);assert.ok(doc.state.bookings.every(b=>b.start===e().start));
  doc=await step(doc,'tournamentSettings',{eventId:e().id,format:'groups',category:'mixed-doubles',scoring:{games:1,points:15},knockoutScoring:{games:3,points:21},prizes:{first:3000,second:1500,third:500}});
- const pairs=balancedPairs(doc.state.players.map(p=>({id:p.id,score:1000,gender:p.profile?.gender})),'mixed-doubles');
+ const confirmed=new Set(doc.state.registrations.filter(r=>r.status==='confirmed').map(r=>r.playerId)),pairs=balancedPairs(doc.state.players.filter(p=>confirmed.has(p.id)).map(p=>({id:p.id,score:1000,gender:p.profile?.gender})),'mixed-doubles');
  doc=await step(doc,'tournamentDraw',{eventId:e().id,teams:pairs.teams,groups:2,advance:2,seed:5});
  const playing=()=>doc.state.matches.filter(m=>m.status==='playing');
  assert.equal(playing().length,4,'the system puts a fixture on every court after the draw');
- await assert.rejects(()=>step(doc,'autoStart'),/没有可以开赛/);
+ await assert.rejects(()=>step(doc,'tournamentArrange',{eventId:e().id}),/没有可以开赛/);
  // The referee scores one group match live to 15 under the group rule; the shortcut then submits the referee's result.
  const live=playing()[0].id;
+ await assert.rejects(()=>step(doc,'liveScore',{op:'start',matchId:live}),/请先为这场比赛指定裁判/);
+ const fixture=e().tournament!.fixtures.find(f=>f.matchId===live)!,referee=doc.state.players.find(p=>!doc.state.matches.find(m=>m.id===live)!.a.concat(doc.state.matches.find(m=>m.id===live)!.b).includes(p.id))!.id;
+ doc=await step(doc,'tournamentReferee',{eventId:e().id,fixtureId:fixture.id,playerId:referee});
  doc=await step(doc,'liveScore',{op:'start',matchId:live});
  for(let i=0;i<15;i++)doc=await step(doc,'liveScore',{op:'point',matchId:live,side:'b'});
  assert.equal(doc.live[live].status,'finished');assert.ok(competitionView(doc,now).live[live]);
  doc=await step(doc,'autoScore');
  assert.deepEqual(doc.state.matches.find(m=>m.id===live)!.games,[{a:0,b:15}],'the score of the referee is kept');
  // Every result frees a court and the system starts the next fixture there.
- for(let round=0;round<20&&playing().length;round++)doc=await step(doc,'autoScore');
- assert.ok(doc.state.matches.filter(m=>m.status==='complete').every(m=>m.games.length===1),'group matches: one game to 15');
- doc=await step(doc,'tournamentKnockout',{eventId:e().id});
+ for(let round=0;round<20&&e().tournament!.phase==='groups'&&playing().length;round++)doc=await step(doc,'autoScore');
+ const groupMatches=e().tournament!.fixtures.filter(f=>f.stage==='group').map(f=>doc.state.matches.find(m=>m.id===f.matchId)!);
+ assert.ok(groupMatches.every(m=>m.status==='complete'&&m.games.length===1),'group matches: one game to 15');
+ // The last group result draws the knockout by itself and the system starts it.
+ assert.equal(e().tournament!.phase,'knockout');assert.ok(doc.state.audits.some(a=>a.action==='tournamentKnockout'&&a.actor==='system'));
  assert.equal(e().tournament!.phase,'knockout');
  for(let round=0;round<10&&!tournamentChampion(e().tournament!,doc.state);round++)doc=await step(doc,'autoScore');
  const knockout=e().tournament!.fixtures.filter(f=>f.stage==='knockout'&&f.matchId).map(f=>doc.state.matches.find(m=>m.id===f.matchId)!);

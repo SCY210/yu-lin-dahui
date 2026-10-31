@@ -21,11 +21,14 @@ export default function TournamentFees({e,ctx}:{e:Event;ctx:SchedulingContext&{a
  const unpaid=latest?latest.bills.filter(b=>!paid(b.playerId,b.total)).length:0;
  const mark=(id:string,value:boolean)=>void ctx.action('feePaid',{eventId:e.id,settlementId:latest!.id,playerId:id,paid:value,reason:value?'标记已付款':'撤销付款标记'},false).catch(()=>{});
  const ball=()=>open('记录球费','cost',{eventId:e.id,type:'ball',name:'比赛用球',pricing:'unit',cents:200,used:0,start:'',end:'',bearer:'members',advancedBy:'',reason:'比赛用球'},[text('name','型号'),money('cents','单颗价格 · 欧元/颗'),{...number('used','消耗颗数'),min:0},choice('advancedBy','这些球是谁买的',feeMembers(data.players)),why],(v:Record<string,unknown>)=>({...v,pricing:'unit',start:null,end:null}),'球费 = 单颗价格 × 颗数，计入报名费。');
+ // Who collects the entry fee and how to reach them; the organisers set it once per competition.
+ const recipient=e.feeRecipient,setRecipient=()=>open('设置收款人','feeRecipient',{eventId:e.id,playerId:recipient?.playerId??'',phone:recipient?.phone??'',reason:'设置比赛收款人'},[choice('playerId','收款人',feeMembers(data.players)),text('phone','电话 / Bizum'),why],undefined,'报名费交给这位球友，选手在这里看到收款人和电话。');
  const line=(label:string,cents:number,detail?:string)=><div className="tournament-fee-line"><span>{label}{detail&&<small>{detail}</small>}</span><strong>{euro(cents)}</strong></div>;
  return <div className="tournament-fees">
   <section className="card tournament-fee-summary">
-   <div className="tournament-fee-headline"><span>每人报名费</span><strong>{euro(c.fee)}</strong><small>{c.entrants.length} 位正式报名 · 向上取整到整欧元</small></div>
+   <div className="tournament-fee-headline"><span>每人报名费</span><strong>{euro(c.fee)}</strong><small>{c.entrants.length} 位{e.tournament?.phase!=='setup'?'参赛选手':'正式报名'} · 向上取整到整欧元</small></div>
    <div className={'fee-confirmation '+(latest&&!changed?'is-confirmed':'is-pending')} role="status">{latest&&!changed?<CheckCircle2 size={22} aria-hidden="true"/>:<FileClock size={22} aria-hidden="true"/>}<div><strong>{latest?changed?'报名或费用有变动，待重新确认':'报名费已确认 · 第 '+latest.version+' 版':'报名费待组织者确认'}</strong><small>比赛不分摊场地和球费，所有正式报名的选手交同样的报名费。</small></div></div>
+   <div className="tournament-fee-payee"><span>收款人</span>{recipient?<strong>{recipient.name} · {recipient.phone}</strong>:<small>{manager?'还没有设置，选手不知道交给谁':'组织者还没有设置收款人'}</small>}{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={setRecipient}>{recipient?'修改':'设置收款人'}</button>}</div>
    {line('场地费',c.courts,data.bookings.filter(b=>b.eventId===e.id).length+' 个场地时段')}
    {line('球费',c.shuttles,data.costs.filter(x=>x.eventId===e.id).map(x=>x.name+' '+euro(x.type==='ball'?ballCents(x):x.cents)).join(' · ')||'尚未记录')}
    {line('冠亚季奖品',c.prizes,p?'冠军 '+euro(p.first)+' · 亚军 '+euro(p.second)+' · 季军 '+euro(p.third):'在比赛对战表的「赛制与奖品」中设置')}

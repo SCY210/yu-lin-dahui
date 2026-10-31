@@ -21,23 +21,32 @@ export const cardRules:Record<CardKind,{label:string;effect:string;detail:string
 };
 
 export type LiveTally={games:{a:number;b:number}[];current:{a:number;b:number};wins:{a:number;b:number};winner?:Side;disqualified?:Side;
- /** Prompts for the referee: the interval at 11 in a game to 21, and changing ends at 11 in the deciding game. */interval:boolean;changeEnds:boolean};
+ /** Prompts for the referee: the interval at 11 in a game to 21, and changing ends at 11 in the deciding game. */interval:boolean;changeEnds:boolean;
+ /** Every interval so far: when a side first reached the midpoint (11 of 21) in a game. Each one is a 60-second break
+  * and the players change ends, so the sides on the referee page and the board swap with it. */breaks:{game:number;at:number}[]};
+/** How long the break at the midpoint of a game lasts. */
+export const breakMs=60000;
+/** The break running now, if any: the latest midpoint within the last 60 seconds of an unfinished match. */
+export function currentBreak(t:LiveTally,now:number){const last=t.breaks.at(-1);return !t.winner&&last&&now<last.at+breakMs?{...last,until:last.at+breakMs}:null}
+/** Whether the display is mirrored: a referee's own change (legacy) and each midpoint break swap the ends. */
+export const sidesSwapped=(s:Pick<LiveScore,'swapped'>|undefined,t:LiveTally)=>!!s?.swapped!==(t.breaks.length%2===1);
 const other=(side:Side):Side=>side==='a'?'b':'a';
 
 /** Replays the log under the rule: a game ends once it is finished (finishedGame), the match once a side has won the
  * majority of games, or at a black card. Points after the end are ignored. */
 export function liveTally(rule:ScoringRule,events:LiveEvent[]):LiveTally{
- const games:{a:number;b:number}[]=[],wins={a:0,b:0},need=Math.ceil(rule.games/2);let current={a:0,b:0},winner:Side|undefined,disqualified:Side|undefined,last:Side|undefined;
+ const games:{a:number;b:number}[]=[],wins={a:0,b:0},need=Math.ceil(rule.games/2),mid=Math.ceil(rule.points/2),breaks:{game:number;at:number}[]=[];let current={a:0,b:0},winner:Side|undefined,disqualified:Side|undefined,last:Side|undefined;
  for(const e of events){
   if(winner)break;
   if(e.type==='card'&&e.kind==='black'){disqualified=e.side;winner=other(e.side);break}
   const side=e.type==='point'?e.side:e.kind==='red'?other(e.side):null;if(!side)continue;
   current={...current,[side]:current[side]+1};last=side;
+  if(current[side]===mid&&current[other(side)]<mid&&!finishedGame(rule,current.a,current.b))breaks.push({game:games.length,at:e.at});
   if(finishedGame(rule,current.a,current.b)){games.push(current);wins[side]++;current={a:0,b:0};if(wins[side]>=need)winner=side}
  }
- const deciding=rule.games===3&&games.length===2,mid=Math.ceil(rule.points/2);
+ const deciding=rule.games===3&&games.length===2;
  const reached=!winner&&!!last&&Math.max(current.a,current.b)===mid&&current[last]===mid&&Math.min(current.a,current.b)<mid;
- return {games,current,wins,winner,disqualified,interval:reached&&rule.points===21,changeEnds:reached&&deciding};
+ return {games,current,wins,winner,disqualified,interval:reached&&rule.points===21,changeEnds:reached&&deciding,breaks};
 }
 /** The games to save when the match ends. After a black card the opponent is recorded as winning the unfinished game
  * with the fewest points that finish it, and any further games it still needed 21:0 (or 15:0, 11:0), so the saved
@@ -50,6 +59,10 @@ export function finalGames(rule:ScoringRule,t:LiveTally){
  while(wins[w]<need){games.push(game(rule.points,0));wins[w]++}
  return games;
 }
+
+/** A walkover: the side that did not withdraw wins every game it needs 21:0 (15:0, 11:0), a valid result under the
+ * rule, so standings and the bracket move on as for any score. */
+export function walkoverGames(rule:ScoringRule,winner:Side){const loser=other(winner);return Array.from({length:Math.ceil(rule.games/2)},()=>({[winner]:rule.points,[loser]:0}) as {a:number;b:number})}
 
 /** Playing time: from the start, without pauses. */
 export function liveElapsed(s:Pick<LiveScore,'startedAt'|'pausedAt'|'pausedMs'>,now:number){

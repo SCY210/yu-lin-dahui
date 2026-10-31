@@ -3,7 +3,7 @@ import {useEffect,useRef} from 'react';
 import {Maximize2,X} from 'lucide-react';
 import type {Event,Match} from '../lib/domain/types';
 import {defaultScoring,matchRule} from '../lib/domain/tournament';
-import {liveElapsed,liveTally,type Side} from '../lib/domain/live-score';
+import {cardRules,currentBreak,liveElapsed,liveTally,sidesSwapped,type Side} from '../lib/domain/live-score';
 import {clock,useLiveScores,useSecondClock} from '../lib/client/live-score';
 import type {SchedulingContext} from './event-scheduling';
 import {Avatar} from './avatar';
@@ -32,7 +32,9 @@ export default function LiveScoreboard({e,ctx,close}:{e:Event;ctx:SchedulingCont
   {t&&t.fixtures.some(f=>f.stage==='knockout')&&<section className="board-panel"><h3>淘汰赛对阵图</h3><TournamentBracket t={t} data={ctx.data} name={ctx.name} compact/></section>}
   {t&&groupPhase&&<section className="board-panel board-groups">{t.groups.map((_,g)=><div key={g} className="board-group"><h3>{tournamentFormat(t)==='round-robin'?'循环赛':String.fromCharCode(65+g)+' 组'}</h3><ol>{groupStandings(t,ctx.data,g).map((row,i)=><li key={row.id} className={tournamentFormat(t)==='groups'&&i<t.advance?'is-qualifying':''}><span>{i+1}</span><strong>{t.teams.find(x=>x.id===row.id)?.players.map(ctx.name).join(' / ')}</strong><small>{row.wins} 胜 {row.losses} 负</small></li>)}</ol></div>)}</section>}
   {matches.length?<div className="live-board-grid">{matches.map(m=>{
-   const rule=matchRule(e.tournament,m.id)??defaultScoring,live=scores[m.id],tally=liveTally(rule,live?.events??[]),[left,right]:Side[]=live?.swapped?['b','a']:['a','b'];
+   const rule=matchRule(e.tournament,m.id)??defaultScoring,live=scores[m.id],tally=liveTally(rule,live?.events??[]),[left,right]:Side[]=sidesSwapped(live,tally)?['b','a']:['a','b'],pause=currentBreak(tally,now);
+   // Every warning and card of the match, oldest first, with the player when the referee named one.
+   const cards=(live?.events??[]).flatMap(x=>x.type==='card'?[x]:[]);
    const court=ctx.data.bookings.find(b=>b.id===m.courtId)?.name??'场地',f=fixtures.find(f=>f.matchId===m.id)!;
    const state=!live||live.status==='ready'?'等待开始':live.status==='paused'?'暂停':live.status==='finished'?'已结束':'进行中';
    const shown=(side:Side)=>tally.winner?tally.wins[side]:tally.current[side];
@@ -47,6 +49,8 @@ export default function LiveScoreboard({e,ctx,close}:{e:Event;ctx:SchedulingCont
      </div>
      {team(m,right,tally.winner===right,'right')}
     </div>
+    {pause&&<div className="board-break" role="status"><strong>局间休息 {clock(pause.until-now)}</strong><span>选手交换场地</span></div>}
+    {cards.length>0&&<ul className="board-cards">{cards.map((c,i)=><li key={i}><i className={'card-chip is-'+c.kind} aria-hidden="true"/><strong>{cardRules[c.kind].label}</strong><span>{c.playerId?ctx.name(c.playerId):m[c.side].map(ctx.name).join(' / ')} · {cardRules[c.kind].effect}</span></li>)}</ul>}
    </article>;
   })}</div>:<p className="live-board-empty">现在没有进行中的比赛。下一场开赛后，比分会出现在这里。</p>}
  </div>;

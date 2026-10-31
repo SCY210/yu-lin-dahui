@@ -23,6 +23,8 @@ export default function TournamentSignup({e,ctx,rules,courts,editCourt,bookers}:
  const entrants=regs.filter(r=>r.status==='confirmed'),waiting=regs.filter(r=>r.status==='waitlist'),mine=regs.find(r=>r.playerId===data.me.playerId);
  const signUp=(playerId=data.me.playerId)=>open('报名参赛','register',{eventId:e.id,playerId,arrival:e.start,departure:e.end,note:''},[],undefined,'报名整场比赛，对阵和上场时间由系统安排。满员后自动候补。');
  const cancel=(playerId:string)=>open('取消报名','cancel',{eventId:e.id,playerId,reason:''},[why],undefined,'取消后名额顺延给候补。已抽签的比赛请先联系组织者。');
+ // After the draw the field is fixed (lib/domain/commands.ts refuses new entries and drawn players leaving).
+ const drawn=!!e.tournament&&e.tournament.phase!=='setup';
  const others=data.players.filter(p=>p.enabled&&!p.guestEventId&&!regs.some(r=>r.playerId===p.id));
  const row=(r:typeof regs[number],i:number)=>{const p=data.players.find(p=>p.id===r.playerId);return <li key={r.playerId}><button type="button" className="tournament-entrant" onClick={()=>ctx.openProfile?.(r.playerId)}><Avatar p={p??{name:ctx.name(r.playerId)}} size="signup-avatar"/><span className="tournament-entrant-index">{i+1}</span><strong>{ctx.name(r.playerId)}</strong></button>{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>cancel(r.playerId)}>取消</button>}</li>};
  return <div className="tournament-signup">
@@ -30,11 +32,11 @@ export default function TournamentSignup({e,ctx,rules,courts,editCourt,bookers}:
    <div className="row"><h2><Trophy size={20}/> 比赛报名</h2><FeatureGuide rules={rules as never} topic="signup" iconOnly/></div>
    <p className="hint">{entrants.length} / {e.capacity} 人{waiting.length?' · 候补 '+waiting.length+' 人':''} · {closed?'报名已截止':'报名截止 '+fmt(closes,{month:'numeric',day:'numeric'})+' '+hm(closes)}</p>
    <div className="tournament-signup-me">
-    {mine?<><span className={'badge '+(mine.status==='confirmed'?'is-confirmed':'is-waiting')}>{mine.status==='confirmed'?'已报名':'候补第 '+(waiting.findIndex(r=>r.playerId===mine.playerId)+1)+' 位'}</span><button type="button" className="ghost" disabled={ctx.busy} onClick={()=>cancel(mine.playerId)}>取消报名</button></>
-     :<button type="button" className="primary" disabled={ctx.busy||closed&&!manager||e.status!=='open'&&!manager} onClick={()=>signUp()}>报名参赛</button>}
+    {mine?<><span className={'badge '+(mine.status==='confirmed'?'is-confirmed':'is-waiting')}>{mine.status==='confirmed'?'已报名':'候补第 '+(waiting.findIndex(r=>r.playerId===mine.playerId)+1)+' 位'}</span>{!drawn||manager?<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>cancel(mine.playerId)}>取消报名</button>:<small className="hint">已抽签，退赛请联系组织者</small>}</>
+     :drawn?<span className="hint">已抽签，报名已截止</span>:<button type="button" className="primary" disabled={ctx.busy||closed&&!manager||e.status!=='open'&&!manager} onClick={()=>signUp()}>报名参赛</button>}
     <EventShare key={e.id} event={e} clubName={data.settings.name}/>
    </div>
-   {manager&&others.length>0&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>open('替球友报名','register',{eventId:e.id,playerId:others[0].id,arrival:e.start,departure:e.end,note:''},[choice('playerId','球友',others.map(p=>[p.id,p.name]))],undefined,'替球友报名整场比赛。')}><Plus size={16}/>替球友报名</button>}
+   {manager&&!drawn&&others.length>0&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>open('替球友报名','register',{eventId:e.id,playerId:others[0].id,arrival:e.start,departure:e.end,note:''},[choice('playerId','球友',others.map(p=>[p.id,p.name]))],undefined,'替球友报名整场比赛。')}><Plus size={16}/>替球友报名</button>}
    {entrants.length>0&&<ol className="tournament-entrants">{entrants.map(row)}</ol>}
    {waiting.length>0&&<><h3>候补</h3><ol className="tournament-entrants is-waiting">{waiting.map(row)}</ol></>}
   </section>

@@ -4,8 +4,10 @@ import {apply} from '../lib/domain/commands';
 import {emptyState,type Event} from '../lib/domain/types';
 import {newTournament,finishedGame,fixtureSides,tournamentChampion,groupStandings,categoryProblem} from '../lib/domain/tournament';
 import {seededFirstRound} from '../lib/domain/tournament-commands';
-import {balancedPairs} from '../lib/domain/tournament-pairing';
+import {balancedPairs,pairingFlags} from '../lib/domain/tournament-pairing';
 import {calculateSettlement,competitionCosts} from '../lib/domain/money';
+import {walkoverGames} from '../lib/domain/live-score';
+import {remindersForChange} from '../lib/reminder-contract';
 
 const now=Date.parse('2030-10-10T13:00:00Z');
 /** A fictional competition: `owner` is the club owner, `admin` an administrator, `creator` a member who created it. */
@@ -93,8 +95,14 @@ test('balanced pairing evens out the team totals and mixes one man with one woma
  assert.ok(Math.max(...totals)-Math.min(...totals)<=0,'totals '+totals.join());
  const odd=balancedPairs([...players,{id:'late',score:1000}]);assert.deepEqual(odd.left,['late'],'the last given waits for a partner');
  const mixed=[...players.slice(0,5).map(p=>({...p,gender:'male'})),...players.slice(5).map(p=>({...p,gender:'female'})),{id:'w9',score:1650,gender:'female'}];
- const result=balancedPairs(mixed,'mixed-doubles');assert.equal(result.teams.length,4);assert.deepEqual(result.left,['p4']);
- for(const team of result.teams)assert.deepEqual(team.map(id=>mixed.find(p=>p.id===id)!.gender).sort(),['female','male']);
+ // Nine players: the last one waits. Five men and three women remain, so the weakest man stands in for a woman.
+ const result=balancedPairs(mixed,'mixed-doubles');assert.equal(result.teams.length,4);assert.deepEqual(result.left,['w9']);
+ const genders=result.teams.map(team=>team.map(id=>mixed.find(p=>p.id===id)!.gender).sort().join());
+ assert.equal(genders.filter(g=>g==='female,male').length,3);assert.equal(genders.filter(g=>g==='male,male').length,1);
+ const standIn=result.teams.findIndex(team=>team.includes('p4'));assert.ok(standIn>=0,'the man with the lowest score stands in');
+ assert.deepEqual(result.flags.map(f=>f.team),[standIn],'only the stand-in team is flagged');assert.match(result.flags[0].reason,/顶女位/);
+ // Hand-made pairs are flagged when a team total is far from the others.
+ assert.deepEqual(pairingFlags([[{id:'a',score:1600},{id:'b',score:1600}],[{id:'c',score:1000},{id:'d',score:1000}],[{id:'e',score:1300},{id:'f',score:1300}]]).map(f=>f.team),[0,1]);
 });
 
 test('the entry fee is courts, shuttles and prizes over the entrants, rounded up to a euro, never a split',async()=>{
@@ -120,7 +128,7 @@ test('men\'s singles only takes men, doubles must keep a category, and partners 
  await apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:'mens-doubles'}),now);
  await assert.rejects(()=>apply(doubles.s,doubles.owner,'tournamentSettings',settings(doubles.e,{category:null}),now),/请选择男双或混双/);
  const pairs=balancedPairs([{id:'m1',score:1200,gender:'male'},{id:'w1',score:1500,gender:'female'},{id:'m2',score:1000,gender:'male'}],'mens-doubles');
- assert.deepEqual(pairs,{teams:[['m1','m2']],left:['w1']});
+ assert.deepEqual([pairs.teams,pairs.left],[[['m1','m2']],['w1']]);
 });
 
 test('the group stage and the knockout follow their own scoring rule',async()=>{
@@ -154,4 +162,81 @@ test('the system puts ready fixtures on free courts after the draw and after eve
  }
  assert.equal(s.matches.filter(m=>m.status==='complete').length,15,'every fixture was arranged and played without anyone starting it by hand');
  await assert.rejects(()=>apply(s,owner,'tournamentArrange',{eventId:e.id},clock),/没有可以开赛/);
+});
+
+test('on three courts nobody waits much longer than two matches between their group matches',async()=>{
+ // Nine singles in one round robin; every pairing takes its own fixed 10-20 minutes. Picking only the fairest-looking
+ // fixture now left players without a free opponent for 35+ minutes; playing each choice out keeps it within 30.
+ for(const seed of [1,2,3]){
+  const {s,e,owner}=fixture(true,9);e.tournament!.autoArrange=true;
+  s.bookings.push({...s.bookings[0],id:'court2',name:'Court 2'});
+  await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',scoring:{games:1,points:21}}),now);
+  await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed},now);
+  const length=(ids:string[])=>600000+[...ids].sort().join().split('').reduce((h,c)=>(h*31+c.charCodeAt(0)+seed)%600000,7);
+  const free=new Map(s.players.map(p=>[p.id,now])),seen=new Set<string>();let longest=0;
+  const note=()=>{for(const m of s.matches)if(m.status==='playing'&&!seen.has(m.id)){seen.add(m.id);for(const id of [...m.a,...m.b])longest=Math.max(longest,m.start!-free.get(id)!)}};
+  note();
+  for(let i=0;i<40;i++){
+   const playing=s.matches.filter(m=>m.status==='playing');if(!playing.length)break;
+   const m=playing.sort((x,y)=>x.start!+length([...x.a,...x.b])-y.start!-length([...y.a,...y.b]))[0],end=m.start!+length([...m.a,...m.b]);
+   await apply(s,owner,'score',{matchId:m.id,a:21,b:15},end);for(const id of [...m.a,...m.b])free.set(id,end);note();
+  }
+  assert.equal(s.matches.filter(m=>m.status==='complete').length,36,'every fixture was played');
+  assert.ok(longest<=30*60000,'seed '+seed+': longest wait '+Math.round(longest/60000)+' minutes');
+ }
+});
+
+test('after the draw the field is fixed, the fee follows the drawn players and the title names the category',async()=>{
+ const {s,e,owner,creator}=fixture(true,6);e.automaticTitle=true;e.title='old';
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'round-robin',category:'mens-singles',scoring:{games:1,points:21}}),now);
+ assert.match(e.title,/男单比赛$/,'the automatic title follows the category');
+ s.players.forEach(p=>{p.profile={gender:'male',years:1,hand:'right',preference:'all',style:'',equipment:''}});
+ // Five of the six entrants are drawn; the sixth stays a confirmed signup but does not play, so does not pay.
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.slice(0,5).map(p=>[p.id]),seed:2},now);
+ assert.deepEqual(competitionCosts(s,e).entrants,['p0','p1','p2','p3','p4']);
+ const member=s.accounts.find(a=>a.id==='member3')!;
+ await assert.rejects(()=>apply(s,member,'cancel',{eventId:e.id,playerId:'p3',reason:'Fixture reason'},now),/退赛请联系组织者/);
+ s.registrations.find(r=>r.playerId==='p5')!.status='cancelled';const late=s.accounts.find(a=>a.playerId==='p5')!;
+ await assert.rejects(()=>apply(s,late,'register',{eventId:e.id,playerId:'p5',arrival:e.start,departure:e.end,note:''},now),/报名已截止/);
+ await apply(s,creator,'cancel',{eventId:e.id,playerId:'p4',reason:'Fixture reason'},now);
+ assert.equal(s.registrations.find(r=>r.playerId==='p4')!.status,'cancelled','organisers may still withdraw a player');
+});
+
+test('a walkover wins every needed game to zero and players are told when their match is put on a court',async()=>{
+ assert.deepEqual(walkoverGames({games:3,points:21},'b'),[{a:0,b:21},{a:0,b:21}]);assert.deepEqual(walkoverGames({games:1,points:15},'a'),[{a:15,b:0}]);
+ const {s,e,owner}=fixture(true,4);e.tournament!.autoArrange=true;
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'knockout',scoring:{games:3,points:21}}),now);
+ const before=structuredClone(s);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed:1,seeded:true},now);
+ const notices=remindersForChange(s,before,owner.id,'draw',now).filter(n=>n.kind==='matches');
+ assert.equal(notices.length,2,'one notice per match put on a court');assert.match(notices[0].title,/轮到你上场了/);
+ assert.deepEqual(notices.flatMap(n=>n.accountIds).sort(),s.accounts.filter(a=>a.id!==owner.id&&s.players.some(p=>p.id===a.playerId)&&a.playerId!=='p4'&&a.playerId!=='p5').map(a=>a.id).sort(),'the players of those matches, except the organiser who drew');
+ const m=s.matches.find(x=>x.status==='playing')!,games=walkoverGames({games:3,points:21},'a');
+ await apply(s,owner,'score',{matchId:m.id,a:games[0].a,b:games[0].b,games,reason:'弃权'},now+60000);
+ assert.equal(s.matches.find(x=>x.id===m.id)!.status,'complete');
+});
+
+test('a group score can still be corrected after the knockout is drawn when the qualifiers stay the same',async()=>{
+ const {s,e,owner}=fixture(true,4);e.tournament!.autoArrange=true;
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'groups',scoring:{games:1,points:21},knockoutScoring:{games:1,points:21}}),now);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),groups:2,advance:1,seed:3},now);
+ const t=e.tournament!;let clock=now;
+ for(let i=0;i<4&&t.phase==='groups';i++){const m=s.matches.find(x=>x.status==='playing');if(!m)break;clock+=60000;await apply(s,owner,'score',{matchId:m.id,a:21,b:10},clock)}
+ assert.equal(t.phase,'knockout','the last group result drew the knockout');
+ const group=t.fixtures.find(f=>f.stage==='group')!;
+ await apply(s,owner,'score',{matchId:group.matchId!,a:21,b:15},clock+1000);
+ await assert.rejects(()=>apply(s,owner,'score',{matchId:group.matchId!,a:15,b:21},clock+2000),/改变出线名单/);
+});
+
+test('competition scores come from the referee and the organisers, not the players',async()=>{
+ // Six seeded singles: p3 meets p4 in the first round; both and the referee p5 are ordinary members.
+ const {s,e,owner}=fixture(true,6);e.tournament!.autoArrange=true;
+ await apply(s,owner,'tournamentSettings',settings(e,{format:'knockout',scoring:{games:1,points:21}}),now);
+ await apply(s,owner,'tournamentDraw',{eventId:e.id,teams:s.players.map(p=>[p.id]),seed:1,seeded:true},now);
+ const m=s.matches.find(x=>[...x.a,...x.b].includes('p3'))!,account=(id:string)=>s.accounts.find(a=>a.playerId===id)!;
+ assert.ok(m&&[...m.a,...m.b].includes('p4'));
+ await assert.rejects(()=>apply(s,account('p3'),'score',{matchId:m.id,a:21,b:10},now+60000),/403/);
+ const f=e.tournament!.fixtures.find(x=>x.matchId===m.id)!;await apply(s,owner,'tournamentReferee',{eventId:e.id,fixtureId:f.id,playerId:'p5'},now);
+ await apply(s,account('p5'),'score',{matchId:m.id,a:21,b:10},now+60000);
+ assert.equal(s.matches.find(x=>x.id===m.id)!.status,'complete','the assigned referee may');
 });

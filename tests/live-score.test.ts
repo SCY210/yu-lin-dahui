@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {emptyState,type Event} from '../lib/domain/types';
 import {newTournament,finishedGame,type ScoringRule} from '../lib/domain/tournament';
-import {applyLiveOp,canRefereeMatch,finalGames,liveElapsed,liveTally,type LiveOpBody,type LiveScore,type Side} from '../lib/domain/live-score';
+import {applyLiveOp,breakMs,canRefereeMatch,currentBreak,finalGames,liveElapsed,liveTally,sidesSwapped,type LiveOpBody,type LiveScore,type Side} from '../lib/domain/live-score';
 
 const best3:ScoringRule={games:3,points:21},now=Date.parse('2030-10-10T13:00:00Z');
 const points=(...sides:[Side,number][])=>sides.flatMap(([side,n])=>Array.from({length:n},(_,i)=>({type:'point' as const,side,at:i})));
@@ -74,4 +74,18 @@ test('organisers assign a referee who is not playing; the referee may score that
  await apply(s,referee,'score',{matchId:f.matchId!,a:21,b:10,games:[{a:21,b:10},{a:21,b:10}],reason:'裁判实时记分'},now+60000);
  assert.equal(s.matches.find(m=>m.id===f.matchId)!.status,'complete');
  await apply(s,owner,'tournamentReferee',{eventId:e.id,fixtureId:f.id,playerId:null},now);assert.equal(f.referee,undefined);
+});
+
+test('the midpoint of each game starts a 60-second break and the ends change by themselves',()=>{
+ const at=(n:number)=>n*1000,log=(sides:Side[])=>sides.map((side,i)=>({type:'point' as const,side,at:at(i)}));
+ // 11 straight points to a: the break starts on the eleventh point.
+ const first=liveTally(best3,log(Array(11).fill('a')));
+ assert.deepEqual(first.breaks,[{game:0,at:at(10)}]);assert.equal(sidesSwapped(undefined,first),true,'ends changed once');
+ assert.deepEqual(currentBreak(first,at(10)+30000),{game:0,at:at(10),until:at(10)+breakMs});assert.equal(currentBreak(first,at(10)+breakMs),null,'over after 60 seconds');
+ // The rest of the game and the next one: a second break at 11 in game two swaps the ends back.
+ const two=liveTally(best3,log([...Array(21).fill('a'),...Array(11).fill('b')]));
+ assert.deepEqual(two.breaks.map(b=>b.game),[0,1]);assert.equal(sidesSwapped(undefined,two),false);
+ // Only the first side to reach the midpoint starts a break.
+ assert.equal(liveTally(best3,log([...Array(11).fill('a'),...Array(11).fill('b')])).breaks.length,1);
+ assert.equal(liveTally({games:1,points:15},log(Array(8).fill('b'))).breaks.length,1,'8 is the midpoint of a game to 15');
 });

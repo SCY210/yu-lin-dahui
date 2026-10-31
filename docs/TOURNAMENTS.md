@@ -21,8 +21,8 @@ and generates the full elimination bracket. Higher group places seed first;
 first-round opponents cross groups when possible. Empty slots are explicit byes.
 Future opponents resolve from preceding results, and the final winner is shown.
 
-Redraws are allowed only before the first match. Group scores are sealed after
-qualifying; an entirely unstarted knockout bracket can be removed to correct them.
+Redraws are allowed only before the first match. Group scores that would change the
+qualifiers are sealed once the knockout is drawn; an entirely unstarted knockout bracket can be removed to correct them.
 A correction cannot change a winner once the next dependent match has started.
 Tournament fixtures cannot be voided through ordinary activity controls; this
 initial release requires valid completed scores and does not implement withdrawals
@@ -55,10 +55,13 @@ page. Creators who are not administrators can still draw and run the competition
   the board follow the rule of the match's stage. Score entry asks for every game, rejects unfinished games, and
   replaces the club's own target and cap for these matches. Competitions without a rule keep the club rules, and a
   knockout without its own rule follows the group rule.
-- **Partners.** Doubles partners are fixed for the whole competition. The auto-balance button pairs the strongest with the
-  weakest by realm score, then swaps members between teams while that brings the team totals closer
-  (`lib/domain/tournament-pairing.ts`). Mixed doubles only swap within a gender. Players left without a partner are
-  listed. The organisers can edit every pair before the draw, or assign all pairs by hand.
+- **Partners.** Doubles partners are fixed for the whole competition. The auto-balance button pairs every confirmed
+  entrant: the strongest with the weakest by realm score, then swaps members between teams while that brings the team
+  totals closer (`lib/domain/tournament-pairing.ts`). Only an odd player out is left over. In mixed doubles, when there
+  are more men than women, the men with the lowest realm score take the women's places (and the strongest women the
+  men's places in the opposite case); mixed teams of two men or two women are accepted. Teams with a stand-in, and teams
+  whose total is more than 150 from the average, are highlighted with the reason, recomputed while the owner or an
+  administrator edits the pairs by hand (`pairingFlags`). Men's doubles pair men only.
 - **Entry fee.** A competition is paid by a compulsory entry fee, never split. The fee is the competition's courts,
   its shuttles and other expenses, and the prize costs for champion, runner-up and third place, divided by the
   confirmed entrants and rounded up to a whole euro (`competitionCosts` and `entryFeeSettlement` in
@@ -77,22 +80,54 @@ Tests: `tests/tournament-formats.test.ts`.
   the courts below. Shuttle and partner options, activity details and bringing a friend are not offered. Court
   occupancy sits at the bottom of the signup tab of activities and competitions.
 - **System scheduling.** Competitions created now have `autoArrange`. After the draw, after the knockout is generated
-  and after every result, every free court booked at that moment takes a ready fixture (`arrangeFixtures`). Earlier
-  rounds go first; within a round, the fixture whose players have played least and waited longest goes first, so
-  everyone plays about as often. Nobody is put on two courts at once, and a court's referee stays on for its next
-  fixture unless they play in it. Organisers can also run the arrangement by hand, or start a fixture on a chosen court.
+  and after every result, every free court booked at that moment takes a ready fixture (`arrangeFixtures`), one whose
+  players are all off court. Nobody is put on two courts at once, and a court's referee stays on for its next fixture
+  unless they play in it. Organisers can also run the arrangement by hand, or start a fixture on a chosen court.
+  - *Group stage.* Opponents are fixed, so the fixture that looks fairest now can leave a player whose remaining
+    opponents are all on court waiting for a long time later. Round order is therefore not enforced. The four
+    longest-waiting ready fixtures are each played out to the end of the group stage, every match taking the average
+    length so far (15 minutes before any result), and the one whose longest wait is shortest goes on court; ties go
+    to the smallest sum of squared waits (`bestGroupFixture` in `lib/domain/tournament-schedule.ts`). On three courts
+    this cut the longest wait between a player's matches from about 40 to about 25 minutes in simulated round robins.
+  - *Knockout.* Earlier rounds go first; within a round, the teams that have played least and rested longest.
+  - Some waiting is structural: with two groups of four on three courts, one group always has a fixture waiting, and
+    its free pair can only play each other once. A court is never held empty to wait for a better fixture.
 - **Page layout.** Matches on court are pinned to the top of the competition page, with the referee button. Each group
   lists all its teams first, ranked with avatars and their record, and then its fixtures as compact rows. A fixture
   opens its own screen with start, referee and score controls, so closing it returns to the same place on the page.
   After a referee submits a result, the referee page offers the next match on the same court.
 
+## Rules that keep the competition consistent
+
+- **Title.** A competition's automatic title is its date and category, for example "October 31 · mixed doubles competition" in Chinese. It follows
+  changes of time and category.
+- **Field fixed at the draw.** After the draw, members can no longer sign up, and drawn players cannot withdraw
+  themselves; the organisers withdraw them and record a walkover for their remaining matches.
+- **Entry fee by players.** Before the draw the entry fee is shared by the confirmed signups; after it, by the drawn
+  players only, so a signup left out of the draw does not pay. The fee tab shows who collects it (the activity's fee
+  recipient, set there by the organisers).
+- **Walkover.** For a match in play, organisers can record that one side withdrew. The other side wins every game it
+  needs 21:0 (15:0 or 11:0), a valid result, so standings and the bracket move on (`walkoverGames`).
+- **Players told where to play.** Whenever a competition match is put on a court, by the system or by hand, its
+  players get a reminder and push with the court and opponents.
+- **Who scores.** In a competition, scores come from the match's assigned referee and the organisers (creator, owner
+  and administrators). Players cannot enter or correct their own scores, and are not prompted to.
+- **Corrections.** A group score can still be corrected after the knockout is drawn, as long as the qualifiers and
+  their order stay the same (`qualifiers`). A knockout winner cannot change once the next match has started.
+
 ## Bracket presentation
 
-The knockout is a draw sheet (`app/tournament-bracket.tsx`). Every first-round entry is a line on the left or right
-edge; seeds show their number (or group letter) in red, and byes are marked. Lines join pairs round by round toward
-the final in the middle. The lines a winner has travelled are highlighted, matches in play pulse, and each decided
-junction names its winner and score, with the champion above the final. Selecting a junction opens that fixture. The
-sheet fits the screen, with an option for its full size.
+The knockout is a printed draw folded in two (`app/tournament-bracket.tsx`): the top half of the draw runs left to
+right, the bottom half right to left, and both meet at the final in the middle, so the sheet is half as tall. Column
+headers name the round each column plays next (1/8, quarter-finals, semi-finals, final), with the champion in the
+middle. The outer columns list every entry with its draw number and seed (the seed number in a seeded knockout, the group and place after groups), byes included. Each column toward
+the middle shows who went through, with the game scores under the line. A match in play
+is highlighted: both teams' lines, the bracket joining them, and the place its winner will take, with the court.
+Tapping a match opens it. The sheet scrolls sideways on a phone.
+
+With `autoArrange`, the knockout is drawn by itself as soon as the last group result is in (`advanceAfterGroups`,
+audited as the system), with group winners seeded first in standard seeding so the top two can only meet in the
+final, and first-round opponents from different groups where possible. The system then starts it on free courts.
 
 ## Live board
 
