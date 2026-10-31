@@ -59,7 +59,8 @@ The sandbox entry and route use the server-projected capability. Every sandbox r
 The competition sandbox debugs a competition end to end without opening a real one (`lib/competition-simulation.ts`).
 It follows the real flow and runs it on the real pages:
 
-1. **Create.** The sandbox starts with up to sixteen member snapshots, taken with the same rules as the activity
+1. **Create.** The sandbox starts with a snapshot of every enabled member with an account, the same members who can
+   sign up for a real competition, taken with the same rules as the activity
    sandbox, and no competition. The organiser creates it with the real create form: category, time, venue and courts.
 2. **Sign up.** Members sign up through the same court signup as the real page. The sandbox can sign up or cancel any
    member, or sign everyone up at once.

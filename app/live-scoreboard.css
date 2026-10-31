@@ -1,5 +1,5 @@
 /* All-courts board (app/live-scoreboard.tsx): the app's theme colours, one card per court, sides left and right. */
-.live-board{position:fixed;inset:0;z-index:80;display:grid;grid-template-rows:auto;align-content:start;gap:16px;padding:max(16px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 24px;overflow:auto;color:var(--foreground);background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--primary) 14%,var(--background)),var(--background) 60%)}
+.live-board{position:fixed;inset:0;z-index:45;display:grid;grid-template-rows:auto;align-content:start;gap:16px;padding:max(16px,env(safe-area-inset-top)) clamp(12px,3vw,32px) 24px;overflow:auto;color:var(--foreground);background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--primary) 14%,var(--background)),var(--background) 60%)}
 .live-board-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .live-board-top h2{margin:0;font-size:clamp(20px,2.6vw,30px)}
 .live-board-top small{color:var(--muted-foreground)}

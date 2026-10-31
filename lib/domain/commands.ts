@@ -8,7 +8,7 @@ import {applyBounty} from './bounties';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
-import {applyTournament,arrangeFixtures} from './tournament-commands';
+import {applyTournament,arrangeFixtures,advanceAfterGroups} from './tournament-commands';
 import {newTournament,assertTournamentScore,matchRule,categoryFits} from './tournament';
 import {automaticEventTitle,eventFormat,isPractice,teamSize} from './match-format';
 import {editReason} from './edit-reason';
@@ -608,7 +608,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
                 finishLiveMatch(s, matchEvent, m, now);
             if(firstCompletion&&m.earlyScoreAt===undefined)advanceScheduledCourts(s,matchEvent,now);
             // A competition puts its next fixtures on the freed court straight away (lib/domain/tournament-commands.ts).
-            if(firstCompletion&&matchEvent.tournament?.autoArrange)arrangeFixtures(s,matchEvent,now);
+            if(firstCompletion&&matchEvent.tournament?.autoArrange){advanceAfterGroups(s,matchEvent,now);arrangeFixtures(s,matchEvent,now)}
             break;
         }
         case 'matchScoring': {

@@ -1,23 +1,31 @@
-/* Knockout draw sheet (app/tournament-bracket.tsx): entries on both edges, lines meeting at the final. */
-.draw-sheet{display:grid;gap:8px;min-width:0}
-.draw-sheet-tools{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.draw-sheet-tools .hint{margin:0}
-.draw-sheet-scroll{overflow-x:auto;border-radius:14px;background:var(--card);border:1px solid var(--border);padding:6px 4px}
-.draw-sheet.is-compact .draw-sheet-scroll{border:0;padding:0;background:transparent}
-.draw-sheet-svg{display:block;height:auto}
-.draw-line{fill:none;stroke:color-mix(in srgb,var(--foreground) 28%,transparent);stroke-width:1.4}
-.draw-line.is-won{stroke:var(--primary);stroke-width:2.6}
-.draw-line.is-live{stroke:#f59e0b;stroke-width:2.6;stroke-dasharray:6 4;animation:draw-live 1s linear infinite}
-@keyframes draw-live{to{stroke-dashoffset:-20}}
-.draw-entry{font-size:13px;font-weight:600;fill:var(--foreground)}
-.draw-entry.is-empty{fill:var(--muted-foreground);font-weight:400}
-.draw-seed{fill:#d4372c;font-weight:800}
-.draw-champion{font-size:15px;font-weight:800;fill:var(--primary)}
-.draw-junction{cursor:pointer}
-.draw-junction rect{fill:transparent}
-.draw-junction.is-selected rect{fill:color-mix(in srgb,var(--primary) 12%,transparent)}
-.draw-junction.is-final circle{fill:var(--card);stroke:var(--primary);stroke-width:2}
-.draw-junction.is-final.is-live circle{stroke:#f59e0b}
-.draw-winner{font-size:10px;font-weight:700;fill:var(--primary)}
-.draw-score{font-size:9.5px;fill:var(--muted-foreground);font-variant-numeric:tabular-nums}
-@media(prefers-reduced-motion:reduce){.draw-line.is-live{animation:none}}
+/* Knockout draw sheet read left to right (app/tournament-bracket.tsx), like a printed draw. */
+.draw-sheet{display:grid;min-width:0}
+.draw-sheet-scroll{overflow:auto;border-radius:14px;background:var(--card);border:1px solid var(--border)}
+.draw-sheet.is-compact .draw-sheet-scroll{border:0;background:transparent}
+.draw-sheet-canvas{position:relative}
+.draw-head{position:absolute;top:0;height:36px;display:grid;place-items:center;font-size:14px;color:var(--muted-foreground);background:color-mix(in srgb,var(--foreground) 6%,transparent);border-bottom:1px solid var(--border)}
+.draw-cell{position:absolute;display:flex;align-items:flex-end;gap:6px;padding:0 6px 4px 8px;border:0;border-bottom:1.5px solid color-mix(in srgb,var(--foreground) 35%,transparent);background:transparent;color:inherit;text-align:left;font:inherit}
+.draw-cell.is-result{cursor:pointer}
+.draw-cell.is-won{border-bottom-color:var(--primary)}
+.draw-cell.is-out .draw-names{color:var(--muted-foreground);font-weight:500}
+.draw-cell.is-selected{background:color-mix(in srgb,var(--primary) 10%,transparent)}
+.draw-index{align-self:center;width:1.6em;flex:none;font-size:13px;color:var(--muted-foreground);text-align:center}
+.draw-names{display:grid;min-width:0;font-size:15px;font-weight:700;line-height:1.3}
+.draw-names>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.draw-names em{font-style:normal;font-weight:600;color:#d4372c}
+.draw-names.is-muted{color:var(--muted-foreground);font-weight:400}
+.draw-cell.is-result.is-won .draw-names{color:var(--primary)}
+.draw-join{position:absolute;width:0;border-right:1.5px solid color-mix(in srgb,var(--foreground) 35%,transparent)}
+.draw-join.is-won{border-right-color:var(--primary)}
+.draw-score{position:absolute;font-size:13px;color:var(--muted-foreground);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.draw-champion{position:absolute;font-weight:800;color:var(--primary)}
+/* A match in play: both teams, the bracket joining them and the place its winner takes. */
+.draw-cell.is-playing{background:#f59e0b1f;border-bottom:2.5px solid #f59e0b}
+.draw-cell.is-playing .draw-names{color:#92400e}
+.draw-cell.is-live{background:#f59e0b1f;border-bottom:2.5px dashed #f59e0b;animation:draw-pulse 1.6s ease-in-out infinite}
+.draw-join.is-live{border-right:2.5px solid #f59e0b}
+.draw-live{font-size:13px;font-weight:800;color:#b45309;white-space:nowrap}
+@keyframes draw-pulse{50%{background:#f59e0b40}}
+@media(prefers-reduced-motion:reduce){.draw-cell.is-live{animation:none}}
+.draw-sheet.is-compact .draw-names{font-size:13px}
+.draw-sheet.is-compact .draw-head{font-size:12px;height:30px}

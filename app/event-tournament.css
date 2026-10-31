@@ -35,7 +35,7 @@
 .fixture-mid{text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
 .fixture-mid small{color:var(--muted-foreground)}
 .fixture-row.is-playing .fixture-mid small{color:#b45309;font-weight:700}
-.fixture-sheet{position:fixed;inset:0;z-index:70;display:grid;grid-template-rows:auto 1fr;background:var(--background);overflow:hidden}
+.fixture-sheet{position:fixed;inset:0;z-index:44;display:grid;grid-template-rows:auto 1fr;background:var(--background);overflow:hidden}
 .fixture-sheet-bar{display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 12px 10px;border-bottom:1px solid var(--border);background:var(--card)}
 .fixture-sheet-body{overflow:auto;padding:14px 12px max(24px,env(safe-area-inset-bottom))}
 .fixture-sheet-body .tournament-match{max-width:640px;margin:0 auto}
@@ -49,3 +49,4 @@
 .tournament-live-info span{overflow-wrap:anywhere;font-size:14px}
 .tournament-live-info i{font-style:normal;color:var(--muted-foreground)}
 .tournament-live-row .primary{min-height:44px;white-space:nowrap}
+.tournament-pair.is-flagged{padding:8px;border-radius:12px;background:#f59e0b1a;outline:2px solid #f59e0b80}.tournament-pair-flag{display:block;font-weight:500;font-size:12px;color:#b45309}

@@ -8,7 +8,7 @@ import {validateRound} from './grouping';
 import {fail,month,type State,type Account,type Match,type Event} from './types';
 import {isClubOwner} from './ownership';
 import {tournamentResults} from './tournament-results';
-import {categoryFits,categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type TournamentFixture} from './tournament';
+import {categoryFits,categoryProblem,fixtureSides,groupStandings,groupComplete,tournamentFormat,type Tournament,type TournamentFixture} from './tournament';
 const id=z.string().min(1).max(100),rule=z.object({games:z.union([z.literal(1),z.literal(3)]),points:z.union([z.literal(11),z.literal(15),z.literal(21)])}).strict();
 const schemas={
  tournamentDraw:z.object({eventId:id,teams:z.array(z.array(id).min(1).max(2)).min(2).max(32),groups:z.number().int().min(2).max(8).default(2),advance:z.number().int().min(1).max(4).default(2),seed:z.number().int().min(1).max(2147483647),/** Knockout only: teams are already in seed order (strongest first) instead of drawn at random. */seeded:z.boolean().optional()}),
@@ -38,6 +38,23 @@ export function seededFirstRound(seeds:string[]){
  let size=2;while(size<seeds.length)size*=2;
  let order=[0];while(order.length<size){const n=order.length*2;order=order.flatMap(i=>[i,n-1-i])}
  return Array.from({length:size/2},(_,i)=>({a:seeds[order[i*2]],b:seeds[order[i*2+1]]}));
+}
+/** The knockout from the group tables: group winners first, then runners-up, in standard seeding so the best can
+ * only meet late; first-round opponents come from different groups where possible. */
+export function generateKnockout(t:Tournament,s:Pick<State,'matches'>){
+ const tables=t.groups.map((_,i)=>groupStandings(t,s,i)),seeds:string[]=[];
+ for(let rank=0;rank<t.advance;rank++)for(const table of tables)if(table[rank])seeds.push(table[rank].id);
+ const first=seededFirstRound(seeds),groupOf=(id:string|undefined)=>t.groups.findIndex(g=>g.includes(id??''));
+ for(let i=0;i<first.length;i++){const pair=first[i];if(!pair.a||!pair.b||groupOf(pair.a)!==groupOf(pair.b))continue;
+  const j=first.findIndex((other,j)=>j!==i&&other.a&&other.b&&groupOf(pair.a)!==groupOf(other.b)&&groupOf(other.a)!==groupOf(pair.b));
+  if(j>=0)[pair.b,first[j].b]=[first[j].b,pair.b];
+ }
+ t.fixtures.push(...bracket(first));t.phase='knockout';
+}
+/** Once the last group result is in, the knockout is drawn without anyone pressing a button (autoArrange). */
+export function advanceAfterGroups(s:State,e:Event,now:number){
+ const t=e.tournament;if(!t?.autoArrange||tournamentFormat(t)!=='groups'||t.phase!=='groups'||!groupComplete(t,s))return false;
+ generateKnockout(t,s);s.audits.push({id:crypto.randomUUID(),at:now,actor:'system',action:'tournamentKnockout',reason:'小组赛结束，自动生成淘汰赛',changes:{eventId:e.id}});return true;
 }
 /** Puts one ready fixture on a court: both sides known, the court booked now and free, the players not on court. */
 function startFixture(s:State,e:Event,f:TournamentFixture,courtId:string,now:number){
@@ -129,17 +146,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
   case 'tournamentKnockout':{
    if(tournamentFormat(t)!=='groups')fail('本赛制没有小组赛晋级');
    if(t.phase!=='groups'||!groupComplete(t,s))fail('请先完成所有小组赛');
-   const tables=t.groups.map((_,i)=>groupStandings(t,s,i)),seeds:string[]=[];
-   for(let rank=0;rank<t.advance;rank++)for(const table of tables)seeds.push(table[rank].id);
-   let size=2;while(size<seeds.length)size*=2;
-   const slots:(string|undefined)[]=Array.from({length:size},(_,i)=>seeds[i]);
-   const first=Array.from({length:size/2},(_,i)=>({a:slots[i],b:slots[size-1-i]}));
-   const groupOf=(id:string|undefined)=>t.groups.findIndex(g=>g.includes(id??''));
-   for(let i=0;i<first.length;i++){const pair=first[i];if(!pair.a||!pair.b||groupOf(pair.a)!==groupOf(pair.b))continue;
-    const j=first.findIndex((other,j)=>j!==i&&other.a&&other.b&&groupOf(pair.a)!==groupOf(other.b)&&groupOf(other.a)!==groupOf(pair.b));
-    if(j>=0)[pair.b,first[j].b]=[first[j].b,pair.b];
-   }
-   t.fixtures.push(...bracket(first));t.phase='knockout';break;
+   generateKnockout(t,s);break;
   }
   case 'tournamentReopen':{
    if(tournamentFormat(t)!=='groups'||t.phase!=='knockout'||t.fixtures.some(f=>f.stage==='knockout'&&f.matchId))fail('淘汰赛已开打，不能返回小组赛');
