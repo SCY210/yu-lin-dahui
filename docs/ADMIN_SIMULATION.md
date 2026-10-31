@@ -1,6 +1,6 @@
 # Administrator scheduling simulation
 
-Live doubles use the same winner preference as production, without a consecutive-win limit. Waiting players remain eligible; scarce substitutes never cause an automatic two-win lockout. Saved legacy win-limit entries are ignored and omitted from normal responses. Four available players can continue, while voluntary rest and busy-player protections remain. Simulation changes never write the real club.
+Live doubles use the same rotation as production: everyone leaves after each game and the next four come from the queue (see [Live court rotation](LIVE_PLAY.md)). Scarce substitutes never cause an automatic two-win lockout. Saved legacy win-limit entries are ignored and omitted from normal responses. Four available players can continue, while voluntary rest and busy-player protections remain. Simulation changes never write the real club.
 
 Rotating live matches share production's bounded partner-repetition cost: prefer new partners when strength is close, retain the balanced pairing for large differences, and preserve fixed-partner mode. No separate simulation-only pairing algorithm or win-limit is introduced.
 

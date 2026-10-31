@@ -16,8 +16,8 @@ try{
  const s=api.createSimulation(now).state;s.bookings=s.bookings.slice(0,1);const e=s.events[0];e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:Array.from({length:6},(_,i)=>s.players.slice(i*2,i*2+2).map(p=>p.id))};await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());await api.loadClubState();
  let stored=await api.load(),first=stored.matches.find(m=>m.status==='playing'),held=[...first.a];
  now+=60000;await send('score',{matchId:first.id,a:21,b:19});await send('liveNext',{eventId:e.id,courtId:first.courtId});
- stored=await api.load();let second=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>[...second.a,...second.b].includes(id)));
- now+=60000;const aWon=held.every(id=>second.a.includes(id)),score=await request('score',{matchId:second.id,a:aWon?21:19,b:aWon?19:21});
+ stored=await api.load();let second=stored.matches.find(m=>m.status==='playing');assert.ok([...first.a,...first.b].every(id=>![...second.a,...second.b].includes(id)),'everyone leaves; two waiting teams play');
+ now+=60000;const score=await request('score',{matchId:second.id,a:21,b:19});
  const before=await api.load();database.injectFailure(query=>query.startsWith('INSERT INTO commits'));assert.equal((await post(score)).status,503);database.injectFailure(null);assert.deepEqual(await api.load(),before,'failed score also rolls back the mandatory break');
  assert.equal((await post(score)).status,200);assert.equal((await post(score)).status,200);
  stored=await api.load();assert.equal(stored.events[0].livePlay.rest.filter(r=>r.reason==='win-limit').length,0,'winning twice never creates a forced break');
@@ -26,6 +26,6 @@ try{
  assert.equal((await post(await request('liveReady',{eventId:e.id,playerId:held[0]}))).status,200);
  await send('livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:false});
  const next=await request('liveNext',{eventId:e.id,courtId:first.courtId,allowSame:true});assert.deepEqual((await Promise.all([post(next),post({...next,requestId:crypto.randomUUID()})])).map(r=>r.status).sort(),[200,409]);
- stored=await api.load();const third=stored.matches.find(m=>m.status==='playing');assert.ok(held.every(id=>[...third.a,...third.b].includes(id)));assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
- console.log('PASS winner API: retained winners, no win cap, legacy breaks ignored/hidden, scoped response, atomic rollback, idempotence and concurrent next-game conflict.');
+ stored=await api.load();const third=stored.matches.find(m=>m.status==='playing'),teams=stored.events[0].pointsChoice.teams;assert.ok([third.a,third.b].every(team=>teams.some(t=>t.every(id=>team.includes(id)))),'complete fixed teams');assert.ok([...second.a,...second.b].every(id=>![...third.a,...third.b].includes(id)),'the next two waiting teams');assert.equal(stored.matches.filter(m=>m.status==='playing').length,1);
+ console.log('PASS winner API: everyone leaves after each game, no win cap, legacy breaks ignored/hidden, scoped response, atomic rollback, idempotence and concurrent next-game conflict.');
 }finally{Date.now=realNow;database.close();delete globalThis.__winnerApi}

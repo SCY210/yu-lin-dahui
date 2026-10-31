@@ -2,17 +2,31 @@
 
 Each court advances independently after a valid single-game score. A finished court waits for the Start grouping button (`liveNext`), available to signed-up players, the organiser and administrators. Other courts keep playing. Scores and lineup commands use the existing optimistic, idempotent D1 transactions.
 
-## Winner preference without a win limit
+## Everyone leaves the court, then a queue
 
-Available doubles winners are preferred for their next game. Waiting players fill the remaining places as a queue: whoever has waited longest since their previous game goes first, then fewer appearances. The selected four use the existing strength, gender and match-history pairing algorithm; the winners may remain partners or be split. Fixed-partner mode keeps complete pairs intact.
+After each game all four players leave the court; winners do not stay on. The next players come from a queue:
 
-To improve strength, variety or avoid a rematch, the pairing may swap a selected bench player for one whose wait differs by at most one game, so nobody is passed over for more than about one extra game.
+1. Waiting players come before the court's just-finished players.
+2. Whoever has waited longest since their previous game goes first.
+3. Among players who came off the same game, fewer appearances go first, then signup order.
 
-Until October 2026 the queue counted appearances first. Winners who stayed on through a run then had more games than everyone else. After losing, they sat out until the others caught up. On three courts with sixteen players and four on the bench, simulations showed runs of 8-13 games started without them, against a bench turnover of about two games. With the queue the longest run is about 4-6 games, and team strength differences are unchanged. The trade-off is that a pair on a long winning run plays more games in total; there is still no win limit.
+The selected four use the existing strength, gender and match-history pairing algorithm. To improve strength or variety, or to avoid a rematch, the pairing may swap a selected player for one whose wait differs by at most one game and who has not played more. Nobody is therefore passed over for more than about one extra game, and nobody gets ahead in games.
+
+**Breaking up blocks.** Winner retention used to keep the same people from simply swapping partners. Without it, the four players of one game could leave together, queue together and come back together. A game may therefore not take three or more players from one earlier game while others can play. Instead, two of them play with two others, just-finished players included; those who would not get ahead in games come first, then the best balance. In fixed-partner mode two teams that just played each other are not paired again; another team comes in. Complete pairs are never split.
+
+**History.** Until October 2026 doubles winners stayed on with no win limit, and the bench counted appearances first. A strong pair could play 10-15 games in a row while others waited. After losing, they sat out until everyone had caught up: on three courts with sixteen players, simulations showed runs of 8-13 games started without them. Simulated activities of 1-4 courts and 6-28 players, with the stronger team more likely to win, compare as follows:
+
+- Games played now differ by at most 1-3 across players (before: up to 6-14).
+- The longest wait is shorter in every setup, for example 7 instead of 10 games started without a player on three courts with 24 players.
+- The longest run of back-to-back games is 2-4 when six or more players are waiting (before: 10-15).
+- The same four reunite in at most a few percent of games outside very small groups.
+- Team strength differences are unchanged.
+
+With only one or two players waiting, back-to-back runs stay long whatever the rule, because only that many players can be swapped out per game. The do-not-play-consecutively preference remains for players who want a break.
 
 Rotating live doubles now include partner repetition in the strength comparison, rather than only as a final tie-breaker. Each immediately repeated pair costs 24 Elo-equivalent points; historical pair uses contribute 4 each, capped at 16 for frequency. The combined live partnership penalty is capped at 40. Thus a modest strength difference can permit new partners, while a large mismatch cannot be justified by unlimited repetition penalties. Gender safeguards still rank first. Fixed partners, singles and planned scheduling do not opt into this additional cost. History is indexed once and each candidate uses only map lookups.
 
-There is no two-win limit and no automatic break caused by consecutive wins. Retention is a preference, not an eligibility lock. Recent losers and winners waiting at another idle court remain candidates when substitutes are scarce. Four available players can keep playing without an override flag; five- and six-player groups can rotate without waiting for nonexistent substitutes. Other courts' waiting winners are used only after unreserved candidates. Players currently playing elsewhere are always excluded.
+There is no win limit and no automatic break caused by consecutive wins. The queue is a preference, not an eligibility lock. When substitutes are scarce, the just-finished players remain candidates. Four available players can keep playing without an override flag; five- and six-player groups can rotate without waiting for nonexistent substitutes. Players currently playing elsewhere are always excluded.
 
 Availability still respects signup/booking windows, disabled or stopped participants, absence holds and explicit voluntary breaks. The fix does not bypass these independent controls or split fixed partners. If fewer than four genuinely available players (or fewer than two complete fixed teams) remain, the court waits. Singles retain their existing explicit same-player option.
 
@@ -32,7 +46,7 @@ An organiser may start live play or switch an expired activity to live mode afte
 
 Overtime games store their actual start and completion timestamps. Activity dates, booking intervals, registration times and fee allocation durations remain unchanged. The usual end-time projection and voting rules remain clock-based. Expired activities never restart through background maintenance: overtime games require an explicit action. Conditional reads retain the existing activity-end boundary, so clients see the transition without a new polling policy or database migration.
 
-The historical retained-player marker can still describe personal winning runs, but it no longer controls eligibility. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
+Rounds no longer record retained players. `liveWinStreaks` counts each player's live wins in a row, whatever their partners or courts, and older rounds' retained-player markers are ignored. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
 
 ## Simulation and validation
 
