@@ -1,1 +1,25 @@
 .me-achievements-entry>.row{flex-wrap:wrap}.me-achievements-entry h3{display:flex;align-items:center;gap:8px;margin:0}.me-achievements-entry>.row>button{flex-shrink:0}.me-panel-content{margin-top:20px;min-width:0}.me-settings-entry>.actions{gap:10px}.me-settings-entry>.actions>button{min-height:44px}.me-panel-content>.card:first-child{margin-top:0}@media(max-width:380px){.me-settings-entry>.actions>button{flex:1 1 100%;width:100%}}
+
+/* My page, compact: one profile card with its actions under the name, short stat tiles, tighter section cards and one
+   settings card that also holds administrator tools and sign-out. Scoped under the club shell so it outranks the
+   general compact card spacing (app/compact-interface.css). */
+body .shell.app-compact .me-profile{margin-bottom:12px}
+body .shell.app-compact .me-profile h1{margin:0;font-size:24px;line-height:1.25}
+body .shell.app-compact .me-profile p{margin:2px 0 0;font-size:13px}
+body .shell.app-compact .me-profile .me-profile-actions{gap:4px}
+body .shell.app-compact .me-profile .me-profile-actions .ghost{min-height:36px;padding:4px 10px;font-size:14px}
+body .shell.app-compact .stats.me-stats{gap:10px;margin:0 0 10px}
+body .shell.app-compact .me-stats .card{padding:12px 14px;margin:0}
+body .shell.app-compact .me-stats .card>span{font-size:13px}
+body .shell.app-compact .me-stats .card>strong{font-size:26px;line-height:1.15}
+body .shell.app-compact .me-stats .card>small{font-size:12px}
+/* The realm card keeps its own layout; only its spacing and type get smaller. */
+body .shell.app-compact .me-stats .me-realm-card .me-realm-badge-wrap{margin:2px 0 4px!important}
+body .shell.app-compact .me-stats .me-realm-card>small{line-height:1.45}
+body .shell.app-compact .card.me-achievements-entry,body .shell.app-compact .card.my-fee-summary,body .shell.app-compact .card.me-settings-entry{padding:12px 14px;margin:10px 0}
+body .shell.app-compact .me-achievements-entry h3,body .shell.app-compact .my-fee-summary h3,body .shell.app-compact .me-settings-entry h3{margin:0 0 6px;font-size:16px}
+body .shell.app-compact .me-achievements-entry .row{align-items:center}
+body .shell.app-compact .me-achievements-entry .row h3{margin:0}
+body .shell.app-compact .me-achievements-entry .row .secondary,body .shell.app-compact .me-settings-entry .actions>*{min-height:40px}
+body .shell.app-compact .me-settings-entry .actions{gap:8px}
+body .shell.app-compact .me-settings-entry .me-sign-out{margin-left:auto}
