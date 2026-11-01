@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {playerSettled,planTransfers,openTransfers} from '../lib/domain/fee-transfers';
+import {collectorRepayment,playerSettled,planTransfers,openTransfers} from '../lib/domain/fee-transfers';
 import {unpaidBills} from '../lib/domain/fee-payments';
 import {calculateSettlement} from '../lib/domain/money';
 import {sameSettlement} from '../lib/domain/settlement-state';
@@ -48,6 +48,12 @@ test('with a member collecting, everyone pays the collector and the collector re
  assert.equal(v.collector,'p3');
  assert.deepEqual(v.transfers,[{from:'p0',to:'p3',cents:840},{from:'p3',to:'p1',cents:720},{from:'p3',to:'p2',cents:360}],'Carol collects 8.40 and, with her own 2.40, repays Alice and Bob');
  assert.ok(!playerSettled(s.payments,v,'p3'),'the collector still has to pass the money on');
+ // Her status shows what she still has to repay, not an unpaid share of her own.
+ assert.equal(collectorRepayment(s.payments,v,'p3'),1080);assert.equal(collectorRepayment(s.payments,v,'p0'),null,'others keep the usual status');
+ await apply(s,carol,'feeTransferPaid',{eventId:e.id,settlementId:v.id,from:'p3',to:'p1',paid:true,reason:''},after+hour);
+ assert.equal(collectorRepayment(s.payments,v,'p3'),360);
+ await apply(s,carol,'feeTransferPaid',{eventId:e.id,settlementId:v.id,from:'p3',to:'p2',paid:true,reason:''},after+hour);
+ assert.equal(collectorRepayment(s.payments,v,'p3'),0,'all repaid');assert.ok(playerSettled(s.payments,v,'p3'));
 });
 
 test('the club-subsidised part of an advanced court is owed by the owner',async()=>{

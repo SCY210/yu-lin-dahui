@@ -96,6 +96,14 @@ export function transferPaidCents(payments:Paid[],eventId:string,from:string,to:
 export function transferPaid(payments:Paid[],eventId:string,t:Transfer){return transferPaidCents(payments,eventId,t.from,t.to)>=t.cents}
 /** Whether a player owes nothing more on this confirmed version: every transfer they make is marked, or, for a split
  * paid the old way, their recorded payments cover the bill. Advancers whose advance covers their share owe nothing. */
+/** For the collector of a version settled by transfers: the cents still to pass on to advancers (0 once every repayment
+ * is marked). Null for anyone else, or a collector with nothing to repay: their status is the usual paid/unpaid one.
+ * The collector keeps their own share out of what they collect, so this is all they still owe (docs/FEE_ADVANCES.md). */
+export function collectorRepayment(payments:Paid[],settlement:Pick<Settlement,'eventId'|'transfers'|'collector'>,playerId:string){
+ if(!settlement.transfers||settlement.collector!==playerId)return null;
+ const repayments=settlement.transfers.filter(t=>t.from===playerId);if(!repayments.length)return null;
+ return repayments.reduce((left,t)=>left+Math.max(0,t.cents-transferPaidCents(payments,settlement.eventId,t.from,t.to)),0);
+}
 export function playerSettled(payments:Paid[],settlement:Pick<Settlement,'eventId'|'transfers'|'bills'>,playerId:string){
  if(settlement.transfers)return settlement.transfers.every(t=>t.from!==playerId||transferPaid(payments,settlement.eventId,t));
  const bill=settlement.bills.find(b=>b.playerId===playerId);
