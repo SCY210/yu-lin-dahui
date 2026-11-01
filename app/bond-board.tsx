@@ -10,7 +10,7 @@ type Player={id:string;name:string;enabled?:boolean;guest?:boolean;guestEventId?
 type Row={playerId:string;score:number;games:number;gifts:number};
 const count=(n:number)=>new Intl.NumberFormat('zh-CN').format(n);
 const collator=new Intl.Collator('zh-Hans-CN-u-co-pinyin');
-const preview=8;
+const preview=3;
 
 /** 道缘榜 on the 我的 page: the viewer's 道缘 with every member, strongest first. The owner and administrators can
  * also pick any member and see that member's 道缘 with everyone (docs/BONDS.md). */
@@ -62,7 +62,7 @@ export default function BondBoard({rows,pairs,players,meId,onProfile}:{rows:Bond
  </section>;
 }
 
-/** The first eight, then the rest on request. */
+/** The first three, then the rest on request, so My stays short. */
 function Expandable({total,unit,open,children}:{total:number;unit:string;open?:boolean;children:(limit:number)=>ReactNode}){
  const [expanded,setExpanded]=useState(false);
  return <>{children(expanded||open?total:preview)}{!open&&total>preview&&<button type="button" className="ghost bond-board-more" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?'收起':'查看全部 '+total+' '+unit}</button>}</>;

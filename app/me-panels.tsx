@@ -11,13 +11,15 @@ export function MyAchievements({children}:{children:ReactNode}) {
  </section>;
 }
 
-export function MySettings({account,notifications}:{account:ReactNode;notifications:ReactNode}) {
+/** extra: further buttons in the same row (administrator tools, sign-out), so My ends with one settings card. */
+export function MySettings({account,notifications,extra}:{account:ReactNode;notifications:ReactNode;extra?:ReactNode}) {
  const [active,setActive]=useState<'account'|'notifications'|null>(null),id=useId();
  return <section className="card me-settings-entry">
-  <h3>账号与设备</h3>
+  <h3>设置</h3>
   <div className="actions">
    <button className="secondary" aria-expanded={active==='account'} aria-controls={active==='account'?id:undefined} onClick={()=>setActive(value=>value==='account'?null:'account')}><KeyRound size={17} aria-hidden="true"/> 账号与密码</button>
    <button className="secondary" aria-expanded={active==='notifications'} aria-controls={active==='notifications'?id:undefined} onClick={()=>setActive(value=>value==='notifications'?null:'notifications')}><Bell size={17} aria-hidden="true"/> 通知与安装</button>
+   {extra}
   </div>
   {active&&<div id={id} className="me-panel-content">{active==='account'?account:notifications}</div>}
  </section>;
