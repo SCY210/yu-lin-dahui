@@ -128,3 +128,17 @@ test('advancers are shown what they actually paid; per-person rounding is spread
  assert.equal(v.advances!.reduce((n,a)=>n+a.cents,0),billed,'repayments still balance what members owe');
  assert.ok(v.advances!.every(a=>Math.abs(a.cents-(a.paid??a.cents))<=4),'only the rounding cents are added');
 });
+
+test('a confirmed split keeps its amounts and paid marks when only the rounding of advances changes',async()=>{
+ const {s,e}=await fixture();await confirm(s,e.id);const v=latest(s);
+ // An older calculation that moved a few cents of rounding between advancers, as before November 2026.
+ const old=structuredClone(v);old.transfers=old.transfers!.map((t,i)=>({...t,cents:t.cents+(i===0?4:i===1?-4:0)}));
+ s.settlements=s.settlements.map(x=>x.id===v.id?old:x);
+ const draft=calculateSettlement(s,e,after);
+ assert.ok(sameSettlement(draft,old),'the organiser is not asked to confirm again');
+ const versions=s.settlements.length;await confirm(s,e.id);assert.equal(s.settlements.length,versions,'confirming again keeps the existing version');
+ assert.deepEqual(latest(s).transfers,old.transfers,'its amounts stay as confirmed');
+ // A real change still counts: another member advanced the balls.
+ await apply(s,owner,'feeAdvance',{eventId:e.id,itemId:s.costs[0].id,advancedBy:'p0',reason:''},after);
+ assert.ok(!sameSettlement(calculateSettlement(s,e,after),old),'changing an advancer needs a new version');
+});
