@@ -31,6 +31,7 @@ The advances, the transfers and the collector are stored with the confirmed vers
 ## Marking transfers
 
 - Every transfer is marked on its own (`feeTransferPaid`), by its payer, its receiver or an organiser.
+- The collector keeps their own share out of what they collect, so their status shows what they still have to repay to advancers (`collectorRepayment`): pending repayment with the amount, then repaid once every repayment is marked. This applies on the fees page and on My. Other members keep the usual paid or pending-transfer status.
 - A person counts as paid once all their transfers are marked; unpaid reminders, the reminder button count and "My page" use this.
 - Marks are stored per payer and receiver (`payments` rows with `to`), so a later version keeps them, and a raised amount shows as unpaid again.
 - Marking a whole bill (`feePaid`) is refused on a version settled by transfers.

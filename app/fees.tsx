@@ -14,7 +14,7 @@ import FeatureGuide from './feature-guide';
 type BallCostForm={eventId:string;type:'ball';name:string;pricing:'unit';cents:number;used:number;start:string;end:string;bearer:'members'|'subsidy';advancedBy:string;reason:string};
 import {bookingParts} from '../lib/domain/booking-advancers';
 import {bookingCents,ballCents,legacyTubeUnitCents} from '../lib/domain/money';
-import {feeMembers,playerSettled,transferPaid,type Transfer} from '../lib/domain/fee-transfers';
+import {collectorRepayment,feeMembers,playerSettled,transferPaid,type Transfer} from '../lib/domain/fee-transfers';
 import FeeTransfers from './fee-transfers';
 /** Court or expense time that nobody present shares, merged per item, for example 2号场 15:00–19:00 €27.60. */
 function unshared(detail:{item?:string;name:string;start:number;end:number;unallocated:number}[]){
@@ -38,7 +38,9 @@ const paid=(b:{playerId:string;total:number})=>latest?.transfers?playerSettled(p
 const proxied=(id:string)=>id!==data.me.playerId&&data.players.find((p:{id:string;ownerId:string})=>p.id===id)?.ownerId===data.me.id;
 const canMark=(id:string)=>statusOn&&!!latest?.bills.some((x:{playerId:string})=>x.playerId===id)&&(id===data.me.playerId||proxied(id)||manager);
 const markPaid=(id:string,value:boolean)=>void ctx.action('feePaid',{eventId:ev.id,settlementId:latest!.id,playerId:id,paid:value,reason:value?'标记已付款':'撤销付款标记'},false).catch(()=>{});
-const paidStatus=(b:{playerId:string;total:number})=>statusOn&&<div className="fee-paid-status">{paid(b)?<span className="fee-status is-paid">已付款</span>:<span className="fee-status is-unpaid">{latest?.transfers?'待转账':'未付款'}</span>}{canMark(b.playerId)&&b.total>0&&!latest?.transfers&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>markPaid(b.playerId,!paid(b))}>{paid(b)?'撤销已付款':'标记已付款'}</button>}</div>;
+// The collector owes nothing of their own; what they still owe is the repayments to the advancers.
+const repayment=(id:string)=>latest?collectorRepayment(payments,latest,id):null;
+const paidStatus=(b:{playerId:string;total:number})=>statusOn&&<div className="fee-paid-status">{repayment(b.playerId)!==null?(repayment(b.playerId)?<span className="fee-status is-unpaid">待还垫付 · {euro(repayment(b.playerId)!)}</span>:<span className="fee-status is-paid">已还清</span>):paid(b)?<span className="fee-status is-paid">已付款</span>:<span className="fee-status is-unpaid">{latest?.transfers?'待转账':'未付款'}</span>}{canMark(b.playerId)&&b.total>0&&!latest?.transfers&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>markPaid(b.playerId,!paid(b))}>{paid(b)?'撤销已付款':'标记已付款'}</button>}</div>;
 // The reminder targets the latest confirmed version even while a manager previews a newer draft.
 const unpaidCount=latest&&latest.confirmed?(latest.transfers?new Set((latest.transfers as Transfer[]).filter(t=>!transferPaid(payments,ev.id,t)).map(t=>t.from)).size:latest.bills.filter((b:{playerId:string;total:number})=>!paid(b)).length):0;
 const myFriends=statusOn&&latest?latest.bills.filter((b:{playerId:string})=>proxied(b.playerId)):[];
