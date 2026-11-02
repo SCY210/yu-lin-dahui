@@ -21,3 +21,5 @@ export type BondRow={playerId:string;score:number;games:number;wins:number;gifts
 export type BondPair={a:string;b:string;score:number;games:number;wins:number;gifts:number};
 /** A received gift not yet acknowledged: coins, or a shop gift with its coin value. */
 export type GiftNotice={id:string;fromPlayerId:string;coins:number;item?:string;value:number;message?:string;at:number};
+/** One gift between members, for the owner and administrators' gift history; `cancelled` when its shop order was refunded. */
+export type GiftRecord={id:string;from:string;to:string;item?:string;value:number;message?:string;at:number;cancelled?:true};

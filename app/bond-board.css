@@ -37,3 +37,15 @@
 .bond-board-focus button:hover{color:var(--primary)}
 .bond-board-focus small{font-size:12px;color:var(--muted-foreground)}
 .wuxia-theme .bond-board-search input{background:transparent;border:0;box-shadow:none}
+
+/* Gift history (owner and administrators). */
+.bond-gift-list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.bond-gift-list li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border)}
+.bond-gift-list li:last-child{border-bottom:0}
+.bond-gift-list li>svg{margin-top:3px;color:var(--primary)}
+.bond-gift-list li.cancelled{opacity:.55}
+.bond-gift-main{display:grid;gap:2px;min-width:0}
+.bond-gift-main strong{font-size:14px;overflow-wrap:anywhere}
+.bond-gift-main small,.bond-gift-list time{font-size:12px;color:var(--muted-foreground)}
+.bond-gift-main q{font-size:13px;overflow-wrap:anywhere}
+.bond-gift-list time{white-space:nowrap}

@@ -34,6 +34,13 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  const canUse=(courtId:string,id:string)=>allowed.get(courtId)?.has(id)??false;
  const prior=s.rounds.filter(r=>r.eventId===e.id&&['published','playing','complete'].includes(r.status));
  const debt=(id:string)=>{let deficit=0,wait=0,games=0,streak=0;for(const r of prior){if(!r.eligible.includes(id))continue;const ms=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled');const played=ms.some(m=>[...m.a,...m.b].includes(id)&&(!m.noShow?.length||m.noShow.includes(id)));deficit+=ms.length*4/r.eligible.length-(played?1:0);if(played){wait=0;games++;streak++}else{wait++;streak=0}}return {deficit,wait,games,streak}};
+ // Each court continues on its own when its previous game ends (lib/domain/scheduled-courts.ts). A court whose next
+ // game takes a player from another court's previous game has to wait for that court too, so where possible each
+ // court's next four come from its own previous game and the players who rested.
+ const courtKey=(id:string)=>{const b=s.bookings.find(x=>x.id===id);return (b?.venue??e.venue)+'/'+(b?.name??id)};
+ const previousRound=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled'&&r.start<at).sort((x,y)=>y.start-x.start)[0];
+ const previousCourt=new Map<string,string>();
+ if(previousRound)for(const m of s.matches)if(m.roundId===previousRound.id&&m.status!=='cancelled')for(const id of [...m.a,...m.b])previousCourt.set(id,courtKey(m.courtId));
  const tired=tiredPlayers(s,e.id),debts=new Map(eligible.map(id=>[id,debt(id)]));
  eligible.sort((a,b)=>{const x=debts.get(a)!,y=debts.get(b)!;return Number(tired.has(a))-Number(tired.has(b))||y.deficit-x.deficit||y.wait-x.wait||x.streak-y.streak||a.localeCompare(b)});const picked=new Set<string>(),usedCourts:typeof courts=[];let selected:string[]=[];
  for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&canUse(court.id,id));if(pool.length<4)continue;const chosen=pool.slice(0,4);chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
@@ -53,7 +60,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
    key+=(left<right?left+'/'+right:right+'/'+left)+';';
   }
   const cached=costCache.get(key);if(cached)return cached;
-  let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0;const gaps:number[]=[];
+  let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0,courtWaits=0,blocks=0,recent=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
    mismatches+=genderMismatches(s,a,b,rating);
@@ -64,10 +71,11 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
     if(['mentor','carry'].includes(e.identityMode??''))variety-=Math.abs(rating(team[0])-rating(team[1]))*.6;
    }
    // As in live rotation: a block from one game counts like a repeated foursome, and repeated partners cost strength.
-   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b])+history.blocks([...a,...b]);partners+=history.partnerPenalty(a,b);
+   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b]);blocks+=history.blocks([...a,...b]);partners+=history.partnerPenalty(a,b);if(courts.length>1)recent+=history.recentPartners(a,b);
+   if(courts.length>1){const here=courtKey(courts[i/4].id);if([...a,...b].some(id=>previousCourt.has(id)&&previousCourt.get(id)!==here))courtWaits++}
    variety+=history.variety(a,b,e.playMode==='koc'?1800:350);
   }
-  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts,partners);costCache.set(key,result);return result;
+  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts,partners,courtWaits,blocks,recent);costCache.set(key,result);return result;
  };
  // Check all three pairings on each court, including the unchanged one.
  // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.

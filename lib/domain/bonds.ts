@@ -6,7 +6,7 @@ import {guestIds,isGuest} from './guests';
 import {isClubOwner} from './ownership';
 import {fail,type Account,type Match,type State} from './types';
 
-import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,bondCoinPoints,giftNoticeDays,type BondRow,type BondPair,type GiftNotice} from './bond-tiers';
+import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,bondCoinPoints,giftNoticeDays,type BondRow,type BondPair,type GiftNotice,type GiftRecord} from './bond-tiers';
 export * from './bond-tiers';
 
 /** A gift row of this member's own ledger: a shop gift they gave or received. Members cannot give coins to each other, so
@@ -73,6 +73,16 @@ export function giftNotices(s:Pick<State,'treasureLedger'|'treasureOrders'>,a:Pi
   .sort((x,y)=>x.at-y.at||x.id.localeCompare(y.id));
 }
 
+/** Every gift between members, newest first, from the giver's ledger row (the one naming the receiver). For the owner
+ * and administrators only; a refunded shop gift stays in the list, marked cancelled. */
+export function giftHistory(s:Pick<State,'treasureLedger'|'treasureOrders'>,limit=200):GiftRecord[]{
+ const orders=new Map(s.treasureOrders.map(o=>[o.id,o]));
+ return s.treasureLedger.filter(r=>r.giftTo).sort((x,y)=>y.at-x.at||y.id.localeCompare(x.id)).slice(0,limit).map(r=>{
+  const order=r.orderId?orders.get(r.orderId):undefined,item=r.giftItem??(order&&`${order.productName} × ${order.quantity}`);
+  return {id:r.id,from:r.playerId,to:r.giftTo!,...(item?{item}:{}),value:r.giftValue??Math.abs(r.delta),...(r.message?{message:r.message}:{}),at:r.at,...(order?.status==='cancelled'?{cancelled:true as const}:{})};
+ });
+}
+
 /** Every pair of members with a bond, strongest first, replayed the same way as `bondRows` so both agree. */
 export function bondPairs(s:BondState,matches:Match[]=finished(s as State)):BondPair[]{
  const cancelled=new Set(s.treasureOrders.filter(o=>o.status==='cancelled').map(o=>o.id));
@@ -125,7 +135,7 @@ export type BondHistory=ReturnType<typeof bondHistory>;
  * Shared history is internal only. Recheck authorization and return independent rows on every projection. */
 export function bondView(s:State,a:Account,matches?:Match[],history?:BondHistory){
  const all=history?undefined:matches??finished(s),rows=history?history.rowFor(a.playerId):bondRows(s,a.playerId,all);
- return {rows:history?rows.map(row=>({...row})):rows,...(a.role==='admin'||isClubOwner(s,a)?{pairs:history?history.pairs().map(pair=>({...pair})):bondPairs(s,all)}:{})};
+ return {rows:history?rows.map(row=>({...row})):rows,...(a.role==='admin'||isClubOwner(s,a)?{pairs:history?history.pairs().map(pair=>({...pair})):bondPairs(s,all),gifts:giftHistory(s)}:{})};
 }
 
 export function applyBond(s:State,a:Account,action:string,input:unknown){

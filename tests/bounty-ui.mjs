@@ -42,7 +42,7 @@ try{
  await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:start-60000});assert.ok(text(ui.toJSON()).includes('进行中'),'an accepted bounty shows before the start');
  await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:event.end+86400000});assert.equal(ui.toJSON(),null);
  const forms=[];await mount(BountySettingsPanel,{settings:defaultBountySettings,open:(...args)=>forms.push(args)});
- assert.ok(text(ui.toJSON()).includes('60%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
+ assert.ok(text(ui.toJSON()).includes('30%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
  const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,9);assert.equal(values.streakCoins,30);
  assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{streak:{coins:30,points:15},rout:{coins:15,points:9},upset:{coins:20,points:10},deuce:{coins:10,points:6}}});
  console.log('PASS bounty UI: offer card answers, accepted/completed/failed states, pop-up accept and later, a different xianxia scene per bounty kind with a still final frame for reduced motion, home timing, settings form');

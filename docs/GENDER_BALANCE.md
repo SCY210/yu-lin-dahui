@@ -27,3 +27,7 @@ Two men and two women of similar level are therefore always split into two mixed
 It never changes **who** plays or rests. Turn fairness, bench priority, availability and venue rules stay upstream, and fixed partners are never split. When every split has a mismatch (for example three strong men and one weaker woman, or two fixed pairs of men and of women), the best balanced split is still scheduled. Manual lineup corrections by organisers are not changed.
 
 Tests: `tests/gender-balance.test.ts`.
+
+## Asking members for their gender
+
+Members whose gender is neither male nor female (unset or undisclosed, `needsGender` in `lib/player-profile-options.ts`) are asked every time the app opens (`app/gender-prompt.tsx`), because pairing depends on it. The dialog opens the gender field, highlighted; "later" closes it until the next app open. The profile marks the missing gender in red, and the gender field is highlighted in the profile form. The notification prompt waits until the gender prompt is closed.

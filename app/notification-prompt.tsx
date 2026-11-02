@@ -80,7 +80,7 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
  return <Dialog open={open} onOpenChange={next=>{if(!next)dismiss()}}><DialogContent className="app-dialog notification-optin" showCloseButton>
   <DialogHeader><DialogTitle><Bell size={22} aria-hidden="true"/>开启活动通知（可选）</DialogTitle><DialogDescription>开启后，即使没打开网站，手机也会像收到微信消息一样弹出提醒。不开启也能正常使用网站和查看站内提醒。</DialogDescription></DialogHeader>
   <NotificationIncentiveNotice/>
-  <ul className="notification-optin-kinds"><li>新活动开放报名</li><li>报名成功、候补转正</li><li>分组和上场安排</li><li>活动改时间或取消</li><li>费用确认</li><li>赛后评选</li></ul>
+  <ul className="notification-optin-kinds"><li>新活动开放报名</li><li>候补转正</li><li>比赛上场</li><li>活动改时间或取消</li><li>费用确认</li><li>赛后评选</li><li>悬赏令</li></ul>
   {install?<><p className="notification-optin-lead">苹果手机要先把网站“添加到主屏幕”，才能收到通知。按下面 4 步操作，大约 1 分钟：</p><IosInstallSteps/></>:denied?isIphone()?<><p className="notification-optin-lead">系统已阻止通知。按下面步骤在 iPhone 设置里允许：</p><IosDeniedSteps/></>:<p className="hint">系统已阻止通知。请在浏览器或手机的通知设置中允许本网站，然后点击下方按钮重新检测。</p>:<p className="hint">点击开启后，请在系统提示中选择“允许”。每台设备需要单独开启。</p>}
   {error&&<p className="connection-note" role="alert">{error}</p>}
   <div className="actions notification-optin-actions">{canEnable?<button type="button" className="primary" disabled={busy} onClick={()=>void enable()}>{busy?'正在开启…':'开启通知'}</button>:<button type="button" className="primary" disabled={busy} onClick={()=>void recheck()}>{busy?'正在检测…':install||offer.support==='unsupported'?'重新检测通知支持':denied?'已允许，重新检测并开启':'重新检测通知服务'}</button>}

@@ -14,7 +14,7 @@ import './player-profile.css';
 const AchievementCollection=lazy(()=>import('./achievement-collection'));
 const BondCard=lazy(()=>import('./bond-card'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
-import {genderOptions,genderLabels,type ProfileGender} from '../lib/player-profile-options';
+import {genderOptions,genderLabels,needsGender,type ProfileGender} from '../lib/player-profile-options';
 
 const defaults = {gender:'undisclosed',years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
@@ -23,9 +23,9 @@ const optional = (key:string, label:string) => ({...text(key, label), optional:t
 
 function ProfileAvatar({p}:Pick<ComponentProps<typeof Avatar>,'p'>) {return <Avatar p={p} size="pp-avatar" eager/>;}
 
-function Fact({label, value}: {label:string; value:unknown}) {
+function Fact({label, value, warn}: {label:string; value:unknown; warn?:string}) {
   const filled = value !== null && value !== undefined && String(value).trim() !== '';
-  return <div className="pp-fact"><dt>{label}</dt><dd className={filled ? '' : 'pp-unfilled'}>{filled ? String(value) : '尚未填写'}</dd></div>;
+  return <div className="pp-fact"><dt>{label}</dt><dd className={warn ? 'pp-needs' : filled ? '' : 'pp-unfilled'}>{filled ? String(value) : '尚未填写'}{warn ? ' · ' + warn : ''}</dd></div>;
 }
 
 export default function PlayerProfile({p, stats, ctx}:any) {
@@ -38,8 +38,8 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   const state = stats ?? {};
   const range=tensionRange(p.profile);
   const unparsedLegacy=!range&&p.profile?.tension&&!('tensionMin' in p.profile||'tensionMax' in p.profile);
-  const edit = () => genderOnly?ctx.open('修改性别','profileGender',{playerId:p.id,gender:p.profile?.gender??'undisclosed'},[choice('gender','性别（可不透露）',genderOptions.map(([value,label])=>[value,label]))]):ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
-    choice('gender', '性别（可不透露）', genderOptions.map(([value,label])=>[value,label])),
+  const edit = () => genderOnly?ctx.open('修改性别','profileGender',{playerId:p.id,gender:p.profile?.gender??'undisclosed'},[{...choice('gender','性别（可不透露）',genderOptions.map(([value,label])=>[value,label])),highlight:needsGender(p.profile?.gender)}]):ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
+    {...choice('gender', '性别（可不透露）', genderOptions.map(([value,label])=>[value,label])),highlight:needsGender(p.profile?.gender)},
     {...number('years', '球龄（年）'),min:0,max:80,step:'any'},
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
@@ -74,7 +74,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     <Disclosure label="个人资料与打法" defaultOpen><section className="pp-section" aria-label="个人信息">
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
-        <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]}/>
+        <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]} warn={needsGender(p.profile?.gender)?'排场需要，请填写男或女':undefined}/>
         <Fact label="球龄" value={p.profile?.years != null ? `${p.profile.years}年` : null}/>
         <Fact label="惯用手" value={hands[p.profile?.hand]}/>
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>

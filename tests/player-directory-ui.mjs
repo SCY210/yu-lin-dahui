@@ -56,7 +56,10 @@ try{
  assert.ok(shown.includes('风雨同舟')&&shown.includes('16,000')&&shown.includes('礼物 12 羽币')&&shown.includes('还没有一起搭档'));
  assert.equal(names().length,11,'every member except the viewer, guests and disabled members');assert.ok(!names().includes('Fictional Guest')&&!names().includes('Fictional Off'));
  await act(()=>ui.root.findAll(n=>n.props.className==='bond-board-player')[0].props.onClick());assert.deepEqual(profiles,['b']);
- await mount(BondBoard,{rows,pairs,players,meId:'me',onProfile:id=>profiles.push(id)});
+ const gifts=[{id:'g2',from:'b',to:'me',item:'Fictional towel × 1',value:12,message:'Fictional thanks',at:Date.parse('2030-05-02T10:00:00Z')},{id:'g1',from:'a',to:'b',value:5,at:Date.parse('2030-05-01T10:00:00Z'),cancelled:true}];
+ await mount(BondBoard,{rows,pairs,gifts,players,meId:'me',onProfile:id=>profiles.push(id)});
+ await act(()=>button('送礼记录').props.onClick());shown=text(ui.toJSON());
+ assert.ok(shown.includes('Fictional Ben → Fictional Me')&&shown.includes('Fictional towel × 1 · 价值 12 羽币')&&shown.includes('Fictional thanks')&&shown.includes('5 羽币 · 已取消'),'admins read every gift, newest first');
  await act(()=>button('全群道缘').props.onClick());shown=text(ui.toJSON());
  const members=()=>ui.root.findAll(n=>n.props.className==='bond-board-member').map(b=>b.props['aria-label'].replace(/^查看|的道缘$/g,''));
  assert.ok(shown.includes('仅群主和管理员可见'));

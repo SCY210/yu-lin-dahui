@@ -38,6 +38,8 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   unmet,
   /** Separate from whole-game rematches: repeating a pair against NEW opponents still counts.
    * Indexed lookups only. The live balance comparator caps the total at 40 Elo-equivalent points. */
+  /** How many of these two teams played together in their latest game. */
+  recentPartners:(a:string[],b:string[])=>[a,b].filter(team=>team.length===2&&(lastPartner.get(team[0])===team[1]||lastPartner.get(team[1])===team[0])).length,
   partnerPenalty:(a:string[],b:string[])=>{
    let uses=0,recent=0;
    for(const team of [a,b])if(team.length===2){

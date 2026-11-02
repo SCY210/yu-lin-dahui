@@ -8,7 +8,7 @@ import {build} from 'esbuild';
 mkdirSync('.test-output',{recursive:true});
 globalThis.__bountySweepTest={env:{}};
 const fixture=globalThis.__bountySweepTest;
-writeFileSync('.test-output/bounty-sweep-entry.ts',"export {runBountyReminderSweep} from '../lib/bounty-reminder-sweep';export {drawnBounty} from '../lib/domain/bounties';export {flushPushOutbox} from '../lib/push-outbox';export {load,save} from '../lib/store';export {emptyState} from '../lib/domain/types';");
+writeFileSync('.test-output/bounty-sweep-entry.ts',"export {runBountyReminderSweep} from '../lib/bounty-reminder-sweep';export {drawnBounty,bountyTitles} from '../lib/domain/bounties';export {flushPushOutbox} from '../lib/push-outbox';export {load,save} from '../lib/store';export {emptyState} from '../lib/domain/types';");
 await build({entryPoints:['.test-output/bounty-sweep-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/bounty-sweep-bundle.mjs',plugins:[{name:'isolated-bounty-sweep',setup(b){b.onResolve({filter:/^cloudflare:workers$/},()=>({path:'env',namespace:'bounty-fixture'}));b.onLoad({filter:/.*/,namespace:'bounty-fixture'},()=>({contents:'export const env=globalThis.__bountySweepTest.env;',loader:'js'}))}}]});
 const api=await import(pathToFileURL(resolve('.test-output/bounty-sweep-bundle.mjs')).href);
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const name of readdirSync('drizzle').filter(n=>n.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+name,'utf8'));
@@ -44,7 +44,7 @@ try{
  assert.deepEqual(inbox(),['alice '+points],'Bob drew no bounty, Carol is on the waitlist, the practice is not a points match');
  assert.deepEqual(captures,['https://fcm.googleapis.com/fcm/send/alice'],'her device receives a push');
  const notice=JSON.parse(sql.prepare("SELECT payload FROM reminder_inbox WHERE kind='bounty'").get().payload);
- assert.match(notice.title,/^悬赏令 · /);assert.match(notice.body,/^周四积分赛 19:00 开打。.+完成得 .+；接下没完成扣 10 积分。/);assert.equal(notice.tab,'overview');
+ assert.equal(notice.title,'羽林大会');assert.ok(Object.values(api.bountyTitles).includes(notice.body),'the body names the bounty only');assert.equal(notice.tab,'overview');
  assert.deepEqual(await run(start-20*minute),{sent:0},'told once');assert.equal(captures.length,1);
  // Carol is promoted from the waitlist before the start: she is told on the next tick.
  const promoted=await api.load(),next=structuredClone(promoted);next.registrations.find(r=>r.id===points+'-p3').status='confirmed';await api.save(next,'promote',promoted);

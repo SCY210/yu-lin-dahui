@@ -108,7 +108,11 @@ test('a shop gift is bought by the giver, raises the bond, is announced to the r
  assert.equal(notice.item,'Fictional grip tape × 2');assert.equal(notice.value,24);assert.equal(notice.coins,0);assert.equal(notice.message,'生日快乐');
  assert.equal(treasureShopView(s,owner).orders[0].giftTo,'p2','the owner sees whom to hand it to');
  await assert.rejects(()=>apply(s,account(s,1),'treasureRedeem',{productId:product.id,expectedPrice:12,giftTo:'p1',requestId:crypto.randomUUID()},start),/自己/);
+ const [record]=bondView(s,owner).gifts!;
+ assert.deepEqual({from:record.from,to:record.to,item:record.item,value:record.value,message:record.message},{from:'p1',to:'p2',item:'Fictional grip tape × 2',value:24,message:'生日快乐'},'the owner reads the gift history');
+ assert.equal(bondView(s,account(s,3)).gifts,undefined,'members never see it');
  treasureOrder(s,owner,{id:order.id,status:'cancelled'},start+3000);
+ assert.equal(bondView(s,owner).gifts![0].cancelled,true,'a refunded gift stays in the history, marked cancelled');
  assert.equal(treasureBalance(s,'p1'),100);assert.equal(bond(s,'p1','p2'),undefined);assert.equal(bond(s,'p2','p1'),undefined);
  assert.deepEqual(giftNotices(s,account(s,2),start+4000),[]);
 });

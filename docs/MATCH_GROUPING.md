@@ -99,3 +99,24 @@ Within one round nobody appears on two courts, and nobody plays two games at the
 - A swap into a game already on court refuses a player who is playing on another court.
 
 `tests/round-integrity.test.ts` checks both cases and runs random planned-schedule operations against the invariant.
+
+## Courts that do not wait for each other
+
+On two or more courts, a planned round is laid out so that each court can start its next game as soon as its own game ends. A court whose next group includes a player still finishing on another court must wait for that court too; the search counts such courts (`courtWaits`, `COURT_WAIT_COST` in `lib/domain/match-balance.ts`) and prefers line-ups where the players of one court's game move on together and the other court's players stay with the other court. A block of three from one game still costs more (`BLOCK_COST`), and so does an immediate partner repeat on more than one court (`RECENT_PARTNER_COST`), so avoiding a wait never re-pairs partners or reunites a block. The previous round is the latest planned, non-cancelled round before the one being planned.
+
+Simulations of 16 rounds (`planPoints`, four hours of 15-minute rounds, random strengths, 8 seeds each) give these shares of rounds where every court waits for another court, before and after:
+
+| Courts / players | Before | After |
+| --- | --- | --- |
+| 2 / 12 | 58% | 6% |
+| 2 / 16 | 37% | 0% |
+| 3 / 16 | 90% | 8% |
+| 3 / 18 | 67% | 0% |
+| 4 / 20 | 96% | 13% |
+| 4 / 24 | 78% | 0% |
+
+Immediate partner repeats and reunited blocks stay at 0%, and strength balance is unchanged. With only two players resting (10 players on two courts, 14 on three) most rounds still have one dependent court: almost every player plays every round, so the players of one game cannot all stay on their court.
+
+## Unplayed planned games are removed at the end
+
+When an activity has ended, planned games of published rounds that never started and have no score are deleted, and a round left empty goes with them (`deleteUnplayedPlanned` in `lib/domain/planned-cleanup.ts`, run by the read-time maintenance in `lib/club-maintenance.ts` and recorded in the audit log as `deleteUnplayedPlanned`). Games that started stay, so their score can still be entered. Overtime rounds and live rounds are left alone, and tournaments are not affected. `tests/planned-cleanup.test.ts` checks it.

@@ -55,3 +55,5 @@ body .shell.app-compact .pl-detail-heading{margin-bottom:16px}
 .error-dialog [data-slot=dialog-title]{display:flex;align-items:center;gap:8px;color:#c0392b}.error-dialog-messages{display:grid;gap:6px;color:var(--foreground)}.error-dialog-messages p{margin:0}
 /* Activity description under the title (moved out of the signup tab). */
 .event-heading .event-note{margin:8px 0 0;color:var(--muted-foreground);font-size:14px;line-height:1.6}
+.field-highlight{padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--destructive) 8%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--destructive) 55%,transparent)}
+.pp-fact dd.pp-needs{color:var(--destructive);font-weight:700}
