@@ -33,14 +33,16 @@ try{
  data.rounds=[0,1].map(i=>({id:'overlap'+i,eventId:e.id,start:now-120000+i*60000,duration:15,status:'playing',eligible:data.players.map(p=>p.id),rest:[],seed:i+1,pointsSlot:i+1}));
  data.matches=data.rounds.flatMap((r,i)=>[0,1].map(c=>({id:'overlap-match'+i+c,eventId:e.id,roundId:r.id,courtId:c?'other-court':'court',a:['p'+(c*4),'p'+(c*4+1)],b:['p'+(c*4+2),'p'+(c*4+3)],status:i===0&&c===0?'complete':i===1&&c===1?'published':'playing',start:i===1&&c===1?null:r.start,end:i===0&&c===0?now-60000:null,scoreA:i===0&&c===0?21:null,scoreB:i===0&&c===0?19:null,games:i===0&&c===0?[{a:21,b:19}]:[],monthly:true,elo:true,locked:false})));
  await mount();assert.equal(ui.root.findAllByType('details').filter(d=>d.props.className?.includes('round-disclosure is-playing')).length,2,'both overlapping rounds stay visible as in progress');assert.ok(text(ui.toJSON()).includes('1/2 场已结束 · 1 场待录分'));assert.ok(text(ui.toJSON()).includes('0/2 场已结束 · 2 场待录分'));assert.ok(!/\d+ 场进行中/.test(text(ui.toJSON())),'planned rounds do not show the live court count');assert.ok(buttons().some(b=>b.props['aria-label']==='选择交换：Player 4'),'unscored playing planned matches remain editable');assert.ok(!buttons().some(b=>/锁定|解锁/.test(text(b))));
- // Long schedules fold: three or more finished rounds and the rounds after the next one each become one entry; the
- // next round stays collapsed while a round is playing.
+ // Long schedules: rounds in progress stay open; the others are a tab strip with one round shown, the next by default.
  const keepRounds=data.rounds,keepMatches=data.matches;
  data.rounds=Array.from({length:10},(_,i)=>({id:'long'+i,eventId:e.id,start:now-3600000+i*60000,duration:15,status:i<3?'complete':i===3?'playing':'published',eligible:data.players.map(p=>p.id),rest:[],seed:i+1,pointsSlot:i+1}));data.matches=[];
- await mount();const summaries=ui.root.findAllByType('summary').map(text);
- assert.ok(summaries.includes('已结束 3 轮')&&summaries.includes('后面还有 5 轮 · 第 6–10 轮'),summaries.join(' | '));
- const roundDetails=ui.root.findAllByType('details').filter(d=>d.props.className?.includes('round-disclosure'));
- assert.deepEqual(roundDetails.map(d=>[text(d.findAllByType('summary')[0]).split(' · ')[0],d.props.open]),[['第 4 轮',true],['第 5 轮',false]],'only the playing round is open; folded rounds are not rendered');
+ await mount();const tabs=()=>ui.root.findAllByType('button').filter(b=>b.props.role==='tab');
+ assert.deepEqual(tabs().map(b=>text(b)),['第 1 轮已结束','第 2 轮已结束','第 3 轮已结束','第 5 轮待开始','第 6 轮待开始','第 7 轮待开始','第 8 轮待开始','第 9 轮待开始','第 10 轮待开始']);
+ const rounds=()=>ui.root.findAllByType('details').filter(d=>d.props.className?.includes('round-disclosure')).map(d=>[text(d.findAllByType('summary')[0]).split(' · ')[0],d.props.open]);
+ assert.deepEqual(rounds(),[['第 4 轮',true]],'while a round plays, the other rounds wait behind their tabs');
+ await act(()=>tabs()[0].props.onClick());assert.deepEqual(rounds(),[['第 4 轮',true],['第 1 轮',true]]);assert.equal(tabs()[0].props['aria-selected'],true);
+ await act(()=>tabs()[0].props.onClick());assert.deepEqual(rounds(),[['第 4 轮',true]],'tapping the open tab again closes it');
+ data.rounds[3].status='published';await mount();assert.deepEqual(rounds(),[['第 4 轮',true]],'with nothing playing, the next round shows by default');
  data.rounds=keepRounds;data.matches=keepMatches;
  e.schedulingMode='planned';e.status='draft';data.rounds=[{id:'any-time',eventId:e.id,start:now-7200000,duration:15,status:'published',eligible:data.players.map(p=>p.id),rest:[],seed:1,pointsSlot:1}];
  data.matches=[{id:'any-time-match',eventId:e.id,roundId:'any-time',courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[],locked:false}];e.start=now+3600000;e.end=now+10800000;data.bookings.forEach(b=>{b.start=e.start;b.end=e.end});data.registrations.forEach(r=>{r.arrival=e.start;r.departure=e.end});data.registrations.find(r=>r.playerId==='p4').arrival=now+7200000;

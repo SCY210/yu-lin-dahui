@@ -65,5 +65,11 @@ try{
  assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/15:00–17:00爱丽丝17:00–19:00小波/);
  await drag('设置 第 1 段和第 2 段的分界',3);assert.deepEqual(parts.map(p=>[p.start,p.advancedBy]),[['2026-11-05T15:00','p1'],['2026-11-05T18:00','p2']],'a three-hour part is allowed');
  await mount(CourtParts,{start:'2026-11-05T15:00',end:'2026-11-05T19:00',parts,members,label:'设置',onChange:next=>{parts=next}});await drag('设置 第 1 段和第 2 段的分界',4);assert.equal(parts[1].start,'2026-11-05T18:00','the last part keeps an hour');
- console.log('PASS fee transfers UI: advances, own and folded transfers, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
+ // A collector with a long list: open and done transfers are two tabs, the open ones first.
+ const crowd={...settlement,transfers:Array.from({length:8},(_,i)=>({from:'c'+i,to:'p0',cents:100+i}))};
+ await mount(FeeTransfers,{e,settlement:crowd,ctx:ctx('p0',[{eventId:'e',playerId:'c0',to:'p0',cents:100},{eventId:'e',playerId:'c1',to:'p0',cents:101}]),manager:false});
+ const tabs=()=>ui.root.findAll(n=>n.type==='button'&&n.props.role==='tab');
+ assert.deepEqual(tabs().map(b=>text(b.children)),['待处理 6','已完成 2']);assert.equal(button('确认已收到').length,6);assert.equal(button('撤销').length,0);
+ await act(()=>tabs()[1].props.onClick());assert.equal(button('撤销').length,2);assert.equal(button('确认已收到').length,0);
+ console.log('PASS fee transfers UI: advances, own and folded transfers, open/done tabs for long lists, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
