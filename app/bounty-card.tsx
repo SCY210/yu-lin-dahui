@@ -11,26 +11,26 @@ export const rewardText=(b:{coins:number;points:number})=>[b.coins?`${b.coins} �
 /** The scroll of one bounty: its goal, reward and penalty. */
 export function BountyScroll({kind,coins,points,penalty}:{kind:BountyKind;coins:number;points:number;penalty:number}){
  return <div className="bounty-scroll">
-  <p className="bounty-goal">{bountyGoals[kind]}</p>
-  <dl><div><dt>完成奖励</dt><dd>{rewardText({coins,points})}</dd></div><div><dt>接下未完成</dt><dd>{penalty?`扣 ${penalty} 积分`:'不扣分'}</dd></div></dl>
+  <p className="bounty-goal">悬赏所求：{bountyGoals[kind]}</p>
+  <dl><div><dt>功成之赏</dt><dd>{rewardText({coins,points})}</dd></div><div><dt>失手之罚</dt><dd>{penalty?`折损 ${penalty} 积分`:'无罚'}</dd></div></dl>
  </div>;
 }
 /** This member's bounty for one activity: an offer to answer, or the accepted bounty and, after the activity, its result. */
 export default function BountyCard({title,offer,accepted,busy,onRespond,onOpen}:{title?:string;offer?:Offer|null;accepted?:ViewBounty;busy?:boolean;onRespond?:(offer:Offer,accept:boolean)=>void;onOpen?:()=>void}){
  if(offer)return <section className="card bounty-card is-offer" aria-label="悬赏令">
-  <BountyHead kind={offer.kind} title={title} onOpen={onOpen} state="待回应"/>
+  <BountyHead kind={offer.kind} title={title} onOpen={onOpen} state="待接令"/>
   <BountyScroll {...offer}/>
-  <p className="hint">接不接都可以：不接没有惩罚。只能回应一次，你的第一局开始后悬赏令失效。</p>
-  <div className="actions"><button type="button" className="primary" disabled={busy} onClick={()=>onRespond?.(offer,true)}>接下悬赏</button><button type="button" className="ghost" disabled={busy} onClick={()=>onRespond?.(offer,false)}>不接</button></div>
+  <p className="hint">接与不接，全凭道友本心，婉拒无罚；一言既出，不可更改。首局开战后此令自散。</p>
+  <div className="actions"><button type="button" className="primary" disabled={busy} onClick={()=>onRespond?.(offer,true)}>接下此令</button><button type="button" className="ghost" disabled={busy} onClick={()=>onRespond?.(offer,false)}>婉拒</button></div>
  </section>;
  if(!accepted)return null;
  const done=accepted.outcome==='completed',failed=accepted.outcome==='failed';
  return <section className={'card bounty-card'+(done?' is-completed':failed?' is-failed':'')} aria-label="悬赏令" role="status">
-  <BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'已完成':failed?'未完成':'进行中'}/>
+  <BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'功成':failed?'失手':'修行中'}/>
   <BountyScroll {...accepted}/>
-  {done?<p className="bounty-result"><CheckCircle2 size={17} aria-hidden="true"/>悬赏完成！获得 {rewardText(accepted)}。</p>
-   :failed?<p className="bounty-result"><XCircle size={17} aria-hidden="true"/>悬赏未完成{accepted.penalty?`，扣 ${accepted.penalty} 积分`:''}。</p>
-   :<p className="hint">活动结束后自动结算；补录比分也会重新结算。</p>}
+  {done?<p className="bounty-result"><CheckCircle2 size={17} aria-hidden="true"/>悬赏功成！天机阁赐下 {rewardText(accepted)}。</p>
+   :failed?<p className="bounty-result"><XCircle size={17} aria-hidden="true"/>此令未竟{accepted.penalty?`，折损 ${accepted.penalty} 积分`:''}。</p>
+   :<p className="hint">散场之后，天机阁自会清算；补录比分亦会重新清算。</p>}
  </section>;
 }
 function BountyHead({kind,title,state,onOpen}:{kind:BountyKind;title?:string;state:string;onOpen?:()=>void}){

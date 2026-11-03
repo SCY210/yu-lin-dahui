@@ -44,7 +44,7 @@ try{
  assert.deepEqual(inbox(),['alice '+points],'Bob drew no bounty, Carol is on the waitlist, the practice is not a points match');
  assert.deepEqual(captures,['https://fcm.googleapis.com/fcm/send/alice'],'her device receives a push');
  const notice=JSON.parse(sql.prepare("SELECT payload FROM reminder_inbox WHERE kind='bounty'").get().payload);
- assert.equal(notice.title,'羽林大会');assert.ok(Object.values(api.bountyTitles).includes(notice.body),'the body names the bounty only');assert.equal(notice.tab,'overview');
+ assert.equal(notice.title,'悬赏令','the push title is the word bounty alone');assert.ok(Object.values(api.bountyTitles).some(t=>notice.body===`天机阁降下${t}，道友可敢接下？`),'one short line in the cultivation voice of the club');assert.equal(notice.tab,'overview');
  assert.deepEqual(await run(start-20*minute),{sent:0},'told once');assert.equal(captures.length,1);
  // Carol is promoted from the waitlist before the start: she is told on the next tick.
  const promoted=await api.load(),next=structuredClone(promoted);next.registrations.find(r=>r.id===points+'-p3').status='confirmed';await api.save(next,'promote',promoted);

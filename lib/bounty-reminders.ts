@@ -10,7 +10,7 @@ export function bountyReminders(s:State,now:number):Reminder[]{
  return s.events.filter(e=>bountyEvent(e)&&bountyOfferAt(e)<=now&&now<e.start).flatMap(e=>s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').flatMap(r=>{
   const offer=bountyOffer(s,e,r.playerId,now),account=s.accounts.find(a=>a.playerId===r.playerId);
   if(!offer||!account)return [];
-  return [{id:`bounty:${e.id}:${r.playerId}`,kind:'bounty' as const,eventId:e.id,title:'羽林大会',tab:'overview' as const,accountIds:[account.id],expires:e.end,createdAt:now,playerId:r.playerId,
-   body:bountyTitles[offer.kind]}];
+  return [{id:`bounty:${e.id}:${r.playerId}`,kind:'bounty' as const,eventId:e.id,title:'悬赏令',tab:'overview' as const,accountIds:[account.id],expires:e.end,createdAt:now,playerId:r.playerId,
+   body:`天机阁降下${bountyTitles[offer.kind]}，道友可敢接下？`}];
  }));
 }
