@@ -9,9 +9,9 @@
  --af-qi:#3fae8a;--af-qi-light:#bff0dc;--af-cloud:#e9fbf3;--af-cloud-line:#3fae8a;
  --af-gold:#d4a23a;--af-gold-light:#fff3c8;--af-steel:#eef3f8;--af-steel-edge:#9fb3c8;
  --af-violet:#7b4fd6;--af-violet-light:#d9c6ff;--af-thunder:#f4ecff;--af-thunder-glow:#a77cff;
- --af-seal-radius:999px;--af-seal-font:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+ --af-seal-radius:999px;--af-seal-font:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',-apple-system,system-ui,sans-serif}
 span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;height:100%;min-width:0;object-fit:cover;border-radius:inherit;border:0;flex:1;margin:0}
-.avatar-fire-art{position:absolute;inset:-20%;width:140%;height:140%;overflow:visible;pointer-events:none;z-index:1}
+.avatar-fire-art{position:absolute;top:-20%;left:-20%;inset:-20%;width:140%;height:140%;overflow:visible;pointer-events:none;z-index:1}
 .avatar-fire-art.avatar-fire-back{z-index:-1}
 .avatar-fire-art *{transform-box:view-box}
 .af-square{display:none}
@@ -45,7 +45,7 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .af-bagua{transform-origin:50px 50px;animation:af-turn 11s linear infinite;filter:drop-shadow(0 0 2px var(--af-thunder-glow))}
 .af-bagua-scale{transform-origin:50px 50px}
 .wuxia-theme .af-bagua-scale{transform:scale(1.08)}
-.af-octagon{fill:color-mix(in srgb,var(--af-violet) 28%,transparent);stroke:var(--af-violet);stroke-width:1.6;stroke-linejoin:round}
+.af-octagon{fill:var(--af-violet);fill-opacity:.28;stroke:var(--af-violet);stroke-width:1.6;stroke-linejoin:round}
 .af-yao{fill:var(--af-gold)}
 .af-bagua-frame{fill:none;stroke:var(--af-violet-light);stroke-width:1.4}
 .af-thunder{fill:none;stroke:var(--af-thunder);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 3px var(--af-thunder-glow));animation:af-strike 3.6s linear infinite}
@@ -59,11 +59,11 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 
 /* The seal sits centred under the avatar, so it never reaches into the name or realm tag beside it.
    It shows the count and the tier's own word (连胜 / 连斩 / 连霸), styled per tier; hidden on tiny avatars. */
-.avatar-fire-seal{position:absolute;left:50%;bottom:-11%;transform:translateX(-50%);z-index:2;display:inline-flex!important;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px!important;overflow:hidden;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font)!important;font-size:clamp(8px,22cqw,13px)!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;white-space:nowrap;pointer-events:none;color:#fff!important;background:linear-gradient(135deg,#4cc39b,#23876a)}
+.avatar-fire-seal{position:absolute;left:50%;bottom:-11%;transform:translateX(-50%);z-index:2;display:inline-flex!important;align-items:baseline;justify-content:center;gap:1px;padding:1px 5px!important;overflow:hidden;border-radius:var(--af-seal-radius);border:1px solid #fff;box-shadow:0 1px 3px #0003;font-family:var(--af-seal-font)!important;font-size:9px!important;font-size:clamp(8px,22cqw,13px)!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;white-space:nowrap;pointer-events:none;color:#fff!important;background:linear-gradient(135deg,#4cc39b,#23876a)}
 .avatar-fire-seal>.af-seal-count,.avatar-fire-seal>.af-seal-word{position:relative;z-index:1;color:inherit!important;font:inherit!important;margin:0!important}
 .avatar-fire-seal>.af-seal-word{font-size:.8em!important;font-weight:700!important}
 /* A glint sweeps across the seal. */
-.avatar-fire-seal::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,#ffffffb3 48%,transparent 66%);transform:translateX(-120%);animation:af-glint 2.8s ease-in-out infinite;animation-play-state:paused}
+.avatar-fire-seal::after{content:'';position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:linear-gradient(105deg,transparent 30%,#ffffffb3 48%,transparent 66%);transform:translateX(-120%);animation:af-glint 2.8s ease-in-out infinite;animation-play-state:paused}
 .avatar-fire-shell[data-moving=true] .avatar-fire-seal::after{animation-play-state:running}
 @keyframes af-glint{0%,55%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
 /* A band of light flows along the frame, round or square, in the tier's colour. */
@@ -75,6 +75,14 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .avatar-fire-shell[data-tier='2'] .avatar-fire-seal{background:linear-gradient(135deg,#f3cf6a,#b67b16);color:#3a2507!important;border-color:#fff3c8}
 .avatar-fire-shell[data-tier='3'] .avatar-fire-seal{background:linear-gradient(135deg,#9d6cff,#4b23b0);color:#fff4c9!important;border-color:#f3cf6a;box-shadow:0 0 6px #a77cffaa}
 @container (max-width:34px){.avatar-fire-seal{display:none!important}}
+/* Browsers without container queries (iOS Safari before 16) cannot size the seal to the avatar or hide it on small
+   ones: they keep the fixed size above and show the seal only on the larger avatars, never on the 22–32px ones in
+   lists and match cards. */
+@supports not (container-type:inline-size){
+ .avatar-fire-seal{display:none!important}
+ .avatar-fire-shell.ranking-avatar .avatar-fire-seal,.avatar-fire-shell.rp-avatar .avatar-fire-seal,.avatar-fire-shell.pp-avatar .avatar-fire-seal,.avatar-fire-shell.award-avatar .avatar-fire-seal,.avatar-fire-shell.bond-board-face .avatar-fire-seal,.avatar-fire-shell.score-avatar .avatar-fire-seal,.avatar-fire-shell.board-avatar .avatar-fire-seal{display:inline-flex!important}
+ .avatar-fire-shell.rp-avatar .avatar-fire-seal,.avatar-fire-shell.pp-avatar .avatar-fire-seal{font-size:12px!important}
+}
 
 /* 水墨江湖: ink-and-mineral colours, a square frame and square seals in a serif face. */
 .wuxia-theme .avatar.avatar-fire-shell{--af-qi:#3d7a62;--af-qi-light:#cfe6d6;--af-cloud:#f6f1e3;--af-cloud-line:#3d7a62;--af-gold:#a8792a;--af-gold-light:#f2dfae;--af-steel:#f3efe4;--af-steel-edge:#6b6355;--af-violet:#5b3a8e;--af-violet-light:#bca8dc;--af-thunder-glow:#8e63d8;--af-seal-radius:3px;--af-seal-font:'Songti SC','SimSun',serif}
@@ -104,7 +112,7 @@ span.avatar-fire-shell>img.avatar.avatar-fire-image{display:block;width:100%;hei
 .al-vortex{transform-origin:49px 10px;animation:af-turn 7s linear infinite}
 .al-vortex ellipse{fill:none;stroke:var(--al-vortex);stroke-width:1.4;stroke-dasharray:6 4;opacity:.8}
 .al-bolt{fill:var(--al-bolt);stroke:#fff;stroke-width:.6;stroke-linejoin:round;opacity:0;filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 3px var(--al-bolt-glow));animation:al-strike 3.8s linear infinite}
-.al-strike{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#fff;opacity:0;pointer-events:none;animation:al-strike-flash 3.8s linear infinite;animation-play-state:paused}
+.al-strike{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;z-index:1;border-radius:inherit;background:#fff;opacity:0;pointer-events:none;animation:al-strike-flash 3.8s linear infinite;animation-play-state:paused}
 .avatar-fire-shell[data-moving=true] .al-strike{animation-play-state:running}
 @keyframes al-drift{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
 @keyframes al-rain{0%{transform:translateY(-3px);opacity:0}15%{opacity:.9}100%{transform:translateY(14px);opacity:0}}
