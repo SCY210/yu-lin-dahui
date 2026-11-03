@@ -22,8 +22,9 @@ const players=16;
 /** Every enabled member with an account, as on the real signup, and no competition yet. Without a club (tests), a
  * fictional roster of sixteen. */
 export function createCompetitionSimulation(now:number,club:State|undefined):CompetitionSimulationDocument{
- const base=createSimulation(now,club,club?club.players.length:players),s=base.state;
- s.settings.name='比赛模拟';s.events=[];s.bookings=[];s.registrations=[];delete s.settings.pairingOdds;
+ // Singles needs only two members; the placeholder activity and its courts are cleared right away.
+ const base=createSimulation(now,club,club?club.players.length:players,1,'singles'),s=base.state;
+ s.settings.name='比赛模拟';s.events=[];s.bookings=[];s.registrations=[];delete s.settings.pairingOdds;delete base.size;
  return {...base,kind:'competition',live:{}};
 }
 export function competitionView(doc:CompetitionSimulationDocument,now:number):CompetitionSimulationView{return {...simulationView(doc,now),live:doc.live}}

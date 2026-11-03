@@ -5,18 +5,23 @@ import type {ClubData} from './contracts/club';
 import {pendingSchedulingIds,schedulingMode} from './domain/scheduling';
 import {realmSnapshot,realmPolicy} from './domain/realm-rating';
 import type {PairingOdds} from './domain/pairing-odds';
+import {z} from 'zod';
+import {defaultSimulationSize,simulationLimits,type SimulationSize} from './simulation-size';
 export const simulationKey='admin-simulation-v1';
 /** sources: the real member behind each sandbox player, so production pairing odds can be carried over. */
-export type SimulationDocument={version:1|2;revision:number;state:State;requests:string[];sources?:Record<string,string>};
-export type SimulationView={revision:number;data:ClubData};
+const sizeInput=z.object({players:z.coerce.number().int().min(simulationLimits.players.min).max(simulationLimits.players.max),courts:z.coerce.number().int().min(simulationLimits.courts.min).max(simulationLimits.courts.max),format:z.enum(['doubles','singles'])}).partial();
+/** sources: the real member behind each sandbox player, so production pairing odds can be carried over. */
+export type SimulationDocument={version:1|2;revision:number;state:State;requests:string[];sources?:Record<string,string>;size?:SimulationSize};
+export type SimulationView={revision:number;data:ClubData;size?:SimulationSize};
 const commands=new Set(['eventRanking','pointsParticipation','noShow','noShowArrived','pointsStart','pointsLate','pointsPresence','pointsReplace','liveStart','livePause','livePreference','liveReady','liveLineup','liveSwap','liveNext','schedulingMode','pointsNext','planPoints','publishPoints','pointsModeVote','pointsModeVoting','pointsModeSelect','generate','publish','start','swap','moveCourt','cancelRound','score','void','matchScoring','playSettings','handicap']);
 /** Copy member display/strength snapshots into a closed graph with sandbox-only IDs. */
-/** limit: how many members to copy (twelve for an activity, sixteen for a competition). */
-export function createSimulation(now:number,club?:State,limit=12):SimulationDocument{
+/** limit: how many members to copy (every member for a competition); courts and format shape the activity. */
+export function createSimulation(now:number,club?:State,limit=defaultSimulationSize.players,courts=defaultSimulationSize.courts,format:SimulationSize['format']=defaultSimulationSize.format):SimulationDocument{
  const s=emptyState(),start=Math.floor(now/1800000)*1800000,end=start+6*3600000;
  s.settings.initialized=true;s.settings.name='排场模拟活动';s.settings.ownerAccountId='sim-admin';
- const memberIds=new Set(club?.accounts.map(a=>a.playerId)),members=club?.players.filter(p=>p.enabled&&memberIds.has(p.id)).slice(0,limit),ratings=club?realmSnapshot(club,now):null;
+ const memberIds=new Set(club?.accounts.map(a=>a.playerId)),roster=club?.players.filter(p=>p.enabled&&memberIds.has(p.id)),members=roster?.slice(0,limit),ratings=club?realmSnapshot(club,now):null;
  if(members&&!members.length)fail('暂无可用于模拟的真实球友');
+ if(members&&members.length<(format==='singles'?2:4))fail(`可用于模拟的真实球友只有 ${members.length} 位，不够打${format==='singles'?'单打':'双打'}`);
  if(club)s.settings.rules=structuredClone(club.settings.rules);
  for(let i=0;i<(members?.length??limit);i++){
   const id='sim-player-'+(i+1),account=i?'sim-account-'+(i+1):'sim-admin';
@@ -27,10 +32,10 @@ export function createSimulation(now:number,club?:State,limit=12):SimulationDocu
   // Rating-only chunks seed that ledger without copying historical games or season points.
   let remaining=rating-realmPolicy.start,part=0;while(remaining){const delta=Math.sign(remaining)*Math.min(300,Math.abs(remaining));s.audits.push({id:'sim-rating-'+(i+1)+'-'+part++,actor:'sim-admin',action:'grantPoints',reason:'模拟修为快照',at:now-1,changes:{playerId:id,period:month(now),points:0,rating:delta,reason:'模拟修为快照'}});remaining-=delta}
  }
- const e={id:'sim-event',creatorId:'sim-admin',title:'模拟活动 · '+s.players.length+'人 / 两场地',matchFormat:'doubles' as const,schedulingMode:'live' as const,start,end,venue:'模拟球馆',address:'',capacity:s.players.length,signupDeadline:end,cancelDeadline:start-86400000,note:'管理员专用排场模拟，使用真实球友资料快照。',status:'open' as const,attendanceMode:'automatic' as const,courtMode:'interval' as const,ballMode:'interval' as const};
- s.events=[e];s.bookings=[1,2].map(i=>({id:'sim-court-'+i,eventId:e.id,name:'模拟 '+i+' 号场',start,end,pricing:'hourly',cents:690,signupCapacity:s.players.length}));
+ const e={id:'sim-event',creatorId:'sim-admin',title:'模拟活动 · '+s.players.length+'人 / '+courts+'片场地'+(format==='singles'?' · 单打':''),matchFormat:format,schedulingMode:'live' as const,start,end,venue:'模拟球馆',address:'',capacity:s.players.length,signupDeadline:end,cancelDeadline:start-86400000,note:'管理员专用排场模拟，使用真实球友资料快照。',status:'open' as const,attendanceMode:'automatic' as const,courtMode:'interval' as const,ballMode:'interval' as const};
+ s.events=[e];s.bookings=Array.from({length:courts},(_,k)=>k+1).map(i=>({id:'sim-court-'+i,eventId:e.id,name:'模拟 '+i+' 号场',start,end,pricing:'hourly',cents:690,signupCapacity:s.players.length}));
  s.registrations=s.players.map((p,i)=>({id:'sim-registration-'+(i+1),eventId:e.id,playerId:p.id,sequence:i+1,status:'confirmed',arrival:start,departure:end,registeredAt:start,note:'模拟接龙',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));
- const doc:SimulationDocument={version:2,revision:0,state:s,requests:[],...(members?{sources:Object.fromEntries(members.map((p,i)=>['sim-player-'+(i+1),p.id]))}:{})};
+ const doc:SimulationDocument={version:2,revision:0,state:s,requests:[],size:{players:limit,courts,format,available:roster?.length??s.players.length},...(members?{sources:Object.fromEntries(members.map((p,i)=>['sim-player-'+(i+1),p.id]))}:{})};
  if(club)syncPairingOdds(doc,club,now);
  return doc;
 }
@@ -51,18 +56,27 @@ export function simulationView(doc:SimulationDocument,now:number):SimulationView
  const a=doc.state.accounts[0],data=projectClubState(doc.state,a,month(now),new Date(now).getUTCFullYear(),now);
  // Testers open the sandbox too: they never receive pairing odds.
  const settings:typeof data.settings&{pairingOdds?:unknown}={...data.settings};delete settings.pairingOdds;
- return {revision:doc.revision,data:{...data,settings,accountNotice:{required:false,currentVersion:'local-preview',contentHash:'',acceptedAt:null,acceptedVersion:null,currentConfirmed:false,receipts:[]},loginAccounts:[],auth:{method:'password',username:null,passwordEnabled:false,isOwner:true,canChangeUsername:false,usernameChangedAt:null}}};
+ return {revision:doc.revision,size:simulationSize(doc),data:{...data,settings,accountNotice:{required:false,currentVersion:'local-preview',contentHash:'',acceptedAt:null,acceptedVersion:null,currentConfirmed:false,receipts:[]},loginAccounts:[],auth:{method:'password',username:null,passwordEnabled:false,isOwner:true,canChangeUsername:false,usernameChangedAt:null}}};
+}
+/** The size a document was made with; documents from before sizes were chosen used twelve players on two courts. */
+export function simulationSize(doc:SimulationDocument):SimulationSize{return doc.size??{...defaultSimulationSize,available:doc.state.players.length}}
+/** A fresh sandbox; the reset form may change any of players, courts and format, the rest keep their current value. */
+export function resetSimulation(doc:SimulationDocument,payload:unknown,now:number,club?:State){
+ const parsed=sizeInput.safeParse(payload&&typeof payload==='object'?Object.fromEntries(['players','courts','format'].flatMap(k=>k in payload?[[k,(payload as Record<string,unknown>)[k]]]:[])):{});
+ if(!parsed.success)fail(`模拟人数须为 ${simulationLimits.players.min}–${simulationLimits.players.max} 人，场地 ${simulationLimits.courts.min}–${simulationLimits.courts.max} 片`);
+ const size={...simulationSize(doc),...parsed.data};
+ return createSimulation(now,club??doc.state,size.players,size.courts,size.format);
 }
 /** club: the full club, read only for a reset. odds: the club settings and the activities that have pairing odds. */
 export async function changeSimulation(doc:SimulationDocument,action:string,payload:unknown,requestId:string,now:number,club?:State,odds?:Pick<State,'events'|'settings'>){
  if(action!=='reset'&&action!=='preplan'&&!commands.has(action))fail('模拟空间只允许排场、到场确认和比分操作');
- const next=action==='reset'?createSimulation(now,club??doc.state):structuredClone(doc),s=next.state,a=s.accounts[0],e=s.events[0];
+ const next=action==='reset'?resetSimulation(doc,payload,now,club):structuredClone(doc),s=next.state,a=s.accounts[0],e=s.events[0];
  if(action!=='reset'&&(odds??club))syncPairingOdds(next,(odds??club)!,now);
  if(action!=='reset'){
   if(now>=e.end)fail('模拟活动已过期，请重置模拟活动后再测试');
   if(s.matches.length>500)fail('模拟记录过多，请重置模拟活动');
   if(action==='preplan'){
-   if(s.matches.some(m=>m.status==='playing'))fail('请先录完当前两场比分，或重置模拟活动，再预排赛程');
+   if(s.matches.some(m=>m.status==='playing'))fail('请先录完正在进行的比赛，或重置模拟活动，再预排赛程');
    const mode=schedulingMode(s,e);if(mode!=='planned')await apply(s,a,'schedulingMode',{eventId:e.id,mode:'planned',expectedMode:mode,expectedPendingIds:pendingSchedulingIds(s,e.id)},now);
    await apply(s,a,'planPoints',{eventId:e.id,at:now,pointsMinutes:90,roundMinutes:15,seed:1,pairing:e.pointsChoice?.selectedMode??'rotate'},now);
   }else await apply(s,a,action,payload,now);
