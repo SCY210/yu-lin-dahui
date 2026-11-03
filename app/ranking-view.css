@@ -102,3 +102,17 @@
 .wuxia-theme .rv-locate-me:hover{background:#eee0bc}
 .wuxia-theme .rv-locate-me:focus-visible,.wuxia-theme .leaderboard-row.is-me:focus{outline-color:#9b712c}
 @media(max-width:600px){.rv-my-ranking{padding:14px}.rv-my-ranking-info{flex-basis:100%}.rv-locate-me{width:100%}}
+
+/* Compact rows on phones: name and realm on one line, the points on the right of the row instead of a line of
+   their own, about a third of the former height (docs/COMPACT_MOBILE_LAYOUT.md). */
+@media(max-width:600px){
+ .ranking-card .leaderboard-row{grid-template-columns:21px 38px minmax(0,1fr) auto;align-items:center;padding:8px 6px;column-gap:4px}
+ .ranking-card .ranking-person{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;min-width:0}
+ .ranking-card .ranking-person>small,.ranking-card .ranking-person>.rv-progress{flex-basis:100%}
+ .ranking-card .ranking-person>small{font-size:12px;line-height:1.4}
+ .ranking-card .rv-realm-meta{margin:0}
+ .ranking-card .ranking-result{grid-column:4;display:grid;justify-items:end;gap:0;text-align:right}
+ .ranking-card .ranking-result>strong{font-size:20px;line-height:1.1}
+ .ranking-card .ranking-result small{font-size:11px;line-height:1.35}
+ .ranking-card .rv-breakdown-toggle{min-height:32px;font-size:12px;padding:0 2px}
+}

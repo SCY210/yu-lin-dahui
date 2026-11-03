@@ -3,6 +3,7 @@ import {ArrowRight,Copy} from 'lucide-react';
 import {toast} from 'sonner';
 import {euro} from './form-fields';
 import {transferPaid,type Advance,type Transfer} from '../lib/domain/fee-transfers';
+import FoldList from './fold-list';
 import './fee-transfers.css';
 
 type Settlement={id:string;eventId:string;version:number;advances?:Advance[];transfers?:Transfer[];collector?:string};
@@ -28,7 +29,7 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
   <p className="hint">{settlement.collector?`大家把分摊转给收款人 ${name(settlement.collector)}${collectorPhone?'（'+collectorPhone+'）':''}，${name(settlement.collector)} 再把垫付的钱转给约场、出球的人。`:'约场、出球的人已经垫付，按下面的转账结清，转账笔数已尽量少。'}垫付人自己的分摊已从垫付里扣除。</p>
   {(settlement.advances?.length??0)>0&&<p className="fee-advances">已垫付：{settlement.advances!.map(a=><span key={a.playerId}>{a.playerId===me?'我':name(a.playerId)} {euro(a.paid??a.cents)}</span>)}</p>}
   {(()=>{const extra=(settlement.advances??[]).reduce((n,a)=>n+a.cents-(a.paid??a.cents),0);return extra?<p className="hint">大家的分摊按人取整到分，合计{extra>0?'多收':'少收'} {euro(Math.abs(extra))}，已按垫付金额{extra>0?'摊给':'由'}垫付人{extra>0?'':'分担'}。</p>:null})()}
-  {mine.length>0&&<div className="fee-transfer-list" aria-label="和我有关的转账">{mine.map(row)}</div>}
+  {mine.length>0&&<div className="fee-transfer-list" aria-label="和我有关的转账"><FoldList items={[...mine].sort((a,b)=>Number(done(a))-Number(done(b))).map(row)} shown={6} unit="笔转账"/></div>}
   {!mine.length&&<p className="hint">你没有需要转出或收取的钱。</p>}
   {others.length>0&&<details className="fee-transfer-others"><summary>其他人的转账 · {others.length} 笔 · 已转 {others.filter(done).length} 笔</summary><div className="fee-transfer-list">{others.map(row)}</div></details>}
  </section>;

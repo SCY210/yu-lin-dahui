@@ -1,24 +1,41 @@
-# Compact mobile sections
+# 手机紧凑布局
 
-Primary actions and short summaries stay visible. Secondary lists and explanations use explicit native disclosures rather than hidden CSS content or smaller typography.
+主要操作和简短摘要保持可见。次要列表和说明用明确的原生折叠项收起，而不是用 CSS 隐藏内容或缩小字号。
 
-| View | Initially visible | Open on demand |
+| 页面 | 默认可见 | 按需展开 |
 | --- | --- | --- |
-| Court signup | Court/time, capacity, signup action, first six profile avatar links | Formal and waiting lists, per-person changes; pending cancellation requests initially expand the roster |
-| Live play | Current matches and score controls, own rest preference | Other players, completed matches and partner setup |
-| Fees | Confirmation state, own amount, confirmation/notification controls and recipient in one card | Complete per-person split, cost summary/rules, expense editing and exemptions |
-| Player profile | Identity, realm, short motto preview and permitted edit controls | Personal information/style, equipment/photos, statistics and achievements |
-| My | Profile/realm, achievement entry, newest personal split and settings entry | Achievement collection and earlier confirmed activity splits |
-| Social play | Open post-event MVP voting; active arena/KOC information | Ordinary play setup and pre-event MVP preview |
+| 场地接龙 | 场地和时间、名额、接龙按钮、前六个球友头像链接 | 正式和候补名单、个人修改；有待处理的取消申请时名单默认展开 |
+| 实时排场 | 当前比赛和录分按钮、自己的轮休意愿 | 其他球友、已完成的比赛和搭档设置 |
+| 预排赛程 | 进行中的轮次；没有进行中的轮次时是下一轮 | 下一轮（有轮次进行中时）、已结束的轮次和更后面的轮次；3 轮及以上合并成"已结束 N 轮"和"后面还有 N 轮"两项 |
+| 费用 | 确认状态、自己的金额、确认和通知按钮、收款人，集中在一张卡片里；和自己有关的转账先显示 6 笔，未转的在前 | 每人完整分摊、费用合计与规则、费用编辑和豁免、其余转账 |
+| 首页费用卡片 | 每张卡片的前两个活动；每个活动一行人数和金额，付款人以小标签显示前 6 位 | 其余活动和付款人 |
+| 排行榜 | 每位球友一行：名次、头像、名字和境界、计分局数，积分和胜率在右侧 | 积分明细 |
+| 球员主页 | 身份、境界、口号摘要和允许的编辑按钮 | 个人资料和风格、装备和照片、统计和成就 |
+| 我的 | 头像和境界、成就入口、最新一份个人分摊、设置入口 | 成就簿和更早的已确认分摊 |
+| 玩法 | 进行中的赛后 MVP 投票、擂台和王者局信息 | 普通玩法设置和赛前 MVP 预览 |
 
-Amounts, financial confirmation, score permissions, account restrictions, profile perspective and navigation are unchanged. Profile avatar/name links still use the existing navigation history. No data migration is required. Achievement content loads only on first expansion and remains mounted on later collapse so its filters are retained. Other native disclosure sections preserve the existing lazy-mount behavior.
+金额、费用确认、录分权限、账号限制、个人主页视角和导航都不变。球员头像和名字链接仍使用原有的导航历史。不需要数据迁移。其他原生折叠项保留原有的延迟挂载行为。
 
-Validation: `tests/compact-sections-ui.mjs` exercises the actual React components and verifies collapse/expand, profile links, registration editing, own rest changes, fee notification payloads, complete split access, and latest-confirmed/history selection. Existing profile, score, signup and API suites remain required. The checks use isolated fictional fixtures and do not write to production. CSS retains theme variables, readable text and touch targets; browser/device rendering must be reported separately from component tests.
+## 减少下滑（2026 年 11 月）
 
-## Club header
+用一个虚构俱乐部（22 位球友、四场已结束的积分赛、一场进行中的积分赛和一场即将开始的活动）在 390 px 宽度下实测页面高度，按一屏 844 px 计：
 
-Inside the club the header is one compact block, so content starts high on a phone:
+| 页面 | 之前 | 之后 |
+| --- | --- | --- |
+| 首页（收款人视角，四场活动未收齐） | 6.9 屏 | 3.1 屏 |
+| 排行榜（22 人） | 6.4 屏 | 3.9 屏 |
+| 分组 / 比赛（12 轮预排、第 1 轮进行中） | 5.8 屏 | 3.6 屏 |
+| 费用（收款人，17 笔转账） | 4.6 屏 | 3.8 屏，折叠后更短 |
+| 活动接龙（创建者视角） | 3.5 屏 | 2.8 屏 |
 
-- The theme picker is an icon button in the header icon row, next to the treasure and reminder icons. The separate theme toolbar row above the page appears only on pages outside the club, such as sign-in.
-- On phones, the three icons are 36 px boxes and the reminder shows only its bell. Its text stays available to screen readers, and the unread count sits on the corner.
-- The page gradient and texture are painted on the root element, and the body is transparent. A separate body background let a plain strip of the root colour show at the top: a collapsed top margin exposed it, and it also showed under the iOS status bar.
+主要来源：首页的"等你收款"和"提醒 3 次仍未付款"把同一批人逐行各列一遍，还把进行中的比赛挤到最下面；排行榜每人约 186 px；赛程默认同时展开当前轮和下一轮，而且十几个收起的轮次各占一行；场地时间占用在每片场地下重复整份名单；每笔转账占两行。
+
+验证：`tests/compact-sections-ui.mjs` 使用真实的 React 组件，检查折叠和展开、个人主页链接、报名修改、自己的轮休修改、费用通知内容、完整分摊入口，以及最新确认版本和历史版本的选择。原有的个人主页、录分、接龙和接口测试仍然必须通过。这些检查使用隔离的虚构数据，不写入生产环境。CSS 保留主题变量、可读的文字和触控尺寸；浏览器和真机渲染结果要与组件测试分开报告。
+
+## 俱乐部顶栏
+
+进入俱乐部后，顶栏是一块紧凑的区域，让内容在手机上从更高的位置开始：
+
+- 主题选择器是顶栏图标行里的一个图标按钮，挨着宝阁和提醒图标。页面上方单独的主题工具栏只出现在俱乐部之外的页面，例如登录页。
+- 手机上三个图标是 36 px 的方块，提醒只显示铃铛。它的文字仍然提供给读屏软件，未读数显示在角上。
+- 页面渐变和纹理画在根元素上，body 是透明的。以前 body 单独有背景时，顶部会露出一条纯色的根元素颜色：一是被折叠的上外边距露出来，二是在 iOS 状态栏下面也会露出来。

@@ -3,6 +3,7 @@ import {Wallet,Copy,Check} from 'lucide-react';
 import {toast} from 'sonner';
 import {euro} from './form-fields';
 import {openTransfersFor,unpaidFeesFor,type FeePayment,type FeeSplit} from '../lib/client/my-fees';
+import FoldList from './fold-list';
 import './fee-status.css';
 
 type Bill={eventId:string;settlementId:string;playerId:string};
@@ -25,21 +26,21 @@ export default function HomeUnpaid({settlements,payments,players,me,events,onOpe
  return <section className="card home-unpaid" role="status" aria-live="polite">
   <div className="home-unpaid-title"><Wallet size={20} aria-hidden="true"/><strong>有 {groups.length+transferGroups.length} 场活动还没付款</strong></div>
   <p className="hint">{transfers.length?'转账后点“标记已转”（或“标记已付款”），提示就会消失。':'转账后点“标记已付款”，提示就会消失。'}</p>
-  <div className="home-unpaid-list">{groups.map(({eventId,bills})=>{const e=byId.get(eventId),payee=e?.feeRecipient,total=bills.reduce((n,b)=>n+b.total,0);return <div className="home-unpaid-item" key={eventId}>
+  <div className="home-unpaid-list"><FoldList items={[...groups.map(({eventId,bills})=>{const e=byId.get(eventId),payee=e?.feeRecipient,total=bills.reduce((n,b)=>n+b.total,0);return <div className="home-unpaid-item" key={eventId}>
    <button type="button" className="home-unpaid-row" onClick={()=>onOpen(eventId)}>
-    <span><strong>{e?.title}</strong>{bills.length>1?bills.map(b=><small key={b.playerId}>{b.friend?'代 '+name(b.playerId)+' 付':'自己'} · {euro(b.total)}</small>):bills[0].friend&&<small>代 {name(bills[0].playerId)} 付</small>}</span><b>{euro(total)}</b><span aria-hidden="true">去费用页 ›</span>
+    <span><strong>{e?.title}</strong>{bills.length>1?<span className="home-owed-names">{bills.map(b=><span key={b.playerId}>{b.friend?'代 '+name(b.playerId)+' 付':'自己'} · {euro(b.total)}</span>)}</span>:bills[0].friend&&<small>代 {name(bills[0].playerId)} 付</small>}</span><b>{euro(total)}</b><span aria-hidden="true">去费用页 ›</span>
    </button>
    {(payee||onMarkPaid)&&<div className="home-unpaid-actions">
     {payee&&<span className="home-unpaid-payee">转账给 <strong>{payee.name}</strong> · {payee.phone}</span>}
     {payee&&<button type="button" className="ghost" onClick={()=>void copy(payee.phone)}><Copy size={15} aria-hidden="true"/> 复制电话号码</button>}
     {onMarkPaid&&<button type="button" className="primary" disabled={busy} onClick={()=>onMarkPaid(bills.map(({eventId,settlementId,playerId})=>({eventId,settlementId,playerId})))}><Check size={15} aria-hidden="true"/> {bills.length>1?'全部标记已付款':'标记已付款'}</button>}
    </div>}
-  </div>})}
-  {transferGroups.map(({eventId,list})=>{const e=byId.get(eventId),total=list.reduce((n,t)=>n+t.cents,0);return <div className="home-unpaid-item" key={'transfers:'+eventId}>
+  </div>}),
+  ...transferGroups.map(({eventId,list})=>{const e=byId.get(eventId),total=list.reduce((n,t)=>n+t.cents,0);return <div className="home-unpaid-item" key={'transfers:'+eventId}>
    <button type="button" className="home-unpaid-row" onClick={()=>onOpen(eventId)}>
-    <span><strong>{e?.title}</strong>{list.map(t=><small key={t.to}>转给 {name(t.to)} · {euro(t.cents)}</small>)}</span><b>{euro(total)}</b><span aria-hidden="true">去费用页 ›</span>
+    <span><strong>{e?.title}</strong><span className="home-owed-names">{list.map(t=><span key={t.to}>转给 {name(t.to)} · {euro(t.cents)}</span>)}</span></span><b>{euro(total)}</b><span aria-hidden="true">去费用页 ›</span>
    </button>
    {onMarkTransfers&&<div className="home-unpaid-actions"><button type="button" className="primary" disabled={busy} onClick={()=>onMarkTransfers(list.map(({eventId,settlementId,from,to})=>({eventId,settlementId,from,to})))}><Check size={15} aria-hidden="true"/> {list.length>1?'全部标记已转':'标记已转'}</button></div>}
-  </div>})}</div>
+  </div>})]}/></div>
  </section>;
 }

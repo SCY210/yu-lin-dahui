@@ -1,11 +1,11 @@
-# Court signup coverage
+# 场地接龙覆盖情况
 
-Only the activity creator sees the court-coverage section on the activity signup page. The server derives `canViewCourtOccupancy` for each event from its stored creator and the authenticated account; an administrator or club owner who did not create that activity gets no override. Legacy activities with no creator do not display it. Normal signup lists and signup permissions are unchanged.
+只有活动创建者能在活动接龙页看到场地覆盖情况。服务器根据存储的创建者和已登录账号，为每个活动推导 `canViewCourtOccupancy`；不是该活动创建者的管理员或群主没有例外。没有创建者的旧活动不显示它。普通的接龙名单和报名权限不变。
 
-The section includes a timeline for each booked court. It shows confirmed signup counts, empty intervals and their duration, and whether each interval has enough players for singles (two) or doubles (four). Practice requires one participant for the coverage display. Selecting an interval lists its players. Empty time is summed separately for each court.
+这一节为每片已预约的场地画一条时间轴，显示已确认的接龙人数、空档及其时长，以及每个时段的人数够不够打单打（两人）或双打（四人）。练球活动只要有一人参加就算覆盖。点一个时段会列出这个时段的球友。为了少占屏幕，默认只为有空档的场地显示第一个空档；没有空档的场地不默认列出名单，点时间条才显示，所以名单不会在每片场地下重复一遍。空档时长按每片场地分别累计。
 
-This is planned signup coverage, not evidence of matches played, actual attendance or a financial settlement. Waitlisted and cancelled court signups do not fill gaps. Registration and waitlist-promotion times are respected. Court-specific signups stay on their court; legacy activity-wide signups cover overlapping court bookings. The display reuses `registrationSpans`, handles adjacent intervals without false gaps, and counts a player only once when legacy rows overlap.
+这是计划中的接龙覆盖情况，不代表实际打过的比赛、实际到场或费用结算。候补和已取消的场地接龙不填补空档。会考虑报名时间和候补转正时间。按场地的接龙只算在自己的场地上；旧的按活动接龙覆盖所有重叠的场地预约。显示复用 `registrationSpans`，相邻时段不会被误判为空档，旧数据重叠时同一球员只算一次。
 
-The calculation runs in the client using already authorized activity data. It adds no server queries, persistent records, clock-driven API boundaries or writes. Changes to signups update the diagram through normal activity refresh. All themes use the same component and theme variables.
+计算在客户端用已授权的活动数据完成，不增加服务器查询、持久记录、时钟驱动的接口边界或写入。接龙变化时，图表随正常的活动刷新更新。所有主题使用同一个组件和主题变量。
 
-`tests/court-occupancy.test.ts` covers empty periods, fee-preview boundary agreement for current signups, exclusions, promotions, duplicate-player intervals, court isolation and legacy data. `tests/court-occupancy-ui.mjs` checks integration with the actual signup page, interval selection and updated registration props.
+`tests/court-occupancy.test.ts` 覆盖空档、与当前接龙的费用预估边界一致、排除项、候补转正、同一球员的重复时段、场地隔离和旧数据。`tests/court-occupancy-ui.mjs` 检查它在真实接龙页上的集成、时段选择和接龙更新后的属性。
