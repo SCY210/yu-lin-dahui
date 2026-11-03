@@ -1,0 +1,11 @@
+/* 战况小结 on an ended activity (docs/ACTIVITY_RECAP.md). */
+.event-recap{display:grid;gap:8px;padding:12px 14px}
+.event-recap-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.event-recap-head h3{margin:0;font-size:17px}
+.event-recap-head span{font-size:12px;color:var(--muted-foreground)}
+.event-recap dl{display:grid;gap:6px;margin:0}
+.event-recap dl>div{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:8px;align-items:start}
+.event-recap dt{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted-foreground)}
+.event-recap dt svg{flex:none;color:var(--primary)}
+.event-recap dd{margin:0;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.event-recap-mine{margin:0;padding-top:8px;border-top:1px solid var(--border);font-size:13px}
