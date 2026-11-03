@@ -73,3 +73,10 @@
 .event-scheduling.is-ended .round-tab.is-playing small{color:var(--muted-foreground)}
 .event-scheduling.is-ended .round-tab.is-playing small::before{display:none}
 @media(prefers-reduced-motion:reduce){.round-tab.is-playing small::before{animation:none}}
+/* When live scheduling serves better (lib/domain/scheduling.ts), and a note when this activity's numbers match. */
+.scheduling-advice p.scheduling-advice-live{margin-top:6px;color:var(--foreground);font-weight:600}
+.scheduling-advice ul{margin:2px 0 0;padding-left:16px;list-style:disc;font-size:12px;line-height:1.5;color:var(--muted-foreground)}
+.scheduling-advice p.scheduling-advice-fit{margin-top:6px;padding:4px 8px;border-radius:8px;background:#fdf1ef;color:#a3291d;font-weight:600}
+.scheduling-advice ul>li{list-style:disc}
+.scheduling-advice p.scheduling-advice-fit{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.scheduling-advice p.scheduling-advice-fit>button{min-height:36px;padding:4px 10px;font-size:12px}
