@@ -3,8 +3,10 @@ import {isPractice} from './match-format';
 import {canEnableEventRanking,canManageRankedEvent,eventRankingEnabled} from './event-ranking';
 import {canRecoverEvent} from './event-privacy';
 
-export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Event,'creatorId'>){
- return account.role==='admin'||event.creatorId===account.id;
+/** The club owner and administrators manage every activity, its creator their own. `isOwner` comes with the projected
+ * `me`; server callers also pass authorizeEventAction, which lets the owner through. */
+export function canManageEvent(account:Pick<Account,'id'|'role'>&{isOwner?:boolean},event:Pick<Event,'creatorId'>){
+ return account.role==='admin'||account.isOwner===true||event.creatorId===account.id;
 }
 
 export function canScheduleEvent(account:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Event){return (canManageEvent(account,event)||!!account.isOwner)&&(!eventRankingEnabled(event)||canManageRankedEvent(account,event))}

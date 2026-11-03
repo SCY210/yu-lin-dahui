@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {markIgnoredUpdate,settlementFingerprint,settlementView} from '../lib/domain/settlement-state';
+import {canManageEvent} from '../lib/domain/permissions';
 import {emptyState,type Account,type Settlement,type State} from '../lib/domain/types';
 
 const now=Date.parse('2026-11-04T20:00:00Z'),hour=3600000;
@@ -51,4 +52,17 @@ test('忽略这次更新：只对这一次的预览有效，费用再变化或�
  await apply(s,owner,'feeUpdateIgnore',{eventId:'e',settlementId:'v2',fingerprint:settlementFingerprint(draft),reason:''},now);
  await apply(s,owner,'settleRevoke',{eventId:'e',settlementId:'v2',reason:''},now);assert.equal(s.events[0].feeUpdateIgnored,undefined);
  await assert.rejects(()=>apply(s,owner,'feeUpdateIgnore',{eventId:'e',settlementId:'v2',fingerprint:settlementFingerprint(draft),reason:''},now),/409/,'only the current confirmed version');
+});
+
+test('群主和管理员都能撤回和忽略，不必是活动创建者',async()=>{
+ for(const who of ['admin','owner'] as const){
+  const s=fixture(),actor:Account={id:'carol',email:'',role:who==='admin'?'admin':'member',playerId:'p2'};
+  s.accounts.push(actor);s.players.push({id:'p2',name:'carol',ownerId:'carol',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
+  if(who==='owner')s.settings.ownerAccountId='carol';
+  assert.ok(canManageEvent({...actor,isOwner:who==='owner'},s.events[0]),who+' sees the fee controls');
+  await apply(s,actor,'feeUpdateIgnore',{eventId:'e',settlementId:'v2',fingerprint:'0123456789abcdef',reason:''},now);
+  await apply(s,actor,'settleRevoke',{eventId:'e',settlementId:'v2',reason:''},now);
+  assert.equal(current(s)!.id,'v1',who);
+ }
+ assert.equal(canManageEvent(alice,{creatorId:'owner'}),false,'an ordinary member does not');
 });
