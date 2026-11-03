@@ -4,7 +4,7 @@ import {raw,load} from '../../../lib/store';
 import {emptyState,type State} from '../../../lib/domain/types';
 import {RequestError,readJsonBody} from '../../../lib/request-body';
 import {assertWriteRequest,releaseRejectedWriteBody,writeErrorResponse} from '../../../lib/write-security';
-import {simulationKey,createSimulation,changeSimulation,simulationView,type SimulationDocument} from '../../../lib/admin-simulation';
+import {simulationKey,createSimulation,changeSimulation,simulationView,simulationSize,type SimulationDocument} from '../../../lib/admin-simulation';
 import {competitionSimulationKey,createCompetitionSimulation,changeCompetitionSimulation,competitionView,type CompetitionSimulationDocument} from '../../../lib/competition-simulation';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -36,7 +36,9 @@ export async function POST(req:Request){
   if(p.action==='initialize'){
    const existing=await readDocument(p.kind);// The competition sandbox keeps its progress until reset; the activity sandbox renews once its activity is over.
    if(existing?.version===2&&(p.kind==='competition'||existing.state.events[0].end>Date.now()))return response(viewOf(existing,Date.now()));
-   const doc=p.kind==='competition'?createCompetitionSimulation(Date.now(),await load()):createSimulation(Date.now(),await load());
+   // A renewed activity sandbox keeps the size it was last reset to.
+   const size=existing?simulationSize(existing):undefined;
+   const doc=p.kind==='competition'?createCompetitionSimulation(Date.now(),await load()):createSimulation(Date.now(),await load(),size?.players,size?.courts,size?.format);
    if(existing){doc.revision=existing.revision+1;doc.state.revision=doc.revision;await raw().prepare(`UPDATE settings SET payload=? WHERE id=? AND json_extract(payload,'$.version') IN (1,2) AND json_extract(payload,'$.revision')=? AND EXISTS(SELECT 1 FROM accounts WHERE id=? AND ${accessSql})`).bind(JSON.stringify(doc),keyOf(p.kind),existing.revision,accountId).run()}
    else await raw().prepare(`INSERT INTO settings(id,payload) SELECT ?,? WHERE EXISTS(SELECT 1 FROM accounts WHERE id=? AND ${accessSql}) ON CONFLICT(id) DO NOTHING`).bind(keyOf(p.kind),JSON.stringify(doc),accountId).run();
    await simulationUser();const saved=await readDocument(p.kind);if(!saved)throw new Error('Simulation initialization failed');return response(viewOf(saved,Date.now()));

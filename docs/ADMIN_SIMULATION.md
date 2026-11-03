@@ -1,91 +1,61 @@
-# Administrator scheduling simulation
+# 管理员排场模拟
 
-Live doubles use the same rotation as production: everyone leaves after each game and the next four come from the queue (see [Live court rotation](LIVE_PLAY.md)). Scarce substitutes never cause an automatic two-win lockout. Saved legacy win-limit entries are ignored and omitted from normal responses. Four available players can continue, while voluntary rest and busy-player protections remain. Simulation changes never write the real club.
+实时双打和正式环境用同一套轮换：每局打完所有人都下场，下一局的四人从队列里来（见[实时排场](LIVE_PLAY.md)）。替补少时也不会因为连赢两局被自动锁定。保存过的旧连胜上限记录会被忽略，正常响应里也不返回。只剩四人可上场时可以继续打，主动轮休和正在比赛的保护照旧。模拟改动从不写入真实俱乐部。
 
-Rotating live matches share production's bounded partner-repetition cost: prefer new partners when strength is close, retain the balanced pairing for large differences, and preserve fixed-partner mode. No separate simulation-only pairing algorithm or win-limit is introduced.
+实时轮换的对局和正式环境一样有搭档重复的上限代价：实力相近时优先换新搭档，实力差距大时保留更平衡的分法，固定搭档模式也保持不变。模拟没有单独的排场算法，也没有连胜上限。
 
-Activities offers a small simulation button at the bottom of the page to the club owner, administrators and authorized member testers. The simulation page first asks which sandbox to open: an activity, or a competition (see Competition sandbox below). Every API request checks the authenticated account's stored role or independent tester capability; conditional writes check it again. Members without an explicit grant cannot access the sandbox. Testers also manage
-ranking and scheduling for their own real activities; see [Tester ranked activities](TESTER_RANKED_EVENTS.md). Their member role and other administrator restrictions remain unchanged.
+"活动"页底部有一个小的模拟按钮，群主、管理员和获授权的测试员可以看到。模拟页先问要打开哪种沙盒：活动，或比赛（见下面的比赛沙盒）。每个 API 请求都检查已登录账号存储的角色或单独的测试员权限，条件写入时会再检查一次。没有明确授权的成员不能进入沙盒。测试员也可以管理自己真实活动的积分赛和排场，见[测试员积分赛活动](TESTER_RANKED_EVENTS.md)；他们的成员角色和其他管理员限制不变。
 
-Initialization snapshots up to twelve enabled, account-backed club members in
-stored roster order, with two courts and confirmed simulated registrations.
-Proxy-only friends and disabled profiles are excluded. A smaller club uses its
-actual available roster without inventing additional players; an empty roster
-returns an error. The UI displays the actual participant count.
+## 人数、场地数与单双打
 
-Only names, avatar references, declared gender, current settled strength and club
-scoring rules are copied. No real account IDs, contact details, historical games,
-season points or private profile text are copied. Sandbox accounts, players and
-activity records have separate IDs. Existing authenticated avatar reads remain
-read-only. Strength is seeded with rating-only audit entries in the sandbox so
-normal rating replays preserve the starting snapshot after simulated scoring.
+模拟活动的大小不写死。重置模拟活动时，表单可以选：
 
-The dedicated settings row (admin-simulation-v1) now stores document version 2.
-Opening an old version-1 fictional fixture replaces only that test graph with a
-fresh member snapshot, using a version/revision conditional update. Concurrent
-initialization cannot overwrite a newer simulation. Reopening a non-expired version 2 preserves
-shared administrator progress. Reopening an expired simulation creates a fresh
-member snapshot with a conditional revision update. Reset clears test results and takes a fresh club
-snapshot. The activity lasts six hours; both courts use the current time window.
-One-click 90-minute preplanning and all three scheduling modes remain available.
+- **模拟人数**：2–64 人。按存储的名单顺序，从已启用、有账号的正式球友中依次取，最多取到现有人数，不会编造额外球友。
+- **场地数**：1–8 片，每片都覆盖整个活动时段。
+- **项目**：双打或单打。双打至少要 4 位正式球友，单打至少要 2 位，不够时拒绝重置并说明原因。
 
-The document also keeps, server side only, which real member each sandbox player was copied from (`sources`). Every write reads the club and carries the current pairing odds of the next real activity onto those players, so simulated lineups follow the same odds as production ([Pairing odds](PAIRING_ODDS.md)); the simulation view never includes them.
+表单从当前大小开始，只改动的项会变，其余保持不变。所选大小保存在模拟文档的 `size` 里（`lib/simulation-size.ts`），模拟活动过期后重新打开时沿用同样的大小。第一次初始化以及加入大小设置之前的旧文档，按 12 人、2 片场地、双打处理。活动标题会写出实际人数和场地数，例如"模拟活动 · 20人 / 4片场地"，单打会加上"· 单打"。人数上限显示的是建模拟时可用的正式球友数。
 
-The actual scheduling, score, absence, lateness and rotation commands run entirely
-inside this graph. They never write the club settings row, real accounts, players,
-activities, rankings, expenses, commit revision or notification queues. Ordinary
-club reads and exports do not include the simulation settings row. No schema
-migration is required. Profiles, fees, account management, uploads and real
-notifications remain unavailable in the sandbox.
+## 快照与保存
 
-Optimistic revisions and bounded request receipts prevent duplicate scoring and
-stale resets. Responses are not cached. Real score-reminder dialogs and notification
-prompts are suppressed. Account changes remount the view, and permission failures
-clear the displayed simulation. Tests use in-memory SQLite and synthetic member
-fixtures; they never connect to production data.
+初始化时，按上面的大小拍下正式球友的快照，所有人都是已确认的模拟接龙。只代报名的朋友和已停用的档案不算。俱乐部人数较少时，就用现有的可用名单；名单为空时返回错误。界面显示实际参加人数。
 
-## Current scheduler
+只复制姓名、头像引用、填写的性别、当前已结算的实力和俱乐部计分规则。不复制真实账号 ID、联系方式、历史比赛、赛季积分或私人档案文字。沙盒里的账号、球员和活动记录都有单独的 ID。现有的头像读取保持只读。实力通过沙盒里只调修为的审计记录写入，所以模拟录分后正常的修为重算会保留初始快照。
 
-The sandbox uses the current production domain commands, including per-court continuation through published rounds, overlapping in-progress rounds and planned edits without a time gate. Real club polling pauses while the simulation is open; the sandbox polls only its own protected endpoint. Regular score operations never reload the real club history. Initialization and reset read real members once to create fresh snapshots.
+专用设置行（admin-simulation-v1）现在保存第 2 版文档。打开旧的第 1 版虚构数据时，只把那份测试数据换成新的成员快照，用版本号和修订号做条件更新，并发初始化不会覆盖更新的模拟。重新打开未过期的第 2 版会保留管理员之间共享的进度；重新打开已过期的模拟会用条件修订更新建立新的成员快照。重置会清除测试结果并重新拍俱乐部快照。活动持续六小时，所有场地都使用当前时段。"一键预排90分钟"和三种排场方式都可以使用。
 
-## Tester access
+文档还在服务器端记下每位沙盒球员是从哪位真实成员复制来的（`sources`）。每次写入都会读取俱乐部，把下一个真实活动当前的临时排场概率带到这些球员身上，让模拟分组和正式环境用同样的概率（[临时排场概率](PAIRING_ODDS.md)）；模拟视图里从不包含这些概率。
 
-The owner may grant or revoke a member's independent `simulationTester` capability through the audited `simulationAccess` command. Testers retain the `member` role and all existing real-club data visibility, event permissions and account restrictions. They gain no real points, rating, account, role, export or group-management authority. No display name or client-supplied role grants access.
+真正的排场、比分、缺席、迟到和轮换命令全部在这份数据里运行。它们从不写入俱乐部设置行、真实账号、球员、活动、榜单、费用、提交修订号或通知队列。普通的俱乐部读取和导出不包含模拟设置行。不需要数据库迁移。沙盒里不能使用档案、费用、账号管理、上传和真实通知。
 
-The sandbox entry and route use the server-projected capability. Every sandbox read, initialization and mutation checks the stored account, and the conditional write rechecks admin/tester authorization. Revocation invalidates reads and writes immediately; ordinary member projection never exposes administrator account lists or audit history. Administrators and authorized testers share the same isolated sandbox with revision conflict protection. Specific grants are production account data and are never committed as public name or account-ID lists.
+乐观修订号和有上限的请求回执防止重复录分和过时的重置。响应不缓存。真实的录分提醒弹窗和通知提示在模拟里不显示。切换账号会重新挂载视图，权限失败会清空正在显示的模拟。测试使用内存 SQLite 和合成的成员数据，从不连接生产数据。
 
-## Competition sandbox
+## 当前排场器
 
-The competition sandbox debugs a competition end to end without opening a real one (`lib/competition-simulation.ts`).
-It follows the real flow and runs it on the real pages:
+沙盒使用正式环境当前的领域命令，包括按场推进已发布的轮次、同时进行中的轮次重叠，以及不受时间限制的预排编辑。打开模拟时暂停真实俱乐部的轮询，沙盒只轮询自己受保护的接口。普通的录分操作从不重新加载真实俱乐部历史。初始化和重置只读取一次真实成员来生成新快照。
 
-1. **Create.** The sandbox starts with a snapshot of every enabled member with an account, the same members who can
-   sign up for a real competition, taken with the same rules as the activity
-   sandbox, and no competition. The organiser creates it with the real create form: category, time, venue and courts.
-2. **Sign up.** Members sign up through the same competition signup as the real page. The sandbox can sign up or cancel any
-   member, or sign everyone up at once.
-3. **Run.** The real activity page takes over: signups, the competition tab (settings, draw, fixtures, referees,
-   referee scoring, knockout, results and archive) and the fee tab (entry fee confirmation and payment marks).
+## 测试员权限
 
-A competition is created for tomorrow, as in the real form. "Move to the start" shifts the whole competition, with its
-courts and signups, so it starts now. Only one competition exists at a time; reset clears it and refreshes the member
-snapshots.
+群主可以通过有审计记录的 `simulationAccess` 命令，授予或撤销某位成员单独的 `simulationTester` 权限。测试员保留 `member` 角色，以及原有的真实俱乐部数据可见范围、活动权限和账号限制，不会因此获得真实积分、修为、账号、角色、导出或群组管理的权力。显示名或客户端提交的角色都不能授予访问权。
 
-It is a separate settings row (`admin-simulation-competition-v1`), behind the same access checks, revisions and request
-receipts as the activity sandbox. Requests name it with `kind: 'competition'` (`GET /api/simulation?kind=competition`).
-Its document keeps its progress until it is reset. Only competition creation, signups, fees and the activity commands
-run inside it, never club-wide commands.
+沙盒入口和接口都使用服务器投影的权限。每次沙盒读取、初始化和修改都检查存储的账号，条件写入会再检查管理员或测试员授权。撤销立即让读写失效；普通成员的投影从不暴露管理员账号列表或审计历史。管理员和获授权的测试员共用同一个隔离沙盒，有修订号冲突保护。具体的授权是生产账号数据，从不以公开的名字或账号 ID 列表形式提交到仓库。
 
-Fixtures go on courts exactly as in a real competition: the system arranges them after the draw, the knockout and
-every result, and the page's own arrangement button starts any that are ready. One shortcut makes the flow quick:
+## 比赛沙盒
 
-- **Finish matches in play** records a random result for every match in play. The result follows the rule of that
-  match's stage, and the stronger side by realm score wins more often. A match the referee finished live keeps the
-  referee's score.
+比赛沙盒用来完整调试一场比赛，而不必开一场真实比赛（`lib/competition-simulation.ts`）。它走真实流程，在真实页面上运行：
 
-Live referee scoring keeps its point log inside the sandbox document instead of the `live_scores` table. The referee
-page and the board use the same components through the scheduling context (`ctx.live`). Nothing reaches the real
-club, live scores, rankings, fees or notifications.
+1. **创建。** 沙盒一开始就拍下所有已启用、有账号的成员快照，也就是能报名真实比赛的那些人，规则和活动沙盒相同；此时还没有比赛。组织者用真实的创建表单建比赛：项目、时间、球馆和场地数。所以比赛的人数由报名决定，场地数由创建表单决定，都不写死。
+2. **报名。** 成员通过和真实页面相同的比赛报名入口报名。沙盒可以替任意成员报名或取消，也可以一键全员报名。
+3. **进行。** 之后交给真实的活动页：接龙、比赛标签（设置、抽签、对战表、裁判、裁判记分、淘汰赛、成绩和归档）和费用标签（报名费确认和付款标记）。
 
-Tests: `tests/competition-simulation.test.ts` runs the full flow from the create form to the archive.
-`tests/admin-simulation-api.mjs` covers the competition kind, and `tests/admin-simulation-ui.mjs` the chooser.
+和真实表单一样，比赛默认建在明天。"快进到开赛"会把整场比赛连同场地和报名一起平移，让它现在开始。同一时间只有一场比赛；重置会清除它并刷新成员快照。
+
+它是单独的设置行（`admin-simulation-competition-v1`），使用和活动沙盒相同的访问检查、修订号和请求回执。请求用 `kind: 'competition'` 指明它（`GET /api/simulation?kind=competition`）。它的文档会保留进度，直到被重置。里面只运行比赛创建、报名、费用和活动命令，从不运行俱乐部级别的命令。
+
+对局上场的方式和真实比赛完全一样：系统在抽签、生成淘汰赛和每次出结果之后排场，页面自带的排场按钮会开始所有已就绪的对局。有一个快捷操作让流程更快：
+
+- **一键录完进行中比赛**：给每场进行中的比赛录一个随机结果。结果遵守该比赛所在阶段的计分规则，按修为更强的一方更常获胜。裁判已经实时记完的比赛保留裁判的比分。
+
+实时裁判记分把逐分记录保存在沙盒文档里，而不是 `live_scores` 表。裁判页面和比分板通过排场上下文（`ctx.live`）使用同样的组件。任何内容都不会进入真实俱乐部、实时比分、榜单、费用或通知。
+
+测试：`tests/competition-simulation.test.ts` 从创建表单一直跑到归档；`tests/admin-simulation.test.ts` 覆盖活动沙盒的人数、场地数和单双打选择；`tests/admin-simulation-api.mjs` 覆盖比赛类型；`tests/admin-simulation-ui.mjs` 覆盖选择页和重置表单。

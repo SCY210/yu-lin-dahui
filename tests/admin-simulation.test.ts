@@ -57,6 +57,20 @@ test('fewer members never create fictional replacements, while an empty roster r
  const club=createSimulation(now).state;club.players=club.players.slice(0,5);const d=createSimulation(now,club);assert.equal(d.state.players.length,5);assert.equal(d.state.registrations.length,5);assert.equal(d.state.bookings.length,2);assert.equal(d.state.events[0].capacity,5);assert.match(d.state.events[0].title,/5人/);club.players=[];assert.throws(()=>createSimulation(now,club),/暂无可用于模拟的真实球友/);
 });
 
+test('reset chooses the number of players, courts and singles or doubles, and a later reset keeps them',async()=>{
+ const club=createSimulation(now,undefined,30).state;let d=createSimulation(now,club);assert.deepEqual(simulationView(d,now).size,{players:12,courts:2,format:'doubles',available:30});
+ d=await changeSimulation(d,'reset',{players:'20',courts:'4',format:'doubles',reason:'重置'},request(),now,club);
+ assert.equal(d.state.players.length,20);assert.equal(d.state.registrations.length,20);assert.equal(d.state.bookings.length,4);assert.equal(new Set(d.state.bookings.map(b=>b.name)).size,4);assert.match(d.state.events[0].title,/20人 \/ 4片场地/);
+ d=await changeSimulation(d,'pointsStart',start(d),request(),now+1000);assert.equal(d.state.matches.filter(m=>m.status==='playing').length,4,'all four courts start');
+ d=await changeSimulation(d,'reset',{courts:3},request(),now+2000,club);assert.equal(d.state.players.length,20,'the player count is kept');assert.equal(d.state.bookings.length,3);assert.equal(d.state.matches.length,0);
+ d=await changeSimulation(d,'reset',{players:7,format:'singles'},request(),now+3000,club);assert.equal(d.state.events[0].matchFormat,'singles');assert.match(d.state.events[0].title,/7人 \/ 3片场地 · 单打/);
+ d=await changeSimulation(d,'pointsStart',start(d),request(),now+4000);assert.equal(d.state.matches.filter(m=>m.status==='playing').length,3);assert.ok(d.state.matches.every(m=>m.a.length===1&&m.b.length===1));
+ await assert.rejects(()=>changeSimulation(d,'reset',{players:99},request(),now+5000,club),/模拟人数须为 2–64 人/);
+ await assert.rejects(()=>changeSimulation(d,'reset',{courts:0},request(),now+5000,club),/场地 1–8 片/);
+ const few=structuredClone(club);few.players=few.players.slice(0,3);await assert.rejects(()=>changeSimulation(d,'reset',{format:'doubles'},request(),now+6000,few),/只有 3 位，不够打双打/);
+ const big=await changeSimulation(d,'reset',{players:50},request(),now+7000,club);assert.equal(big.state.players.length,30,'never more than the real roster');
+});
+
 test('the sandbox schedules with the current production pairing odds of the next activity, never showing them',async()=>{
  const club=emptyState(),hour=3600000;
  for(let i=0;i<14;i++){const id='real-'+i;club.accounts.push({id:'account-'+i,email:'',role:i?'member':'admin',playerId:id});club.players.push({id,ownerId:'account-'+i,name:'Fictional '+i,enabled:true,initialRating:1000+i*40,rating:1000+i*40,ratedGames:0,ratingReason:''})}
