@@ -2,7 +2,9 @@ import {raw} from './store';
 import {removePushSubscription} from './push-subscriptions';
 import {newlyOpenedSignups,signupPushMessage,pushSubscriptionInput} from './push-contract';
 import {pushConfiguration,sendWebPush,type PushEnvironment} from './push-crypto';
-import {reminderPreferences,defaultReminderPreferences,reminderKinds,type Reminder} from './reminder-contract';
+/** The section the notice's link brings into view (public/sw.js builds the link), with a registration's slot. */
+const pushFocus=(notice:Reminder)=>{const focus=reminderFocus(notice);return focus?.section?{section:focus.section,...(focus.bookingId?{bookingId:focus.bookingId}:{})}:{}};
+import {reminderPreferences,defaultReminderPreferences,reminderFocus,reminderKinds,type Reminder} from './reminder-contract';
 import {emptyState} from './domain/types';
 import {unpaidFeeReminders} from './reminder-contract';
 import type {State,Event,Account,Player} from './domain/types';
@@ -71,7 +73,7 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     if(!player.enabled||account.playerId!==player.id||!relevant||(preference.success&&!preference.data[kind])||row.createdAt<Date.now()-86400000){state='cancelled'}
     else{
      const subscription=pushSubscriptionInput.parse(JSON.parse(row.subscription));
-     const status=await sendWebPush(subscription,notice?{title:notice.title,body:notice.body,eventId:notice.eventId,kind:notice.kind,tab:notice.tab,...(notice.roundId?{roundId:notice.roundId}:{}),tag:'yulin-reminder-'+notice.id}:signupPushMessage(event),config,send,notice?Math.floor((notice.expires-Date.now())/1000):86400);
+     const status=await sendWebPush(subscription,notice?{title:notice.title,body:notice.body,eventId:notice.eventId,kind:notice.kind,tab:notice.tab,...(notice.roundId?{roundId:notice.roundId}:{}),...pushFocus(notice),tag:'yulin-reminder-'+notice.id}:signupPushMessage(event),config,send,notice?Math.floor((notice.expires-Date.now())/1000):86400);
      if(status===404||status===410){await removePushSubscription(account.id,subscription.endpoint);return}
      if(status>=200&&status<300)state='sent';else if(status>=400&&status<500&&status!==429)state='failed';
     }

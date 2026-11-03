@@ -2,10 +2,7 @@
 import {useContext,useEffect,useRef,useState} from 'react';
 import {ClubNavigationContext} from '../lib/client/club-navigation-react';
 import type {Event,Match,Round} from '../lib/domain/types';
-
-// Outside a browser (tests, server rendering) there is no frame clock or page to scroll.
-const nextFrame=(f:()=>void)=>typeof requestAnimationFrame==='function'?requestAnimationFrame(f):setTimeout(f,16) as unknown as number;
-const cancelFrame=(id:number)=>typeof cancelAnimationFrame==='function'?cancelAnimationFrame(id):clearTimeout(id);
+import {cancelFrame,nextFrame} from './section-focus';
 type FocusData={matches:Match[];rounds:Round[];me:{playerId:string}};
 /** The match to bring into view on an activity's rounds tab (docs/JUMP_TO_MATCH.md): the one a link names (a home score
  * button, a reminder, a notification), else once per visit the game in progress, the viewer's own first. */

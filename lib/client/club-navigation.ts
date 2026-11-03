@@ -1,9 +1,12 @@
 export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders'|'simulation'|'treasure'|'achievements'|'money';
 export type EventTab = 'overview'|'signup'|'rounds'|'fees'|'social';
 export type SocialTab = 'players'|'network'|'challenges'|'funny';
-/** A match or round to bring into view on an activity's rounds tab (docs/JUMP_TO_MATCH.md). Opening its score form is a
- * separate one-shot request (lib/client/score-intent.ts), never part of the URL or history. */
-export type RouteFocus = {matchId?:string; roundId?:string};
+/** What an activity tab brings into view (docs/JUMP_TO_MATCH.md): a match or round on the rounds tab, or one section on
+ * another tab: the viewer's own transfers (fees), their court card (signup, a booking when a reminder names it) or the
+ * MVP vote (social). Opening a score form is a separate one-shot request (lib/client/score-intent.ts), never part of
+ * the URL or history. */
+export type FocusSection = 'pay'|'mine'|'awards';
+export type RouteFocus = {matchId?:string; roundId?:string; section?:FocusSection; bookingId?:string};
 export type ClubRoute = {page:ClubPage; eventId:string; tab:EventTab; playerId:string; socialTab:SocialTab; focus?:RouteFocus};
 export const homeRoute:ClubRoute = {page:'home',eventId:'',tab:'overview',playerId:'',socialTab:'players'};
 const pages = new Set(['home','events','ranking','me','social','admin','reminders','simulation','treasure','achievements','money']);
@@ -11,29 +14,39 @@ const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';
 
-function normalizeFocus(value:unknown):RouteFocus|undefined {
+const tabSections:Partial<Record<EventTab,FocusSection>> = {fees:'pay',signup:'mine',overview:'mine',social:'awards'};
+function normalizeFocus(value:unknown,tab:EventTab):RouteFocus|undefined {
  if(!value||typeof value!=='object')return;
- const v=value as Record<string,unknown>,matchId=safeId(v.matchId),roundId=safeId(v.roundId);
- if(!matchId&&!roundId)return;
- return {...(matchId?{matchId}:{}),...(roundId?{roundId}:{})};
+ const v=value as Record<string,unknown>;
+ if(tab==='rounds'){
+  const matchId=safeId(v.matchId),roundId=safeId(v.roundId);
+  if(!matchId&&!roundId)return;
+  return {...(matchId?{matchId}:{}),...(roundId?{roundId}:{})};
+ }
+ const section=tabSections[tab];
+ if(!section||v.section!==section)return;
+ const bookingId=section==='mine'?safeId(v.bookingId):'';
+ return {section,...(bookingId?{bookingId}:{})};
 }
 export function normalizeRoute(value:Partial<Record<keyof ClubRoute,unknown>>):ClubRoute {
  const page:ClubPage = typeof value.page==='string'&&pages.has(value.page)?value.page as ClubPage:'home';
- const tab=page==='events'&&typeof value.tab==='string'&&eventTabs.has(value.tab)?value.tab as EventTab:'overview',focus=page==='events'&&tab==='rounds'?normalizeFocus(value.focus):undefined;
+ const tab=page==='events'&&typeof value.tab==='string'&&eventTabs.has(value.tab)?value.tab as EventTab:'overview',focus=page==='events'?normalizeFocus(value.focus,tab):undefined;
  return {...(focus?{focus}:{}),page,eventId:page==='events'?safeId(value.eventId):'',tab:page==='events'&&typeof value.tab==='string'&&eventTabs.has(value.tab)?value.tab as EventTab:'overview',playerId:page==='social'?safeId(value.playerId):'',socialTab:page==='social'&&typeof value.socialTab==='string'&&socialTabs.has(value.socialTab)?value.socialTab as SocialTab:'players'};
 }
 export function readClubRoute(href:string):ClubRoute {
  const q = new URL(href).searchParams;
- return normalizeRoute({page:(q.get('page')||(q.has('event')?'events':'home')) as ClubPage,eventId:q.get('event')??'',tab:(q.get('tab')==='matches'?'rounds':q.get('tab')) as EventTab,playerId:q.get('player')??'',socialTab:q.get('social') as SocialTab,focus:{matchId:q.get('match')??'',roundId:q.get('round')??''}});
+ return normalizeRoute({page:(q.get('page')||(q.has('event')?'events':'home')) as ClubPage,eventId:q.get('event')??'',tab:(q.get('tab')==='matches'?'rounds':q.get('tab')) as EventTab,playerId:q.get('player')??'',socialTab:q.get('social') as SocialTab,focus:{matchId:q.get('match')??'',roundId:q.get('round')??'',section:q.get('goto')??'',bookingId:q.get('booking')??''}});
 }
 export function clubRouteUrl(href:string,route:ClubRoute):string {
  const url = new URL(href);
- for(const key of ['page','event','tab','player','social','match','round'])url.searchParams.delete(key);
+ for(const key of ['page','event','tab','player','social','match','round','goto','booking'])url.searchParams.delete(key);
  if(route.page!=='home')url.searchParams.set('page',route.page);
  if(route.eventId){url.searchParams.set('event',route.eventId);if(route.tab!=='overview')url.searchParams.set('tab',route.tab)}
  if(route.page==='social'){if(route.playerId)url.searchParams.set('player',route.playerId);else if(route.socialTab!=='players')url.searchParams.set('social',route.socialTab)}
  if(route.focus?.matchId)url.searchParams.set('match',route.focus.matchId);
  if(route.focus?.roundId)url.searchParams.set('round',route.focus.roundId);
+ if(route.focus?.section)url.searchParams.set('goto',route.focus.section);
+ if(route.focus?.bookingId)url.searchParams.set('booking',route.focus.bookingId);
  return url.pathname+url.search+url.hash;
 }
 export const sameRoute = (a:ClubRoute,b:ClubRoute)=>JSON.stringify(a)===JSON.stringify(b);

@@ -10,6 +10,15 @@ export const reminderPreferences=z.object({signup:z.boolean(),registration:z.boo
 export type ReminderPreferences=z.infer<typeof reminderPreferences>;
 export const defaultReminderPreferences:ReminderPreferences={signup:true,registration:true,changes:true,matches:true,fees:true,awards:true,upcoming:true,bounty:true};
 export type Reminder={id:string;kind:ReminderKind;eventId:string;title:string;body:string;tab:'overview'|'rounds'|'fees'|'social';accountIds:string[];expires:number;playerId?:string;bookingId?:string;status?:string;roundId?:string;settlementId?:string;settlementVersion?:number;/** Proxied friends whose bills this notice covers. */proxyPlayerIds?:string[];/** An unpaid reminder: repeatable, never deduplicated against the confirmation notice. */due?:boolean;/** The owner and administrators are told that bills are still unpaid after the automatic reminders. */overdue?:boolean;createdAt:number;readAt?:number|null};
+/** What a reminder's link brings into view on its tab (docs/JUMP_TO_MATCH.md): a game notice's round (the member's
+ * match), the viewer's open transfer for a fee notice, the MVP vote for the awards notice, their court card (the slot
+ * it names) for a registration notice. */
+export function reminderFocus(r:Pick<Reminder,'kind'|'tab'|'roundId'|'bookingId'>):{roundId?:string;section?:'pay'|'mine'|'awards';bookingId?:string}|undefined{
+ if(r.tab==='rounds')return r.roundId?{roundId:r.roundId}:undefined;
+ if(r.kind==='fees'&&r.tab==='fees')return {section:'pay'};
+ if(r.kind==='awards'&&r.tab==='social')return {section:'awards'};
+ if(r.kind==='registration'&&r.tab==='overview')return {section:'mine',...(r.bookingId?{bookingId:r.bookingId}:{})};
+}
 const time=new Intl.DateTimeFormat('zh-CN',{timeZone:'Europe/Madrid',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
 const slots=(r:Registration)=>r.bookingSignups??[{bookingId:'',status:r.status,arrival:r.arrival,departure:r.departure}];
 export function participantIds(s:State,e:Event){const players=new Set(s.registrations.filter(r=>r.eventId===e.id&&slots(r).some(x=>x.status!=='cancelled')).map(r=>r.playerId));return s.accounts.filter(a=>players.has(a.playerId)||a.id===e.creatorId).map(a=>a.id)}

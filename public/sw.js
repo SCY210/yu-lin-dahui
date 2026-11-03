@@ -39,6 +39,14 @@ self.addEventListener('fetch', event => {
   }));
 });
 
+// Each section belongs to one tab (lib/client/club-navigation.ts); a registration notice may name its slot.
+const sectionTabs = {pay:'fees', awards:'social', mine:'overview'};
+const focusQuery = message => {
+  const section = typeof message.section === 'string' && Object.prototype.hasOwnProperty.call(sectionTabs, message.section) ? message.section : '';
+  if (!section || sectionTabs[section] !== (message.tab || 'overview')) return '';
+  const booking = section === 'mine' && typeof message.bookingId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(message.bookingId) ? '&booking=' + message.bookingId : '';
+  return '&goto=' + section + booking;
+};
 self.addEventListener('push', event => {
   event.waitUntil((async () => {
     let message = {};
@@ -50,8 +58,9 @@ self.addEventListener('push', event => {
       body: typeof message.body === 'string' ? message.body.slice(0,250) : '有新消息，点开查看。',
       icon: '/icons/app-192.png', badge: '/icons/app-192.png',
       tag: signup ? (message.kind==='signup'?'yulin-signup-'+message.eventId:typeof message.tag==='string'?message.tag.slice(0,240):'yulin-'+message.kind+'-'+message.eventId) : 'yulin-push-test', renotify: false,
-      // A game notice names its round, so the rounds tab scrolls to the member's match (docs/JUMP_TO_MATCH.md).
-      data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId)+(message.tab==='rounds'||message.tab==='fees'||message.tab==='social'?'&tab='+message.tab:'')+(message.tab==='rounds'&&typeof message.roundId==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(message.roundId)?'&round='+encodeURIComponent(message.roundId):'') : '/?page=me' },
+      // A game notice names its round, so the rounds tab scrolls to the member's match; a fee, MVP or registration
+      // notice names the section to bring into view (docs/JUMP_TO_MATCH.md).
+      data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId)+(message.tab==='rounds'||message.tab==='fees'||message.tab==='social'?'&tab='+message.tab:'')+(message.tab==='rounds'&&typeof message.roundId==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(message.roundId)?'&round='+encodeURIComponent(message.roundId):'')+focusQuery(message) : '/?page=me' },
     });
   })());
 });
@@ -60,7 +69,7 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async () => {
     const path = event.notification.data?.path;
     // Push content can never direct users to another origin or a login endpoint.
-    const safePath = typeof path === 'string' && /^\/\?page=(me|events)(?:&event=[A-Za-z0-9_%~-]{1,300})?(?:&tab=(overview|rounds|fees|social))?$/.test(path) ? path : '/?page=me';
+    const safePath = typeof path === 'string' && /^\/\?page=(me|events)(?:&event=[A-Za-z0-9_%~-]{1,300})?(?:&tab=(overview|rounds|fees|social))?(?:&round=[A-Za-z0-9_-]{1,100})?(?:&goto=(pay|mine|awards))?(?:&booking=[A-Za-z0-9_-]{1,100})?$/.test(path) ? path : '/?page=me';
     const url = new URL(safePath,self.location.origin).href;
     const windows = await self.clients.matchAll({type:'window',includeUncontrolled:true});
     for (const client of windows) if (new URL(client.url).origin === self.location.origin && 'navigate' in client) {
