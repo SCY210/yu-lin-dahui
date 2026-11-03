@@ -1,6 +1,7 @@
 import {raw,load,save,committed} from './store';
 import {getAppUser,hashToken,sessionCookie,type AppUser} from './auth';
-import {checkPassword} from './password';
+import {checkPassword,normalizeUsername} from './password';
+import {usernameTaken} from './username-lookup';
 import {emptyState,type Account} from './domain/types';
 import {isClubOwner} from './domain/ownership';
 import {RequestError} from './request-body';
@@ -64,9 +65,9 @@ export async function changeLoginUsername(user:AppUser,input:ChangeUsernameInput
   const current=await snapshot(targetId);
   if(!unchanged(targetCredential,current))reject('目标登录账号已更新，请刷新重试',409);
   if(!freshOwner&&targetCredential.usernameChangedAt!==null)reject('每人只能自主修改登录账号一次',409);
-  if(targetCredential.username.toLowerCase()===input.newUsername)reject('新账号不能与当前账号相同',400);
-  const occupied=await raw().prepare('SELECT id FROM password_credentials WHERE username=? COLLATE NOCASE AND id<>?').bind(input.newUsername,targetId).first();
-  if(occupied)reject('这个登录账号已被使用',409);
+  if(normalizeUsername(targetCredential.username)===input.newUsername)reject('新账号不能与当前账号相同',400);
+  // An older name differing only in simplified and traditional form counts as taken (docs/ACCOUNT_LOGIN.md).
+  if(await usernameTaken(input.newUsername,targetId))reject('这个登录账号已被使用',409);
   const previous=structuredClone(state),now=Date.now(),changedAt=freshOwner?targetCredential.usernameChangedAt:now;
   state.audits.push({id:auditId,at:now,actor:actor.id,action:'changeLoginUsername',reason:freshOwner?'群主修改登录账号，保留成员自主修改次数':'本人使用一次自主修改登录账号机会',changes:{accountId:targetId,previousUsername:targetCredential.username,username:input.newUsername,selfChangeConsumed:!freshOwner,requestId:input.requestId}});
   const assignments=freshOwner?'username=?':'username=?,username_changed_at=?';

@@ -1,48 +1,74 @@
-# Administrator-managed accounts
+# 管理员开通的账号
 
-The app does not offer public self-registration or require email. Administrators create usernames and passwords; new accounts always start as members. Role management is a separate protected operation.
+应用不开放公开注册，也不需要邮箱。账号名和密码由管理员创建，新账号一律从普通成员开始。调整账号权限是另一项受保护的操作。
 
-## Creating and migrating accounts
+## 创建和迁移账号
 
-1. The owner verifies the existing platform identity and enables password login from the personal account page. The same profile, permissions, photos, and match history remain associated.
-2. In group administration, create an account with a display name, username, and initial password. New usernames accept 2-32 ASCII letters/digits, case-insensitively; legacy non-Latin, underscore, and email-style usernames still work. A changed username follows the new policy. Passwords are 12-128 characters.
-3. Link an existing player profile when appropriate. Enable login on an existing account rather than duplicating its identity.
-4. Deliver the initial credentials directly to the person through an appropriate private channel. The app sends no automatic email/messages and never displays saved passwords.
-5. Reset a forgotten password as an administrator. The change revokes all target-account sessions while preserving its role and business records.
+1. 群主先验证原平台身份，再在个人账号页启用密码登录。原来的档案、权限、照片和比赛记录都保持关联。
+2. 在群组管理里创建账号，填写显示名字、登录账号和初始密码。登录账号的规则见下面的"登录账号的格式"。密码 12–128 位。
+3. 合适时关联已有的球友档案。已有账号要开通登录时，直接为原账号开通，不要另建一个重复身份。
+4. 通过合适的私下渠道把初始账号密码直接交给本人。应用不会自动发邮件或消息，也从不显示已保存的密码。
+5. 忘记密码由管理员重置。重置会让目标账号的所有会话失效，权限和业务记录保留不变。
 
-Passwords come from the user or administrator, not source-code defaults. Fictional test accounts belong only in dedicated local databases.
+密码来自本人或管理员，不使用源代码里的默认值。虚构的测试账号只能放在专用的本地数据库里。
 
-## Changing usernames and passwords
+## 登录账号的格式
 
-A member can change their own username once, after verifying their current password. The owner can change their own or another person's username repeatedly, using the owner's password rather than requesting the member's password.
+新账号和改名后的账号为 2–32 位中文、英文字母或数字，可以混用（`lib/username-format.ts`）。中文是 CJK 统一汉字（含扩展 A 和兼容汉字区）；全角字母、空格、下划线和连字符不能用。表单和服务端用同一份规则；规则写成普通的字符范围，不用 `\p{…}`，所以旧浏览器也能正常加载表单脚本。
 
-An owner-initiated rename does not consume or reset the member's self-service allowance; resetting a password does not reset it either. A successful self-change records the usage timestamp. Duplicate names, invalid formats, incorrect passwords, and concurrency failures do not consume the allowance.
+账号按"键"保存和查找（`normalizeUsername`，`lib/password.ts`）：全角折成半角、英文不区分大小写，**简体和繁体算同一个账号**。例如"羽林會""羽林会"和台湾、香港字形"裡""裏"都对应同一个键。转换逐字进行（`simplifyHanzi`，`lib/username-hanzi.ts`），只在服务端做。对照表 `lib/username-hanzi-data.ts` 由 `scripts/generate-username-hanzi.mjs` 从 OpenCC 词典（TSCharacters、TWVariants、HKVariants，Apache-2.0，见 `vendor/opencc-1.4.2.LICENSE.txt`）生成，不作为运行时依赖；生成时会检查转换两次的结果不变。新账号保存为简体形式，所以账号列表里显示的是简体。
 
-Changing one's own username signs out all sessions; changing another member's username revokes that member's sessions while preserving the owner's session. Account/player IDs, protected owner status, photos, costs, and match relationships remain stable. Login usernames and display names are independent.
+以前的旧账号（中文、下划线或邮箱式）照常可以登录，数据库里的旧账号名不改写（`lib/username-lookup.ts`）：
 
-The current password is required for a self-service password change. A reset or change revokes previous password sessions atomically.
+- 登录时先按输入原样（只折全角和大小写）查找，再按简体键查找。都找不到、而且输入里有中文时，才把含非 ASCII 字符的旧账号逐个换成简体键比较。这样以前存成繁体的旧账号，输入繁体能登录，输入简体也能登录；纯英文数字账号的登录不多做任何查询。
+- 新建、启用或改名时，除了同一个键，还会把含非 ASCII 字符的旧账号逐个换成简体键比较，避免出现简繁两个看起来是同一个名字的账号。
+- 同一个名字的简体和繁体共用一个登录尝试次数限制。
 
-## Access boundary
+## 修改登录账号和密码
 
-Only the login entry is public. Club lists, events, scores, costs, and images require membership. The legacy platform sign-in entry is for migration. Production does not create accounts from the historical invitation code.
+成员验证当前密码后，可以自己修改一次登录账号。群主可以多次修改自己或别人的登录账号，用的是群主自己的密码，不需要对方的密码。
 
-Sites must remove untrusted identity headers before forwarding requests. Keep the underlying Worker behind that distribution layer. Development emulation is loopback-only and absent from production builds.
+群主替成员改名，不会占用也不会重置成员自己的那次修改机会；重置密码也不会重置它。本人修改成功后记录使用时间。账号名重复、格式不对、密码错误和并发失败都不占用这次机会。新账号与当前账号只差大小写或简繁体时，会被拒绝并提示与当前账号相同。
 
-## Implementation
+修改自己的登录账号会退出所有会话；修改别人的登录账号会让对方的会话失效，群主自己的会话保留。账号和球员 ID、受保护的群主身份、照片、费用和比赛关系保持不变。登录账号和显示名字互不影响。
 
-- Salted scrypt: N=16384, r=8, p=5, constant-time comparison.
-- 256-bit session tokens; only SHA-256 token digests stored server-side.
-- HttpOnly, SameSite=Lax cookies; Secure on HTTPS; 14-day expiry. Logout deletes the session and suppresses legacy identity auto-login.
-- Exact-origin checks, an 8 KiB body limit, a 10-second absolute JSON receive deadline, and persistent IP/username rate limits.
-- Credentials and business records commit in one atomic D1 batch. Idempotency keys and unique usernames prevent duplicate account creation.
-- Session issuance rechecks the validated username, salt, and password hash to prevent a concurrent reset from issuing a usable stale-password session.
-- Retries reload administrator permissions. Members and anonymous callers cannot create accounts, reset others' passwords, or bypass protected owner checks.
-- Passwords, salts, hashes, and session tokens are excluded from business exports and audit payloads.
+本人修改密码时需要当前密码。重置或修改密码会在同一次操作里让之前的密码会话失效。
 
-Migrations 0003-0006 establish and evolve credentials, username keys, and the self-change timestamp. New password accounts have an empty legacy email field. Existing platform-account email fields remain for compatibility.
+## 访问边界
 
-## Verification
+只有登录入口是公开的。俱乐部名单、活动、比分、费用和图片都需要成员身份。旧平台登录入口只用于迁移。生产环境不会凭历史邀请码创建账号。
 
-Use tests/managed-accounts.mjs, tests/change-username-api.mjs, tests/change-password-api.mjs, and tests/ownership-api.mjs only with their documented fictional loopback fixtures. They cover identity preservation, permissions, idempotency, session tampering/revocation, username policy, concurrent reset/login, origin checks, and protected ownership.
+Sites 在转发请求前必须去掉不可信的身份请求头，底层 Worker 要放在这个分发层后面。开发用的模拟只在本机回环地址上运行，生产构建里没有。
 
-Historical machine-specific execution reports are ignored; run results must state their own environment and scope. HTTP loopback checks do not certify HTTPS cookies or production edge identity stripping.
+## 实现
+
+- 加盐 scrypt：N=16384、r=8、p=5，比较时用常数时间比较。
+- 256 位会话令牌；服务端只保存令牌的 SHA-256 摘要。
+- Cookie 为 HttpOnly、SameSite=Lax，HTTPS 下加 Secure，有效期 14 天。退出登录会删除会话，并阻止旧身份自动登录。
+- 严格校验来源、请求体上限 8 KiB、JSON 接收绝对时限 10 秒，并按 IP 和账号名持久限速。
+- 凭据和业务记录在同一个 D1 原子批次里提交。幂等键和唯一账号名防止重复创建账号。
+- 签发会话时会再核对账号名、盐和密码哈希，防止并发重置后仍签发用旧密码的会话。
+- 重试时会重新读取管理员和测试员权限。测试员只能管理普通成员的账号（[TESTER_MEMBER_MANAGEMENT.md](TESTER_MEMBER_MANAGEMENT.md)）；普通成员和未登录的人不能创建账号、不能重置别人的密码，也不能绕过受保护的群主检查。
+- 密码、盐、哈希和会话令牌不会出现在业务导出和审计内容里。
+
+迁移 0003–0006 建立并演进了凭据、账号名键和本人修改时间。新的密码账号的旧邮箱字段为空；原平台账号的邮箱字段为兼容保留。
+
+## 验证
+
+`tests/username-hanzi.test.ts` 覆盖账号格式和简繁转换：
+
+- 允许中文、拒绝全角字母和空格。
+- 繁体、台湾和香港字形都转成同一个简体键，转换两次结果不变。
+- 对照表里每个字都转换到简体。
+
+`tests/chinese-username-api.mjs` 走真实账号接口和事务存储（SQLite），覆盖：
+
+- 建中文账号，存成简体。
+- 用繁体或简体都能登录。
+- 简繁同名的账号不能重复创建。
+- 以前存成繁体的旧账号，输入繁体和简体都能登录，也不能被新的简体账号重复占用。
+- 改名时只差简繁体会被拒绝。
+
+`tests/managed-accounts.mjs`、`tests/change-username-api.mjs`、`tests/change-password-api.mjs` 和 `tests/ownership-api.mjs` 只能配合它们说明的虚构本地回环数据使用，覆盖身份保留、权限、幂等、会话篡改和失效、账号名规则、并发重置与登录、来源检查和受保护的群主身份。
+
+各机器上的历史执行报告不纳入版本跟踪；运行结果要写明自己的环境和范围。HTTP 回环检查不能证明 HTTPS Cookie 或生产边缘的身份头清理。

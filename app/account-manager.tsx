@@ -10,6 +10,7 @@ import {Pick} from './ui';
 import TrialCleanup from './trial-cleanup';
 import type {ClubData} from '../lib/contracts/club';
 import {accountProfileChoices} from '../lib/client/recorded-friends';
+import {isNewUsername,usernamePattern,usernameRule} from '../lib/username-format';
 export default function AccountManager({data,refresh,onEditName,onSelfUsernameChanged}:any){
  const [form,setForm]=useState<any>(null),[usernameTarget,setUsernameTarget]=useState<any>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const name=(id:string)=>data.players.find((p:any)=>p.id===id)?.name??'球友';
@@ -20,7 +21,7 @@ export default function AccountManager({data,refresh,onEditName,onSelfUsernameCh
  const {available,friends}=accountProfileChoices(data),friend=(id:string)=>friends.find(f=>f.id===id);
  function open(account?:any,reset=false){setError('');setForm({accountId:account?.id,reset,name:account?name(account.playerId):'',username:account?login(account.id)?.username??'':'',playerId:'new',password:'',confirmation:'',requestId:crypto.randomUUID()})}
  async function submit(e:React.FormEvent){
-  e.preventDefault();if(busy)return;if(form.password!==form.confirmation){setError('两次密码不一致');return}if(!form.reset&&!/^[A-Za-z0-9]{2,32}$/.test(form.username.trim())){setError('新账号须为2–32位英文字母或数字');return}setBusy(true);setError('');
+  e.preventDefault();if(busy)return;if(form.password!==form.confirmation){setError('两次密码不一致');return}if(!form.reset&&!isNewUsername(form.username.trim())){setError('新账号须为'+usernameRule);return}setBusy(true);setError('');
   try{
    const payload=form.reset?{action:'resetPassword',accountId:form.accountId,password:form.password,requestId:form.requestId}:{action:'createAccount',accountId:form.accountId,name:form.name,username:form.username,password:form.password,requestId:form.requestId,...(form.playerId!=='new'?{playerId:form.playerId}:{})};
    const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d:any=await r.json();if(!r.ok)throw new Error(d.error);
@@ -37,7 +38,7 @@ export default function AccountManager({data,refresh,onEditName,onSelfUsernameCh
  {form&&<form onSubmit={submit}><div className="form-fields">
  {!form.reset&&!form.accountId&&<label>球友档案<Pick value={form.playerId} options={[['new','创建新球友档案'],...available.map((p:{id:string;name:string})=>[p.id,p.name+' · 保留历史记录']),...friends.map(f=>[f.id,f.name+'（'+f.host+' 的朋友）· 转为正式成员'])]} onChange={(id:string)=>{if(!busy)setForm({...form,playerId:id,name:id==='new'?'':name(id)})}}/>{friend(form.playerId)&&<small>这位朋友{friend(form.playerId)!.activities?'在 '+friend(form.playerId)!.activities+' 场活动里':''}的接龙、比赛和费用都会并到新账号名下；过去的比赛按正式成员重新计算修为，从朋友当前的水平开始。昵称可以改成本人的名字。</small>}</label>}
  {!form.reset&&<label>昵称<input required readOnly={!!form.accountId||(form.playerId!=='new'&&!friend(form.playerId))} maxLength={150} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} disabled={busy}/></label>}
- <label>登录账号<input required readOnly={form.reset} minLength={form.reset?1:2} maxLength={form.reset?254:32} pattern={form.reset?undefined:'[A-Za-z0-9]{2,32}'} title={form.reset?undefined:'2–32位英文字母或数字'} autoComplete="off" autoCapitalize="none" spellCheck={false} value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={busy}/>{!form.reset&&<small>2–32位英文字母或数字，英文不区分大小写。</small>}</label>
+ <label>登录账号<input required readOnly={form.reset} minLength={form.reset?1:2} maxLength={form.reset?254:32} pattern={form.reset?undefined:usernamePattern} title={form.reset?undefined:usernameRule} autoComplete="off" autoCapitalize="none" spellCheck={false} value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={busy}/>{!form.reset&&<small>2–32位中文、英文字母或数字；英文不区分大小写，简体和繁体算同一个账号。</small>}</label>
  <label>{form.reset?'新密码':'初始密码'}<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} disabled={busy}/><small>至少12位。请为每位球友设置不同的密码。</small></label>
  <label>确认密码<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={form.confirmation} onChange={e=>setForm({...form,confirmation:e.target.value})} disabled={busy}/></label>
  </div>{error&&<p className="error" role="alert">{error}</p>}<button className="primary full" disabled={busy}>{busy?'正在保存…':form.reset?'确认重置密码':'保存账号'}</button></form>}

@@ -1,8 +1,11 @@
 import {z} from 'zod';
+import {normalizeUsername} from './password';
+import {usernameCharacters} from './username-format';
 
 // Validate original characters before normalization: full-width letters are not
-// valid new account names. Existing login names keep their legacy reader.
-export const newUsername=z.string().trim().min(2,'登录账号至少2位').max(32,'登录账号最多32位').regex(/^[A-Za-z0-9]+$/,'登录账号只能包含英文字母和数字').transform(value=>value.toLowerCase());
+// valid new account names. Existing login names keep their legacy reader. A new name
+// is stored under its normalized key: lower case, Chinese in simplified form.
+export const newUsername=z.string().trim().min(2,'登录账号至少2位').max(32,'登录账号最多32位').regex(usernameCharacters,'登录账号只能包含中文、英文字母和数字').transform(normalizeUsername);
 export const changeUsernameInput=z.object({
  action:z.literal('changeUsername'),
  newUsername,
