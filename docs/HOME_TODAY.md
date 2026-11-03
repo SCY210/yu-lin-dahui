@@ -1,41 +1,42 @@
-# Home page and activity list
+# 首页与活动列表
 
-The home page shows only what needs attention today. The Activities tab is the full catalogue.
+首页只显示今天需要处理的事，"活动"标签页才是完整的活动目录。
 
-## Home page (`app/home-today.tsx`, `lib/client/home-today.ts`)
+## 首页（`app/home-today.tsx`、`lib/client/home-today.ts`）
 
-From top to bottom:
+从上到下依次是：
 
-1. **Unpaid fees** (`app/home-unpaid.tsx`). One entry per activity with unpaid bills of the latest confirmed split. When the member also owes for friends they registered, the entry lists each bill and the total. When the activity has a fee recipient, the row shows the recipient and a copy button. The "mark paid" button records a self-reported payment (`feePaid`) for every bill of that activity without leaving the page.
-2. **To-dos** (`homeTodos`):
-   - scores to enter for the member's own games of activities that are no longer running (a live game gets a "record score" button on its live card instead);
-   - sign-up deadlines within `signupSoonHours` (24 h) for open activities the member has not joined;
-   - waitlist promotions from the last `promotionNoticeHours` (24 h).
+1. **待付费用**（`app/home-unpaid.tsx`）。最新一版已确认分摊里还有未付账单的活动，每个活动一项。成员还替自己代报名的朋友付钱时，这一项会列出每张账单和合计。活动设了收款人时，这一行显示收款人和复制按钮。"标记已付款"按钮不离开页面就为该活动的每张账单记一笔自报付款（`feePaid`）。账单和转账以一行可换行的小标签显示，不再一人一行；超过两个活动时只显示前两个，其余收在"还有 N 场活动 ›"按钮后面（`app/fold-list.tsx`）。
+2. **待办**（`homeTodos`）：
+   - 已经不在进行中的活动里，成员自己的比赛还没录比分（进行中的比赛在它的实时卡片上有"录比分"按钮）；
+   - 成员还没报名、报名截止在 `signupSoonHours`（24 小时）以内的开放活动；
+   - 最近 `promotionNoticeHours`（24 小时）内从候补转正。
 
-   Each activity and kind appears once, in that order.
-3. **Live activities** (`liveActivities`). One highlighted card per running activity, merging all of its courts. If the member is on court, the card names the court, partner and opponents. Otherwise it shows a resting hint.
-4. **Recently ended** (`recentlyEnded`). Activities that ended in the last `recentlyEndedHours` (24 h, as long as the MVP vote is open), or that the organiser ended early. While the member may still vote (`canCastAwardVote`) and has not voted, the card offers the MVP vote. Otherwise it links to the results.
+   每个活动每种待办只出现一次，按上面的顺序排列。
+3. **进行中的活动**（`liveActivities`）。每个进行中的活动一张突出的卡片，合并它所有的场地。成员正在场上时，卡片写明场地、搭档和对手；否则显示轮休提示。
+4. **最近结束**（`recentlyEnded`）。最近 `recentlyEndedHours`（24 小时，只要 MVP 投票还开着）内结束的活动，或组织者提前结束的活动。成员还能投票（`canCastAwardVote`）且还没投时，卡片提供 MVP 投票；否则链接到活动。
+5. **等你收款**和**提醒 3 次仍未付款**（`app/home-fees-owed.tsx`）。收款人和管理员看到的别人欠的钱，排在今天的活动之后，免得一整场活动没付款时把进行中的比赛挤到好几屏以下。每个活动一行写"N 人未付"，并标出其中已提醒 3 次仍未付的人数；付款人以小标签显示，先显示 6 位，其余点"还有 N 人"展开；同样只先显示两个活动。已经出现在"等你收款"里的付款人，不会在"提醒 3 次仍未付款"卡片里重复列出。
 
-When nothing applies, a quiet empty state links to the Activities tab. The component re-evaluates every 15 seconds, so cards appear and expire on time without reloading.
+什么都没有时，显示一个安静的空状态，链接到"活动"标签页。组件每 15 秒重新计算一次，所以卡片会准时出现和消失，不必重新加载。
 
-## Activities tab (`groupEvents`)
+## "活动"标签页（`groupEvents`）
 
-Upcoming activities are split into:
+即将开始的活动分成：
 
-- **Signed up** (first group): activities with an active (not cancelled) registration of the member;
-- **Open for sign-up**: open for sign-up and before the deadline;
-- **Other activities**: everything else upcoming, such as locked or full activities.
+- **我已报名**（第一组）：成员有有效（未取消）报名的活动；
+- **可以报名**：开放报名且未过截止时间；
+- **其他活动**：其余即将开始的活动，例如已锁定或已满员的活动。
 
-Ended and cancelled activities are collapsed under a **history** disclosure, newest first.
+已结束和已取消的活动收在**历史活动**折叠项里，最新的在前。
 
-## Toasts in the ink-wash theme
+## 水墨主题的提示条
 
-`app/wuxia-toast.css` restyles Sonner toasts under `html.wuxia-theme`: a rice-paper background, square corners, serif type, and a thick left edge in the theme's pigments (green for success, cinnabar for errors and plain toasts, ochre for warnings). The classic theme keeps its existing colours.
+`app/wuxia-toast.css` 在 `html.wuxia-theme` 下重新设计 Sonner 提示条：宣纸底色、直角、衬线字体，左侧一条粗边用主题颜料（成功用绿色，错误和普通提示用朱砂色，警告用赭石色）。经典主题保持原来的颜色。
 
-## Header and home shortcuts
+## 顶栏与首页快捷入口
 
-The treasure shop card on home and on the member page is replaced by a gift icon to the left of the reminders button in the header, on every page. Its accessible name and tooltip carry the balance. Home no longer shows the create-activity, create-tournament and activity-guide buttons; they remain on the activities page. The member page no longer lists the account-notice receipts; the receipts themselves are still stored, as the privacy notice describes.
+首页和"我的"页上的宝阁卡片换成了顶栏里提醒按钮左边的礼物图标，每个页面都有。它的无障碍名称和悬停提示里写着余额。首页不再显示创建活动、创建比赛和活动指南按钮，它们留在"活动"页上。"我的"页不再列出账号须知的确认记录；记录本身仍按隐私说明保存。
 
-## Scoring any court from home
+## 在首页给任意场地录分
 
-Anyone who may score the activity (signed up for it, its organiser or an administrator, the server's score permission) gets a score button on every court of the running activity's card, not only their own game. When an activity is no longer running, its unscored games become one to-do per activity with the number of games; it opens the viewer's own game first. Only the viewer's own game still opens the score form by itself (`pendingScores` and `pendingOwnScores` in `lib/client/score-reminder.ts`).
+所有可以给活动录分的人（报名了该活动、组织者或管理员，即服务器的录分权限）都能在进行中活动卡片的每片场地上看到录分按钮，而不只是自己的比赛。活动不在进行中后，它未录分的比赛合并成每个活动一条待办，写明比赛数；点开先打开查看者自己的比赛。只有查看者自己的比赛会自动打开录分表单（`lib/client/score-reminder.ts` 里的 `pendingScores` 和 `pendingOwnScores`）。

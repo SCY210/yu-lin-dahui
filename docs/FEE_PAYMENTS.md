@@ -1,85 +1,53 @@
-# Fee payments and reminders
+# 费用付款与提醒
 
-Splits of activities that record who booked each court and bought each expense are settled by transfers between members instead; see [Fee advances](FEE_ADVANCES.md). The rest of this page describes paying a whole bill.
+记录了每片场地由谁预约、每项费用由谁购买的活动，分摊改为在成员之间转账结算，见[费用垫付](FEE_ADVANCES.md)。本页其余部分讲的是整张账单的付款。
 
-## Proxy-registered friends
+## 代报名的朋友
 
-A friend registered by a member who has no account of their own cannot receive notices. Their fee notice goes to the
-account that registered them (`feeContact` in `lib/domain/fee-payments.ts`). That account gets one personal
-confirmation notice naming the friends whose fees it should pass on or pay; players paying only for themselves share
-the ordinary notice. Once the friend has their own account, notices go to them directly. Disabled players and disabled
-proxies receive nothing.
+成员代报名、自己没有账号的朋友收不到通知。他们的费用通知发给代报名的账号（`lib/domain/fee-payments.ts` 里的 `feeContact`）。这个账号会收到一条单独的确认通知，写明它要转告或代付哪些朋友的费用；只为自己付钱的球员收到普通通知。朋友有了自己的账号后，通知直接发给他们。已停用的球员和已停用的代报名人什么也收不到。
 
-Notices never contain amounts, because they can appear on a lock screen. The fees page shows each amount.
+通知里从不写金额，因为它们可能出现在锁屏上。金额在费用页查看。
 
-## Marking a bill paid
+## 标记账单已付款
 
-After the split is confirmed, a player taps "Mark paid" on the fees page. The player, the account that
-registered a proxied friend, and the activity's creator or an administrator can mark or unmark a bill. A self-reported
-payment covers the current bill total; older stored payments still count. If a later confirmed version raises the
-amount, the earlier payment no longer covers it and the bill shows as unpaid again. Marking or unmarking requires the latest confirmed settlement ID, so an old page cannot silently mark a changed bill paid. The member view receives only the
-activity, player and amount of each payment.
+分摊确认后，球员在费用页点"标记已付款"。球员本人、代报名朋友的账号，以及活动创建者或管理员都可以标记或撤销一张账单。自报的付款覆盖当前账单总额；以前保存的付款仍然算数。如果之后确认的新版本提高了金额，之前的付款就不再覆盖它，账单重新显示为未付。标记或撤销都需要最新已确认分摊的 ID，所以旧页面不会悄悄把已经变了的账单标成已付。成员视图里每笔付款只包含活动、球员和金额。
 
-## Reminding unpaid players
+## 提醒未付款的球员
 
-The former "Notify players" button is now "Remind unpaid (N)". It sends a personal reminder to every
-account that still has an unpaid bill of its own or of a proxied friend. Each reminder request is delivered (it is not
-deduplicated against the confirmation notice), at most once every six hours per settlement version. The button is
-disabled when everyone has paid, and the server refuses the request in that case. Reminders respect the fee confirmation
-notification preference and are cancelled if a newer version is confirmed before delivery. Delivery rechecks current payments and proxy ownership: fully paid recipients receive nothing, and partially paid proxy groups name only friends who still owe.
+原来的"通知球员"按钮现在是"提醒未付款（N）"。它给每个仍有自己或代报名朋友未付账单的账号发一条个人提醒。每次提醒请求都会送达（不会与确认通知去重），但同一分摊版本每六小时最多一次。所有人都付款后按钮不可用，服务器也会拒绝这种请求。提醒遵守费用确认通知的偏好设置；如果送达前确认了更新的版本，提醒会被取消。送达时会重新检查当前付款和代报名关系：已全部付清的人收不到，部分付清的代报名人只会看到仍欠款的朋友。
 
-## Automatic reminders
+## 自动提醒
 
-The hourly Cloudflare cron (`build/sites-worker.ts`, `lib/fee-reminder-sweep.ts`) reminds unpaid players without anyone pressing the button:
+每小时一次的 Cloudflare 定时任务（`build/sites-worker.ts`、`lib/fee-reminder-sweep.ts`）不用人按按钮，也会提醒未付款的球员：
 
-- 24, 48 and 72 hours after a split is confirmed, every account that still has an unpaid bill of its own or of a proxied friend gets the same personal reminder as the manual button. Paying stops further reminders; a fully paid split drops out.
-- 24 hours after the third reminder, if any bill is still unpaid, the owner and administrators are told once, with the names of those who still owe. An administrator without a bill of their own still receives this push.
-- Reminders are only sent between 09:00 and 21:59 Madrid time. A reminder that falls due at night waits for the morning. If the cron misses several steps, it sends one reminder, never a burst.
-- Only the latest confirmed version counts. A newer version starts its own schedule, and the replaced version is forgotten. Splits confirmed more than seven days ago, and deleted or cancelled activities, are not reminded automatically.
-- Progress per settlement version is stored in the `fee-reminder-sweep-v1` settings row. It is committed in the same batch as the notices, so a retried tick never sends a step twice. Pushes queued by the cron are delivered by the cron itself, without waiting for a visit.
-- An idle tick runs one small query, and outside reminder hours none at all. A tick with work reads only recent settlements, their events and payments, and the accounts and players, never the whole club.
+- 分摊确认后 24、48、72 小时，每个仍有自己或代报名朋友未付账单的账号，收到和手动按钮相同的个人提醒。付款后不再提醒；已全部付清的分摊不再处理。
+- 第三次提醒后 24 小时，如果还有账单未付，群主和管理员会收到一次通知，写明还欠款的人。自己没有账单的管理员也会收到这条推送。
+- 提醒只在马德里时间 09:00–21:59 之间发送。夜里到期的提醒等到早上。如果定时任务漏掉了几步，只补发一次提醒，不会连发。
+- 只有最新的已确认版本算数。新版本重新开始自己的计时，被替换的版本不再处理。七天前确认的分摊，以及已删除或已取消的活动，不会自动提醒。
+- 每个分摊版本的进度保存在 `fee-reminder-sweep-v1` 设置行里，和通知在同一批写入中提交，所以重试的定时任务不会把同一步发两次。定时任务排队的推送由它自己发出，不必等有人访问。
+- 空闲时只跑一条小查询，提醒时段之外一条都不跑。有工作时只读取最近的分摊、相关活动和付款，以及账号和球员，从不读取整个俱乐部。
 
-The manual "Remind unpaid (N)" button is unchanged and independent: organisers can still remind at any time, at most once every six hours per version.
+手动的"提醒未付款（N）"按钮不变，两者互不影响：组织者随时可以提醒，同一版本每六小时最多一次。
 
-`lib/fee-reminder-schedule.ts` holds the reminder hours and computes the tick that tells the owner (`feeOverdueAt`). The server sweep and the app share it, so the home page marks a split overdue at the same moment the owner and administrators are told (`tests/fee-reminders.test.ts` checks this against the sweep).
+`lib/fee-reminder-schedule.ts` 保存提醒时间点，并计算通知群主的时刻（`feeOverdueAt`）。服务器定时任务和应用共用它，所以首页把分摊标为逾期的时刻，正好是群主和管理员收到通知的时刻（`tests/fee-reminders.test.ts` 会和定时任务对照检查）。
 
-## Saved payees
+## 常用收款人
 
-Every transfer recipient saved for an activity is kept in the club settings as a saved payee (matched by the digits
-of the phone number, so a renamed payee updates in place), newest use first and at most 20. Activity managers see them
-in the transfer section of the fees page and apply one with a single tap instead of typing the name and number again.
-Only the club owner and administrators are listed as regular payees; any other saved payee is folded under "other payees"
-(opened when it is the activity's current recipient). The copy button next to the recipient copies the phone number only,
-on the fees page and on the home page's unpaid card.
-The member who added a payee, or an administrator, can remove it; removing it never changes recipients already set on
-activities. The member view receives each payee's name, phone and whether the viewer added it, never the adder's id.
+活动里保存过的每个转账收款人，都会作为常用收款人存在俱乐部设置里（按电话号码的数字匹配，所以改名后会就地更新），最近用过的在前，最多 20 个。活动管理者在费用页的转账区看到它们，点一下即可使用，不必重新输入姓名和号码。只有群主和管理员列为常规收款人；其他保存过的收款人收在"其他收款人"下面（是该活动当前收款人时默认展开），这样平时少占一屏。收款人旁边的复制按钮只复制电话号码，费用页和首页的未付款卡片都是如此。添加收款人的成员或管理员可以删除它；删除不会改变已经设在活动上的收款人。成员视图里每个收款人只包含姓名、电话以及是否由查看者添加，从不包含添加者的 ID。
 
-## Where members see unpaid fees
+<a id="where-members-see-unpaid-fees"></a>
 
-- My page: each row of the activity and split list shows a green "paid" or red "unpaid" label for the member's own bill.
-- Home page: while the member owes a confirmed fee, for themselves or for a friend they registered, a highlighted
-  notice at the top lists each activity, whose bill it is and the amount, and opens the activity's fees tab. It
-  disappears once every bill is marked paid. Only the latest confirmed version of each visible activity counts
-  (`lib/client/my-fees.ts`, covered by `tests/my-fees.test.ts`). A newer confirmed split that removes a member also removes their older bill from My page.
-- Home page, for the receiver: on splits settled by transfers ([Fee advances](FEE_ADVANCES.md)), a member who booked a
-  court, bought balls or collects the fees sees a "waiting for payment" card as soon as the split is confirmed. It lists, per activity, who
-  has not marked a transfer to them and how much. Once the automatic reminders are over, each such payer gets a red
-  "reminded 3 times, still unpaid" tag. "Mark received" marks the activity's transfers as received. Splits paid the old way are not
-  listed, because their recipient is only a name and phone number, not linked to an account.
-- Home page, for the owner and administrators: from the moment they are told (above), a "still unpaid after 3 reminders" card lists every
-  visible activity that still has unpaid people, oldest first, with each payer and what they still owe. It covers both
-  ways of paying and stays until everyone has paid. Tapping an activity opens its fees tab to remind again or mark
-  payments. Cancelled and draft activities are left out (`app/home-fees-owed.tsx`, `tests/home-fees-reminders-ui.mjs`).
+## 成员在哪里看到未付费用
 
-## Reminder button
+- "我的"页：活动与分摊列表的每一行，用绿色"已付"或红色"未付"标签标出成员自己的账单。
+- 首页：成员有已确认但未付的费用（自己的或代报名朋友的）时，顶部有一张醒目的提示卡片，列出每个活动、是谁的账单和金额，点一下打开该活动的费用页。所有账单都标记已付后它会消失。只算每个可见活动最新的已确认版本（`lib/client/my-fees.ts`，由 `tests/my-fees.test.ts` 覆盖）。新的已确认分摊把某位成员移除后，他在"我的"页上的旧账单也会消失。卡片里先显示两个活动，其余点"还有 N 场活动 ›"展开。
+- 首页，收款的人：转账结算的分摊（[费用垫付](FEE_ADVANCES.md)）一经确认，预约了场地、买了球或负责收钱的成员就会看到"等你收款"卡片。每个活动一行，写明"N 人未付"和金额；自动提醒结束后，再标出"其中 M 人已提醒 3 次仍未付"，这些人的名字标签显示为红色。付款人以小标签显示，先显示 6 位，其余点"还有 N 人"展开；同样先显示两个活动。"全部标记已收到"把该活动的转账标为已收到。按旧方式付款的分摊不列出，因为它们的收款人只是一个名字和电话号码，没有关联到账号。
+- 首页，群主和管理员：从收到通知的那一刻起（见上文），"提醒 3 次仍未付款"卡片列出每个还有人未付的可见活动，最早的在前，以及每位付款人和仍欠的金额。它涵盖两种付款方式，直到所有人都付清。已经出现在自己"等你收款"卡片里的付款人不会在这里重复列出。点一个活动打开它的费用页，可以再次提醒或代为标记。已取消和草稿活动不列出（`app/home-fees-owed.tsx`、`tests/home-fees-reminders-ui.mjs`）。"等你收款"和这张卡片排在今天的活动之后（见[首页与活动列表](HOME_TODAY.md)）。
 
-The reminder button in the header switches to a ringing, highlighted icon with the unread count (99+ above 99) while
-the reminder centre has unread notices. The count refreshes on load, on every page change, when the tab becomes
-visible and every minute while visible; a failed read keeps the last count. Only the latest request may update the count. Account changes clear the old count immediately; onboarding without a club account makes no reminder request.
+## 提醒按钮
 
-## Verification
+提醒中心有未读通知时，顶栏的提醒按钮变成响铃、突出显示的图标，并显示未读数（超过 99 显示 99+）。未读数在加载时、每次换页时、标签页变为可见时，以及可见期间每分钟刷新一次；读取失败时保留上次的数字。只有最新的一次请求可以更新数字。切换账号会立即清除旧数字；还没有俱乐部账号的引导阶段不发提醒请求。
 
-`tests/fee-payments.test.ts` covers fee contacts, confirmation and reminder notices, mark and unmark permissions, raised
-amounts, the six-hour limit and the projected fields. `tests/fee-payees.test.ts` covers saving, renaming, the
-20-payee limit, removal permissions and the projected fields. `tests/push-api.mjs` covers encrypted delivery of
-reminders, request idempotence and the six-hour refusal.
+## 验证
+
+`tests/fee-payments.test.ts` 覆盖费用联系人、确认和提醒通知、标记和撤销的权限、金额提高、六小时限制以及投影的字段。`tests/fee-payees.test.ts` 覆盖保存、改名、20 个收款人的上限、删除权限以及投影的字段。`tests/push-api.mjs` 覆盖提醒的加密送达、请求幂等以及六小时内的拒绝。

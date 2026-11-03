@@ -18,3 +18,10 @@
 .home-unpaid-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .home-unpaid-payee{flex-basis:100%;font-size:13px;color:var(--muted-foreground);overflow-wrap:anywhere}
 .home-unpaid-actions button svg{vertical-align:-2px}
+
+/* Names and amounts as wrapping chips under each activity on the home fee cards (app/home-unpaid.tsx,
+   app/home-fees-owed.tsx), instead of a line each. */
+.home-owed-names{display:flex;flex-wrap:wrap;gap:4px 6px;margin:0;font-size:13px;color:var(--muted-foreground)}
+.home-owed-names>span{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--foreground) 6%,var(--card));white-space:nowrap}
+.home-owed-names>span.is-overdue{background:color-mix(in srgb,var(--destructive) 12%,var(--card));color:var(--destructive)}
+.home-owed-more{padding:1px 8px;border:0;border-radius:999px;background:none;color:var(--primary);font:inherit;font-size:13px;cursor:pointer;min-height:28px}

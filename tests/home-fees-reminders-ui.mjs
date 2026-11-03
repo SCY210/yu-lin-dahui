@@ -51,5 +51,13 @@ try{
  assert.ok(shown.includes('提醒 3 次仍未付款')&&shown.includes('Fictional Bob · €4.50')&&shown.includes('Fictional Alice · €2.00')&&!shown.includes('等你收款'),'administrators see every overdue payer');
  await act(()=>ui.root.findByType('button').props.onClick());assert.equal(requests.at(-1),'e');
  await act(async()=>ui.update(React.createElement(HomeFeesOwed,{...owed,now:late,admin:true,events:[{id:'e',title:'Fictional activity',status:'cancelled'}]})));assert.equal(ui.toJSON(),null,'cancelled activities are not listed');
- console.log('PASS home fee/reminder UI: receivables, overdue tags and admin overdue card, onboarding, latest response wins, account isolation, 99+, failure preservation, visible-only refresh, cleanup/reduced motion, latest bills, proxy navigation, paid and removed hiding');
+ // Long lists fold: two activities, six payers each; a payer waiting on me is not repeated in the overdue card.
+ const many=Array.from({length:9},(_,i)=>({id:'q'+i,name:'Fictional Q'+i})),three=['e','f','g'].map((eventId,k)=>({...split('t'+eventId,1,[]),eventId,created:confirmed,transfers:many.map(p=>({from:p.id,to:'p1',cents:100+k}))}));
+ const folded={...owed,settlements:three,players:[...owed.players,...many],now:late,admin:true,events:['e','f','g'].map(id=>({id,title:'Fictional '+id,status:'ended'}))};
+ await mount(HomeFeesOwed,folded);shown=text(ui.toJSON());
+ assert.ok(shown.includes('9 人未付')&&shown.includes('其中 9 人已提醒 3 次仍未付')&&shown.includes('还有 3 人')&&shown.includes('还有 1 场活动'),'counts, six payers and two activities show first');
+ assert.ok(!shown.includes('Fictional Q8')&&!shown.includes('提醒 3 次仍未付款'),'the rest fold, and payers already waiting on me are not listed again as overdue');
+ await act(()=>ui.root.findAllByType('button').find(b=>text(b.props.children).includes('还有 3 人')).props.onClick());assert.ok(text(ui.toJSON()).includes('Fictional Q8'));
+ await act(()=>ui.root.findAllByType('button').find(b=>text(b.props.children).includes('还有 1 场活动')).props.onClick());assert.ok(text(ui.toJSON()).includes('Fictional g'));
+ console.log('PASS home fee/reminder UI: receivables, overdue tags and admin overdue card, folded payers and activities, onboarding, latest response wins, account isolation, 99+, failure preservation, visible-only refresh, cleanup/reduced motion, latest bills, proxy navigation, paid and removed hiding');
 }finally{if(ui)await act(()=>ui.unmount());Object.assign(globalThis,{fetch:original.fetch,document:original.document,setInterval:original.setInterval,clearInterval:original.clearInterval,IS_REACT_ACT_ENVIRONMENT:original.act})}
