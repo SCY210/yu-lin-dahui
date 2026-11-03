@@ -26,7 +26,7 @@ export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:
 export const bountyGoals:Record<BountyKind,string>={
  streak:`本场活动连赢 ${bountyStreakWins} 局`,
  rout:`赢一局，且对手只得个位数分（不超过 ${bountyRoutMaxScore} 分）`,
- upset:`赢一局对手平均修为比你方高至少 ${bountyUpsetGap} 的比赛`,
+ upset:`赢一局比赛，对手中至少一人的修为比你方平均高 ${bountyUpsetGap} 以上`,
  deuce:`赢一局 ${bountyDeuceScore} 平后的加分赛（如 22:20）`,
  unbeaten:`本场活动一局不输，金身不破（至少打满 ${bountyUnbeatenGames} 局）`,
  champion:`本场活动赢的局数力压全场，独占鳌头（并列第一也算，至少赢 ${bountyChampionWins} 局）`,
@@ -86,8 +86,9 @@ export function updateBountySettings(s:State,a:Account,input:unknown,now:number)
 }
 
 /** Whether an accepted bounty was met, once the activity's scheduled end has passed. Only completed games count; a
- * no-show forfeit is not a game. The upset compares the average 修为 of both sides before the match. */
-export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecord,now:number,games?:RatedGame[]):BountyOutcome|null{
+ * no-show forfeit is not a game. The upset compares each opponent's 修为 before the match with the average of the
+ * member's side; gamesOf gives every player's rated games (the realm ledger). */
+export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecord,now:number,gamesOf?:(playerId:string)=>RatedGame[]):BountyOutcome|null{
  if(record.status!=='accepted'||!bountyEvent(e)||now<e.end)return null;
  const id=record.playerId,played=s.matches.filter(m=>m.eventId===e.id&&[...m.a,...m.b].includes(id)).flatMap(m=>gameFacts(m).map(g=>({...g,side:m.a.includes(id)?'a' as const:'b' as const})))
   .sort((x,y)=>x.match.start!-y.match.start!||x.match.id.localeCompare(y.match.id)||x.index-y.index);
@@ -105,14 +106,21 @@ export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecor
  }
  else if(record.kind==='sweep')met=new Set(won.flatMap(g=>g.match[g.side==='a'?'b':'a'])).size>=bountySweepOpponents[eventFormat(e)==='singles'?'singles':'doubles'];
  else if(record.kind==='close')met=won.filter(g=>Math.abs(g.a-g.b)===2).length>=bountyCloseWins;
- else met=(games??[]).some(g=>g.eventId===e.id&&g.playerId===id&&g.won&&g.opponent-g.team>=bountyUpsetGap);
+ else{
+  // The upset: a won game where at least one opponent's 修为 before the match was at least bountyUpsetGap above the
+  // average of the member's side. A missing opponent record falls back to the opponents' average.
+  const mine=gamesOf?.(id)??[];
+  met=mine.some(g=>{if(g.eventId!==e.id||!g.won)return false;const m=s.matches.find(x=>x.id===g.matchId);
+   const before=(m?(g.side==='a'?m.b:m.a):[]).map(pid=>gamesOf!(pid).find(x=>x.matchId===g.matchId&&x.gameIndex===g.gameIndex)?.before).filter((x):x is number=>x!==undefined);
+   return Math.max(g.opponent,...before)-g.team>=bountyUpsetGap});
+ }
  return met?'completed':'failed';
 }
 /** Season points from bounties, on the activity's singles or doubles board in the month it started: the frozen reward
  * for a completed bounty, minus the frozen penalty for an accepted one that was not met. */
 export function bountyPointAdjustments(s:Pick<State,'events'|'matches'>,now:number,gamesOf:(playerId:string)=>RatedGame[]){
  return s.events.filter(bountyEvent).flatMap(e=>(e.bounties??[]).flatMap(b=>{
-  const outcome=bountyOutcome(s,e,b,now,b.kind==='upset'?gamesOf(b.playerId):undefined),delta=outcome==='completed'?b.points:outcome==='failed'?-b.penalty:0;
+  const outcome=bountyOutcome(s,e,b,now,gamesOf),delta=outcome==='completed'?b.points:outcome==='failed'?-b.penalty:0;
   return delta?[{playerId:b.playerId,eventId:e.id,period:month(e.start),format:eventFormat(e) as 'singles'|'doubles',delta}]:[];
  }));
 }
@@ -125,7 +133,7 @@ export type BountyHonor={eventId:string;title:string;playerId:string;kind:Bounty
 /** Completed bounties of activities that ended in the last day, newest first, announced to everyone. Only completions
  * are public; declined, open and failed bounties stay private. */
 export function bountyHonors(s:Pick<State,'events'|'matches'>,now:number,gamesOf:(playerId:string)=>RatedGame[]):BountyHonor[]{
- return s.events.filter(e=>bountyEvent(e)&&e.end<=now&&now<bountyHonorUntil(e)&&e.bounties?.length).flatMap(e=>e.bounties!.filter(b=>b.status==='accepted'&&bountyOutcome(s,e,b,now,b.kind==='upset'?gamesOf(b.playerId):undefined)==='completed')
+ return s.events.filter(e=>bountyEvent(e)&&e.end<=now&&now<bountyHonorUntil(e)&&e.bounties?.length).flatMap(e=>e.bounties!.filter(b=>b.status==='accepted'&&bountyOutcome(s,e,b,now,gamesOf)==='completed')
   .map(b=>({eventId:e.id,title:e.title,playerId:b.playerId,kind:b.kind,coins:b.coins,points:b.points,at:e.end})))
   .sort((a,b)=>b.at-a.at||a.eventId.localeCompare(b.eventId)||a.playerId.localeCompare(b.playerId));
 }

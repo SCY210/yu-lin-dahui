@@ -74,7 +74,7 @@ function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
  claims.push(...attendanceStreakClaims(s,now,events,members,index,priorAmounts));
  const rated=ledger??realmLedger(s,now);
  // A completed bounty pays the coins frozen when it was accepted (lib/domain/bounties.ts).
- for(const e of events.values())for(const b of e.bounties??[])if(b.coins>0&&members.has(b.playerId)&&bountyOutcome(s,e,b,now,b.kind==='upset'?rated.byPlayer.get(b.playerId)??[]:undefined)==='completed'){
+ for(const e of events.values())for(const b of e.bounties??[])if(b.coins>0&&members.has(b.playerId)&&bountyOutcome(s,e,b,now,id=>rated.byPlayer.get(id)??[])==='completed'){
   const id=JSON.stringify(['bounty',e.id,b.playerId]);
   if(e.deletedAt===undefined||prior.has(id))claims.push({id,eventId:e.id,playerId:b.playerId,source:'bounty',amount:b.coins,updated:now});
  }
