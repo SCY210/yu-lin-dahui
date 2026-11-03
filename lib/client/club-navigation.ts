@@ -1,9 +1,9 @@
-export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders'|'simulation'|'treasure';
+export type ClubPage = 'home'|'events'|'ranking'|'me'|'social'|'admin'|'reminders'|'simulation'|'treasure'|'achievements';
 export type EventTab = 'overview'|'signup'|'rounds'|'fees'|'social';
 export type SocialTab = 'players'|'network'|'challenges'|'funny';
 export type ClubRoute = {page:ClubPage; eventId:string; tab:EventTab; playerId:string; socialTab:SocialTab};
 export const homeRoute:ClubRoute = {page:'home',eventId:'',tab:'overview',playerId:'',socialTab:'players'};
-const pages = new Set(['home','events','ranking','me','social','admin','reminders','simulation','treasure']);
+const pages = new Set(['home','events','ranking','me','social','admin','reminders','simulation','treasure','achievements']);
 const eventTabs = new Set(['overview','signup','rounds','fees','social']);
 const socialTabs = new Set(['players','network','challenges','funny']);
 const safeId = (value:unknown)=>typeof value==='string'&&value.length<=150?value:'';
@@ -76,7 +76,7 @@ export class ClubNavigation {
   if(!selection||frame.route.page!=='ranking')return;
   frame.ranking=selection;this.write(false);
  }
- get profileBackLabel(){const source=this.profileSource?.route;if(!source)return '返回球友列表';if(source.page==='events')return source.tab==='signup'?'返回接龙':'返回活动';if(source.page==='ranking')return '返回榜单';if(source.page==='me')return '返回我的';if(source.page==='home')return '返回首页';if(source.page==='admin')return '返回群组管理';return source.socialTab==='network'?'返回关系图':source.socialTab==='challenges'?'返回复仇局':source.socialTab==='funny'?'返回趣味榜':'返回球友列表'}
+ get profileBackLabel(){const source=this.profileSource?.route;if(!source)return '返回球友列表';if(source.page==='events')return source.tab==='signup'?'返回接龙':'返回活动';if(source.page==='ranking')return '返回榜单';if(source.page==='me')return '返回我的';if(source.page==='achievements')return '返回我的成就';if(source.page==='home')return '返回首页';if(source.page==='admin')return '返回群组管理';return source.socialTab==='network'?'返回关系图':source.socialTab==='challenges'?'返回复仇局':source.socialTab==='funny'?'返回趣味榜':'返回球友列表'}
  subscribe(listener:(route:ClubRoute)=>void){this.listeners.add(listener);listener(this.route);return()=>{this.listeners.delete(listener)}}
  private emit(){for(const listener of this.listeners)listener(this.route)}
  private write(push:boolean){
