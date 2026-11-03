@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {defaultGuestLevel,guestLevels} from '../lib/domain/guests';
 import {recordedFriends,type RecordedFriend} from '../lib/client/recorded-friends';
-import {guestNameKey} from '../lib/domain/guest-names';
+import {looseGuestName} from '../lib/domain/guest-names';
 import {choice,text,why,fmt} from './ui';
 import type {Field,Form} from './form-fields';
 import './guest-manager.css';
@@ -12,8 +12,7 @@ type EventView={id:string;title:string;start:number};
 type Registration={eventId:string;playerId:string;status:string;sequence:number;bookingSignups?:{bookingId:string;status:string}[]};
 type Friend=RecordedFriend<Guest>;
 type Ctx={data:{players:Guest[];events:EventView[];registrations:Registration[]};busy:boolean;open:(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:Form['convert'],description?:string)=>void;action:(name:string,payload:Record<string,unknown>,close?:boolean)=>Promise<unknown>};
-/** Loose nickname match for spotting likely duplicates: case, spaces and a trailing number ("aq", "AQ", "aq 2"). */
-const loose=(name:string)=>guestNameKey(name).replace(/\s+/g,'').replace(/\d+$/,'');
+const loose=looseGuestName;
 const levelLabel=(level?:number)=>guestLevels.find(([v])=>v===level)?.[1]??'';
 
 /** Recorded friends for the owner and admins (docs/FRIEND_SIGNUP_ENTRY.md): merge duplicates, correct details, take a

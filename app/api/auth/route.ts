@@ -1,8 +1,9 @@
 import { readJsonBody } from '../../../lib/request-body';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, loginRateKey, rateLimitId, trustedClientIP } from '../../../lib/rate-limit';
-import { assertAccountMutable, assertPlayerMutable } from '../../../lib/domain/ownership';
+import { assertPlayerMutable } from '../../../lib/domain/ownership';
 import { convertFriendToMember } from '../../../lib/domain/guest-conversion';
+import { assertAccountManageable, canManageMembers } from '../../../lib/domain/member-managers';
 import { isGuest } from '../../../lib/domain/guests';
 import { DomainError } from '../../../lib/domain/types';
 import { newUsername as username, changeUsernameInput } from '../../../lib/username-policy';
@@ -191,23 +192,24 @@ export async function POST(req: Request) {
                 }
             }
         }
-        if (actor.role !== 'admin')
-            return denied('只有管理员可以创建账号或重置密码');
+        // Administrators and testers manage member accounts; a tester only ordinary members (docs/TESTER_MEMBER_MANAGEMENT.md).
+        if (!canManageMembers(actor))
+            return denied('只有管理员和测试员可以创建账号或重置密码');
         if (action === 'resetPassword') {
             const p = z.object({ accountId: z.string().min(1), password, requestId: z.string().uuid() }).parse(input), key = actor.id + ':resetPassword:' + p.requestId;
             let cred: ReturnType<typeof makePassword> | undefined;
             for (let attempt = 0; attempt < 4; attempt++) {
                 const s = await load();
-                if (s.accounts.find(a => a.id === user.userId)?.role !== 'admin')
-                    return denied('管理员权限已变更');
+                if (!canManageMembers(s.accounts.find(a => a.id === user.userId)))
+                    return denied('账号管理权限已变更');
                 if (await committed(key))
                     return result({ ok: true, duplicate: true }, req);
-                assertAccountMutable(s, s.accounts.find(a => a.id === user.userId)!, p.accountId);
+                assertAccountManageable(s, s.accounts.find(a => a.id === user.userId)!, p.accountId);
                 if (!s.accounts.some(a => a.id === p.accountId) || !await passwordEnabled(p.accountId))
                     return denied('目标账号尚未开通密码登录', 404);
                 cred ??= makePassword(p.password);
                 const previous = structuredClone(s);
-                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'resetAccountPassword', reason: '管理员重置登录密码', changes: { accountId: p.accountId } });
+                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'resetAccountPassword', reason: s.accounts.find(a => a.id === user.userId)?.role === 'admin' ? '管理员重置登录密码' : '测试员重置登录密码', changes: { accountId: p.accountId } });
                 try {
                     await save(s, key, previous, [raw().prepare('UPDATE password_credentials SET salt=?,hash=? WHERE id=?').bind(cred.salt, cred.hash, p.accountId), raw().prepare('DELETE FROM auth_sessions WHERE user_id=?').bind(p.accountId)]);
                     return result({ ok: true }, req);
@@ -230,8 +232,8 @@ export async function POST(req: Request) {
             let cred: ReturnType<typeof makePassword> | undefined;
             for (let attempt = 0; attempt < 4; attempt++) {
                 const s = await load();
-                if (s.accounts.find(a => a.id === user.userId)?.role !== 'admin')
-                    return denied('管理员权限已变更');
+                if (!canManageMembers(s.accounts.find(a => a.id === user.userId)))
+                    return denied('账号管理权限已变更');
                 if (await committed(key))
                     return result({ ok: true, duplicate: true }, req);
                 if (await usernameTaken(p.username))
@@ -241,7 +243,7 @@ export async function POST(req: Request) {
                     return denied('原账号不存在', 404);
                 const freshActor = s.accounts.find(a => a.id === user.userId)!;
                 if (existing)
-                    assertAccountMutable(s, freshActor, existing.id);
+                    assertAccountManageable(s, freshActor, existing.id);
                 // A recorded friend who joins becomes a member with all their records (lib/domain/guest-conversion.ts).
                 const friend = !existing && !!p.playerId && isGuest(s, p.playerId);
                 if (p.playerId && !friend)
