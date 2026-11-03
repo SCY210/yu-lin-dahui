@@ -2,6 +2,9 @@ import { readJsonBody } from '../../../lib/request-body';
 import { assertWriteRequest, releaseRejectedWriteBody, writeErrorResponse } from '../../../lib/write-security';
 import { cleanExpiredRateLimits, consumeRateLimit, loginRateKey, rateLimitId, trustedClientIP } from '../../../lib/rate-limit';
 import { assertAccountMutable, assertPlayerMutable } from '../../../lib/domain/ownership';
+import { convertFriendToMember } from '../../../lib/domain/guest-conversion';
+import { isGuest } from '../../../lib/domain/guests';
+import { DomainError } from '../../../lib/domain/types';
 import { newUsername as username, changeUsernameInput } from '../../../lib/username-policy';
 import { changeLoginUsername, loginAccountMetadata } from '../../../lib/username-change';
 import { z } from 'zod';
@@ -241,31 +244,49 @@ export async function POST(req: Request) {
                 const freshActor = s.accounts.find(a => a.id === user.userId)!;
                 if (existing)
                     assertAccountMutable(s, freshActor, existing.id);
-                if (p.playerId)
+                // A recorded friend who joins becomes a member with all their records (lib/domain/guest-conversion.ts).
+                const friend = !existing && !!p.playerId && isGuest(s, p.playerId);
+                if (p.playerId && !friend)
                     assertPlayerMutable(s, freshActor, p.playerId);
                 if (existing && await passwordEnabled(existing.id))
                     return denied('原账号已有登录账号，请使用重置密码', 409);
                 const player = existing ? s.players.find(v => v.id === existing.playerId) : p.playerId ? s.players.find(v => v.id === p.playerId) : undefined;
                 if ((existing || p.playerId) && !player)
                     return denied('球友档案不存在', 404);
-                if (player)
+                if (player && !friend)
                     assertPlayerMutable(s, freshActor, player.id);
                 if (!existing && player && s.accounts.some(a => a.playerId === player.id))
                     return denied('该球友已有账号，请开通原账号或重置密码', 409);
                 const accountId = existing?.id ?? newId, playerId = player?.id ?? newPlayerId;
                 cred ??= makePassword(p.password);
                 const previous = structuredClone(s);
-                if (!existing)
-                    s.accounts.push({ id: accountId, email: '', role: 'member', playerId });
-                if (player) {
-                    if (!existing)
-                        player.ownerId = accountId;
+                let converted: ReturnType<typeof convertFriendToMember> | undefined;
+                if (friend) {
+                    try {
+                        converted = convertFriendToMember(s, playerId, accountId, p.name, Date.now());
+                    }
+                    catch (e) {
+                        if (e instanceof DomainError)
+                            return denied(e.message, 409);
+                        throw e;
+                    }
                 }
-                else
-                    s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '管理员创建球友账号' });
-                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'createLoginAccount', reason: existing ? '为原账号开通登录' : player ? '为已有球友档案创建登录' : '管理员创建普通成员账号', changes: { accountId, playerId, username: p.username } });
+                else {
+                    if (!existing)
+                        s.accounts.push({ id: accountId, email: '', role: 'member', playerId });
+                    if (player) {
+                        if (!existing)
+                            player.ownerId = accountId;
+                    }
+                    else
+                        s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '管理员创建球友账号' });
+                }
+                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'createLoginAccount', reason: existing ? '为原账号开通登录' : converted ? '临时来宾转为正式成员' : player ? '为已有球友档案创建登录' : '管理员创建普通成员账号', changes: { accountId, playerId: converted?.playerId ?? playerId, username: p.username, ...(converted ? { formerGuests: converted.before, mergedPlayerIds: converted.merged, hiddenDuplicateIds: converted.left, startLevel: converted.level } : {}) } });
                 try {
-                    await save(s, key, previous, [raw().prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(accountId, p.username, cred.salt, cred.hash, Date.now())]);
+                    // The store deletes removed rows before writing changed ones, but the friend's merged records are still
+                    // referenced by the old signups until those are rewritten: delete them last, in the same batch.
+                    const merged = converted?.merged ?? [], prior = merged.length ? { ...previous, players: previous.players.filter(v => !merged.includes(v.id)) } : previous;
+                    await save(s, key, prior, [raw().prepare('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)').bind(accountId, p.username, cred.salt, cred.hash, Date.now()), ...merged.map(id => raw().prepare('DELETE FROM players WHERE id = ?').bind(id))]);
                     return result({ ok: true, accountId, username: p.username }, req);
                 }
                 catch (e) {

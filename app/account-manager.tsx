@@ -9,11 +9,13 @@ import ChangeUsername from './change-username';
 import {Pick} from './ui';
 import TrialCleanup from './trial-cleanup';
 import type {ClubData} from '../lib/contracts/club';
+import {accountProfileChoices} from '../lib/client/recorded-friends';
 export default function AccountManager({data,refresh,onEditName,onSelfUsernameChanged}:any){
  const [form,setForm]=useState<any>(null),[usernameTarget,setUsernameTarget]=useState<any>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const name=(id:string)=>data.players.find((p:any)=>p.id===id)?.name??'球友';
  const login=(id:string)=>(data.loginAccounts??[]).find((c:any)=>c.accountId===id);
- const available=data.players.filter((p:{id:string;guestEventId?:string})=>!p.guestEventId&&!data.accounts.some((a:{playerId:string})=>a.playerId===p.id));
+ // Profiles a new account can take over (docs/FRIEND_TO_MEMBER.md).
+ const {available,friends}=accountProfileChoices(data),friend=(id:string)=>friends.find(f=>f.id===id);
  function open(account?:any,reset=false){setError('');setForm({accountId:account?.id,reset,name:account?name(account.playerId):'',username:account?login(account.id)?.username??'':'',playerId:'new',password:'',confirmation:'',requestId:crypto.randomUUID()})}
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy)return;if(form.password!==form.confirmation){setError('两次密码不一致');return}if(!form.reset&&!/^[A-Za-z0-9]{2,32}$/.test(form.username.trim())){setError('新账号须为2–32位英文字母或数字');return}setBusy(true);setError('');
@@ -31,8 +33,8 @@ export default function AccountManager({data,refresh,onEditName,onSelfUsernameCh
  {data.accounts.map((a:ClubData['accounts'][number])=>{const c=login(a.id);return <div className="account-line" key={a.id}><div className="grow"><strong>{name(a.playerId)}</strong><p>{c?<><span className="account-key">{c.username}</span> · {a.isOwner?'群主 · 最高权限':a.role==='admin'?'管理员':'成员'}</>:'尚未开通账号密码登录'}</p></div><div className="actions">{data.me.isOwner&&<>{a.canEditProfileName!==false&&<button className="secondary" onClick={()=>onEditName(a)}><Pencil size={15}/>修改名字</button>}{c&&<button className="secondary" onClick={()=>setUsernameTarget(a)}><Pencil size={15}/>修改账号</button>}</>}{a.canModify===false?<span className="badge">群主账号受保护</span>:<button className="secondary" onClick={()=>open(a,!!c)}><KeyRound size={15}/>{c?'重置密码':'开通登录'}</button>}</div></div>})}
  <Dialog open={!!form} historyCloseBlocked={busy} onOpenChange={v=>{if(!v&&!busy)setForm(null)}}><DialogContent className="app-dialog account-edit-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(busy)ev.preventDefault()}} onInteractOutside={ev=>{if(busy)ev.preventDefault()}}><DialogHeader><DialogTitle>{form?.reset?'重置账号密码':form?.accountId?'开通原账号登录':'创建球友账号'}</DialogTitle><DialogDescription>{form?.reset?'新密码生效后，该账号原有登录会话会退出。头像、权限和比赛记录保留。':'填写账号和初始密码，保存后手动交给本人。新账号默认为普通成员。'}</DialogDescription></DialogHeader>
  {form&&<form onSubmit={submit}><div className="form-fields">
- {!form.reset&&!form.accountId&&<label>球友档案<Pick value={form.playerId} options={[['new','创建新球友档案'],...available.map((p:any)=>[p.id,p.name+' · 保留历史记录'])]} onChange={(id:string)=>{if(!busy)setForm({...form,playerId:id,name:id==='new'?'':name(id)})}}/></label>}
- {!form.reset&&<label>昵称<input required readOnly={!!form.accountId||form.playerId!=='new'} maxLength={150} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} disabled={busy}/></label>}
+ {!form.reset&&!form.accountId&&<label>球友档案<Pick value={form.playerId} options={[['new','创建新球友档案'],...available.map((p:{id:string;name:string})=>[p.id,p.name+' · 保留历史记录']),...friends.map(f=>[f.id,f.name+'（'+f.host+' 的朋友）· 转为正式成员'])]} onChange={(id:string)=>{if(!busy)setForm({...form,playerId:id,name:id==='new'?'':name(id)})}}/>{friend(form.playerId)&&<small>这位朋友{friend(form.playerId)!.activities?'在 '+friend(form.playerId)!.activities+' 场活动里':''}的接龙、比赛和费用都会并到新账号名下；过去的比赛按正式成员重新计算修为，从朋友当前的水平开始。昵称可以改成本人的名字。</small>}</label>}
+ {!form.reset&&<label>昵称<input required readOnly={!!form.accountId||(form.playerId!=='new'&&!friend(form.playerId))} maxLength={150} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} disabled={busy}/></label>}
  <label>登录账号<input required readOnly={form.reset} minLength={form.reset?1:2} maxLength={form.reset?254:32} pattern={form.reset?undefined:'[A-Za-z0-9]{2,32}'} title={form.reset?undefined:'2–32位英文字母或数字'} autoComplete="off" autoCapitalize="none" spellCheck={false} value={form.username} onChange={e=>setForm({...form,username:e.target.value})} disabled={busy}/>{!form.reset&&<small>2–32位英文字母或数字，英文不区分大小写。</small>}</label>
  <label>{form.reset?'新密码':'初始密码'}<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} disabled={busy}/><small>至少12位。请为每位球友设置不同的密码。</small></label>
  <label>确认密码<input type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={form.confirmation} onChange={e=>setForm({...form,confirmation:e.target.value})} disabled={busy}/></label>
