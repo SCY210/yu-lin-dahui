@@ -1,5 +1,6 @@
 import type {Account,Event,Settings,State} from './domain/types';
 import {awardVotingClosesAt} from './domain/activity-voting';
+import {bountyHonorUntil} from './domain/bounties';
 import {attendanceForEvent,usesAutomaticAttendance} from './domain/attendance';
 import {registrationSpans} from './domain/booking-signups';
 import {pointsWindow} from './domain/points-window';
@@ -109,5 +110,7 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  // MVP voting closes on the clock: the result, its points and the winner's notice appear without a write.
  const voted=new Set(s.awardVotes.map(v=>v.eventId));
  for(const e of s.events)if(voted.has(e.id))boundary(awardVotingClosesAt(e));
+ // A completed bounty leaves the club-wide banner a day after its activity ends.
+ for(const e of s.events)if(e.bounties?.some(b=>b.status==='accepted'))boundary(bountyHonorUntil(e));
  return expires;
 }

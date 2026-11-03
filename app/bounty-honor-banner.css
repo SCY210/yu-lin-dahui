@@ -1,0 +1,19 @@
+/* Club-wide bounty announcements: a gold-edged ink strip under the top bar whose text scrolls right to left. */
+.bounty-honor-banner{--honor:#a06a00;display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:6px 6px 6px 10px;border:1px solid color-mix(in srgb,var(--honor) 45%,transparent);border-radius:10px;background:linear-gradient(90deg,color-mix(in srgb,#f4cf63 22%,var(--card)),var(--card));color:var(--foreground);overflow:hidden}
+.bounty-honor-seal{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:8px;background:var(--honor);color:#fff6d8}
+.bounty-honor-window{flex:1;min-width:0;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 16px,#000 calc(100% - 16px),transparent)}
+.bounty-honor-track{display:flex;width:max-content;animation:bounty-honor-scroll linear infinite}
+.bounty-honor-banner:hover .bounty-honor-track,.bounty-honor-banner:focus-within .bounty-honor-track{animation-play-state:paused}
+.bounty-honor-list{display:flex;gap:48px;margin:0;padding:0 48px 0 0;list-style:none}
+.bounty-honor-list button{padding:2px 0;border:0;background:none;color:inherit;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer}
+.bounty-honor-list button:hover{color:var(--honor)}
+.bounty-honor-close{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:none;color:var(--muted-foreground)}
+@keyframes bounty-honor-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+/* Reduced motion: no scrolling; announcements wrap and the duplicate copy is dropped. */
+@media (prefers-reduced-motion:reduce){
+ .bounty-honor-window{mask-image:none}
+ .bounty-honor-track{width:auto;animation:none}
+ .bounty-honor-list{flex-direction:column;gap:2px;padding:0}
+ .bounty-honor-list[aria-hidden]{display:none}
+ .bounty-honor-list button{white-space:normal;text-align:left}
+}
