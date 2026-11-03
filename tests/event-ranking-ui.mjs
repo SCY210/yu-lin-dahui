@@ -15,9 +15,8 @@ const adminForm=newEventForm(Date.now(),false,true);assert.ok(adminForm.fields.s
 const testerForm=newEventForm(Date.now(),false,canManageRankedEvent({id:'member',role:'member',simulationTester:true}));assert.ok(testerForm.fields.some(f=>f.key==='ranking'));assert.equal(testerForm.convert(booked(testerForm)).ranked,true);
 const original={window:globalThis.window,document:globalThis.document},surface={addEventListener(){},removeEventListener(){}};globalThis.window=surface;globalThis.document=surface;
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;const opened=[],e={id:'e',creatorId:'member',ranked:false,status:'open',start:Date.now()-1000,end:Date.now()+3600000},ctx={data:{me:{id:'member',role:'member'},matches:[]},busy:false,open(...args){opened.push(args)}};
-const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');
 try{
- await act(()=>{ui=renderer.create(React.createElement(EventRanking,{e,ctx}))});assert.equal(ui.root.findAllByType('button').length,0);assert.ok(text(ui.root).includes('普通活动'));assert.ok(text(ui.root).includes('不加减积分或修为'));
+ await act(()=>{ui=renderer.create(React.createElement(EventRanking,{e,ctx}))});assert.equal(ui.toJSON(),null,'members see no switch and no card: the header seal shows the state');
  ctx.data.me={id:'admin',role:'admin'};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));await act(()=>ui.root.findByType('button').props.onClick());assert.deepEqual(opened.at(-1).slice(0,3),['开启积分赛','eventRanking',{eventId:'e',ranked:true,expectedRanked:false}]);
  ctx.data.me={id:'owner',role:'member',isOwner:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,1);
  ctx.data.me={id:'member',role:'member',simulationTester:true};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,1);
@@ -26,5 +25,5 @@ try{
  ctx.data.me={id:'member',role:'member',simulationTester:false};await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0,'revoked capability hides controls');
  ctx.data.me={id:'member',role:'member',simulationTester:true};
  ctx.data.matches=[{eventId:'e',start:1,games:[],scoreA:null,scoreB:null,status:'playing'}];await act(()=>ui.update(React.createElement(EventRanking,{e,ctx})));assert.equal(ui.root.findAllByType('button').length,0);
- console.log('PASS event ranking UI: member refusal, tester creation/own controls and revocation, owner/admin controls, ordinary labels and history guards');
+ console.log('PASS event ranking UI: member refusal, tester creation/own controls and revocation, owner/admin controls, a bare switch beside the guides and history guards');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT;for(const key of ['window','document']){if(original[key]===undefined)delete globalThis[key];else globalThis[key]=original[key]}}
