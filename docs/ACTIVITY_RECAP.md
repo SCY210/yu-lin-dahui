@@ -1,16 +1,16 @@
-# Activity recap
+# 活动战报
 
-Once an activity has ended, its overview starts with a battle summary card (`app/event-recap.tsx`) when it has scored games. The summary is computed in the client by `activityRecap` in `lib/domain/activity-recap.ts`, from the completed matches the viewer can already see. It adds no server work, stored data, writes or clock boundaries: the card appears with the existing end-of-activity status.
+活动结束且已有录分对局时，活动概览顶部显示战报卡片（`app/event-recap.tsx`）。`lib/domain/activity-recap.ts` 中的 `activityRecap` 在客户端根据查看者已经能看到的已完成比赛计算战报，不增加服务端计算、存储数据、写入或时钟边界；卡片沿用已有的活动结束状态显示。
 
-The card shows:
+卡片显示：
 
-- the number of games, players who played and points scored;
-- the MVP, once voting has closed (`mvpWinners`);
-- the top winners by games won, tied players together (at most three);
-- the best win rate of a player with three or more games, when it beats the top winner's rate;
-- the longest run of wins in a row, three or more;
-- the best pair: the doubles partners with the most wins together, two or more;
-- the closest game (smallest margin, then most points) and the most one-sided game (margin of ten or more);
-- the viewer's own games, wins and losses, when they played.
+- 对局数、实际上场人数和总得分；
+- 投票截止后的 MVP（`mvpWinners`）；
+- 按胜局数排列的优胜球友，并列者一起显示，最多三人；
+- 至少打过三局、且胜率高于胜局数领先者的最佳胜率球友；
+- 至少三连胜的最长连胜纪录；
+- 一起获胜最多、且至少赢过两局的最佳双打搭档；
+- 最胶着的一局（先比最小分差，再比总得分）和最悬殊的一局（分差至少十分）；
+- 查看者参加过活动时，显示其个人局数、胜局和败局。
 
-Games are the individual games of each completed match (`gameFacts`), in the order they ended, so a best-of-three counts as several games. Matches still playing, voided games and other activities are ignored. `tests/activity-recap.test.ts` checks the rules with fictional matches.
+局数按每场已完成比赛中的单局（`gameFacts`）计算，并按结束时间排序，因此三局两胜比赛会计为多局。正在进行的比赛、已作废的比赛和其他活动均不计入。`tests/activity-recap.test.ts` 使用虚构比赛验证这些规则。
