@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {defaultGuestLevel,guestLevels} from '../lib/domain/guests';
-import {friendKey} from '../lib/domain/guest-friend-key';
+import {recordedFriends,type RecordedFriend} from '../lib/client/recorded-friends';
 import {guestNameKey} from '../lib/domain/guest-names';
 import {choice,text,why,fmt} from './ui';
 import type {Field,Form} from './form-fields';
@@ -10,7 +10,7 @@ import './guest-manager.css';
 type Guest={id:string;name:string;guest?:boolean;guestEventId?:string;guestHost?:string;guestHostId?:string;guestLevel?:number;guestGender?:'male'|'female';guestFriendId?:string;guestHidden?:boolean};
 type EventView={id:string;title:string;start:number};
 type Registration={eventId:string;playerId:string;status:string;sequence:number;bookingSignups?:{bookingId:string;status:string}[]};
-type Friend={key:string;latest:Guest;records:Guest[];activities:number;last:number};
+type Friend=RecordedFriend<Guest>;
 type Ctx={data:{players:Guest[];events:EventView[];registrations:Registration[]};busy:boolean;open:(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:Form['convert'],description?:string)=>void;action:(name:string,payload:Record<string,unknown>,close?:boolean)=>Promise<unknown>};
 /** Loose nickname match for spotting likely duplicates: case, spaces and a trailing number ("aq", "AQ", "aq 2"). */
 const loose=(name:string)=>guestNameKey(name).replace(/\s+/g,'').replace(/\d+$/,'');
@@ -21,12 +21,7 @@ const levelLabel=(level?:number)=>guestLevels.find(([v])=>v===level)?.[1]??'';
 export default function GuestManager({ctx}:{ctx:Ctx}){
  const {data,open,action,busy}=ctx,[selected,setSelected]=useState<string[]>([]);
  const starts=new Map(data.events.map(e=>[e.id,e.start])),titles=new Map(data.events.map(e=>[e.id,e.title]));
- const groups=new Map<string,Guest[]>();
- for(const p of data.players)if(p.guest||p.guestEventId){const k=friendKey(p,p.guestHostId);groups.set(k,[...(groups.get(k)??[]),p])}
- const friends:Friend[]=[...groups].map(([key,records])=>{
-  const dated=[...records].sort((a,b)=>(starts.get(a.guestEventId??'')??0)-(starts.get(b.guestEventId??'')??0));
-  return {key,records,latest:dated.at(-1)!,activities:new Set(records.map(r=>r.guestEventId).filter(Boolean)).size,last:starts.get(dated.at(-1)!.guestEventId??'')??0};
- }).sort((a,b)=>a.latest.name.localeCompare(b.latest.name,'zh-CN')||b.last-a.last);
+ const friends:Friend[]=recordedFriends(data.players,data.events);
  const listed=friends.filter(f=>!f.latest.guestHidden),hidden=friends.filter(f=>f.latest.guestHidden);
  const similar=new Map<string,number>();for(const f of listed)similar.set(loose(f.latest.name),(similar.get(loose(f.latest.name))??0)+1);
  const chosen=listed.filter(f=>selected.includes(f.key));
