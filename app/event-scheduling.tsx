@@ -100,7 +100,9 @@ export function EventRounds({e,ctx,mode,now,focusRoundId}:{e:Event;ctx:Schedulin
    // A focused match in a round behind the tabs shows that round until another tab is chosen.
    const shown=others.find(r=>r.id===(roundTab||focusRoundId))??(playingRounds.length?undefined:next&&others.includes(next)?next:others.at(-1));
    return <>{playingRounds.map(r=>roundView(r,rounds.indexOf(r)))}
-    <div className="round-tabs" role="tablist" aria-label="其他轮次">{others.map(r=>{const n=rounds.indexOf(r)+1;return <button type="button" role="tab" key={r.id} aria-selected={r.id===shown?.id} className={'round-tab is-'+r.status+(r.id===shown?.id?' is-selected':'')} onClick={()=>setRoundTab(r.id===shown?.id&&playingRounds.length?'':r.id)}>第 {n} 轮<small>{r.status==='complete'?'已结束':r.status==='draft'?'草稿':'待开始'}</small></button>})}</div>
+    {/* Every round, coloured like its section: green finished, red in progress, plain not started. A round in progress
+        is already open above, so its tab scrolls to it. */}
+    <div className="round-tabs" role="tablist" aria-label="全部轮次">{rounds.map((r,i)=>{const live=r.status==='playing';return <button type="button" role="tab" key={r.id} aria-selected={!live&&r.id===shown?.id} className={'round-tab is-'+r.status+(!live&&r.id===shown?.id?' is-selected':'')} onClick={()=>live?document.querySelector<HTMLElement>('[id^="match-"][data-round="'+r.id+'"]')?.scrollIntoView({block:'center',behavior:'smooth'}):setRoundTab(r.id===shown?.id&&playingRounds.length?'':r.id)}>第 {i+1} 轮<small>{r.status==='complete'?'已结束':live?'进行中':r.status==='draft'?'草稿':'待开始'}</small></button>})}</div>
     {shown&&roundView(shown,rounds.indexOf(shown),true)}</>;
   })()}
   <Disclosure label="搭档方式与投票"><EventPointsPlan e={e} ctx={ctx} planning/></Disclosure>
