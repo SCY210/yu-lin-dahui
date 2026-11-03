@@ -7,7 +7,7 @@ import {mergeStrengthRating} from '../lib/domain/ranking';
 import {realmLedger} from '../lib/domain/realm-rating';
 import {activateAutomaticCoins,reconcileAutomaticCoins} from '../lib/domain/automatic-coins';
 
-// Cloudflare's free Workers plan allows 10ms of CPU per request; see docs/PERFORMANCE_BUDGET.md. Other test files
+// Polled reads should stay around 10ms of CPU (Workers Paid allows more, but every phone polls); see docs/PERFORMANCE_BUDGET.md. Other test files
 // run in parallel and steal CPU at random moments, so every timing is the fastest of several runs (contention only
 // ever adds time) with generous budgets. A return to per-player or per-event full scans (the 169ms projection this
 // file was written against) still fails.
@@ -85,7 +85,7 @@ test('maintenance shares the 修为 refresh and coin ledger without changing the
 });
 
 // Budgets are counted in copies of the whole club state (structuredClone, about 2ms on a laptop) timed alongside, so
-// they hold on any machine and under any load. The 10ms Workers limit is about five copies on a laptop.
+// they hold on any machine and under any load. The 10ms read target is about five copies on a laptop.
 test('a club-sized view stays far below the old cost, and shared viewers are cheaper still',()=>{
  const {s,now}=club(30),period=periodAt(now),year=Number(period.slice(0,4)),viewers=s.accounts.slice(0,10);
  clearSharedClubValues();projectClubState(s,viewers[0],period,year,now,{revision:s.revision});

@@ -27,7 +27,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
   const actor=eventRankingEnabled(original)?s.accounts.find(a=>canEnableEventRanking(s,a,original)):s.accounts.find(a=>a.id===original.creatorId)??s.accounts.find(a=>a.role==='admin');
   if(!actor)continue;
   const mode=schedulingMode(s,original),planKey=awaitsPlan(s,original,mode)?autoPlanKey(s,original,now):null;
-  // Cloning the complete history twice on every unchanged poll can itself exceed the free CPU budget.
+  // Cloning the complete history twice on every unchanged poll would cost more than the whole rest of a read.
   // First activation still records its audit; later polls clone only when a clock action can actually run.
   if(original.pointsSession?.startedAt){
    if(mode==='live'){

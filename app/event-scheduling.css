@@ -47,3 +47,13 @@
 /* One court fills the row instead of leaving half of it empty; on wide screens three courts share one row. */
 .event-scheduling .courts-grid>:only-child{grid-column:1/-1;width:100%;max-width:560px}
 @media(min-width:1000px){.event-scheduling .courts-grid:has(>:nth-child(3):last-child),.event-scheduling .courts-grid:has(>:nth-child(5)){grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* The recommended way of scheduling, highlighted above the selector for organisers (recommendedSchedulingMode). */
+.scheduling-advice{display:flex;align-items:center;gap:10px;margin:6px 0;padding:10px 12px;border:1.5px solid var(--primary);border-radius:12px;background:color-mix(in srgb,var(--primary) 9%,var(--card));color:var(--foreground)}
+.scheduling-advice>svg{flex:none;color:var(--primary)}
+.scheduling-advice>div{flex:1;min-width:0}
+.scheduling-advice strong{display:block;font-size:14px;color:var(--primary)}
+.scheduling-advice p{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--muted-foreground)}
+.scheduling-advice>button{flex:none;min-height:40px;padding:6px 12px;font-size:13px}
+.scheduling-advice.is-current{border-style:dashed;background:var(--card)}
+@media(max-width:600px){.scheduling-advice{flex-wrap:wrap}.scheduling-advice>button{width:100%}}

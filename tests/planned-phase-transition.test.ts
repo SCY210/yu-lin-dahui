@@ -56,11 +56,46 @@ test('fast morning scores cannot start the next attendance phase early',()=>{
  assert.equal(advanceScheduledCourts(s,e,boundary),true);assert.equal(m('m21').start,boundary);
 });
 
-test('expiration is persisted even when the next confirmed phase cannot start yet',async()=>{
+test('expiration is persisted even when a hand-edited next phase cannot start yet',async()=>{
  const {s,e,m,ids}=fixture();s.matches.filter(m=>['r2','r3'].includes(m.roundId)).forEach(m=>m.a[0]=ids[10]);e.noShowHold=[ids[10]];
+ // An organiser's swap keeps its lineup: the rounds are not planned again around the held player.
+ for(const roundId of ['r2','r3'])s.audits.push({id:'swap-'+roundId,at:start,actor:s.accounts[0].id,action:'swap',reason:'swap 操作',changes:{roundId,p1:ids[1],p2:ids[10]}});
+ const lineups=structuredClone(s.matches.filter(m=>['r2','r3'].includes(m.roundId)));
  assert.equal(await startDuePointsSessions(s,boundary,apply),true);
  assert.ok(s.matches.filter(m=>['r0','r1'].includes(m.roundId)).every(m=>m.status==='cancelled'));assert.equal(m('m20').status,'published');assert.equal(s.matches.some(m=>m.status==='playing'),false);
+ assert.deepEqual(s.matches.filter(m=>['r2','r3'].includes(m.roundId)),lineups);assert.equal(s.audits.some(a=>a.action==='pointsReplan'),false);
  assert.equal(await startDuePointsSessions(s,boundary+1,apply),false);
+});
+
+test('without a hand edit the next phase is planned again around a held player and starts',async()=>{
+ const {s,e,m,ids}=fixture();s.matches.filter(m=>['r2','r3'].includes(m.roundId)).forEach(m=>m.a[0]=ids[10]);e.noShowHold=[ids[10]];
+ assert.equal(await startDuePointsSessions(s,boundary,apply),true);
+ assert.equal(s.audits.filter(a=>a.action==='pointsReplan').length,1);
+ const playing=s.matches.filter(m=>m.status==='playing');
+ assert.deepEqual(playing.map(m=>m.id).sort(),['m20','m21'],'each court keeps its game ID');
+ assert.ok(playing.every(x=>![...x.a,...x.b].includes(ids[10])&&![...x.a,...x.b].some(id=>id===ids[8]||id===ids[9])),'the held player and those who left are not planned');
+ assert.equal(new Set(playing.flatMap(x=>[...x.a,...x.b])).size,8);assert.equal(m('m20').start,boundary);
+ const saved=structuredClone(s);assert.equal(await startDuePointsSessions(s,boundary+1,apply),false);assert.deepEqual(s,saved,'planned again only once');
+});
+
+test('players whose game was skipped at a phase change get it back in the next phase',async()=>{
+ const s=createSimulation(start).state,e=s.events[0],ids=s.players.map(p=>p.id),cut=start+60*minute;
+ e.schedulingMode='planned';e.end=start+240*minute;e.pointsSession={startedAt:start,attendance:[],waiting:[]};e.pointsPlan={start,end:e.end,roundMinutes:15};
+ s.bookings.forEach(b=>b.end=e.end);s.registrations[11].arrival=cut;
+ const game=(id:string,roundId:string,court:number,players:string[],done=false)=>s.matches.push({id,eventId:e.id,roundId,courtId:s.bookings[court].id,a:players.slice(0,2),b:players.slice(2),status:done?'complete':'published',start:done?start:null,end:done?start+15*minute:null,scoreA:done?21:null,scoreB:done?15:null,games:done?[{a:21,b:15}]:[],monthly:true,elo:true,locked:false,enteredBy:null});
+ // The first round: court 1 was played, court 2 never started before the twelfth player arrived.
+ s.rounds.push({id:'a0',eventId:e.id,start,duration:15,status:'playing',eligible:ids.slice(0,11),rest:ids.slice(8,11),seed:1,pointsSlot:1});
+ game('g01','a0',0,ids.slice(0,4),true);game('g02','a0',1,ids.slice(4,8));
+ // The next round was planned as if both games had been played: 4 to 7 would rest again.
+ s.rounds.push({id:'a1',eventId:e.id,start:cut,duration:15,status:'published',eligible:ids,rest:ids.slice(4,8),seed:2,pointsSlot:2});
+ game('g11','a1',0,[ids[0],ids[1],ids[8],ids[9]]);game('g12','a1',1,[ids[2],ids[3],ids[10],ids[11]]);
+ assert.equal(await startDuePointsSessions(s,cut,apply),true);
+ assert.equal(s.matches.find(x=>x.id==='g02')!.status,'cancelled');
+ const next=s.matches.filter(x=>x.roundId==='a1'&&x.status==='playing').flatMap(x=>[...x.a,...x.b]);
+ assert.equal(next.length,8);
+ for(const id of ids.slice(4,8))assert.ok(next.includes(id),'a player whose game was skipped plays next');
+ for(const id of ids.slice(0,4))assert.ok(!next.includes(id),'those who played rest');
+ assert.deepEqual(s.rounds.find(r=>r.id==='a1')!.rest.sort(),[...ids.slice(0,4)].sort());
 });
 
 test('unconfirmed drafts, ordinary one-round scheduling and future activities are not expired',()=>{
