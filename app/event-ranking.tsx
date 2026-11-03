@@ -4,8 +4,11 @@ import type {Event} from '../lib/domain/types';
 import type {SchedulingContext} from './event-scheduling';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 
-export default function EventRanking({e,ctx}:{e:Event;ctx:SchedulingContext}){
+/** The points-match switch, a button beside the rounds tab's guides (app/event-view.tsx). Only those who may change it,
+ * before the first game starts, see it; the header's points-match seal shows the current state to everyone. */
+export default function EventRankingToggle({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),enabled=eventRankingEnabled(e),admin=canManageRankedEvent(ctx.data.me,e);
  const editable=admin&&!ctx.readOnly&&now<e.end&&!['ended','cancelled'].includes(e.status)&&!eventHasStartedMatches(ctx.data,e);
- return <section className="card event-ranking"><div className="row"><strong>{enabled?'积分赛':'普通活动'}</strong>{editable&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open(enabled?'改为普通活动':'开启积分赛','eventRanking',{eventId:e.id,ranked:!enabled,expectedRanked:enabled},[],undefined,enabled?'改为普通接龙和分组，对局不计积分或修为。':'开启后本活动的对局计入积分榜和修为；开打后不能变更。')}>{enabled?'改为普通活动':'开启积分赛'}</button>}</div><p className="hint">{enabled?'本活动为积分赛，对局按规则计入积分与修为。':'接龙、分组和录分照常使用，对局、MVP 和迟到均不加减积分或修为。'}</p></section>;
+ if(!editable)return null;
+ return <button type="button" className="event-ranking-toggle" disabled={ctx.busy} onClick={()=>ctx.open(enabled?'改为普通活动':'开启积分赛','eventRanking',{eventId:e.id,ranked:!enabled,expectedRanked:enabled},[],undefined,enabled?'改为普通接龙和分组，对局不计积分或修为。':'开启后本活动的对局计入积分榜和修为；开打后不能变更。')}>{enabled?'改为普通活动':'开启积分赛'}</button>;
 }

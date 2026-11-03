@@ -19,8 +19,17 @@ export function schedulingMode(s:Pick<State,'rounds'>,e:Event):SchedulingMode{
  * live play can only split the four players whose turn it is. In whole-evening simulations on two to four courts the
  * mean rating gap between the sides was 20-37 planned and 106-140 live with full attendance, and 41-61% of live games
  * had a gap over 100. Live play gives 3-22% more games, which the club ranks below balanced games. */
-export function recommendedSchedulingMode():{mode:'planned';reason:string}{
- return {mode:'planned',reason:'预排在每轮所有上场球友里统一分队，模拟中双方修为分平均只差 20–40 分；实时排场只能在刚轮到的 4 人里分队，平均差 110–140 分，约一半的局差 100 分以上。'};
+/** Planned is the recommendation (AGENTS.md C1); `live` lists when live scheduling serves better (AGENTS.md E2, D1). */
+export function recommendedSchedulingMode():{mode:'planned';reason:string;live:string[]}{
+ return {mode:'planned',reason:'预排在每轮所有上场球友里统一分队，模拟中双方修为分平均只差 20–40 分；实时排场只能在刚轮到的 4 人里分队，平均差 110–140 分，约一半的局差 100 分以上。',
+  live:['每片场只多 1 人左右轮休时（如 2 片场 9–10 人、3 片场 13–15 人）：预排的下一局常要等人从别的场下来，会空场；实时排场打完就补人。',
+   '有人想打一局歇一局时：「不连续上场」只在实时排场里有。']};
+}
+/** Whether this many players on this many courts leaves about one player resting per court, the case where planned
+ * rounds leave courts idle and live scheduling fills them sooner (AGENTS.md E2). */
+export function liveSchedulingFits(players:number,courts:number,perCourt:number){
+ const extra=players-courts*perCourt;
+ return courts>0&&extra>=1&&extra<=courts;
 }
 export function pendingSchedulingIds(s:Pick<State,'matches'>,eventId:string){return s.matches.filter(m=>m.eventId===eventId&&['draft','published'].includes(m.status)).map(m=>m.id).sort()}
 /** Never delete historical records or cancel a game that has already started. */

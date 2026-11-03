@@ -183,3 +183,5 @@ input[readonly]{background:#f8f7fb;color:#7c748c}
 @keyframes section-focus-ink{0%,40%{box-shadow:0 0 0 3px #a8382a,0 0 14px #a8382a80}100%{box-shadow:0 0 0 0 transparent}}
 @media(prefers-reduced-motion:reduce){.is-section-focused{animation:none;box-shadow:0 0 0 3px #d4a23a}}
 .ev-court-card,.fee-transfer,.fee-main-summary,.section-focus-target{scroll-margin:90px 0 110px}
+
+.feature-actions .event-ranking-toggle{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--primary);font:inherit;font-size:14px;font-weight:500;cursor:pointer}

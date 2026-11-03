@@ -1,9 +1,8 @@
 'use client';
 import type {LiveOp,LiveScore} from '../lib/domain/live-score';
-import EventRanking from './event-ranking';
 import PointsAttendance from './points-attendance';
 import EventTournament from './event-tournament';
-import {useState} from 'react';
+import {lazy,Suspense,useState} from 'react';
 import {Check,Shuffle,CalendarDays,Sparkles} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
 import type {Event,Match,Round,State} from '../lib/domain/types';
@@ -15,9 +14,9 @@ import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {liveActivityAvailable} from '../lib/domain/live-window';
 import {canScheduleEvent} from '../lib/domain/permissions';
-import {isPractice,eventFormat} from '../lib/domain/match-format';
+import {isPractice,eventFormat,courtPlayers} from '../lib/domain/match-format';
 import {pointsWindow} from '../lib/domain/points-window';
-import {pendingSchedulingIds,recommendedSchedulingMode,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
+import {liveSchedulingFits,pendingSchedulingIds,recommendedSchedulingMode,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
 import EventLivePlay from './event-live-play';
 import EventPointsPlan from './event-points-plan';
 import MatchCard from './match-card';
@@ -25,11 +24,22 @@ import {useMatchFocus} from './match-focus';
 import GroupPlayer from './group-player';
 import Disclosure from './disclosure';
 import './event-scheduling.css';
+const AdviceDialog=lazy(()=>import('./scheduling-advice-dialog'));
 import MatchPlayerFilter from './match-player-filter';
 import {eventMatchPlayerIds,matchIncludesPlayer} from '../lib/client/match-player-filter';
 import {currentRoundSelection} from '../lib/client/lineup-sync';
 type FormOpen=(title:string,action:string,values:Record<string,unknown>,fields:Field[],convert?:(v:Record<string,unknown>)=>Record<string,unknown>,description?:string)=>void;
 export type SchedulingContext={/** The competition sandbox keeps live scores in its own document (lib/competition-simulation.ts). */live?:{scores:Record<string,LiveScore>;send:(op:LiveOp)=>Promise<LiveScore>};matchPlayerId?:string;data:ClubData;name:(id:string)=>string;admin:boolean;busy:boolean;readOnly?:boolean;open:FormOpen;send:(action:string,payload:Record<string,unknown>)=>void;openProfile?:(id:string)=>void;setDanger:(value:{action:string;payload:Record<string,unknown>;title:string;description:string;reason:string})=>void};
+/** The recommended way, one compact line above the selector; why, and when live scheduling serves better, open in a
+ * dialog (docs/COMPACT_MOBILE_LAYOUT.md). A red line names this activity's own fit for live scheduling. */
+function SchedulingAdvice({advice,mode,fit,busy,change}:{advice:ReturnType<typeof recommendedSchedulingMode>;mode:SchedulingMode;fit?:{players:number;courts:number};busy:boolean;change:(next:SchedulingMode)=>void}){
+ const [open,setOpen]=useState(false),current=advice.mode===mode;
+ return <aside className={'scheduling-advice'+(current?' is-current':'')} aria-label="推荐排场方式">
+  <div className="scheduling-advice-row"><Sparkles size={15} aria-hidden="true"/><strong>推荐：{schedulingLabels[advice.mode]}{current?' · 正在使用':''}</strong><button type="button" className="scheduling-advice-why" aria-haspopup="dialog" onClick={()=>setOpen(true)}>何时用实时？</button>{!current&&<button type="button" className="primary" disabled={busy} onClick={()=>change(advice.mode)}>改用{schedulingLabels[advice.mode]}</button>}</div>
+  {fit&&<p className="scheduling-advice-fit" role="note"><span>本场 {fit.players} 人 / {fit.courts} 片场，{mode==='live'?'正适合实时排场':'更适合实时排场'}</span>{mode!=='live'&&<button type="button" className="secondary" disabled={busy} onClick={()=>change('live')}>改用实时排场</button>}</p>}
+  {open&&<Suspense fallback={null}><AdviceDialog advice={advice} onClose={()=>setOpen(false)}/></Suspense>}
+ </aside>;
+}
 const compareRounds=(a:Round,b:Round)=>(a.pointsSlot!==undefined&&b.pointsSlot!==undefined?a.pointsSlot-b.pointsSlot:0)||a.start-b.start||a.id.localeCompare(b.id);
 export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext}){
  const now=useActivityClock(e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),mode=schedulingMode(ctx.data,e),manager=!ctx.readOnly&&canScheduleEvent(ctx.data.me,e);
@@ -42,12 +52,15 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  const filter=<MatchPlayerFilter ids={ids} value={playerId} myId={ctx.data.me.playerId} name={ctx.name} onChange={id=>setSelection({eventId:e.id,playerId:id})}/>;
  const cancelled=ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled'&&(!playerId||ctx.data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId))));
  if(isPractice(e))return null;
- if(e.tournament)return <><EventRanking e={e} ctx={ctx}/>{filter}<EventTournament key={e.id} e={e} ctx={filteredContext}/></>;
+ if(e.tournament)return <>{filter}<EventTournament key={e.id} e={e} ctx={filteredContext}/></>;
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
  // Organisers who can still choose see the recommended way, highlighted above the selector.
  const advice=manager&&active?recommendedSchedulingMode():undefined;
- return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><EventRanking e={e} ctx={ctx}/><PointsAttendance e={e} ctx={ctx}/>{advice&&<aside className={'scheduling-advice'+(advice.mode===mode?' is-current':'')} aria-label="推荐排场方式"><Sparkles size={16} aria-hidden="true"/><div><strong>推荐：{schedulingLabels[advice.mode]}{advice.mode===mode?' · 正在使用':''}</strong><p>{advice.reason}</p></div>{advice.mode!==mode&&<button type="button" className="primary" disabled={ctx.busy} onClick={()=>change(advice.mode)}>改用{schedulingLabels[advice.mode]}</button>}</aside>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
+ // This activity's own numbers: confirmed players against its distinct courts (same name and venue count once).
+ const courtCount=new Set(ctx.data.bookings.filter(b=>b.eventId===e.id).map(b=>(b.venue??e.venue)+'/'+b.name)).size,playerCount=ctx.data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').length;
+ const fit=advice&&liveSchedulingFits(playerCount,courtCount,courtPlayers(e))?{players:playerCount,courts:courtCount}:undefined;
+ return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><PointsAttendance e={e} ctx={ctx}/>{advice&&<SchedulingAdvice advice={advice} mode={mode} fit={fit} busy={ctx.busy} change={change}/>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
   {filter}
   {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now} focusRoundId={jump.roundId}/>}
   {cancelled.length>0&&<Disclosure key={playerId} label={'已撤销轮次 · '+cancelled.length}>{cancelled.slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}

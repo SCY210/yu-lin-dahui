@@ -6,7 +6,7 @@ import './me-panels.css';
 /** The entry card on My: a short tally; the collection opens on its own page (`page=achievements`). */
 export function MyAchievements({unlocked,stages,totalStages,onOpen}:{unlocked:number;stages:number;totalStages:number;onOpen:()=>void}) {
  return <section className="card me-achievements-entry">
-  <div className="row"><div><h3><Medal size={20} aria-hidden="true"/> 我的成就</h3><p className="hint">已点亮 {unlocked} 枚 · {stages} / {totalStages} 阶段</p></div><button className="secondary" onClick={onOpen}>查看成就 ›</button></div>
+  <div className="row"><div><h3><Medal size={20} aria-hidden="true"/> 我的仙箓</h3><p className="hint">已点亮 {unlocked} 枚 · {stages} / {totalStages} 阶段</p></div><button className="secondary" onClick={onOpen}>翻阅仙箓 ›</button></div>
  </section>;
 }
 
