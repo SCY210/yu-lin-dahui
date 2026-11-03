@@ -8,6 +8,7 @@ import {maskClubContent} from './domain/blocked-words';
 import {canDeletePhoto} from './domain/photo-deletion';
 import {achievementSnapshot} from './domain/achievements';
 import {clubOwnerId,clubOwnerPlayerId,isClubOwner} from './domain/ownership';
+import {canManageAccount,canManageMembers} from './domain/member-managers';
 import {month,type State,type Account} from './domain/types';
 import {activeAvatarStreaks} from './domain/season-points';
 import {doublesLeaderboard as leaderboard,doublesQuarterlyLeaderboard as quarterlyLeaderboard,doublesAnnualLeaderboard as annualLeaderboard,singlesQuarterlyLeaderboard,singlesAnnualLeaderboard} from './domain/ranking';
@@ -107,6 +108,6 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   rotationPlans:Object.fromEntries(s.events.map(e=>[e.id,rotationPlan(s,e,now)])),settlements:s.settlements.map(x=>({...x,bills:x.bills,detail:x.detail})),
   // Only what paid status needs: who, for which activity, how much.
   payments:s.payments.map(({eventId,playerId,cents,to})=>({eventId,playerId,cents,...(to?{to}:{})})),
-  audits:admin&&!activityId?privateEventState(history,a).audits.slice(-50):[],accounts:admin?s.accounts.map(account=>({...account,isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId,a)==='full',canModify:account.id!==ownerId||isClubOwner(s,a)})):[],drafts,ratingHistory,
+  audits:admin&&!activityId?privateEventState(history,a).audits.slice(-50):[],accounts:canManageMembers(a)?s.accounts.map(account=>({...account,...(admin?{}:{email:''}),isOwner:account.id===ownerId,canEditProfileName:profileEditMode(s,account.playerId,a)==='full',canModify:admin?account.id!==ownerId||isClubOwner(s,a):canManageAccount(s,a,account)})):[],drafts,ratingHistory,
  },s.settings.blockedWords??[]);
 }

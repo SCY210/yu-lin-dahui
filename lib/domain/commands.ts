@@ -56,11 +56,15 @@ import {isPlannedLineup,pendingMatchLineup,swapRoundPlayers} from './round-lineu
 import { findVenue } from '../venues';
 import { authorizeEventAction, isEventAction, canManageEvent } from './permissions';
 import { businessTimestamp as time } from './timestamp';
+import { canManageMembers } from './member-managers';
+import { duplicateGuestSignup } from './guest-names';
 const id = () => crypto.randomUUID();
 const text = z.string().trim().min(1).max(150), pid = z.string().min(1).max(100), cents = z.number().int().min(0).max(100000000), reason = editReason, mode = z.enum(['equal', 'duration', 'interval']);
 const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.number().int().min(-100).max(100), minimum: z.number().int().min(0).max(500), cap: z.number().int().min(0).max(500), target: z.number().int().min(1).max(100), ceiling: z.number().int().min(1).max(150), lead: z.number().int().min(1).max(10), k: z.number().min(1).max(128), algorithm: z.literal('doubles-elo-v1') });
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
-export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && a.role !== 'admin')
+/** Testers manage recorded friends with administrators (docs/TESTER_MEMBER_MANAGEMENT.md). */
+const guestFriendActions = ['guestFriendMerge', 'guestFriendEdit', 'guestFriendHide'];
+export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && !(guestFriendActions.includes(action) && canManageMembers(a)) && a.role !== 'admin')
     fail('403: 仅管理员可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
@@ -364,7 +368,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'cancel': {
             const p = command.payload;
-            const e = event(p.eventId), manager = canManageEvent(a, e);
+            // A tester cancelling a friend's duplicate signup from 临时来宾 acts as an organiser for it (docs/TESTER_MEMBER_MANAGEMENT.md).
+            const e = event(p.eventId), manager = canManageEvent(a, e) || (canManageMembers(a) && duplicateGuestSignup(s, e.id, p.playerId));
             if(player(p.playerId).guestEventId&&player(p.playerId).guestEventId!==e.id)fail('临时来宾只能参加原活动');
             if (!manager)
                 own(p.playerId);

@@ -6,3 +6,14 @@ export function guestAlreadySignedUp(s:{players:{id:string;name:string;guestEven
  const key=guestNameKey(name);
  return s.players.some(p=>p.guestEventId===eventId&&guestNameKey(p.name)===key&&s.registrations.some(r=>r.eventId===eventId&&r.playerId===p.id&&r.status!=='cancelled'));
 }
+/** Loose nickname match for spotting likely duplicates: case, spaces and a trailing number ("aq", "AQ", "aq 2"). */
+export const looseGuestName=(name:string)=>guestNameKey(name).replace(/\s+/g,'').replace(/\d+$/,'');
+type SignupState={players:{id:string;name:string;guestEventId?:string}[];registrations:{eventId:string;playerId:string;status:string;sequence:number}[]};
+/** A friend signed up more than once for one activity (before duplicates were refused), as 临时来宾 lists them: active
+ * guest signups of this activity under one loose nickname. The first by signup order is kept; this is one of the others. */
+export function duplicateGuestSignup(s:SignupState,eventId:string,playerId:string){
+ const guest=(id:string)=>s.players.find(p=>p.id===id&&p.guestEventId===eventId);
+ const me=guest(playerId);if(!me)return false;
+ const same=s.registrations.filter(r=>r.eventId===eventId&&r.status!=='cancelled'&&guest(r.playerId)&&looseGuestName(guest(r.playerId)!.name)===looseGuestName(me.name)).sort((a,b)=>a.sequence-b.sequence);
+ return same.length>1&&same[0].playerId!==playerId&&same.some(r=>r.playerId===playerId);
+}

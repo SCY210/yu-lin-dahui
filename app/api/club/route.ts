@@ -1,3 +1,4 @@
+import { canManageAccount, canManageMembers } from '../../../lib/domain/member-managers';
 import {acknowledgeAccountNotice,accountNoticeView,noticeContent} from '../../../lib/domain/notice-gate';
 import {friendSignupCreatesGuest} from '../../../lib/domain/friend-signup';
 import { privateEventState } from '../../../lib/domain/event-privacy';
@@ -66,7 +67,8 @@ export async function GET(req: Request) {
                 return response({ error: '403: 仅管理员可以导出' }, 403);
             return new Response(JSON.stringify(privateEventState(s, a), null, 2), { headers: { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="club-export.json"', 'Cache-Control': 'no-store' } });
         }
-        const credentials = a.role === 'admin' ?
+        // Administrators see every login name; a tester those of the accounts they may manage, and their own.
+        const credentials = canManageMembers(a) ?
             (await raw().prepare('SELECT id AS accountId,username,username_changed_at AS usernameChangedAt FROM password_credentials').all<{
                 accountId: string;
                 username: string;
@@ -85,7 +87,7 @@ export async function GET(req: Request) {
         // A deleted, merged or newly private activity returns a fresh full view so navigation can recover safely.
         const scopedActivity=activityId&&s.events.some(e=>e.id===activityId&&e.deletedAt===undefined&&(a.role==='admin'||e.status!=='draft'||e.creatorId===a.id))?activityId:undefined;
         const token = readCache.remember({ noticeScope, revision: s.revision, settings: s.settings, account: a, profileRestrictions:s.profileRestrictions }, identity, period, year, clubViewValidUntil(s, a, now), now);
-        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision, consumeState:true, activityId:scopedActivity }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
+        const data: ClubData = { ...projectClubState(s, a, period, year, now, { revision: s.revision, consumeState:true, activityId:scopedActivity }), accountNotice, loginAccounts: a.role === 'admin' ? credentials : canManageMembers(a) ? credentials.filter(c => c.accountId === a.id || s.accounts.some(x => x.id === c.accountId && canManageAccount(s, a, x))) : [], auth: { method: user.method, username: ownUsername, passwordEnabled: !!ownCredential, isOwner: owner, canChangeUsername: canChangeOwnUsername(owner, ownCredential), usernameChangedAt: ownCredential?.usernameChangedAt ?? null } };
         return Response.json(data, { headers: { 'Cache-Control': 'no-store', ...(token ? { 'ETag': token } : {}) } });
     }
     catch (e) {

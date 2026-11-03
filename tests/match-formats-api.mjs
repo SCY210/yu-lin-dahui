@@ -69,7 +69,9 @@ try{
  stored=await api.load();const testerEvent=stored.events.find(e=>e.venue==='Tester ranked venue');assert.equal(testerEvent.ranked,true);assert.equal(stored.accounts.find(a=>a.id==='member5').role,'member');
  await send('eventRanking',{eventId:testerEvent.id,ranked:false,expectedRanked:true});await send('eventRanking',{eventId:testerEvent.id,ranked:true,expectedRanked:false});
  assert.equal((await post(await command('eventRanking',{eventId:future.id,ranked:false,expectedRanked:true}))).status,403,'tester cannot change another activity');
- const testerView=await view();assert.deepEqual(testerView.accounts,[]);assert.equal(testerView.permissions.canManageRoles,false);
+ const testerView=await view();
+ // Testers manage member accounts (docs/TESTER_MEMBER_MANAGEMENT.md): the list, changing only ordinary members.
+ assert.ok(testerView.accounts.filter(x=>x.canModify).every(x=>x.role==='member'&&!x.simulationTester));assert.ok(testerView.accounts.some(x=>x.role==='admin'&&!x.canModify));assert.equal(testerView.permissions.canManageRoles,false);
  user('owner');await send('simulationAccess',{accountId:'member5',enabled:false,reason:'Fictional revoke'});
  user('member5');assert.equal((await post(await command('eventRanking',{eventId:testerEvent.id,ranked:false,expectedRanked:true,simulationTester:true}))).status,403,'server rechecks stored revocation');assert.equal((await api.load()).events.find(e=>e.id===testerEvent.id).ranked,true);
  console.log('PASS ranked event API: stored tester creation/own enable/revocation, forged and cross-activity refusal, member defaults, scoring exclusion, stale/idempotent/rollback and legacy guards');
