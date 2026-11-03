@@ -23,6 +23,7 @@ import {withScorer} from './domain/score-conflict';
 import {guestIds,guestHostName,guestHostPlayerId,guestLevelAt} from './domain/guests';
 import {rankingQuarter} from './ranking-quarter';
 import {calculateSettlementPreview} from './domain/money';
+import {markIgnoredUpdate} from './domain/settlement-state';
 import {socialHistoryParts,socialSnapshot} from './domain/social';
 import {sharedClubValue,sharedViewValidUntil,sharedRealmLedger} from './club-view-shared';
 import {rotationPlan} from './domain/play';
@@ -84,7 +85,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const fullSocial=socialSnapshot(s,period,year,now,history,ledger.snapshot,socialParts);
  const permanent=new Set(history.players.filter(p=>!guests.has(p.id)).map(p=>p.id));
  const social={...fullSocial,funny:fullSocial.funny.filter(st=>permanent.has(st.playerId)),personality:fullSocial.personality.filter(st=>permanent.has(st.playerId)),annual:fullSocial.annual.filter(st=>permanent.has(st.playerId)),stats:fullSocial.stats.filter(st=>permanent.has(st.playerId)).map(st=>({...st,tier:realmView(st.realmScore),realmScore:visibleRealm(st.realmScore)}))};
- const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>calculateSettlementPreview({...s,attendance:actualAttendance},e,now));
+ const drafts=s.events.filter(e=>admin||e.creatorId===a.id).map(e=>markIgnoredUpdate(calculateSettlementPreview({...s,attendance:actualAttendance},e,now),e,s.settlements));
  return maskClubContent({
   ...(activityId?{activityScope:activityId}:{}),
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,bounty:bountySettings(s),feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy,playerId})=>({id,name,phone,mine:createdBy===a.id,...(playerId?{playerId}:{}),...(playerId&&(playerId===ownerPlayerId||s.accounts.some(x=>x.playerId===playerId&&x.role==='admin'))?{leader:true}:{})})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{}),...(pairingOddsView(history,a,now)?{pairingOdds:pairingOddsView(history,a,now)}:{})},me:{...a,giftNotices:giftNotices(history,a,now),bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin,canUseSimulation:canUseSimulation(a)},

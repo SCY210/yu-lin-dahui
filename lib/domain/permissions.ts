@@ -3,8 +3,10 @@ import {isPractice} from './match-format';
 import {canEnableEventRanking,canManageRankedEvent,eventRankingEnabled} from './event-ranking';
 import {canRecoverEvent} from './event-privacy';
 
-export function canManageEvent(account:Pick<Account,'id'|'role'>,event:Pick<Event,'creatorId'>){
- return account.role==='admin'||event.creatorId===account.id;
+/** The club owner and administrators manage every activity, its creator their own. `isOwner` comes with the projected
+ * `me`; server callers also pass authorizeEventAction, which lets the owner through. */
+export function canManageEvent(account:Pick<Account,'id'|'role'>&{isOwner?:boolean},event:Pick<Event,'creatorId'>){
+ return account.role==='admin'||account.isOwner===true||event.creatorId===account.id;
 }
 
 export function canScheduleEvent(account:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Event){return (canManageEvent(account,event)||!!account.isOwner)&&(!eventRankingEnabled(event)||canManageRankedEvent(account,event))}
@@ -34,7 +36,7 @@ export function canSwapLivePlayers(s:Pick<State,'registrations'|'players'>,a:Pic
 }
 
 const rankedManagementActions=new Set(['pointsStart','pointsNext','liveStart','livePause','generate','planPoints','publishPoints','publish','start','schedulingMode','playSettings','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart']);
-const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentReferee','tournamentArchive','tournamentArrange','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentReferee','tournamentArchive','tournamentArrange','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','settleRevoke','feeUpdateIgnore','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
