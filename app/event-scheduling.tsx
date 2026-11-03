@@ -21,6 +21,7 @@ import {pendingSchedulingIds,recommendedSchedulingMode,schedulingMode,scheduling
 import EventLivePlay from './event-live-play';
 import EventPointsPlan from './event-points-plan';
 import MatchCard from './match-card';
+import {useMatchFocus} from './match-focus';
 import GroupPlayer from './group-player';
 import Disclosure from './disclosure';
 import './event-scheduling.css';
@@ -35,6 +36,8 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  const liveAfterEnd=now>=e.end&&liveActivityAvailable(e,now);
  const [selection,setSelection]=useState({eventId:e.id,playerId:''});
  const ids=eventMatchPlayerIds(ctx.data,e),playerId=selection.eventId===e.id&&ids.includes(selection.playerId)?selection.playerId:'';
+ // A link (home score button, reminder) or the game in progress scrolls into view (docs/JUMP_TO_MATCH.md).
+ const jump=useMatchFocus(ctx.data,e,!!playerId);
  const filteredContext={...ctx,matchPlayerId:playerId};
  const filter=<MatchPlayerFilter ids={ids} value={playerId} myId={ctx.data.me.playerId} name={ctx.name} onChange={id=>setSelection({eventId:e.id,playerId:id})}/>;
  const cancelled=ctx.data.rounds.filter(r=>r.eventId===e.id&&r.status==='cancelled'&&(!playerId||ctx.data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId))));
@@ -46,11 +49,11 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  const advice=manager&&active?recommendedSchedulingMode():undefined;
  return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><EventRanking e={e} ctx={ctx}/><PointsAttendance e={e} ctx={ctx}/>{advice&&<aside className={'scheduling-advice'+(advice.mode===mode?' is-current':'')} aria-label="推荐排场方式"><Sparkles size={16} aria-hidden="true"/><div><strong>推荐：{schedulingLabels[advice.mode]}{advice.mode===mode?' · 正在使用':''}</strong><p>{advice.reason}</p></div>{advice.mode!==mode&&<button type="button" className="primary" disabled={ctx.busy} onClick={()=>change(advice.mode)}>改用{schedulingLabels[advice.mode]}</button>}</aside>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <select aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</select></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
   {filter}
-  {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now}/>}
+  {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now} focusRoundId={jump.roundId}/>}
   {cancelled.length>0&&<Disclosure key={playerId} label={'已撤销轮次 · '+cancelled.length}>{cancelled.slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}
  </div>;
 }
-export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode:'planned'|'round';now:number}){
+export function EventRounds({e,ctx,mode,now,focusRoundId}:{e:Event;ctx:SchedulingContext;mode:'planned'|'round';now:number;focusRoundId?:string}){
  const {data,name,send,busy,open,setDanger}=ctx,[selected,setSelected]=useState<{roundId:string;playerId:string;lineup:RoundLineup}|null>(null);
  /** The round shown from the tab strip of rounds not in progress; empty means the next round. */
  const [roundTab,setRoundTab]=useState('');
@@ -94,7 +97,8 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
    // A player filter shows all.
    const playingRounds=rounds.filter(r=>r.status==='playing'),others=rounds.filter(r=>r.status!=='playing');
    if(playerId||others.length<2)return rounds.map((r,index)=>roundView(r,index));
-   const shown=others.find(r=>r.id===roundTab)??(playingRounds.length?undefined:next&&others.includes(next)?next:others.at(-1));
+   // A focused match in a round behind the tabs shows that round until another tab is chosen.
+   const shown=others.find(r=>r.id===(roundTab||focusRoundId))??(playingRounds.length?undefined:next&&others.includes(next)?next:others.at(-1));
    return <>{playingRounds.map(r=>roundView(r,rounds.indexOf(r)))}
     <div className="round-tabs" role="tablist" aria-label="其他轮次">{others.map(r=>{const n=rounds.indexOf(r)+1;return <button type="button" role="tab" key={r.id} aria-selected={r.id===shown?.id} className={'round-tab is-'+r.status+(r.id===shown?.id?' is-selected':'')} onClick={()=>setRoundTab(r.id===shown?.id&&playingRounds.length?'':r.id)}>第 {n} 轮<small>{r.status==='complete'?'已结束':r.status==='draft'?'草稿':'待开始'}</small></button>})}</div>
     {shown&&roundView(shown,rounds.indexOf(shown),true)}</>;

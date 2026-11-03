@@ -50,7 +50,8 @@ self.addEventListener('push', event => {
       body: typeof message.body === 'string' ? message.body.slice(0,250) : '有新消息，点开查看。',
       icon: '/icons/app-192.png', badge: '/icons/app-192.png',
       tag: signup ? (message.kind==='signup'?'yulin-signup-'+message.eventId:typeof message.tag==='string'?message.tag.slice(0,240):'yulin-'+message.kind+'-'+message.eventId) : 'yulin-push-test', renotify: false,
-      data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId)+(message.tab==='rounds'||message.tab==='fees'||message.tab==='social'?'&tab='+message.tab:'') : '/?page=me' },
+      // A game notice names its round, so the rounds tab scrolls to the member's match (docs/JUMP_TO_MATCH.md).
+      data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId)+(message.tab==='rounds'||message.tab==='fees'||message.tab==='social'?'&tab='+message.tab:'')+(message.tab==='rounds'&&typeof message.roundId==='string'&&/^[A-Za-z0-9_-]{1,100}$/.test(message.roundId)?'&round='+encodeURIComponent(message.roundId):'') : '/?page=me' },
     });
   })());
 });

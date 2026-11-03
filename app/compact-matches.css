@@ -84,3 +84,10 @@
 .wuxia-theme .match-win-seal{border-radius:3px;background:#a8382a;color:#fff6e6;box-shadow:0 0 0 2px #f7ecd2,0 2px 5px #0003}
 .wuxia-theme .compact-match.is-complete .versus .score-win{color:#a8382a}
 .match-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* A match brought into view by a link or as the game in progress glows briefly (app/match-focus.ts). */
+.match-card.compact-match.is-focused{animation:match-focus 2.2s ease-out}
+@keyframes match-focus{0%,40%{box-shadow:0 0 0 3px #d4a23a,0 0 18px #d4a23a99}100%{box-shadow:0 0 0 0 transparent}}
+.wuxia-theme .match-card.compact-match.is-focused{animation-name:match-focus-ink}
+@keyframes match-focus-ink{0%,40%{box-shadow:0 0 0 3px #a8382a,0 0 14px #a8382a80}100%{box-shadow:0 0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){.match-card.compact-match.is-focused{animation:none;box-shadow:0 0 0 3px #d4a23a}}
+.match-card.compact-match{scroll-margin:90px 0 110px}
