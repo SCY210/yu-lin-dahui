@@ -283,3 +283,38 @@ test('fixed partners rotate as whole teams, win runs carry across games, and vol
  for(let i=0;i<3&&!participants(active(s)[0]).has(held[0]);i++)await score(s,active(s)[0].id,now+260000+i*10000);
  await score(s,active(s)[0].id,now+300000);assert.ok(liveResting(e,held[0]));assert.ok(!participants(active(s)[0]).has(held[0]));
 });
+
+test('late arrivals wait from their arrival and get their share of games, not more',async()=>{
+ // Twelve fictional players on one court; four arrive an hour after play starts. Counting raw games played let late
+ // arrivals jump the queue all evening (about 1.5 games more than their share in simulations).
+ const {s,e,owner}=fixture(12,1);s.players.forEach((p,i)=>{p.rating=p.initialRating=800+(i*137)%600});
+ const late=s.registrations.slice(8);late.forEach(r=>r.arrival=now+3600000);
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ for(let t=now+12*60000;t<e.end;t+=12*60000){
+  for(const m of active(s))await score(s,m.id,t);
+  if(!active(s).length)await nextGame(s,'court0',t);
+ }
+ const share=new Map<string,number>();
+ for(const r of s.rounds.filter(r=>r.live))for(const id of r.eligible)share.set(id,(share.get(id)??0)+4/r.eligible.length);
+ const owed=(id:string)=>(share.get(id)??0)-liveAppearances(s,e.id,id);
+ const lateIds=late.map(r=>r.playerId),mean=lateIds.reduce((n,id)=>n-owed(id),0)/lateIds.length;
+ assert.ok(mean<=.75,'late arrivals play about their share: '+mean.toFixed(2));
+ assert.ok(s.players.every(p=>Math.abs(owed(p.id))<=1.5),'everyone within one and a half games of their share');
+});
+
+test('one court with thirteen players and late arrivals: swaps never skip the same waiting player game after game',async()=>{
+ // Pairwise swaps within one game used to chain across games: one player was passed over three times in a row.
+ const {s,e,owner}=fixture(13,1);s.players.forEach((p,i)=>{p.rating=p.initialRating=700+(i*211)%800});
+ s.registrations.slice(9).forEach(r=>r.arrival=now+40*60000);
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ for(let n=1;n<=40;n++){for(const m of active(s))await score(s,m.id,now+n*11*60000)}
+ const games=s.matches.filter(m=>m.start!==null&&m.status!=='cancelled').sort((x,y)=>x.start!-y.start!);
+ let worst=0;
+ for(const p of s.players){
+  const arrival=s.registrations.find(r=>r.playerId===p.id)!.arrival;
+  const mine=games.map((m,i)=>[...m.a,...m.b].includes(p.id)?i:-1).filter(i=>i>=0),first=games.findIndex(m=>m.start!>=arrival);
+  for(let k=0;k<mine.length;k++)worst=Math.max(worst,mine[k]-(k?mine[k-1]+1:first));
+ }
+ // Nine wait for each game: two or three games' wait, at most one more for a swap, never more.
+ assert.ok(worst<=4,'longest wait in games: '+worst);
+});

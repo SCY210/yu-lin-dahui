@@ -115,7 +115,11 @@ Simulations of 16 rounds (`planPoints`, four hours of 15-minute rounds, random s
 | 4 / 20 | 96% | 13% |
 | 4 / 24 | 78% | 0% |
 
-Immediate partner repeats and reunited blocks stay at 0%, and strength balance is unchanged. With only two players resting (10 players on two courts, 14 on three) most rounds still have one dependent court: almost every player plays every round, so the players of one game cannot all stay on their court.
+Immediate partner repeats and reunited blocks stay at 0%, and strength balance is unchanged. Planned singles use the same court-wait cost; on three and four courts this cut idle court time by 15-35%.
+
+In a minute-by-minute simulation through the real commands, with games lasting 9-21 minutes, court time left idle while four free players waited (they were due on a court still playing) fell, for example, from 99 to 59 minutes on three courts with 18 players and from 130 to 42 minutes on four courts with 28, with up to six more games in four hours. With only one player resting per court and round (13 on three courts, 17-20 on four), planned rounds still leave courts idle for 2-3 court-hours a night, because every next game needs players from courts still playing. Live rotation fills courts as they free and played 20-25% more games in those cases.
+
+When an attendance or court phase ends, its unstarted planned games are skipped (`pointsPhaseAdvance`). Their players lose that game; later rounds, planned in advance, do not give it back. In the simulation with late arrivals, early departures and a court ending early, this left individual players up to about 1.5 games below their share, while the average stayed fair. With only two players resting (10 players on two courts, 14 on three) most rounds still have one dependent court: almost every player plays every round, so the players of one game cannot all stay on their court.
 
 ## Unplayed planned games are removed at the end
 

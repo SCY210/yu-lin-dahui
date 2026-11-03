@@ -106,17 +106,28 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   if(['playing','complete','forfeit'].includes(m.status)&&(!m.noShow?.length||m.noShow.includes(id)))counts.set(id,(counts.get(id)??0)+1);
  }
  const appearances=(id:string)=>counts.get(id)??0;
- const last=(id:string)=>lastTurns.get(id)??0;
+ // Games owed: each live game started while a player was present gives them their share (players per court divided by
+ // everyone present then, from the round's eligible list), minus the games they played. Late arrivals and early
+ // leavers are compared by this, not by raw games played, which would let a late arrival jump the queue all evening.
+ const share=new Map<string,number>(),size=courtPlayers(e);
+ for(const r of s.rounds)if(r.eventId===e.id&&r.live&&r.eligible.length)for(const id of r.eligible)share.set(id,(share.get(id)??0)+size/r.eligible.length);
+ const owed=(id:string)=>(share.get(id)??0)-appearances(id);
+ // Someone who has not played yet has waited since they arrived, not since the activity started.
+ const arrived=new Map(present.map(id=>{const r=s.registrations.find(r=>r.eventId===e.id&&r.playerId===id&&r.status==='confirmed');const span=r?registrationSpans(s,e,r).find(span=>span.start<=at&&(span.end??e.end)>at):undefined;return [id,Math.max(e.start,span?.start??e.start)] as const}));
+ const last=(id:string)=>lastTurns.get(id)??arrived.get(id)??0;
  // The game each player last played in, to keep a whole game from coming back on court as one block.
  const lastGame=new Map<string,string>(),lastStart=new Map<string,number>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null&&['playing','complete','forfeit'].includes(m.status))for(const id of [...m.a,...m.b])if(m.start>=(lastStart.get(id)??-1)){lastStart.set(id,m.start);lastGame.set(id,m.id)}
  // The bench is a queue: whoever has waited longest since their last game goes first, then fewer games. This keeps
  // both the games played and the longest wait about even (docs/LIVE_PLAY.md).
- const fairOrder=(a:string,b:string)=>last(a)-last(b)||appearances(a)-appearances(b)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
+ const fairOrder=(a:string,b:string)=>last(a)-last(b)||owed(b)-owed(a)||present.indexOf(a)-present.indexOf(b)||a.localeCompare(b);
  // Games started since each player's last game; it grows as this call starts games too.
  const waits=new Map<string,number>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null&&['playing','complete','forfeit'].includes(m.status))for(const id of present)if(m.start>last(id))waits.set(id,(waits.get(id)??0)+1);
  const waited=(id:string)=>waits.get(id)??0;
+ // Bench players already passed over since their last game.
+ const passed=new Set<string>();
+ for(const r of s.rounds)if(r.eventId===e.id&&r.live)for(const id of r.livePassed??[])if(r.start>last(id)||!lastTurns.has(id)&&r.start>=last(id))passed.add(id);
  const previousByCourt=new Map<string,Match>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null&&!['playing','draft','published'].includes(m.status)){
   const key=physical(s,e,m.courtId),old=previousByCourt.get(key);
@@ -136,10 +147,19 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   const order=(a:string,b:string)=>Number(justFinished.has(a))-Number(justFinished.has(b))||fairOrder(a,b);
   // For strength, variety and rematches the pairing may swap in a candidate whose wait differs by at most one game and
   // who has not played more, so nobody is passed over for more than about one extra game or plays ahead of others.
-  const sameTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=1&&appearances(b)<=appearances(a);
+  const sameTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=1&&owed(b)>=owed(a)-.5;
   // The order is a preference, not an eligibility lock. When short, any available player can fill the court,
   // including the ones who have just finished.
   const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
+  // Swaps for strength, variety or broken blocks keep the queue: nobody left on the bench may have waited more than one
+  // game longer than a waiting player chosen, and someone already passed over once since their last game is not passed
+  // over again. Pairwise swaps within one game could otherwise chain, across games too, and skip one player again and
+  // again (docs/LIVE_PLAY.md).
+  const lowestWait=(ids:string[])=>Math.min(Infinity,...ids.filter(id=>!justFinished.has(id)).map(waited));
+  const fairCut=(ids:string[])=>{
+   const lowest=lowestWait(ids);if(lowest===Infinity)return true;
+   return pool.every(id=>ids.includes(id)||justFinished.has(id)||waited(id)<=lowest+(passed.has(id)?0:1));
+  };
   let teams:{a:string[];b:string[]}|undefined;
   if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
@@ -162,7 +182,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
      for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
       if(chosen.includes(candidate)||from(candidate)===from(chosen[0]))continue;
       const option=[...chosen];option[i]=candidate;
-      const ahead=Math.max(0,Math.max(...candidate.map(appearances))-Math.max(...chosen[i].map(appearances))),optionCost=cost(option);
+      const ahead=Math.max(0,Math.round(Math.min(...chosen[i].map(owed))-Math.min(...candidate.map(owed)))),optionCost=cost(option);
       if(!best||ahead<bestAhead||(ahead===bestAhead&&compareBalance(optionCost,bestOptionCost!)<0)){best=option;bestAhead=ahead;bestOptionCost=optionCost}
      }
      if(best)chosen=best;
@@ -173,7 +193,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
    let chosen=pair(s,e,pool.slice(0,courtPlayers(e)),history,rating);
    for(let pass=0;pass<2;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
     const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!sameTurn(replaced,candidate))continue;
-    ids[i]=candidate;const next=pair(s,e,ids,history,rating);
+    ids[i]=candidate;if(!fairCut(ids))continue;const next=pair(s,e,ids,history,rating);
     if(compareBalance(next.cost,chosen.cost)<0)chosen=next;
    }
    // Everyone leaves after each game, so a whole game could come back on court as one block and the same people
@@ -183,12 +203,13 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     const ids=[...chosen.a,...chosen.b],tally=new Map<string,number>();
     for(const id of ids){const game=lastGame.get(id);if(game)tally.set(game,(tally.get(game)??0)+1)}
     const block=[...tally].find(([,n])=>n>=3)?.[0];if(!block)break;
-    let best:ReturnType<typeof pair>|undefined,bestAhead=Infinity;
+    // Prefer options that keep the queue fair, then those that do not put anyone ahead in games, then balance.
+    let best:ReturnType<typeof pair>|undefined,bestAhead=Infinity,bestUnfair=true;
     for(let i=0;i<ids.length;i++)if(lastGame.get(ids[i])===block)for(const candidate of pool.slice(0,16)){
      if(ids.includes(candidate)||lastGame.get(candidate)===block)continue;
      const option=[...ids];option[i]=candidate;
-     const split=pair(s,e,option,history,rating),ahead=Math.max(0,appearances(candidate)-appearances(ids[i]));
-     if(!best||ahead<bestAhead||(ahead===bestAhead&&compareBalance(split.cost,best.cost)<0)){best=split;bestAhead=ahead}
+     const split=pair(s,e,option,history,rating),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
+     if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compareBalance(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
     }
     if(!best)break;chosen=best;
    }
@@ -202,7 +223,9 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   participants.forEach(id=>busy.add(id));
   const sequence=1+s.matches.filter(m=>m.eventId===e.id&&m.start!==null&&m.status!=='cancelled'&&physical(s,e,m.courtId)===key).length;
   const roundId=crypto.randomUUID();
-  s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence});
+  const lowest=lowestWait(participants),skipped=pool.filter(id=>!participants.includes(id)&&!justFinished.has(id)&&waited(id)>lowest);
+  skipped.forEach(id=>passed.add(id));
+  s.rounds.push({id:roundId,eventId:e.id,start:now,duration:0,status:'playing',eligible:[...present],rest:present.filter(id=>!participants.includes(id)&&!busy.has(id)),seed:sequence,live:true,liveSequence:sequence,...(skipped.length?{livePassed:skipped}:{})});
   const match:Match={...teams,id:crypto.randomUUID(),eventId:e.id,roundId,courtId:court.id,status:'playing',start:now,end:null,scoreA:null,scoreB:null,monthly:true,elo:true,locked:false,enteredBy:null,games:[]};
   decorateMatch(s,e,match);markRanked(match,e);s.matches.push(match);history.add(match);started.push(match);
   for(const id of participants){counts.set(id,appearances(id)+1);lastTurns.set(id,now);waits.set(id,0);lastGame.set(id,match.id)}

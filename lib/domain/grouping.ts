@@ -141,7 +141,12 @@ function proposeSingles(s:State,e:Event,at:number,duration:number,seed:number){
  for(const b of bookings){const pool=eligible.filter(id=>!used.has(id)&&bookingAllowsPlayer(s,e.id,b.id,id,at,end));if(pool.length<2)continue;const pair=pool.slice(0,2);pair.forEach(id=>used.add(id));selected.push(...pair);courts.push(b)}
  if(!courts.length)fail('本时段同球馆正式球友不足2人，无法安排单打');
  const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000,history=matchHistory(s,e.id);
- const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));repeats+=history.rematches([a],[b])}return balanceCost(gaps,repeats*75,0,repeats)};
+ // As in doubles: where possible each court's next pair comes from its own previous game and the players who rested.
+ const courtKey=(id:string)=>{const b=s.bookings.find(x=>x.id===id);return (b?.venue??e.venue)+'/'+(b?.name??id)};
+ const previousRound=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled'&&r.start<at).sort((x,y)=>y.start-x.start)[0];
+ const previousCourt=new Map<string,string>();
+ if(previousRound)for(const m of s.matches)if(m.roundId===previousRound.id&&m.status!=='cancelled')for(const id of [...m.a,...m.b])previousCourt.set(id,courtKey(m.courtId));
+ const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0,courtWaits=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));repeats+=history.rematches([a],[b]);if(courts.length>1){const here=courtKey(courts[i/2].id);if([a,b].some(id=>previousCourt.has(id)&&previousCourt.get(id)!==here))courtWaits++}}return balanceCost(gaps,repeats*75,0,repeats,0,0,courtWaits)};
  let best=[...selected],cost=penalty(best),rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  const interchangeable=(a:string,b:string)=>sameTurn(debts.get(a)!,debts.get(b)!,tired.has(a),tired.has(b));
  for(let n=0;n<180;n++){const next=[...best],i=Math.floor(rand()*next.length),j=Math.floor(rand()*next.length);const bench=rand()<.5?eligible.filter(id=>!next.includes(id)&&interchangeable(id,next[i])):[];if(bench.length)next[i]=bench[Math.floor(rand()*bench.length)];else [next[i],next[j]]=[next[j],next[i]];const nextCost=penalty(next);if(compareBalance(nextCost,cost)<0){best=next;cost=nextCost}}

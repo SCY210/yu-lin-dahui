@@ -40,3 +40,22 @@ test('planned rounds follow live rotation: no block from one game and hardly any
   const counts=[...games.values()];assert.ok(Math.max(...counts)-Math.min(...counts)<=1,'games stay even');
  }
 });
+
+test('planned singles on three courts mostly keep each court independent of the others',async()=>{
+ // Eight players, six play and two rest: where possible each court's next pair comes from its own previous game and
+ // the players who rested, so fewer courts wait for another court still playing (55% of court-games here, 74% without).
+ let waits=0,total=0;
+ for(const seed of [1,2,3,4]){
+  const {s,e}=fixture();e.matchFormat='singles';
+  s.registrations.slice(8).forEach(r=>r.status='cancelled');s.bookings.push({...s.bookings[0],id:'court2',name:'Court 2'});
+  await apply(s,s.accounts[0],'planPoints',{eventId:e.id,at:now,pointsMinutes:240,roundMinutes:15,seed,pairing:'rotate'},now-1);
+  const rounds=s.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled').sort((a,b)=>a.start-b.start);
+  const court=new Map<string,string>();
+  for(const r of rounds){
+   const matches=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled'),next=new Map<string,string>();
+   for(const m of matches){if(court.size)total++;if([...m.a,...m.b].some(id=>court.has(id)&&court.get(id)!==m.courtId))waits++;for(const id of [...m.a,...m.b])next.set(id,m.courtId)}
+   court.clear();for(const [id,c] of next)court.set(id,c);
+  }
+ }
+ assert.ok(waits/total<=.65,'courts waiting for another court: '+(waits/total*100).toFixed(0)+'%');
+});
