@@ -27,6 +27,9 @@ try{
  const toggle=name=>ui.root.findAllByType('button').find(b=>b.props['aria-label']===name+'的积分明细');
  assert.equal(toggle('Fictional Ann').props['aria-expanded'],false,'collapsed at first');
  assert.equal(ui.root.findAll(n=>n.props.className==='rv-breakdown').length,0);
+ // Under the total only the toggle: no source lines until 明细 opens; the win rate follows the record.
+ const annRow=toggle('Fictional Ann').parent.parent;assert.equal(annRow.findAllByType('small').filter(s=>s.parent.props.className==='ranking-result').length,0,'no small print under the total');
+ assert.ok(!text(annRow).includes('MVP 加分')&&!text(annRow).includes('含进行中'),'sources stay in the breakdown');assert.match(text(annRow),/15胜 6负 · \d+% 胜率/);
  await act(async()=>toggle('Fictional Ann').props.onClick());
  assert.equal(toggle('Fictional Ann').props['aria-expanded'],true);
  const panel=ui.root.findByProps({className:'rv-breakdown'});
