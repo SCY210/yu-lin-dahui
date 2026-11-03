@@ -5,7 +5,7 @@ import {securityHeaders,secureResponse} from '../lib/security-headers';
 import {photoCacheControl} from '../lib/photo-cache';
 
 test('应用响应关闭类型猜测、危险插件及跨站表单，保留当前脚本渲染与合法预览',()=>{
- const headers=new Headers(securityHeaders.map(h=>[h.key,h.value]));
+ const headers=new Headers(securityHeaders.map((h):[string,string]=>[h.key,h.value]));
  assert.equal(headers.get('X-Content-Type-Options'),'nosniff');
  assert.equal(headers.get('Referrer-Policy'),'strict-origin-when-cross-origin');
  const csp=headers.get('Content-Security-Policy')!;
