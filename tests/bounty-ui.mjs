@@ -7,10 +7,10 @@ import {pathToFileURL} from 'node:url';
 import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
-writeFileSync('.test-output/bounty-ui-entry.ts',"export {default as BountyCard,HomeBounties} from '../app/bounty-card';export {default as BountyOffer} from '../app/bounty-offer';export {default as BountySettingsPanel} from '../app/bounty-settings';export {defaultBountySettings,drawnBounty,bountyOfferAt,bountyKinds} from '../lib/domain/bounties';export {bountyEffects} from '../app/bounty-effects';");
+writeFileSync('.test-output/bounty-ui-entry.ts',"export {default as BountyCard,HomeBounties} from '../app/bounty-card';export {default as BountyOffer} from '../app/bounty-offer';export {default as BountySettingsPanel} from '../app/bounty-settings';export {default as BountyHonorBanner} from '../app/bounty-honor-banner';export {defaultBountySettings,drawnBounty,bountyOfferAt,bountyKinds} from '../lib/domain/bounties';export {bountyEffects} from '../app/bounty-effects';");
 await build({entryPoints:['.test-output/bounty-ui-entry.ts'],outfile:'.test-output/bounty-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'},
  plugins:[{name:'headless-dialog',setup(b){b.onResolve({filter:/components\/ui\/dialog$/},()=>({path:'dialog',namespace:'bounty-ui'}));b.onLoad({filter:/.*/,namespace:'bounty-ui'},()=>({loader:'js',contents:"import {createElement as h} from 'react';const box=({children})=>h('section',null,children);export const Dialog=({open,children,onOpenChange})=>open?h('div',{'data-dialog':true,onClose:()=>onOpenChange(false)},children):null;export const DialogContent=box,DialogHeader=box,DialogTitle=({children})=>h('h2',null,children),DialogDescription=box;"}))}}]});
-const {BountyCard,HomeBounties,BountyOffer,BountySettingsPanel,defaultBountySettings,drawnBounty,bountyOfferAt,bountyKinds,bountyEffects}=await import(pathToFileURL(resolve('.test-output/bounty-ui.mjs')).href);
+const {BountyCard,HomeBounties,BountyOffer,BountySettingsPanel,BountyHonorBanner,defaultBountySettings,drawnBounty,bountyOfferAt,bountyKinds,bountyEffects}=await import(pathToFileURL(resolve('.test-output/bounty-ui.mjs')).href);
 const prior=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=node=>typeof node==='string'?node:(Array.isArray(node)?node:node?.children??[]).map(text).join('');
 const mount=async(Component,props)=>{if(ui)await act(()=>ui.unmount());await act(async()=>{ui=renderer.create(React.createElement(Component,props))})};
@@ -45,5 +45,15 @@ try{
  assert.ok(text(ui.toJSON()).includes('30%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
  const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,9);assert.equal(values.streakCoins,30);
  assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{streak:{coins:30,points:15},rout:{coins:15,points:9},upset:{coins:20,points:10},deuce:{coins:10,points:6}}});
- console.log('PASS bounty UI: offer card answers, accepted/completed/failed states, pop-up accept and later, a different xianxia scene per bounty kind with a still final frame for reduced motion, home timing, settings form');
+ // The club-wide banner announces completed bounties in the cultivation voice, opens the activity and can be closed.
+ const honors=[{eventId:'h1',title:'Fictional evening',playerId:'p1',kind:'streak',coins:30,points:15,at:2},{eventId:'h2',title:'Fictional morning',playerId:'p2',kind:'deuce',coins:10,points:0,at:1}],opened=[];
+ await mount(BountyHonorBanner,{honors,name:id=>({p1:'Ada',p2:'Bo'})[id],onOpen:id=>opened.push(id)});
+ const banner=ui.root.findByProps({'aria-label':'悬赏捷报'}),lists=banner.findAll(n=>n.type==='ul');
+ assert.equal(lists.length,2,'a second copy makes the scroll seamless');assert.equal(lists[1].props['aria-hidden'],true,'the copy is hidden from screen readers');
+ shown=text(lists[0]);assert.ok(shown.includes('天机阁传讯：「Fictional evening」一役，Ada道友连斩五阵，剑气如虹，揭下连胜悬赏，得赏 30 羽币 + 15 积分！'),shown);assert.ok(shown.includes('Bo道友')&&shown.includes('鏖战悬赏')&&shown.includes('得赏 10 羽币！'));
+ await act(()=>lists[0].findAllByType('button')[1].props.onClick());assert.deepEqual(opened,['h2']);
+ await act(()=>ui.root.findByProps({'aria-label':'收起悬赏捷报'}).props.onClick());assert.equal(ui.toJSON(),null,'closed for this visit');
+ await mount(BountyHonorBanner,{honors:[],name:()=>'',onOpen:()=>{}});assert.equal(ui.toJSON(),null,'nothing to announce');
+ const honorCss=readFileSync('app/bounty-honor-banner.css','utf8');assert.ok(honorCss.includes('@keyframes bounty-honor-scroll')&&honorCss.includes('@media (prefers-reduced-motion:reduce){'),'scrolls, and stands still for reduced motion');
+ console.log('PASS bounty UI: club-wide honour banner, offer card answers, accepted/completed/failed states, pop-up accept and later, a different xianxia scene per bounty kind with a still final frame for reduced motion, home timing, settings form');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}

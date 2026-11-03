@@ -1,37 +1,45 @@
-# Bounties
+# 悬赏令
 
-A post-match game for points matches, chosen by the club. The scheduler assigns partners and opponents, so every bounty is about how a member plays in the games they are given, never about whom they play with (`lib/domain/bounties.ts`).
+积分赛的赛后玩法，由群组决定是否使用。搭档和对手都由排场决定，所以每张悬赏令考的都是成员在分到的比赛里打得怎样，与和谁一起打无关（`lib/domain/bounties.ts`）。
 
-## Offer
+## 发令
 
-- From 30 minutes before a points match starts (`bountyOfferAt`), about 30% of the members with a confirmed signup are offered one bounty. Points matches are ranked activities that are not tournaments and are not drafts, cancelled or deleted. Guests and waitlisted members get none.
-- The draw is a fixed hash of the activity and the member (`drawnBounty`), so every refresh and device shows the same offer, and nothing is stored until the member answers.
-- The member accepts or declines once (`bountyRespond`, own account only). The offer stays open until the member's first game of the activity starts, so nobody can accept after seeing how they play, and closes at the end of the activity. Declining costs nothing.
-- When the offer opens, each member offered a bounty gets one notice in the reminder center and as a device push (`lib/bounty-reminders.ts`). A ten-minute Cloudflare cron (`lib/bounty-reminder-sweep.ts`) looks for activities starting in the next 30 minutes; an idle tick runs one small query. The notice is short: the title is the word for bounty alone (no club name, also on the device push) and the body is one line in the club's cultivation voice naming the bounty ("the Heavenly Secrets Pavilion issues a ..., dare you take it?"); it opens the activity, which shows the goal, reward and penalty. Members confirmed later, for example from the waitlist, are told on the next tick; nobody is told twice, and nobody once the activity has started. A queued push is dropped if the member has already answered or is no longer confirmed. Members can turn bounty notices off in their reminder preferences; preferences saved before this option count as on.
-- The app pops the offer up once per visit after other dialogs (`app/bounty-offer.tsx`). Closing it only postpones the answer: the offer stays at the top of the home page and on the activity page (`app/bounty-card.tsx`).
-- Each bounty kind opens the pop-up with its own animated xianxia scene and seal (`app/bounty-effects.tsx`): flying swords arriving one by one for the win streak, a lightning strike that splits the ground for the rout, a golden koi leaping over the dragon gate for the upset, and two qi orbs clashing into a turning taiji for the deuce. The scene is decorative and hidden from screen readers. Every element rests on its final frame, so with reduced motion the finished scene shows without movement.
+- 积分赛开始前 30 分钟起（`bountyOfferAt`），约 30% 的正式接龙成员会收到一张悬赏令。积分赛指开启积分、不是赛事、也不是草稿、已取消或已删除的活动。来宾和候补成员不会收到。
+- 抽签是活动与成员的固定哈希（`drawnBounty`），所以每次刷新、每台设备看到的都是同一张；成员回应之前不保存任何记录。
+- 成员只能回应一次，接下或婉拒（`bountyRespond`，只能回应自己的）。悬赏令一直开放到该成员在本活动的第一局开始，免得有人看过自己的状态再接令；活动结束时关闭。婉拒没有任何代价。
+- 发令时，每位收到悬赏令的成员会在提醒中心和设备推送里各收到一条通知（`lib/bounty-reminders.ts`）。Cloudflare 每十分钟的定时任务（`lib/bounty-reminder-sweep.ts`）查找 30 分钟内开始的活动；空闲时只跑一条小查询。通知很短：标题只有"悬赏令"三个字（不带群名，设备推送也一样），正文是一句群组修仙口吻的话，点明悬赏种类（"天机阁降下……，道友可敢接下？"）；点开进入活动，那里写着目标、奖励和惩罚。后来才确认的成员（例如从候补转正）在下一次定时任务时收到；同一人不会收到两次，活动开始后不再发送。如果成员已经回应或不再是正式接龙，排队中的推送会被丢弃。成员可以在提醒偏好里关闭悬赏通知；加入这个选项之前保存的偏好视为开启。
+- 应用在其他弹窗之后，每次访问弹出一次悬赏令（`app/bounty-offer.tsx`）。关掉弹窗只是推迟回应：悬赏令仍留在主页顶部和活动页（`app/bounty-card.tsx`）。
+- 每种悬赏令弹窗都有自己的修仙动画场景和印章（`app/bounty-effects.tsx`）：连胜是飞剑一柄柄到来，大胜是一道雷劈开地面，以弱胜强是金色锦鲤跃过龙门，鏖战是两团真气相撞化为旋转的太极。场景只是装饰，对读屏软件隐藏。每个元素都停在最后一帧，所以开启"减少动态效果"时直接显示完成后的静止画面。
 
-## Challenges
+## 悬赏种类
 
-| Bounty | Goal | Default reward |
+| 悬赏 | 目标 | 默认奖励 |
 |---|---|---|
-| Win streak | win 5 games in a row in this activity | 30 coins + 15 points |
-| Upset | win a game against opponents whose average realm score before the match is at least 250 higher than your side's | 20 coins + 10 points |
-| Rout | win a game in which the opponents score 9 or fewer | 15 coins + 8 points |
-| Deuce | win a game after 20-all (for example 22:20) | 10 coins + 6 points |
+| 连胜 | 本活动连赢 5 局 | 30 羽币 + 15 积分 |
+| 以弱胜强 | 赢一局，赛前对手平均修为比你方高至少 250 | 20 羽币 + 10 积分 |
+| 大胜 | 赢一局，对手得分不超过 9 分 | 15 羽币 + 8 积分 |
+| 鏖战 | 赢一局 20 平后的加分赛（如 22:20） | 10 羽币 + 6 积分 |
 
-Only completed games count; a no-show forfeit is not a game. The realm score comparison uses the averages recorded in the realm ledger before the match (`RatedGame.team` and `opponent`).
+只算已完成的比赛；缺席判负不算一局。修为比较用修为账本里记录的赛前平均值（`RatedGame.team` 和 `opponent`）。
 
-## Settlement
+## 清算
 
-- An accepted bounty is judged once the activity's scheduled end has passed (`bountyOutcome`). It is derived from the stored games, so a score entered or corrected later settles it again.
-- Completed: the frozen points are added on the activity's singles or doubles season board in the month it started (`bountyPointAdjustments`, shown as a bounty line on the leaderboard), and the frozen coins are paid as an automatic coin reward (source `bounty`, docs/AUTOMATIC_COINS.md).
-- Accepted but not completed: the frozen penalty, 10 points by default, is subtracted on the same board.
-- The cached club view already expires at every activity's end, so results appear without a write.
+- 接下的悬赏令在活动预定结束时间过后判定（`bountyOutcome`）。结果由已保存的比赛推出，所以之后补录或修正比分会重新清算。
+- 完成：冻结的积分加到活动开始那个月的单打或双打赛季榜上（`bountyPointAdjustments`，在排行榜上显示为悬赏一项），冻结的羽币作为自动羽币奖励发放（来源 `bounty`，见 docs/AUTOMATIC_COINS.md）。
+- 接下但没完成：在同一榜上扣除冻结的惩罚，默认 10 积分。
+- 缓存的群组视图本来就在每个活动结束时失效，所以结果无需写入就会出现。
 
-## Settings and privacy
+## 主页显示时长与全群捷报
 
-- The owner and administrators set each bounty's coins and points and the penalty under group management, in the bounty settings (`bountySettings`, audited). Accepting freezes the reward and penalty in the answer, so a later change only affects bounties accepted afterwards.
-- Answers are private: the club view sends each member only their own, with its result; administrators see all (`lib/club-view.ts`).
+- 成员自己接下的悬赏令（修行中、功成或失手）留在主页，直到活动预定结束后 24 小时（`HomeBounties`）。活动页一直显示。
+- 完成的悬赏令在同样的 24 小时内向全群播报（`bountyHonors`，`bountyHonorHours`）：应用顶栏下方出现一条滚动横幅（`app/bounty-honor-banner.tsx`），用修仙口吻写明活动、道友、事迹、悬赏名和赏赐，例如"天机阁传讯：「周六积分赛」一役，某某道友连斩五阵，剑气如虹，揭下连胜悬赏，得赏 30 羽币 + 15 积分！"。最新结束的活动排在前面。
+- 点一条捷报打开那场活动；悬停或聚焦时暂停滚动；右侧按钮收起横幅，只在本次访问内有效。开启"减少动态效果"时不滚动，捷报换行排列。模拟页不显示。
+- 只播报完成的悬赏；婉拒、进行中和失手的悬赏仍然不公开。
+- 横幅在活动结束时出现，24 小时后消失。这两个时刻都已登记为缓存视图的时钟边界（`lib/club-read-cache.ts`），所以不需要写入。
 
-Tests: `tests/bounties.test.ts`, `tests/bounty-ui.mjs` and `tests/bounty-reminder-sweep-api.mjs`.
+## 设置与隐私
+
+- 群主和管理员在群组管理的悬赏令设置里调整每种悬赏的羽币、积分和惩罚（`bountySettings`，有审计记录）。接令时奖励和惩罚就冻结在回应里，之后改设置只影响之后接下的悬赏。
+- 回应是私密的：群组视图只给每位成员发送自己的回应和结果；管理员可以看到全部（`lib/club-view.ts`）。唯一例外是上面的全群捷报，它只包含完成的悬赏。
+
+测试：`tests/bounties.test.ts`、`tests/bounty-ui.mjs` 和 `tests/bounty-reminder-sweep-api.mjs`。

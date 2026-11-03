@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {bountyKinds,bountyOffer,bountyOfferAt,bountyOutcome,bountyPointAdjustments,defaultBountySettings,drawnBounty,type BountyKind} from '../lib/domain/bounties';
+import {bountyHonorUntil,bountyKinds,bountyOffer,bountyOfferAt,bountyOutcome,bountyPointAdjustments,defaultBountySettings,drawnBounty,type BountyKind} from '../lib/domain/bounties';
 import {activateAutomaticCoins,reconcileAutomaticCoins} from '../lib/domain/automatic-coins';
 import {realmLedger} from '../lib/domain/realm-rating';
 import {quarterlyLeaderboard} from '../lib/domain/ranking';
@@ -93,4 +93,16 @@ test('members see only their own bounty and its result; the result appears at th
  assert.deepEqual(view(s.accounts[0])!.map(b=>[b.playerId,(b as ViewBounty).outcome??null]),[['p0','completed'],['p1',null]],'administrators see all, with results');
  assert.equal((view(s.accounts[0],e.end-1)!.find(b=>b.playerId==='p0') as ViewBounty).outcome,null);
  assert.ok(clubViewValidUntil(s,s.accounts[0],e.end-minute)<=e.end,'the cached view expires at the end, when bounties settle');
+});
+
+test('completed bounties are announced to everyone for a day after the activity; failed and declined ones stay private',async()=>{
+ const {s,e}=setup('rout');
+ e.bounties=[{playerId:'p0',kind:'rout',status:'accepted',at:bountyOfferAt(e),coins:15,points:8,penalty:10},{playerId:'p1',kind:'rout',status:'accepted',at:bountyOfferAt(e),coins:15,points:8,penalty:10},{playerId:'p2',kind:'rout',status:'declined',at:bountyOfferAt(e),coins:0,points:0,penalty:0}];
+ // p0 and p1 beat p2 and p3 21:4: p0's rout is met; p1's streak (one win) fails and stays private.
+ e.bounties[1].kind='streak';game(s,e,'big',2,[21,4]);
+ const member=s.accounts[3],honors=(now:number)=>projectClubState(s,member,month(now),new Date(now).getUTCFullYear(),now).bountyHonors;
+ assert.deepEqual(honors(e.end-1),[],'nothing before the activity ends');
+ assert.deepEqual(honors(e.end),[{eventId:e.id,title:e.title,playerId:'p0',kind:'rout',coins:15,points:8,at:e.end}],'another member hears of the completion only');
+ assert.equal(honors(bountyHonorUntil(e)-1).length,1);assert.deepEqual(honors(bountyHonorUntil(e)),[],'gone a day after the end');
+ assert.equal(clubViewValidUntil(s,member,bountyHonorUntil(e)-minute),bountyHonorUntil(e),'the cached view expires when the announcement ends');
 });

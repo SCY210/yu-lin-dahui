@@ -102,6 +102,19 @@ export function bountyPointAdjustments(s:Pick<State,'events'|'matches'>,now:numb
  }));
 }
 
+/** How long the whole club hears of a completed bounty after its activity ends; the member's own card on the home
+ * page stays as long (app/bounty-card.tsx). */
+export const bountyHonorHours=24;
+export const bountyHonorUntil=(e:Pick<Event,'end'>)=>e.end+bountyHonorHours*3600000;
+export type BountyHonor={eventId:string;title:string;playerId:string;kind:BountyKind;coins:number;points:number;at:number};
+/** Completed bounties of activities that ended in the last day, newest first, announced to everyone. Only completions
+ * are public; declined, open and failed bounties stay private. */
+export function bountyHonors(s:Pick<State,'events'|'matches'>,now:number,gamesOf:(playerId:string)=>RatedGame[]):BountyHonor[]{
+ return s.events.filter(e=>bountyEvent(e)&&e.end<=now&&now<bountyHonorUntil(e)&&e.bounties?.length).flatMap(e=>e.bounties!.filter(b=>b.status==='accepted'&&bountyOutcome(s,e,b,now,b.kind==='upset'?gamesOf(b.playerId):undefined)==='completed')
+  .map(b=>({eventId:e.id,title:e.title,playerId:b.playerId,kind:b.kind,coins:b.coins,points:b.points,at:e.end})))
+  .sort((a,b)=>b.at-a.at||a.eventId.localeCompare(b.eventId)||a.playerId.localeCompare(b.playerId));
+}
+
 /** Command entry: true when the action was a bounty command. */
 export function applyBounty(s:State,a:Account,action:string,input:unknown,now:number){
  if(action==='bountyRespond'){respondBounty(s,a,input,now);return true}

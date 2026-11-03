@@ -25,7 +25,7 @@ import {calculateSettlementPreview} from './domain/money';
 import {socialHistoryParts,socialSnapshot} from './domain/social';
 import {sharedClubValue,sharedViewValidUntil,sharedRealmLedger} from './club-view-shared';
 import {rotationPlan} from './domain/play';
-import {bountyOutcome,bountySettings} from './domain/bounties';
+import {bountyHonors,bountyOutcome,bountySettings} from './domain/bounties';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
 // Retired profile fields may remain in stored JSON for compatibility, but are never shown: grip/shoes and the self-assessed level.
@@ -87,6 +87,8 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  return maskClubContent({
   ...(activityId?{activityScope:activityId}:{}),
   revision:s.revision,settings:{name:s.settings.name,rules:s.settings.rules,bounty:bountySettings(s),feePayees:(s.settings.feePayees??[]).map(({id,name,phone,createdBy,playerId})=>({id,name,phone,mine:createdBy===a.id,...(playerId?{playerId}:{}),...(playerId&&(playerId===ownerPlayerId||s.accounts.some(x=>x.playerId===playerId&&x.role==='admin'))?{leader:true}:{})})),...(admin?{blockedWords:s.settings.blockedWords??[]}:{}),...(pairingOddsView(history,a,now)?{pairingOdds:pairingOddsView(history,a,now)}:{})},me:{...a,giftNotices:giftNotices(history,a,now),bonusNotices:bonusNotices(history,a,now),isOwner:isClubOwner(s,a)},permissions:{canManageRoles:admin&&isClubOwner(s,a),canManageBlockedWords:admin,canUseSimulation:canUseSimulation(a)},
+  // Completed bounties are announced to the whole club for a day (the top banner, app/bounty-honor-banner.tsx).
+  bountyHonors:bountyHonors(history,now,id=>ledger.byPlayer.get(id)??[]),
   players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestHostId:guestHostPlayerId(s,p.id),guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,canViewCourtOccupancy:!!e.creatorId&&e.creatorId===a.id,mapUrl:googleMapsUrl(e.venue,e.address),
    // Bounty answers are private: each member sees their own (with its result once settled); administrators see all.
