@@ -58,18 +58,23 @@ test('each challenge is judged on completed games after the scheduled end; a dec
  const judge=async(kind:BountyKind,games:[number,number][],ledger=false)=>{
   const {s,e}=setup(kind);await accept(s,e);games.forEach((score,i)=>game(s,e,kind+'-'+i,2+i*13,score));
   assert.equal(bountyOutcome(s,e,e.bounties![0],e.end-1),null,'not before the end');
-  return bountyOutcome(s,e,e.bounties![0],e.end,ledger?realmLedger(s,e.end).byPlayer.get('p0'):undefined);
+  return bountyOutcome(s,e,e.bounties![0],e.end,ledger?(id=>realmLedger(s,e.end).byPlayer.get(id)??[]):undefined);
  };
  assert.equal(await judge('streak',[[21,18],[21,19],[21,17],[21,15],[23,21]]),'completed');
  assert.equal(await judge('streak',[[21,18],[21,19],[18,21],[21,17],[21,15],[21,11]]),'failed','a loss breaks the run');
  assert.equal(await judge('rout',[[21,9]]),'completed');assert.equal(await judge('rout',[[21,10],[5,21]]),'failed','a loss to single figures does not count');
  assert.equal(await judge('deuce',[[22,20]]),'completed');assert.equal(await judge('deuce',[[21,19],[20,22]]),'failed');
- // 修为 starts equal for everyone and grows with play, so the averages before the match are given directly.
+ // 修为 starts equal for everyone and grows with play, so the ratings before the match are given directly: p0's side
+ // averages 900; p2 and p3 are the opponents. One opponent far enough above is enough.
  const upset=setup('upset');await accept(upset.s,upset.e);game(upset.s,upset.e,'upset',2,[21,19]);
- const rated=(gap:number,won=true)=>[{matchId:'upset',eventId:upset.e.id,gameIndex:0,playerId:'p0',side:'a' as const,won,before:900,after:910,delta:10,k:20,expected:.2,opponent:900+gap,team:900,start:upset.e.start,end:upset.e.end,margin:2,settled:true,reset:false}];
- assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(250)),'completed','opponents at least 250 修为 stronger');
- assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(249)),'failed');
- assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(400,false)),'failed','a loss does not count');
+ const row=(playerId:string,side:'a'|'b',before:number,opponent:number,team:number,won:boolean)=>({matchId:'upset',eventId:upset.e.id,gameIndex:0,playerId,side,won,before,after:before,delta:0,k:20,expected:.2,opponent,team,start:upset.e.start,end:upset.e.end,margin:2,settled:true,reset:false});
+ const rated=(p2:number,p3:number|null,won=true)=>(id:string)=>{const avg=p3===null?p2:(p2+p3)/2;return id==='p0'?[row('p0','a',900,avg,900,won)]:id==='p2'?[row('p2','b',p2,900,avg,!won)]:id==='p3'&&p3!==null?[row('p3','b',p3,900,avg,!won)]:[]};
+ const judgeUpset=(gamesOf:(id:string)=>ReturnType<typeof row>[])=>bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,gamesOf);
+ assert.equal(judgeUpset(rated(1200,900)),'completed','one opponent 300 above, although the average is only 150 above');
+ assert.equal(judgeUpset(rated(1150,1150)),'completed','both opponents exactly 250 above');
+ assert.equal(judgeUpset(rated(1149,1000)),'failed','no opponent 250 above');
+ assert.equal(judgeUpset(rated(1400,1400,false)),'failed','a loss does not count');
+ assert.equal(judgeUpset(id=>id==='p0'?[row('p0','a',900,1150,900,true)]:[]),'completed','without opponent records the average still decides');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[22,20],[21,9]]),'completed');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[21,9]]),'failed','fewer than four games');assert.equal(await judge('unbeaten',[[21,18],[21,19],[19,21],[21,9],[21,9]]),'failed','one loss breaks the golden body');
  // 夺魁: the most games won by anyone at the activity, ties included, and at least three. p0 and p1 share a side here.
