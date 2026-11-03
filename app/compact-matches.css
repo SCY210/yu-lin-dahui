@@ -70,3 +70,17 @@
 .compact-match.is-playing .match-status::before{content:'';display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:#c0392b;vertical-align:middle;animation:match-live-dot 1.2s ease-in-out infinite}
 @keyframes match-live-dot{0%,100%{opacity:1}50%{opacity:.3}}
 @media(prefers-reduced-motion:reduce){.compact-match.is-playing .match-status::before{animation:none}}
+
+/* A finished game shows its winner at a glance (both themes): the winning side gets a gold ring, a light gold ground
+   and a 胜 seal, its score is larger and coloured, and the losing side and its score fade. Both sides keep the same
+   padding so the names stay aligned. */
+.compact-match.is-complete .match-teams>.team{position:relative;padding:4px;border-radius:10px}
+.compact-match.is-complete .match-teams>.team.is-winner{background:#fff6d9;box-shadow:0 0 0 2px #d4a23a}
+.compact-match.is-complete .match-teams>.team.is-loser .group-player,.compact-match.is-complete .match-teams>.team.is-loser .match-team-label{opacity:.5;filter:grayscale(.5)}
+.match-win-seal{position:absolute;top:-9px;right:-5px;z-index:2;display:grid;place-items:center;width:24px;height:24px;border-radius:5px;background:#c0392b;color:#fff;font:700 14px/1 'STKaiti','KaiTi','Kaiti SC','PingFang SC',serif;box-shadow:0 0 0 2px #fff,0 2px 5px #0003;transform:rotate(-8deg);pointer-events:none}
+.compact-match.is-complete .versus .score-win{color:#b07a12;font-size:1.2em}
+.compact-match.is-complete .versus .score-lose{opacity:.45;font-weight:600}
+.wuxia-theme .compact-match.is-complete .match-teams>.team.is-winner{background:#f7ecd2;box-shadow:0 0 0 2px #a8792a}
+.wuxia-theme .match-win-seal{border-radius:3px;background:#a8382a;color:#fff6e6;box-shadow:0 0 0 2px #f7ecd2,0 2px 5px #0003}
+.wuxia-theme .compact-match.is-complete .versus .score-win{color:#a8382a}
+.match-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}

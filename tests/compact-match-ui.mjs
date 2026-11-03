@@ -20,7 +20,7 @@ assert.equal((html({interactive:true}).match(/group-player-swap/g)??[]).length,4
 assert.ok(html({interactive:true}).includes('title="非常长的横向球友昵称 Test Name"'));
 assert.equal((html({interactive:true,m:{...m,locked:true}}).match(/group-player-swap/g)??[]).length,4,'retired lock flags cannot prevent lineup edits');
 const completed={...m,status:'complete',start:now-60000,end:now,scoreA:21,scoreB:18,games:[{a:21,b:18}]};
-const result=html({m:completed});assert.ok(result.includes('is-complete'));assert.ok(result.includes('已完成'));assert.ok(result.includes('A 队 · 胜'));assert.ok(result.includes('比分 21 比 18'));assert.ok(result.includes('修正比分'));
+const result=html({m:completed});assert.ok(result.includes('is-complete'));assert.ok(result.includes('已完成'));assert.ok(result.includes('A 队<span class="match-sr-only"> · 胜</span>')&&result.includes('match-win-seal'),'the winner gets a seal; the label says so to screen readers');assert.ok(result.includes('is-loser')&&result.includes('score-win')&&result.includes('score-lose'));assert.ok(result.includes('比分 21 比 18'));assert.ok(result.includes('修正比分'));
 assert.ok(!html({m:completed,ctx:{...ctx,readOnly:true}}).includes('修正比分'),'read-only result cards cannot correct scores');
 const plannedCtx={...ctx,data:{...ctx.data,events:[{...e,schedulingMode:'planned'}],rounds:[{id:'r',eventId:'e',pointsSlot:1,status:'playing',start:now,duration:15}]}};
 const unscoredPlaying=html({interactive:true,m:{...m,status:'playing',start:now,locked:true},ctx:plannedCtx});assert.equal((unscoredPlaying.match(/group-player-swap/g)??[]).length,4);assert.ok(unscoredPlaying.includes('待录分'));assert.ok(!/已锁定|锁定分组|解锁|进行中/.test(unscoredPlaying));assert.ok(html({m:completed,ctx:plannedCtx}).includes('已结束'));
