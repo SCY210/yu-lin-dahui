@@ -18,15 +18,15 @@ const button=label=>ui.root.findAllByType('button').find(b=>text(b).trim()===lab
 try{
  const offer={eventId:'e',playerId:'me',kind:'rout',coins:15,points:8,penalty:10},answers=[];
  await mount(BountyCard,{title:'Fictional points match',offer,onRespond:(o,accept)=>answers.push([o.eventId,accept])});
- let shown=text(ui.toJSON());assert.ok(shown.includes('大胜悬赏')&&shown.includes('个位数')&&shown.includes('15 羽币 + 8 积分')&&shown.includes('扣 10 积分')&&shown.includes('不接没有惩罚'));
- await act(()=>button('接下悬赏').props.onClick());await act(()=>button('不接').props.onClick());assert.deepEqual(answers,[['e',true],['e',false]]);
+ let shown=text(ui.toJSON());assert.ok(shown.includes('大胜悬赏')&&shown.includes('个位数')&&shown.includes('15 羽币 + 8 积分')&&shown.includes('折损 10 积分')&&shown.includes('婉拒无罚'));
+ await act(()=>button('接下此令').props.onClick());await act(()=>button('婉拒').props.onClick());assert.deepEqual(answers,[['e',true],['e',false]]);
  const accepted={playerId:'me',kind:'streak',status:'accepted',at:0,coins:30,points:15,penalty:10};
- await mount(BountyCard,{accepted});assert.ok(text(ui.toJSON()).includes('进行中')&&text(ui.toJSON()).includes('活动结束后自动结算'));assert.equal(button('接下悬赏'),undefined);
- await mount(BountyCard,{accepted:{...accepted,outcome:'completed'}});assert.ok(text(ui.toJSON()).includes('悬赏完成！获得 30 羽币 + 15 积分'));
- await mount(BountyCard,{accepted:{...accepted,outcome:'failed'}});assert.ok(text(ui.toJSON()).includes('悬赏未完成，扣 10 积分'));
+ await mount(BountyCard,{accepted});assert.ok(text(ui.toJSON()).includes('修行中')&&text(ui.toJSON()).includes('天机阁自会清算'));assert.equal(button('接下此令'),undefined);
+ await mount(BountyCard,{accepted:{...accepted,outcome:'completed'}});assert.ok(text(ui.toJSON()).includes('悬赏功成！天机阁赐下 30 羽币 + 15 积分'));
+ await mount(BountyCard,{accepted:{...accepted,outcome:'failed'}});assert.ok(text(ui.toJSON()).includes('此令未竟，折损 10 积分'));
  await mount(BountyCard,{});assert.equal(ui.toJSON(),null);
  const popup=[];await mount(BountyOffer,{offer,title:'Fictional points match',onRespond:accept=>popup.push(accept),onLater:()=>popup.push('later')});
- assert.ok(text(ui.toJSON()).includes('悬赏令 · 大胜悬赏'));await act(()=>button('接下悬赏').props.onClick());await act(()=>ui.root.findByProps({'data-dialog':true}).props.onClose());assert.deepEqual(popup,[true,'later']);
+ assert.ok(text(ui.toJSON()).includes('天机阁降下大胜悬赏')&&text(ui.toJSON()).includes('道友可敢接下'));await act(()=>button('接下此令').props.onClick());await act(()=>ui.root.findByProps({'data-dialog':true}).props.onClose());assert.deepEqual(popup,[true,'later']);
  // Every bounty kind pops up its own scene: its own class, seal word and name, hidden from screen readers.
  const scenes=[];for(const kind of bountyKinds){await mount(BountyOffer,{offer:{...offer,kind},title:'Fictional points match',onRespond:()=>{},onLater:()=>{}});const fx=ui.root.findByProps({'data-kind':kind,'aria-hidden':'true'});assert.equal(fx.props.className,'bounty-fx bounty-fx-'+kind);assert.ok(text(fx).includes(bountyEffects[kind].word)&&text(fx).includes(bountyEffects[kind].name));assert.equal(ui.root.findAll(n=>n.props.className==='bounty-offer-seal').length,0);scenes.push(text(fx))}
  assert.equal(new Set(scenes).size,4,'four different scenes');assert.equal(new Set(bountyKinds.map(k=>bountyEffects[k].word)).size,4);
@@ -36,13 +36,13 @@ try{
  let eventId='home-0';for(let i=0;!drawnBounty(eventId,'me');i++)eventId='home-'+i;
  const start=Date.parse('2026-10-25T17:00:00Z'),event={id:eventId,title:'Fictional evening',start,end:start+7200000,status:'open',ranked:true,matchFormat:'doubles'};
  const data={events:[event],registrations:[{eventId,playerId:'me',status:'confirmed'}],matches:[],players:[{id:'me'}],settings:{bounty:defaultBountySettings},me:{playerId:'me'}};
- await mount(HomeBounties,{data,respond:()=>{},onOpen:()=>{},now:bountyOfferAt(event)});assert.ok(text(ui.toJSON()).includes('待回应'));
+ await mount(HomeBounties,{data,respond:()=>{},onOpen:()=>{},now:bountyOfferAt(event)});assert.ok(text(ui.toJSON()).includes('待接令'));
  await mount(HomeBounties,{data,respond:()=>{},onOpen:()=>{},now:bountyOfferAt(event)-1});assert.equal(ui.toJSON(),null,'nothing before the offer opens');
  const answered={...data,events:[{...event,bounties:[{...accepted,kind:drawnBounty(eventId,'me')}]}]};
- await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:start-60000});assert.ok(text(ui.toJSON()).includes('进行中'),'an accepted bounty shows before the start');
+ await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:start-60000});assert.ok(text(ui.toJSON()).includes('修行中'),'an accepted bounty shows before the start');
  await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:event.end+86400000});assert.equal(ui.toJSON(),null);
  const forms=[];await mount(BountySettingsPanel,{settings:defaultBountySettings,open:(...args)=>forms.push(args)});
- assert.ok(text(ui.toJSON()).includes('60%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
+ assert.ok(text(ui.toJSON()).includes('30%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
  const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,9);assert.equal(values.streakCoins,30);
  assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{streak:{coins:30,points:15},rout:{coins:15,points:9},upset:{coins:20,points:10},deuce:{coins:10,points:6}}});
  console.log('PASS bounty UI: offer card answers, accepted/completed/failed states, pop-up accept and later, a different xianxia scene per bounty kind with a still final frame for reduced motion, home timing, settings form');

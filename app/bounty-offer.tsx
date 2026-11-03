@@ -10,9 +10,9 @@ type Offer={eventId:string;playerId:string;kind:BountyKind;coins:number;points:n
  * the answer: the offer stays on the home and activity pages until the member's first game starts. */
 export default function BountyOffer({offer,title,busy,onRespond,onLater}:{offer:Offer;title:string;busy?:boolean;onRespond:(accept:boolean)=>void;onLater:()=>void}){
  return <Dialog open onOpenChange={open=>{if(!open)onLater()}}><DialogContent className="app-dialog bounty-offer" data-kind={offer.kind}>
-  <DialogHeader><BountyEffect kind={offer.kind}/><DialogTitle>悬赏令 · {bountyTitles[offer.kind]}</DialogTitle><DialogDescription>{title}</DialogDescription></DialogHeader>
+  <DialogHeader><BountyEffect kind={offer.kind}/><DialogTitle>天机阁降下{bountyTitles[offer.kind]}</DialogTitle><DialogDescription>道友可敢接下？ · {title}</DialogDescription></DialogHeader>
   <BountyScroll {...offer}/>
-  <p className="hint">接不接都可以，不接没有惩罚；只能回应一次。也可以稍后在主页回应，你的第一局开始后悬赏令失效。</p>
-  <div className="bounty-offer-actions"><button type="button" className="primary full" disabled={busy} onClick={()=>onRespond(true)}>接下悬赏</button><button type="button" className="ghost full" disabled={busy} onClick={()=>onRespond(false)}>不接</button></div>
+  <p className="hint">接与不接，全凭道友本心，婉拒无罚；一言既出，不可更改。也可稍后在主页回应，首局开战后此令自散。</p>
+  <div className="bounty-offer-actions"><button type="button" className="primary full" disabled={busy} onClick={()=>onRespond(true)}>接下此令</button><button type="button" className="ghost full" disabled={busy} onClick={()=>onRespond(false)}>婉拒</button></div>
  </DialogContent></Dialog>;
 }

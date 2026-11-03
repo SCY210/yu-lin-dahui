@@ -14,6 +14,14 @@ export function schedulingMode(s:Pick<State,'rounds'>,e:Event):SchedulingMode{
  if(all.some(r=>!r.live))return 'round';
  return all.length?'live':'planned';
 }
+/** The way of scheduling the organiser is advised to pick (docs/SCHEDULING_MODES.md): always the planned schedule,
+ * because it keeps the two sides of a game close in strength. It splits everybody playing a round into teams at once;
+ * live play can only split the four players whose turn it is. In whole-evening simulations on two to four courts the
+ * mean rating gap between the sides was 20-37 planned and 106-140 live with full attendance, and 41-61% of live games
+ * had a gap over 100. Live play gives 3-22% more games, which the club ranks below balanced games. */
+export function recommendedSchedulingMode():{mode:'planned';reason:string}{
+ return {mode:'planned',reason:'预排在每轮所有上场球友里统一分队，模拟中双方修为分平均只差 20–40 分；实时排场只能在刚轮到的 4 人里分队，平均差 110–140 分，约一半的局差 100 分以上。'};
+}
 export function pendingSchedulingIds(s:Pick<State,'matches'>,eventId:string){return s.matches.filter(m=>m.eventId===eventId&&['draft','published'].includes(m.status)).map(m=>m.id).sort()}
 /** Never delete historical records or cancel a game that has already started. */
 export function cancelPendingScheduling(s:State,eventId:string){

@@ -48,6 +48,9 @@ The manual "Remind unpaid (N)" button is unchanged and independent: organisers c
 Every transfer recipient saved for an activity is kept in the club settings as a saved payee (matched by the digits
 of the phone number, so a renamed payee updates in place), newest use first and at most 20. Activity managers see them
 in the transfer section of the fees page and apply one with a single tap instead of typing the name and number again.
+Only the club owner and administrators are listed as regular payees; any other saved payee is folded under "other payees"
+(opened when it is the activity's current recipient). The copy button next to the recipient copies the phone number only,
+on the fees page and on the home page's unpaid card.
 The member who added a payee, or an administrator, can remove it; removing it never changes recipients already set on
 activities. The member view receives each payee's name, phone and whether the viewer added it, never the adder's id.
 

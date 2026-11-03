@@ -10,6 +10,26 @@ An activity that has no arrangement yet uses the planned schedule. When it start
 
 "One round after each completed round" can no longer be chosen, and the server rejects switching to it. An activity that already uses it keeps its rounds and controls until it ends, and the selector lets it switch to another mode.
 
+## Recommended mode
+
+Above the selector, organisers who can still switch (the creator, administrators
+and the club owner) see a highlighted recommendation (`recommendedSchedulingMode`
+in `lib/domain/scheduling.ts`), with a button to switch when the activity uses
+live scheduling and a "recommended" mark on its option. It always recommends the
+planned schedule, because it keeps the two sides of a game close in strength: it
+splits everybody playing a round into teams at once, while live play can only
+split the four players whose turn it is. In whole-evening simulations on two to
+four courts with 9-28 players:
+
+| Rating gap between the sides | Planned | Live |
+| --- | --- | --- |
+| Mean, full attendance | 20-37 | 106-140 |
+| Games with a gap over 100, full attendance | 0-1% | 41-61% |
+| Mean, late arrivals and early departures | 48-115 | 107-145 |
+
+Live play gives 3-22% more games and shorter waits, which the club ranks below
+balanced games. Members see no recommendation.
+
 ## Switching
 
 The creator or an administrator switches modes through a confirmation carrying the expected mode and pending match IDs. A stale request is rejected. Switching disables live auto-advance and cancels only unstarted draft/published matches from the old arrangement. Completed scores, started matches, attendance, fees and rest preferences remain unchanged. No production records are rewritten by deployment.
@@ -34,7 +54,9 @@ retires only published, unstarted matches from earlier attendance phases and
 continues with the confirmed next phase. This also retires an earlier-phase
 match whose four players happen to attend all day; it must not hold up the new
 phase. Skipped matches are cancelled without scores, forfeits or point penalties,
-and the transition is audited once as `pointsPhaseAdvance`.
+and the transition is audited once as `pointsPhaseAdvance`. The later unstarted
+rounds are then planned again from the games actually played, so the players of
+the skipped games get them back (`pointsReplan`, docs/MATCH_GROUPING.md).
 Expiration requires a confirmed successor phase. Without one, a final lineup
 manually changed to include a later arrival remains pending until that person
 can play; the clock does not discard the host's last confirmed adjustment.

@@ -14,7 +14,7 @@ export function pendingScores(data:ScoreReminderData,now=Date.now()):Match[]{
    e.deletedAt===undefined&&!['draft','cancelled'].includes(e.status)&&canRecordScore(data,data.me,e);
  }).sort((a,b)=>b.start!-a.start!||a.id.localeCompare(b.id));
 }
-/** Only the signed-in account's own on-court games prompt for a score by themselves. */
+/** The signed-in account's own on-court games, listed in the score bar. */
 export function pendingOwnScores(data:ScoreReminderData,now=Date.now()):Match[]{
  return pendingScores(data,now).filter(m=>[...m.a,...m.b].includes(data.me.playerId));
 }
@@ -22,21 +22,6 @@ export function pendingOwnScores(data:ScoreReminderData,now=Date.now()):Match[]{
 /** Window event asking the score reminder to open the form for one pending game (detail: match id). */
 export const scoreEntryRequest='yulin:score-entry';
 export function requestScoreEntry(matchId:string){window.dispatchEvent(new CustomEvent(scoreEntryRequest,{detail:matchId}))}
-
-/** A visit is consumed even when it has no pending games. Polling or the next
- * live assignment must not produce another popup in the middle of a game. */
-export function createScorePromptGate(owner:string){
- let visit=0,ready=false,handled=false;
- return {
-  begin(){ready=false;handled=false;return ++visit},
-  ready(token:number,accountId:string){if(token===visit&&accountId===owner)ready=true},
-  suppress(){handled=true},
-  next(accountId:string,ids:string[],blocked:boolean){
-   if(accountId!==owner||!ready||handled||blocked)return null;
-   handled=true;return ids[0]??null;
-  },
- };
-}
 
 export type ScoreDraft={a:number|'';b:number|''};
 export function initialScoreDrafts(m:Pick<Match,'games'>):ScoreDraft[]{return [0,1,2].map(i=>m.games[i]?{...m.games[i]}:{a:'',b:''})}

@@ -34,7 +34,7 @@ test('确认通知：代报名的人收到单独一条，写明朋友的金额�
  const general=notices.find(n=>n.id==='fees:e:v1')!,personal=notices.find(n=>n.accountIds.includes('alice'))!;
  assert.deepEqual(general.accountIds.sort(),['bob','owner']);assert.ok(!general.accountIds.includes('alice'));
  assert.equal(personal.id,'fees:e:v1:alice');assert.deepEqual(personal.proxyPlayerIds,['friend']);
- assert.match(personal.body,/除了你自己的费用/);assert.match(personal.body,/你代报名的 小明 的费用/);assert.match(personal.body,/代为转交或代付/);assert.doesNotMatch(personal.body,/€|600|6\.00/,'notices never show amounts');
+ assert.match(personal.body,/含小明/,'the short body names the friend');assert.doesNotMatch(personal.body,/€|600|6\.00/,'notices never show amounts');
 });
 
 test('球友自报已付款：本人和代报名的人可以标记和撤销，其他成员不能；创建者可以代为修正',async()=>{
@@ -60,7 +60,7 @@ test('提醒未付款：只提醒还没标记的人，代报名朋友的提醒�
  const s=fixture();await apply(s,bob,'feePaid',{eventId:'e',settlementId:'v1',playerId:'p2',paid:true},now);await apply(s,alice,'feePaid',{eventId:'e',settlementId:'v1',playerId:'p1',paid:true},now);
  const notices=unpaidFeeReminders(s,s.settlements[0],'request-1',now);
  assert.deepEqual(notices.map(n=>n.accountIds[0]).sort(),['alice','owner']);
- const forAlice=notices.find(n=>n.accountIds[0]==='alice')!;assert.equal(forAlice.title,'费用提醒：还未付款');assert.match(forAlice.body,/你代报名的 小明/);assert.doesNotMatch(forAlice.body,/你自己|€/);
+ const forAlice=notices.find(n=>n.accountIds[0]==='alice')!;assert.equal(forAlice.title,'费用还未付款');assert.match(forAlice.body,/含小明/);assert.doesNotMatch(forAlice.body,/€/);
  assert.ok(forAlice.due);assert.equal(forAlice.settlementId,'v1');assert.ok(notices.every(n=>n.id.includes('request-1')));
  assert.notDeepEqual(unpaidFeeReminders(s,s.settlements[0],'request-2',now).map(n=>n.id),notices.map(n=>n.id));
 });

@@ -2,7 +2,7 @@
 
 The repository shares application source, reusable build/runtime helpers, reproducible tests, database migrations, required deployment metadata, and third-party notices. It does not share credentials, local databases, editor/agent profiles, generated screenshots, logs, or one person's historical test runs.
 
-AGENTS.md is a shared collaboration policy and stays tracked in English. .openai/hosting.json identifies the existing deployment and bindings; it is not a personal instruction file and is necessary to build/deploy this app. Do not ignore all hidden directories or all Markdown/JSON files.
+AGENTS.md is a shared collaboration policy and stays tracked; it is written in Chinese. .openai/hosting.json identifies the existing deployment and bindings; it is not a personal instruction file and is necessary to build/deploy this app. Do not ignore all hidden directories or all Markdown/JSON files.
 
 ## Reports removed from tracking
 
@@ -43,8 +43,8 @@ No action in this change directly accesses or deletes another owner's local file
 
 It does not hide normal source, migrations, shared instructions, licenses, or hosting configuration. Credentials and production exports must never enter Git. If a real secret was committed previously, ignoring/deleting the current file is insufficient: rotate it and handle history separately with the owner's authorization.
 
-Run npm run check:repo to detect prohibited tracked paths, non-English shared Markdown containing Han characters, and broken relative documentation links. This heuristic does not certify translation quality; reviewers still check meaning. Ignored personal reports may keep their original language.
+Run npm run check:repo to detect prohibited tracked paths, new shared Markdown without Chinese text, listed English documents that gained Chinese text, and broken relative documentation links. This heuristic does not certify translation quality; reviewers still check meaning. Ignored personal reports may keep their original language.
 
 ## Existing documentation compatibility
 
-New and rewritten documents are checked for English. Existing untranslated notes are explicitly listed in scripts/legacy-markdown.json so current behavior descriptions are retained rather than replaced by older translations. Tracked-state restrictions and relative-link validation apply to every shared document, including those notes. Remove an exemption when its note is deliberately translated.
+Since November 2026 shared documentation is written in Chinese (until then it was English, with older Chinese notes exempted). New and rewritten documents must contain Chinese text. The English documents that existed then are listed in scripts/english-markdown.json and may stay in English; a listed document that gains Chinese text fails the check, so a rewrite translates the whole document and removes it from the list. Code identifiers, commands, paths and quoted English stay as they are. Tracked-state restrictions and relative-link validation apply to every shared document.

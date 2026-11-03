@@ -28,7 +28,9 @@ let current=data;const writes=[];
 const props=()=>({ctx:{data:current,busy:false,name:id=>current.players.find(p=>p.id===id)?.name??id,refresh:async()=>current,action:async(action,payload)=>{writes.push({action,payload})}}});
 try{
  await act(async()=>{ui=create(React.createElement(Reminder,props()));await pause()});
- assert.ok(ui.root.findAllByType('form').length,'initial pending game opens its score form');
+ assert.equal(ui.root.findAllByType('form').length,0,'the form never opens by itself');
+ await act(async()=>{ui.root.findAll(n=>n.type==='button'&&text(n.children).includes('去录分'))[0].props.onClick();await pause()});
+ assert.ok(ui.root.findAllByType('form').length,'the bar opens the score form of the pending game');
  let inputs=ui.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs[0].props['aria-label'],'第1局乙队比分');
  await act(()=>inputs[0].props.onChange({target:{value:'15'}}));
  current=structuredClone(data);Object.assign(current.matches[0],{status:'complete',end:now,games:[{a:21,b:17}],scoreA:21,scoreB:17,enteredByPlayerId:'p1'});

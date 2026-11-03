@@ -20,7 +20,7 @@ export const dt=madridDateTime;
 export const epoch=madridEpoch;
 export const labels:any={draft:'草稿',open:'报名中',locked:'报名锁定',live:'进行中',ended:'已结束',cancelled:'已取消',waitlist:'候补',confirmed:'正式',ready:'可上场',paused:'暂时休息',left:'已离场',published:'已发布',playing:'比赛中',complete:'已完成',forfeit:'弃权'};
 export const modes=[['interval','按时段分摊'],['duration','按全程参加时长'],['equal','等额分摊']];
-export type Field={key:string;label:string;type?:string;options?:string[][];optional?:boolean;required?:boolean;when?:{key:string;value:string};requiredWhen?:{key:string;value:string};step?:number|'any';min?:number;max?:number};
+export type Field={key:string;label:string;type?:string;/** Draws attention to a field that still needs an answer. */highlight?:boolean;options?:string[][];optional?:boolean;required?:boolean;when?:{key:string;value:string};requiredWhen?:{key:string;value:string};step?:number|'any';min?:number;max?:number};
 export type Form={activityStart?:string;title:string;description?:string;action:string;values:any;fields:Field[];convert?:(v:any)=>any};
 export const text=(key:string,label:string):Field=>({key,label});
 export const timed=(key:string,label:string,optional=false):Field=>({key,label,type:'datetime-local',optional});

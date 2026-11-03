@@ -1,45 +1,92 @@
-# Project collaboration requirements
+# 项目协作要求
 
-## Primary production destination (owner instruction, 2026-10-18)
+## 主要生产站点（仓库所有者指示，2026-10-18）
 
-- Cloudflare is the primary site: https://yu-lin-dahui.chenyueshanxd.workers.dev/. New approved PRs and feature updates publish through the controlled private Cloudflare workflow.
-- The Sites-to-Cloudflare business-data copy was a one-time migration. Do not assume ongoing synchronization or overwrite either database during a code release.
-- The separate Sites deployment remains a secondary entry. Do not automatically publish PRs to it, change its audience, or add redirects without an explicit owner request.
+- Cloudflare 是主站：https://yu-lin-dahui.chenyueshanxd.workers.dev/ 。新批准的 PR 和功能更新通过受控的私有 Cloudflare 流程发布。
+- 从 Sites 到 Cloudflare 的业务数据复制只做过一次迁移。不要假设两边持续同步，也不要在发布代码时覆盖任何一边的数据库。
+- 独立的 Sites 部署仍是次要入口。没有所有者明确要求时，不要自动把 PR 发布到那里，不要改变它的访问范围，也不要添加跳转。
 
-## Significant updates must be synchronized to GitHub
+## 重要更新必须同步到 GitHub
 
-- The canonical repository is [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui).
-- Before finishing any significant update to core functionality, page flows, permissions, security, data structures, architecture, or deployment configuration, synchronize the relevant code, documentation, and necessary configuration to GitHub. Local changes or an updated deployed website alone are insufficient.
-- Validate the update before synchronization. After synchronization, verify that the remote commit contains the changes and provide the commit or PR URL and status. If authentication, permissions, or networking prevent synchronization, explain the specific cause and clearly state that GitHub has not been updated.
+- 正式仓库是 [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui)。
+- 对核心功能、页面流程、权限、安全、数据结构、架构或部署配置做重要更新时，结束前要把相关代码、文档和必要配置同步到 GitHub。只改本地或只更新了线上网站都不算完成。
+- 同步前先验证更新。同步后确认远端提交确实包含这些改动，并给出提交或 PR 的链接和状态。如果因为认证、权限或网络无法同步，要说明具体原因，并明确说明 GitHub 尚未更新。
 
-## Commits and review
+## 提交与审查
 
-- The owner and Codex/assistants performing authorized work through the owner's SCY210 account may update main directly, without a separate PR or additional approval. Significant updates still require validation and GitHub synchronization.
-- Except for the named exception below, invited collaborators must submit changes through a PR approved by SCY210 before merging into main. New commits require renewed review; collaborators must not push directly to main.
-- The owner explicitly authorized zehang0228 to merge PRs into main without SCY210 approval. This user-specific ruleset bypass applies only through pull requests; it does not grant repository Admin, direct pushes to main, force pushes, branch deletion, or exemptions for other collaborators.
-- GitHub enforces protection by account and permissions. Preserve the owner's existing exemption and the zehang0228 PR-only exception. Keep PR approval, Code Owners review, and stale-review dismissal for everyone else. Any additional collaborator exemption requires a new explicit owner instruction. See docs/GITHUB_REVIEW_POLICY.md for the verified configuration.
-- PR submission permissions remain restricted to invited collaborators. The user must explicitly identify any new collaborator.
-- Merge requirement for every PR: server changes must stay within the Cloudflare Workers CPU budget in docs/PERFORMANCE_BUDGET.md (10 ms per request on the free plan). Index data once instead of scanning the whole history per player, activity or match; share viewer-independent results per stored revision; prove optimized output is unchanged; register every new clock-driven change in the live conditional-read boundaries (lib/club-read-cache.ts, tests/live-conditional-read.test.ts); and keep tests/performance.test.ts passing in npm run verify. Do not loosen a performance budget to make a change pass.
+- 所有者本人，以及通过所有者 SCY210 账号执行授权工作的 Codex 或助手，可以直接更新 main，无需单独 PR 或额外批准。重要更新仍需验证并同步到 GitHub。
+- 除下面点名的例外，受邀协作者必须通过 PR 提交改动，并经 SCY210 批准后才能合并到 main。新的提交需要重新审查；协作者不得直接推送到 main。
+- 所有者明确授权 zehang0228 无需 SCY210 批准即可把 PR 合并到 main。这项针对个人的规则豁免只适用于 PR，不授予仓库管理员权限，也不允许直接推送 main、强制推送、删除分支，更不适用于其他协作者。
+- GitHub 按账号和权限执行保护。保留所有者现有的豁免和 zehang0228 仅限 PR 的例外；其他人仍须 PR 批准、Code Owners 审查，新提交会让旧批准失效。任何新的协作者豁免都需要所有者重新明确指示。已核实的配置见 docs/GITHUB_REVIEW_POLICY.md。
+- 提交 PR 的权限仅限受邀协作者。新增协作者必须由用户明确指名。
+- 每个 PR 的合并要求：服务端改动必须符合 docs/PERFORMANCE_BUDGET.md 中的 Cloudflare Workers CPU 预算。俱乐部已在使用 Workers Paid（每次请求最多 30 秒 CPU，每月含 3000 万 CPU 毫秒），所以不再有 10 毫秒的限制；但被轮询的读取仍要保持便宜，因为每部手机每隔几秒就刷新一次，超过月度额度的 CPU 要另外计费。偶尔才运行一次的工作，例如时段切换时重排轮次，可以花更长时间。数据只建一次索引，不要为每个球友、活动或对局扫描整段历史；与查看者无关的结果按存储版本共享；证明优化后的输出不变；每个新的时钟驱动变化都要登记到实时条件读取的边界里（lib/club-read-cache.ts、tests/live-conditional-read.test.ts）；并保持 npm run verify 中的 tests/performance.test.ts 通过。不要为了让改动通过而放宽性能预算。
 
-## Shared documentation and local state
+## 共享文档与本地状态
 
-- Write new or rewritten shared Markdown documentation in English. Existing untranslated notes listed in scripts/legacy-markdown.json may retain their language; preserve their up-to-date behavior descriptions when resolving conflicts. This does not require translating the application UI, user data, test fixtures, or third-party license notices.
-- Keep source code, reproducible tests, migrations, licenses, and required hosting configuration tracked.
-- Keep personal agent/editor state, credentials, local databases, generated outputs, and per-checkout reports ignored.
-- To stop tracking local files, preserve their contents and use git rm --cached. Never delete another contributor's local working files.
-- Git may remove formerly tracked files when another checkout pulls a deletion. Document a backup procedure before merging such a change; ignoring a path alone does not preserve it during checkout.
-- Legal notices must describe actual processing and real operator details. Do not invent identities, legal bases, consent, retention rules, or compliance guarantees.
+- 新写或改写的共享 Markdown 文档用中文写。代码标识符、命令、路径、文件名和引用的英文原文保持原样。scripts/english-markdown.json 列出的英文旧文档可以暂时保持英文；一旦改写，就整篇译成中文并从名单中移出（npm run check:repo 会检查）。解决冲突时保留它们最新的行为描述。这条规定不涉及应用界面、用户数据、测试数据或第三方许可证声明。
+- 源代码、可复现的测试、迁移、许可证和必需的托管配置要纳入版本跟踪。
+- 个人的助手或编辑器状态、凭据、本地数据库、生成的输出和每个检出目录自己的报告要被忽略，不纳入跟踪。
+- 要停止跟踪本地文件时，先保留其内容，再用 git rm --cached。不要删除其他协作者的本地工作文件。
+- 别的检出目录拉取删除操作时，Git 可能会删掉曾被跟踪的文件。合并这类改动前要写明备份步骤；只把路径加入忽略并不能在检出时保住文件。
+- 法律声明必须描述真实的处理方式和真实的运营者信息。不要编造身份、法律依据、同意、保留规则或合规保证。
 
-## Privately customized material stays outside public GitHub
+## 私人定制内容不进公开 GitHub
 
-- Public GitHub stores the shareable version only. Account-specific visual customizations, generated art, prompts and associated account identifiers stay in controlled local backups and the owner-approved private deployment repository. Never upload them to a public repository or public CI.
-- The owner authorized a separate private GitHub deployment repository for cloud publication. Verify its exact identity and private visibility before each source push; preserve the fetch-only shared remote and reject all public or unapproved destinations. Do not add collaborators or change visibility.
-- Do not merge deployment repository history or copy its complete source over the shared version. Port shared functionality separately and inspect each change.
-- Before pushing, run node scripts/check-shared-source.mjs --check. Preserve that check and the local push hook.
+- 公开 GitHub 只存放可分享的版本。针对账号的视觉定制、生成的图片、提示词及相关账号标识，保存在受控的本地备份和所有者批准的私有部署仓库中。绝不上传到公开仓库或公开 CI。
+- 所有者授权了一个单独的私有 GitHub 部署仓库用于云端发布。每次推送源码前都要核实它的确切身份和私有状态；保持共享远端只用于拉取，拒绝一切公开或未经批准的目标。不要添加协作者，也不要改变可见性。
+- 不要合并部署仓库的历史，也不要把它的完整源码覆盖到共享版本上。共享功能要单独移植，并逐项检查每个改动。
+- 推送前运行 node scripts/check-shared-source.mjs --check。保留这项检查和本地推送钩子。
 
-## Controlled production releases
+## 受控的生产发布
 
-- Production may contain deployment-only presentation and permission configuration absent from this public repository. A live private release channel must only be updated from its controlled private checkout.
-- Do not publish a shared-only build over a private production channel or remove the release-channel check to bypass a refusal. Merge shared updates into the private branch, retain its private files and access checks, and use its validated release workflow.
-- Keep public-repository automatic production builds disabled for a controlled private deployment. Shared CI must not receive private source, assets or access configuration.
-- Never run deployment commands from a shared or PR-review checkout, including as a negative probe. A feature branch may predate the deployment guard. Verify refusals with read-only active-version metadata and pure validation or injected no-write test runners; only the controlled private workflow publishes.
+- 生产环境可能包含本公开仓库中没有的、仅用于部署的展示和权限配置。正在使用的私有发布渠道只能从它受控的私有检出目录更新。
+- 不要把只含共享代码的构建发布到私有生产渠道，也不要为了绕过拒绝而删除发布渠道检查。把共享更新合并进私有分支，保留它的私有文件和访问检查，并使用它经过验证的发布流程。
+- 对受控的私有部署，关闭公开仓库的自动生产构建。共享 CI 不得接收私有源码、素材或访问配置。
+- 绝不在共享检出目录或 PR 审查检出目录中运行部署命令，即使只是为了确认会被拒绝。功能分支可能早于部署保护的加入。验证拒绝行为时只用只读的当前版本元数据、纯验证或注入的不写入测试执行器；只有受控的私有流程可以发布。
+
+## 排场规则清单（预排赛程和实时排场）
+
+每个改动对局排场的 PR（`lib/domain/grouping.ts`、`live-play.ts`、`scheduled-courts.ts`、`points-plan.ts`、`points-auto-start.ts`、`planned-gap.ts`、`planned-replan.ts`、`fixed-partners.ts`、`match-balance.ts`、`match-history.ts`、`gender-balance.ts` 及其调用方）都必须遵守下面每一条。要改某一条的 PR，必须在同一个 PR 里同时修改本清单、对应文档和测试，并在 PR 描述中写明。详细说明见：[排场方式](docs/SCHEDULING_MODES.md)、[对局分组](docs/MATCH_GROUPING.md)、[实时排场](docs/LIVE_PLAY.md)、[性别搭配](docs/GENDER_BALANCE.md)、[按场推进](docs/COURT_ROUND_PROGRESS.md)、[缺席](docs/NO_SHOW.md)、[迟到与到场](docs/POINTS_ATTENDANCE.md)。
+
+### A. 两种方式的硬性规则（无论换来多少公平或平衡，都不能违反）
+
+1. 任何人都不能同时在两片场或两局里，本活动和其他活动都算。同一球馆、同名的场地算同一片物理场地。
+2. 只排可上场的人：账号已启用、已正式接龙，在自己的接龙时段和该场地的预约时段及球馆内，没有被报迟到或缺席（确认到场前一直不排），没有停止参加，实时排场下也不在主动休息。
+3. 场地只在预约时间内使用。预定结束时间之后只有加时可以继续，球友和场地取最后一个参加时段和场地时段，而且只能由明确的操作触发（追加一轮、发布、录分、开始组队）。后台维护从不在活动结束后开局，也不在提前结束的活动里开局。
+4. 排场从不拆开固定搭档。只有组织者在某个人迟到时单独替换一人，才可以在那一局里拆开一对。
+5. 排场从不改动已录的比分、已开打的局，或已完成、判负、缺席判负的结果。修改比分和完全相同的重试从不再开新局。
+6. 每次改动都是一个原子事务。换人请求要带上显示时的阵容，过时的请求返回 409。并发的读取和录分只提交一个结果，失败时整体回滚。
+7. 时钟从不发布草稿，会尊重明确的暂停；每个新的时钟驱动变化都要登记到实时条件读取的边界里（`lib/club-read-cache.ts`）。
+8. 被取消的局和缺席判负的局，从不算作其他球友打过。
+
+### B. 先定谁上场，再定怎么分队（两种方式通用）
+
+1. 先按轮次公平决定谁上场：先比每人在场期间应得的局数减去实际局数，再比谁等得最久。强弱、性别和多样性从不决定谁上场；它们只能在轮次相同或几乎相同的球友之间互换（预排：欠的局数和休息情况相同，等待相差不超过一轮；实时：等待相差不超过一局，并且换上来的人欠的局数不比被换下的人少）。
+2. 选出的球友再由 `compareBalance` 分配到各队和各片场，比较顺序是：先看性别不匹配（[性别搭配](docs/GENDER_BALANCE.md)）；再看超过 40 分容差的最大修为分差，其中计入完全重打、同样四人再聚、同一局三人以上又一起上场、重复搭档，以及（预排、多片场时）一片场要等另一片场的代价；最后看总分差和搭档、对手的多样性。
+3. 性别和重复的代价从不让人上场或下场。每种分法都有性别不匹配时，仍按最平衡的分法排。
+4. 连续打了最近三轮的球友，只要有别人能顶上就先休息；从不只因为这条规则让场地缺人。
+
+### C. 预排赛程（默认，也是推荐方式）
+
+1. 推荐预排，因为它把一轮里所有上场的人一起分队，双方强弱接近（模拟中双方平均修为分差为 20-37，实时排场为 106-140）。推荐只显示给能切换排场方式的人。
+2. 从未有过轮次的活动，在开始时由时钟自动预排、发布并开局；失败后只有在接龙、到场或场地变化时才重试。被有意取消的赛程从不重建。
+3. 每片场各自推进：录分会在同一事务里开始这片物理场地上最早的、尚未完成的已发布对局。对局从不早于它的参加时段开始，即使前面的场地提前打完。
+4. 到了参加时段或场地时段的分界点，已结束时段里没开打的对局会被取消且不受处罚（前提是存在已确认的下一时段），之后所有没开打的轮次按实际打过的局重新预排（`pointsReplan`）。手动换过人的轮次、已开打或已录分的轮次、草稿和加时轮保持原阵容；只要有一轮排不出来，就整体不改。
+5. 当前时段的对局打完而下一时段还没开始时，如果还剩至少五分钟，就用在场的球友给空场补排对局（`pointsGapFill`）。
+6. 录分前组织者随时可以换人。时钟从不覆盖手动修改。
+7. 活动结束后，删除从未开打且没有比分的已发布对局；加时轮和实时排场的轮次不删。
+
+### D. 实时排场
+
+1. 每局结束后所有球友都下场；赢的人不留场，没有连胜上限，也没有自动休息。
+2. 下一局的球友来自队列：正在等待的人排在这片场刚下场的人前面，然后是自上一局以来等得最久的人（还没打过的人从到场时算起），然后是欠的局数，最后是接龙顺序。
+3. 为平衡或多样性做的互换必须守住队列：留在场下的人里，没有人比被选中的等待者多等超过一局；被这样跳过的人会记在新局的轮次上（`livePassed`），在他上场前不会再被跳过。
+4. 有别人可上场时，一局不能从之前同一局里带上三人或以上。固定搭档整队移动；有别的队能上时，刚刚交手的两队不再配到一起。
+5. 打完的场地等有人点"开始组队"（`liveNext`）。可上场的人不足四人（固定搭档不足两整队）时场地等待；没有别人可上时，同样的四人可以继续打。
+
+### E. 已知限制（没有同时守住 A 到 D 的修复方案时，不要当作 bug 报告）
+
+1. 实时排场只在刚轮到的四人里分队，双方强弱远不如预排均衡。
+2. 每片场只多约一人休息时，预排会空场，因为下一局需要的人还在别的场上打；这种情况下实时排场补场更快。
+3. 实时排场每片场刚好多一人时，同一局的三人一起再上场有时无法避免。
+4. 固定搭档队数为奇数或有搭档缺席时，部分球友局数会少一些；这是队伍组成造成的，不是排场的问题。

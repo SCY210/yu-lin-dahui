@@ -22,9 +22,9 @@ function setup(kind:BountyKind,fields:Partial<Event>={}){
 function game(s:State,e:Event,id:string,offset:number,score:[number,number]){coinMatch(s,e,id,{start:e.start+offset*minute,end:e.start+(offset+12)*minute,games:[{a:score[0],b:score[1]}],scoreA:score[0],scoreB:score[1]})}
 const accept=(s:State,e:Event,accept=true,now=bountyOfferAt(e))=>apply(s,s.accounts[0],'bountyRespond',{eventId:e.id,playerId:'p0',accept},now);
 
-test('about 60% of members draw one of the four bounties, always the same one for the same activity',()=>{
+test('about 30% of members draw one of the four bounties, always the same one for the same activity',()=>{
  const draws=Array.from({length:2000},(_,i)=>drawnBounty('event-'+i,'player-'+(i%37)));
- const offered=draws.filter(Boolean).length/draws.length;assert.ok(offered>0.55&&offered<0.65,String(offered));
+ const offered=draws.filter(Boolean).length/draws.length;assert.ok(offered>0.25&&offered<0.35,String(offered));
  assert.deepEqual(new Set(draws.filter(Boolean)),new Set(bountyKinds));
  assert.equal(drawnBounty('event-7','player-7'),drawnBounty('event-7','player-7'));
 });

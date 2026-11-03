@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {propose} from '../lib/domain/grouping';
 import {apply} from '../lib/domain/commands';
-import {genderMismatches,genderGapPoints,womenPairGapPoints} from '../lib/domain/gender-balance';
+import {genderMismatches,genderGapPoints,mixedManGapPoints,womenPairGapPoints} from '../lib/domain/gender-balance';
 import {emptyState,type Event,type Player} from '../lib/domain/types';
 
 const start=Date.parse('2026-10-07T12:00:00Z');
@@ -93,4 +93,26 @@ test('a friend counts with the gender given at signup',async()=>{
  const friend=s.players.find(p=>p.id==='D')!;delete friend.profile;friend.guestEventId=e.id;friend.guestGender='female';
  const mixed=(m:{a:string[];b:string[]})=>[m.a,m.b].every(team=>team.some(id=>['C','D'].includes(id)));
  for(let seed=1;seed<=10;seed++)assert.ok(mixed(propose(s,e,start,15,seed).courts[0]),'seed '+seed);
+});
+
+test('a mixed pair may face two women only when its man is at most 50 above the three women on average',()=>{
+ assert.equal(mixedManGapPoints,50);
+ // The three women average 1100: A at 1150 is exactly 50 above, B 51 above, D below them; H has no gender and counts as a man.
+ const {s}=fixture([[1150,'male'],[1151,'male'],[1000,'female'],[900,'male'],[1100,'female'],[1200,'female'],[1500,'male'],[1400]]);
+ const r=rating(s);
+ assert.equal(genderMismatches(s,['A','C'],['E','F'],r),0,'exactly 50 above is allowed');
+ assert.equal(genderMismatches(s,['B','C'],['E','F'],r),1,'51 above counts once');
+ assert.equal(genderMismatches(s,['E','F'],['B','C'],r),1,'whichever side the women are on');
+ assert.equal(genderMismatches(s,['D','C'],['E','F'],r),0,'a weaker man is fine');
+ assert.equal(genderMismatches(s,['H','C'],['E','F'],r),1,'unset gender counts as a man');
+ assert.equal(genderMismatches(s,['G','C'],['A','E'],r),0,'mixed against mixed never counts');
+});
+
+test('planned and round grouping keep a strong man in a mixed pair away from a pair of women when they can',()=>{
+ // Each half of the club is a strong man and three women; even mixed pairs against each other are possible.
+ const {s,e}=fixture([[1400,'male'],[1000,'female'],[1200,'female'],[1200,'female'],[1400,'male'],[1000,'female'],[1200,'female'],[1200,'female']],2);
+ for(let seed=1;seed<=20;seed++)for(const m of propose(s,e,start,15,seed).courts)assert.equal(genderMismatches(s,m.a,m.b,rating(s)),0,'seed '+seed);
+ // One strong man and three women on one court: every split has the mismatch, so the best balanced one is still played.
+ const one=fixture([[1400,'male'],[1000,'female'],[1200,'female'],[1200,'female']]);
+ const court=propose(one.s,one.e,start,15,1).courts[0];assert.equal([...court.a,...court.b].length,4);assert.equal(genderMismatches(one.s,court.a,court.b,rating(one.s)),1);
 });

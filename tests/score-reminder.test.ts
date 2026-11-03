@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Match,type Round,type Event,type Registration} from '../lib/domain/types';
-import {pendingOwnScores,pendingScores,createScorePromptGate,initialScoreDrafts,scoreEntryPayload,type ScoreReminderData} from '../lib/client/score-reminder';
+import {pendingOwnScores,pendingScores,initialScoreDrafts,scoreEntryPayload,type ScoreReminderData} from '../lib/client/score-reminder';
 
 const now=Date.parse('2026-10-09T12:00:00Z');
 function fixture(){
@@ -36,18 +36,6 @@ test('recent unfinished games are first, ending an activity does not discard its
  const s=fixture();s.events[0].status='ended';s.matches.push({...s.matches[0],id:'older',start:now-1800000},{...s.matches[0],id:'a-same-time'});
  assert.deepEqual(pendingOwnScores(s,now).map(m=>m.id),['a-same-time','match','older']);
  s.matches[0].status='complete';assert.ok(!pendingOwnScores(s,now).some(m=>m.id==='match'));
-});
-test('one prompt per visit: initial empty load, polling and a new live assignment never repeatedly interrupt',()=>{
- const gate=createScorePromptGate('account');const visit=gate.begin();gate.ready(visit,'account');assert.equal(gate.next('account',[],false),null);assert.equal(gate.next('account',['new-live-game'],false),null);
- const resumed=gate.begin();gate.ready(resumed,'account');assert.equal(gate.next('account',['new-live-game'],false),'new-live-game');assert.equal(gate.next('account',['another-game'],false),null);
-});
-test('blocked dialogs defer the prompt, a manual dismissal suppresses the current visit, return to app allows retry',()=>{
- const gate=createScorePromptGate('account');const visit=gate.begin();gate.ready(visit,'account');assert.equal(gate.next('account',['match'],true),null);assert.equal(gate.next('account',['match'],false),'match');gate.suppress();assert.equal(gate.next('account',['match'],false),null);
- const returnVisit=gate.begin();gate.ready(returnVisit,'account');assert.equal(gate.next('account',['match'],false),'match');
- const manual=createScorePromptGate('account');const token=manual.begin();manual.ready(token,'account');manual.suppress();assert.equal(manual.next('account',['match'],false),null);
-});
-test('old foreground responses and other accounts cannot arm a score prompt',()=>{
- const gate=createScorePromptGate('account'),old=gate.begin(),latest=gate.begin();gate.ready(old,'account');assert.equal(gate.next('account',['old'],false),null);gate.ready(latest,'other');assert.equal(gate.next('account',['other'],false),null);gate.ready(latest,'account');assert.equal(gate.next('other',['match'],false),null);assert.equal(gate.next('account',['match'],false),'match');
 });
 test('unrecorded scores stay blank and existing results are copied without guessed extra games',()=>{
  assert.deepEqual(initialScoreDrafts({games:[]}),[{a:'',b:''},{a:'',b:''},{a:'',b:''}]);

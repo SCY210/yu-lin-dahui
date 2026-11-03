@@ -1,6 +1,5 @@
 import {raw} from './store';
-import {emptyState} from './domain/types';
-import {defaultReminderPreferences,reminderPreferences,remindersForChange,upcomingReminders,unpaidFeeReminders,type Reminder,type ReminderPreferences} from './reminder-contract';
+import {defaultReminderPreferences,reminderPreferences,remindersForChange,unpaidFeeReminders,type Reminder,type ReminderPreferences} from './reminder-contract';
 import {signupPushStatements} from './push-outbox';
 import type {State} from './domain/types';
 export async function preferencesFor(accountId:string):Promise<ReminderPreferences>{const r=await raw().prepare('SELECT payload FROM reminder_settings WHERE account_id=?').bind(accountId).first<{payload:string}>();if(!r)return {...defaultReminderPreferences};const parsed=reminderPreferences.safeParse(JSON.parse(r.payload));return parsed.success?parsed.data:{...defaultReminderPreferences}}
@@ -24,16 +23,9 @@ export function noticeStatements(notice:Reminder,key:string,now:number){
   db.prepare(`INSERT INTO push_deliveries(id,job_id,subscription_id,next_at) SELECT ?||':'||s.id,?,s.id,? FROM push_subscriptions s JOIN push_jobs j ON j.id=? AND j.request_key=? WHERE EXISTS(SELECT 1 FROM reminder_inbox i WHERE i.account_id=s.account_id AND json_extract(i.payload,'$.id')=?) AND s.created_at<=? ON CONFLICT(id) DO NOTHING`).bind(notice.id,notice.id,now,notice.id,key,notice.id,now)];
 }
 export async function reminderCenter(accountId:string){
- const state=emptyState(),parts=await raw().batch([
-  raw().prepare('SELECT payload FROM accounts WHERE id=?').bind(accountId),
-  raw().prepare('SELECT payload FROM registrations WHERE player_id=(SELECT player_id FROM accounts WHERE id=?)').bind(accountId),
-  raw().prepare('SELECT payload FROM events WHERE id IN (SELECT event_id FROM registrations WHERE player_id=(SELECT player_id FROM accounts WHERE id=?))').bind(accountId),
-  raw().prepare('SELECT payload FROM bookings WHERE event_id IN (SELECT event_id FROM registrations WHERE player_id=(SELECT player_id FROM accounts WHERE id=?))').bind(accountId)
- ]);(['accounts','registrations','events','bookings'] as const).forEach((key,index)=>{(state[key] as unknown[])=parts[index].results.map(row=>JSON.parse(String((row as {payload:string}).payload)))});
- const now=Date.now(),preferences=await preferencesFor(accountId),upcoming=preferences.upcoming?upcomingReminders(state,accountId,now):[],qs=upcoming.flatMap(inboxStatements);if(qs.length)await raw().batch(qs);
- const currentIds=new Set(upcoming.map(n=>n.id)),old=(await raw().prepare("SELECT id,payload FROM reminder_inbox WHERE account_id=? AND kind='upcoming'").bind(accountId).all<{id:string;payload:string}>()).results;
- const stale=old.filter(row=>!currentIds.has(JSON.parse(row.payload).id)).map(row=>raw().prepare('DELETE FROM reminder_inbox WHERE id=? AND account_id=?').bind(row.id,accountId));if(stale.length)await raw().batch(stale);
- await raw().prepare('DELETE FROM reminder_inbox WHERE account_id=? AND kind=\'upcoming\' AND json_extract(payload,\'$.expires\')<=?').bind(accountId,now).run();
+ const now=Date.now();
+ // Upcoming-start notices were removed at the club's request; any stored ones are cleared.
+ await raw().prepare("DELETE FROM reminder_inbox WHERE account_id=? AND kind='upcoming'").bind(accountId).run();
  // Filter before LIMIT and COUNT so deleted activities neither leak their
  // details nor displace visible notices or leave a phantom unread badge.
  const visible="EXISTS(SELECT 1 FROM events e WHERE e.id=reminder_inbox.event_id AND json_extract(e.payload,'$.deletedAt') IS NULL)";

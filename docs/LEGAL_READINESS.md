@@ -8,7 +8,7 @@ This is an engineering readiness record, not a certification that the app cannot
 - Versioned public operator configuration in config/legal.ts. Missing identity/contact, jurisdiction, lawful bases, retention, processor/transfer information, minors policy, or complaint authority keeps the notice visibly marked as a draft. Presence checks are not legal validation.
 - An unchecked image-rights confirmation in avatar, activity, and racket upload forms, enforced by the server before quota reservation/storage. Audits record the uploader's statement and policy version, not supposed consent from each person depicted.
 - Existing membership-based access, protected photos, credential/session safeguards, limited inputs/quotas, and no private PWA cache remain in place.
-- English shared documentation, local-report untracking with a verified backup path, and preserved third-party notices.
+- Shared documentation in Chinese (older documents in English), local-report untracking with a verified backup path, and preserved third-party notices.
 
 Do not invent the operator's identity, select a universal consent checkbox for every use of data, or publish placeholders as a completed privacy policy.
 

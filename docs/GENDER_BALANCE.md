@@ -1,6 +1,6 @@
 # Gender-aware pairing
 
-Doubles pairing avoids line-ups where a pair of men faces a pair of women, or a team with a much weaker woman.
+Doubles pairing avoids line-ups where a pair of men faces a pair of women or a team with a much weaker woman, and where a mixed pair with a clearly stronger man faces a pair of women.
 
 ## Rule (`lib/domain/gender-balance.ts`)
 
@@ -8,6 +8,8 @@ A doubles match counts one **mismatch** for each woman on a team that faces a pa
 
 - the team is two women, unless both women are at least `womenPairGapPoints` (300, two realms) above **both** men (requested by the club in October 2026; previously a pair of women of similar level could face a pair of men); or
 - the woman's rating is at least `genderGapPoints` (150, one realm) below **both** men.
+
+A mixed pair (one man, one woman) facing a pair of women counts one mismatch when the man is more than `mixedManGapPoints` (50) above the average of the three women (requested by the club in November 2026; previously this line-up was always allowed). A man at most 50 above that average, or weaker, may play it.
 
 Two men and two women of similar level are therefore always split into two mixed pairs. The rating is the grouping rating (the doubles-only long-term rating).
 
@@ -27,3 +29,7 @@ Two men and two women of similar level are therefore always split into two mixed
 It never changes **who** plays or rests. Turn fairness, bench priority, availability and venue rules stay upstream, and fixed partners are never split. When every split has a mismatch (for example three strong men and one weaker woman, or two fixed pairs of men and of women), the best balanced split is still scheduled. Manual lineup corrections by organisers are not changed.
 
 Tests: `tests/gender-balance.test.ts`.
+
+## Asking members for their gender
+
+Members whose gender is neither male nor female (unset or undisclosed, `needsGender` in `lib/player-profile-options.ts`) are asked every time the app opens (`app/gender-prompt.tsx`), because pairing depends on it. The dialog opens the gender field, highlighted; "later" closes it until the next app open. The profile marks the missing gender in red, and the gender field is highlighted in the profile form. The notification prompt waits until the gender prompt is closed.

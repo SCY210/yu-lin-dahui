@@ -18,7 +18,7 @@ export type BountyOutcome='completed'|'failed';
 
 export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce'];
 /** Share of eligible members offered a bounty, how early, and the thresholds of each challenge. */
-export const bountyChance=0.6,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20;
+export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20;
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6}},penalty:10};
 export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏'};
 export const bountyGoals:Record<BountyKind,string>={

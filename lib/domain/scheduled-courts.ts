@@ -5,6 +5,7 @@ import {readyIds,validateRound} from './grouping';
 import {isPlannedLineup,pendingMatchLineup} from './round-lineup';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fillPlannedGap,type PlannedGap} from './planned-gap';
+import {replanAfterExpiry} from './planned-replan';
 import {livePresentIds} from './live-play';
 import {markRanked} from './all-ranked';
 import {clearFilledPointsWaiting} from './points-attendance';
@@ -102,7 +103,7 @@ export function readyScheduledMatches(s:State,e:Event,now:number):Match[]{return
 /** Persist the next courts in the same transaction as scoring (and recover due
  * courts on reads after arrivals/bookings change). Current-phase lineups stay intact. */
 export function advanceScheduledCourts(s:State,e:Event,now:number,explicit=false){
- const {ready:matches,expired,gap}=scheduledCourtProgress(s,e,now,explicit);if(!matches.length&&!expired.length&&!gap)return false;
+ const progress=scheduledCourtProgress(s,e,now,explicit),{expired}=progress;let {ready:matches,gap}=progress;if(!matches.length&&!expired.length&&!gap)return false;
  const rounds=new Map(s.rounds.map(r=>[r.id,r]));
  if(expired.length){
   const affected=new Set(expired.map(m=>m.roundId));expired.forEach(m=>m.status='cancelled');
@@ -113,6 +114,8 @@ export function advanceScheduledCourts(s:State,e:Event,now:number,explicit=false
    if(rows.every(m=>m.status==='cancelled'))r.status='cancelled';else reconcileScoredRound(s,r,now,rows);
   }
   s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-courts',action:'pointsPhaseAdvance',reason:'参加时段已切换，跳过前一时段尚未开打的预排',changes:{eventId:e.id,matchIds:expired.map(m=>m.id)}});
+  // The later rounds counted on the skipped games; plan them again, then start the new phase from the new lineups.
+  if(replanAfterExpiry(s,e,now).length)({ready:matches,gap}=scheduledCourtProgress(s,e,now,explicit));
  }
  for(const m of matches){
   const r=rounds.get(m.roundId)!;

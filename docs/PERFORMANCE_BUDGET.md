@@ -1,6 +1,6 @@
 # Worker CPU budget
 
-The club runs on Cloudflare's free Workers plan, which stops a request after 10 ms of CPU time. Network and D1 waiting time do not count; JavaScript work does. Every member's phone polls the club read every 3 seconds during a live activity and every 15 seconds otherwise, and until October 2026 a running activity disabled the conditional-read cache. CPU per read therefore decides whether a weekly session fits the free plan. In October 2026 the club received a "hit CPU limit" notice for more than 100 requests from about 20 visitors.
+Since November 2026 the club runs on Workers Paid (USD 5 per month). A request may use up to 30 seconds of CPU, and 30 million CPU milliseconds a month are included; more is billed. Network and D1 waiting time do not count; JavaScript work does. Until then the club ran on the free plan, which stopped a request after 10 ms of CPU time; the work below was done for that limit. Every member's phone polls the club read every 3 seconds during a live activity and every 15 seconds otherwise, and until October 2026 a running activity disabled the conditional-read cache. CPU per read therefore decided whether a weekly session fit the free plan, and it still decides latency and the monthly allowance. In October 2026 the club received a "hit CPU limit" notice for more than 100 requests from about 20 visitors.
 
 ## Where the time went
 
@@ -77,7 +77,7 @@ For 20 viewers over three hours, continuous live collaboration still has a worst
 
 Every PR that touches server code (`app/api`, `lib`) must:
 
-1. Keep the per-request CPU of a club read within the 10 ms free-plan budget for a club of the current size. Do not add work that runs on every poll unless it is cheap or shared.
+1. Keep the CPU of a polled club read small, around 10 ms for a club of the current size: twenty phones polling every 3 seconds for three hours make about 72,000 reads per session. Do not add work that runs on every poll unless it is cheap or shared. Work that runs once on a rare event, such as planning the remaining rounds again at a phase change (docs/MATCH_GROUPING.md), may take up to a few seconds.
 2. Never scan the whole history once per player, per activity or per match. Build a map or index once per request and pass it down.
 3. Share results that do not depend on the viewer per stored revision through `sharedClubValue`, and give them a validity window that ends at the next clock boundary that can change them (`sharedViewValidUntil`). Never share results that depend on the viewer, permissions or unsaved changes.
 4. When optimizing, prove that the output is unchanged: compare the full projection before and after on a fictional club, including viewers with different permissions and a live activity.
@@ -88,7 +88,7 @@ Other test files run in parallel, so CPU contention can slow any single run. Tim
 
 ## Plan limits
 
-These changes keep a normal session inside the free plan, but they cannot guarantee it: a much larger club, many simultaneous viewers on cold isolates, or a future feature can still exceed 10 ms. Workers Paid (USD 5 per month) raises the limit to 30 seconds of CPU per request. That decision belongs to the repository owner.
+The club moved to Workers Paid in November 2026, so a request is stopped only after 30 seconds of CPU (the default `limits.cpu_ms`; `wrangler.cloudflare.json` does not change it). The included 30 million CPU milliseconds a month cover about three million reads at 10 ms each. Check the monthly CPU usage in the Cloudflare dashboard after a change that adds work to every read.
 
 ## Fee previews scale with one activity
 
