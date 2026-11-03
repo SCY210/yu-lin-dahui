@@ -31,8 +31,14 @@ function worker(){
 }
 test('a push displays a system notification with a stable tag and a safe activity destination',async()=>{
  const sw=worker();await sw.dispatch('push',{data:{json:()=>({...signupPushMessage(event()),body:'新活动',path:'https://evil.example/'})}});
- assert.equal(sw.notifications[0].title,'羽林大会 · 新接龙');assert.equal(sw.notifications[0].options.tag,'yulin-signup-fixture-event');assert.equal(sw.notifications[0].options.renotify,false);
+ assert.equal(sw.notifications[0].title,'新接龙');assert.equal(sw.notifications[0].options.tag,'yulin-signup-fixture-event');assert.equal(sw.notifications[0].options.renotify,false);
  assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=events&event=fixture-event');
+});
+test('every reminder kind, bounties included, shows its own title without the club name and opens its activity',async()=>{
+ const sw=worker();await sw.dispatch('push',{data:{json:()=>({title:'悬赏令',body:'天机阁降下大胜悬赏，道友可敢接下？',eventId:'fixture-event',kind:'bounty',tab:'overview',tag:'yulin-reminder-b'})}});
+ assert.equal(sw.notifications[0].title,'悬赏令');assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=events&event=fixture-event');
+ await sw.dispatch('push',{data:{json:()=>({body:'x',eventId:'fixture-event',kind:'fees',tab:'fees'})}});assert.equal(sw.notifications[1].title,'活动提醒');
+ for(const n of sw.notifications)assert.ok(!n.title.includes('羽林大会'));
 });
 test('missing, malformed or null payloads still create a visible fallback notification',async()=>{
  for(const value of [null,'wrong',[],undefined]){const sw=worker();await sw.dispatch('push',{data:{json:()=>value}});assert.equal(sw.notifications.length,1);assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=me')}

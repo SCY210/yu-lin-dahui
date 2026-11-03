@@ -48,7 +48,7 @@ try{
  captures.length=0;assert.equal((await run(confirmed+4*day)).sent,1);
  assert.deepEqual(inbox().filter(r=>r.endsWith('fees-overdue')).sort(),['admin fees-overdue','owner fees-overdue']);
  assert.deepEqual(captures,['https://fcm.googleapis.com/fcm/send/admin']);
- const overdue=JSON.parse(sql.prepare("SELECT payload FROM reminder_inbox WHERE account_id='admin'").get().payload);assert.match(overdue.body,/仍有 2 人未标记付款：alice、小明/);
+ const overdue=JSON.parse(sql.prepare("SELECT payload FROM reminder_inbox WHERE account_id='admin'").get().payload);assert.match(overdue.body,/2 人提醒 3 次仍未付/);
  assert.deepEqual(await run(confirmed+5*day),{sent:0});assert.equal(inbox().length,2+2+2);
  console.log('PASS fee reminder sweep API: 24/48/72-hour reminders with quiet hours, paid players skipped, proxy friends covered, idempotent ticks, real push delivery and a single owner/administrator escalation');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__feeSweepTest}

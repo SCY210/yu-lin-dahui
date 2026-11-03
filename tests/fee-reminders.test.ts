@@ -40,7 +40,7 @@ test('unpaid bills are reminded 24, 48 and 72 hours after confirmation, then the
  assert.deepEqual(sweep(s,progress,confirmed+3*day+23*hour),[],'never a fourth automatic reminder');
  const overdue=sweep(s,progress,confirmed+4*day);
  assert.equal(overdue.length,1);assert.deepEqual(overdue[0].accountIds.sort(),['admin','owner']);
- assert.ok(overdue[0].overdue&&!overdue[0].due);assert.match(overdue[0].body,/自动提醒 3 次，仍有 2 人未标记付款：alice、小明/);
+ assert.ok(overdue[0].overdue&&!overdue[0].due);assert.match(overdue[0].body,/ · 2 人提醒 3 次仍未付$/);assert.ok(overdue[0].body.length<=40,'one short line');
  assert.equal(new Set([...first,...overdue].map(n=>n.id)).size,first.length+1,'every notice has its own id');
  assert.deepEqual(sweep(s,progress,confirmed+5*day),[],'the owner is told only once');
 });

@@ -32,10 +32,10 @@ export function dueFeeReminders(s:State,progress:FeeReminderProgress,now:number)
   if(record.sent<due){
    notices.push(...unpaidFeeReminders(s,bill,'auto-'+due,now));record.sent=due;
   }else if(record.sent>=automaticFeeReminders&&!record.escalated&&now-bill.created>=(automaticFeeReminders+1)*day){
-   const names=owing.map(b=>s.players.find(p=>p.id===b.playerId)?.name??'球友'),accountIds=owners(s);
+   const accountIds=owners(s);
    if(accountIds.length)notices.push({kind:'fees',eventId:e.id,tab:'fees',expires:now+day,createdAt:now,accountIds,settlementId:bill.id,settlementVersion:bill.version,overdue:true,
     id:`fees-overdue:${e.id}:${bill.id}`,title:'费用提醒：仍有未付款',
-    body:`${e.title}的分摊已自动提醒 ${automaticFeeReminders} 次，仍有 ${owing.length} 人未标记付款：${names.join('、')}。可在费用页查看或再次提醒。`.slice(0,250)});
+    body:`${e.title} · ${owing.length} 人提醒 ${automaticFeeReminders} 次仍未付`.slice(0,250)});
    record.escalated=true;
   }
   next[bill.id]=record;

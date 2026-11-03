@@ -43,9 +43,11 @@ self.addEventListener('push', event => {
   event.waitUntil((async () => {
     let message = {};
     try { const value = event.data?.json(); if (value && typeof value === 'object' && !Array.isArray(value)) message = value; } catch { /* Show a visible fallback. */ }
-    const signup = ['signup','registration','changes','matches','fees','awards','upcoming'].includes(message.kind) && typeof message.eventId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(message.eventId);
-    await self.registration.showNotification(signup ? (message.kind==='signup'?'羽林大会 · 新接龙':typeof message.title==='string'?message.title.slice(0,80):'羽林大会 · 活动提醒') : '羽林大会 · 通知', {
-      body: typeof message.body === 'string' ? message.body.slice(0,250) : '有新消息，请打开羽林大会查看。',
+    // The title is the kind of notice itself (the system already shows the app name); the body stays one short line.
+    const signup = ['signup','registration','changes','matches','fees','awards','upcoming','bounty'].includes(message.kind) && typeof message.eventId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(message.eventId);
+    const title = typeof message.title === 'string' && message.title ? message.title.slice(0,80) : signup ? (message.kind==='signup'?'新接龙':'活动提醒') : '通知';
+    await self.registration.showNotification(title, {
+      body: typeof message.body === 'string' ? message.body.slice(0,250) : '有新消息，点开查看。',
       icon: '/icons/app-192.png', badge: '/icons/app-192.png',
       tag: signup ? (message.kind==='signup'?'yulin-signup-'+message.eventId:typeof message.tag==='string'?message.tag.slice(0,240):'yulin-'+message.kind+'-'+message.eventId) : 'yulin-push-test', renotify: false,
       data: { path: signup ? '/?page=events&event='+encodeURIComponent(message.eventId)+(message.tab==='rounds'||message.tab==='fees'||message.tab==='social'?'&tab='+message.tab:'') : '/?page=me' },
