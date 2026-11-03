@@ -18,11 +18,11 @@ function setup(kind:BountyKind,fields:Partial<Event>={}){
  const s=coinFixture(),e=coinEvent(s,eventFor(kind),at+120*minute,fields);for(const p of s.players)coinSignup(s,e,p.id);
  return {s,e,owner:s.accounts[0],p0:s.accounts[0]};
 }
-/** A completed game of p0 (with p1) against p2 and p3, starting `offset` minutes into the activity. */
-function game(s:State,e:Event,id:string,offset:number,score:[number,number]){coinMatch(s,e,id,{start:e.start+offset*minute,end:e.start+(offset+12)*minute,games:[{a:score[0],b:score[1]}],scoreA:score[0],scoreB:score[1]})}
+/** A completed game of p0 (with p1) against p2 and p3 (or other opponents), starting `offset` minutes into the activity. */
+function game(s:State,e:Event,id:string,offset:number,score:[number,number],b=['p2','p3']){coinMatch(s,e,id,{b,start:e.start+offset*minute,end:e.start+(offset+12)*minute,games:[{a:score[0],b:score[1]}],scoreA:score[0],scoreB:score[1]})}
 const accept=(s:State,e:Event,accept=true,now=bountyOfferAt(e))=>apply(s,s.accounts[0],'bountyRespond',{eventId:e.id,playerId:'p0',accept},now);
 
-test('about 30% of members draw one of the four bounties, always the same one for the same activity',()=>{
+test('about 30% of members draw one of the eight bounties, always the same one for the same activity',()=>{
  const draws=Array.from({length:2000},(_,i)=>drawnBounty('event-'+i,'player-'+(i%37)));
  const offered=draws.filter(Boolean).length/draws.length;assert.ok(offered>0.25&&offered<0.35,String(offered));
  assert.deepEqual(new Set(draws.filter(Boolean)),new Set(bountyKinds));
@@ -46,9 +46,11 @@ test('a member answers their own offer once; the reward and penalty are frozen w
  await accept(s,e);assert.deepEqual(e.bounties,[{playerId:'p0',kind:'streak',status:'accepted',at:bountyOfferAt(e),coins:30,points:15,penalty:10}]);
  await accept(s,e);assert.equal(e.bounties!.length,1,'repeating the same answer changes nothing');
  await assert.rejects(()=>accept(s,e,false),/不能更改/);
- await apply(s,s.accounts[0],'bountySettings',{rewards:{streak:{coins:1,points:1},rout:{coins:1,points:1},upset:{coins:1,points:1},deuce:{coins:1,points:1}},penalty:50},bountyOfferAt(e));
+ const ones=Object.fromEntries(bountyKinds.map(k=>[k,{coins:1,points:1}]));
+ await assert.rejects(()=>apply(s,s.accounts[0],'bountySettings',{rewards:{streak:{coins:1,points:1},rout:{coins:1,points:1},upset:{coins:1,points:1},deuce:{coins:1,points:1}},penalty:50},bountyOfferAt(e)),'every kind needs its reward');
+ await apply(s,s.accounts[0],'bountySettings',{rewards:ones,penalty:50},bountyOfferAt(e));
  assert.equal(e.bounties![0].points,15,'later setting changes do not touch an accepted bounty');assert.equal(e.bounties![0].penalty,10);
- await assert.rejects(()=>apply(s,s.accounts[1],'bountySettings',{rewards:{streak:{coins:1,points:1},rout:{coins:1,points:1},upset:{coins:1,points:1},deuce:{coins:1,points:1}},penalty:5},at),/403/);
+ await assert.rejects(()=>apply(s,s.accounts[1],'bountySettings',{rewards:ones,penalty:5},at),/403/);
  assert.equal(s.audits.filter(x=>x.action==='bountySettings').length,1);
 });
 
@@ -68,6 +70,20 @@ test('each challenge is judged on completed games after the scheduled end; a dec
  assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(250)),'completed','opponents at least 250 修为 stronger');
  assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(249)),'failed');
  assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(400,false)),'failed','a loss does not count');
+ assert.equal(await judge('unbeaten',[[21,18],[21,19],[22,20],[21,9]]),'completed');
+ assert.equal(await judge('unbeaten',[[21,18],[21,19],[21,9]]),'failed','fewer than four games');assert.equal(await judge('unbeaten',[[21,18],[21,19],[19,21],[21,9],[21,9]]),'failed','one loss breaks the golden body');
+ // 夺魁: the most games won by anyone at the activity, ties included, and at least three. p0 and p1 share a side here.
+ const champion=async(extra:[string[],string[],number,number][],ownWins:number)=>{const {s,e}=setup('champion');await accept(s,e);for(let i=0;i<ownWins;i++)game(s,e,'own-'+i,2+i*13,[21,15]);extra.forEach(([a,b,x,y],i)=>coinMatch(s,e,'other-'+i,{a,b,scoreA:x,scoreB:y,games:[{a:x,b:y}],start:e.start+(3+i*13)*minute,end:e.start+(15+i*13)*minute}));return bountyOutcome(s,e,e.bounties![0],e.end)};
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10]],3),'completed','three wins, no one else has more');
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10]],3),'completed','a tie for first counts');
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p6'],['p5','p7'],21,10]],3),'failed','p4 won four');
+ assert.equal(await champion([],2),'failed','at least three wins');
+ assert.equal(await judge('close',[[21,19],[23,21],[21,15]]),'completed','two wins by two points');assert.equal(await judge('close',[[21,19],[19,21],[21,18]]),'failed','one close win and a close loss');
+ const sweep=async(opponents:string[][],format?:'singles')=>{const {s,e}=setup('sweep',format?{matchFormat:format}:{});await accept(s,e);opponents.forEach((b,i)=>game(s,e,'sweep-'+i,2+i*13,[21,17],b));return bountyOutcome(s,e,e.bounties![0],e.end)};
+ assert.equal(await sweep([['p2','p3'],['p4','p5'],['p6','p7']]),'completed','five or more different opponents beaten');
+ assert.equal(await sweep([['p2','p3'],['p2','p4'],['p3','p4']]),'failed','only three different opponents');
+ const singles=setup('sweep',{matchFormat:'singles'});await accept(singles.s,singles.e);['p2','p3','p4'].forEach((id,i)=>coinMatch(singles.s,singles.e,'single-'+i,{a:['p0'],b:[id],start:singles.e.start+(2+i*13)*minute,end:singles.e.start+(14+i*13)*minute}));
+ assert.equal(bountyOutcome(singles.s,singles.e,singles.e.bounties![0],singles.e.end),'completed','three different opponents in singles');
  const declined=setup('rout');await accept(declined.s,declined.e,false);game(declined.s,declined.e,'d',2,[21,3]);assert.equal(bountyOutcome(declined.s,declined.e,declined.e.bounties![0],declined.e.end),null);
 });
 

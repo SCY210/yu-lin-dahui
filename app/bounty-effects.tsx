@@ -9,6 +9,10 @@ export const bountyEffects:Record<BountyKind,{word:string;name:string}>={
  rout:{word:'破',name:'雷霆破军'},
  upset:{word:'逆',name:'鲤跃龙门'},
  deuce:{word:'鏖',name:'两仪鏖战'},
+ unbeaten:{word:'金',name:'金身不坏'},
+ champion:{word:'魁',name:'魁星点斗'},
+ sweep:{word:'扫',name:'横扫八方'},
+ close:{word:'险',name:'刀尖问道'},
 };
 const n=(i:number,extra?:Record<string,string|number>)=>({'--i':i,...extra}) as CSSProperties;
 const motes=[[22,110],[58,124],[96,116],[150,128],[192,112],[226,122]];
@@ -66,5 +70,34 @@ const scenes:Record<BountyKind,ReactNode>={
    <circle className="is-yin" cx={120} cy={48} r={4}/><circle className="is-yang" cx={120} cy={76} r={4}/>
   </g></g>
   <g className="fx-orbit"><circle className="fx-orb is-yang" cx={72} cy={62} r={6}/><circle className="fx-orb is-yin" cx={168} cy={62} r={6}/></g>
+ </>,
+ // 金身不坏: a golden bell drops over the court and rings; arrows fly in from both sides and glance off.
+ unbeaten:<>
+  <circle className="fx-halo" cx={120} cy={70} r={46}/>
+  <circle className="fx-halo is-late" cx={120} cy={70} r={60}/>
+  {[[-1,40],[1,52],[-1,76],[1,88],[-1,100],[1,64]].map(([side,y],i)=><g key={i} transform={`translate(${side<0?84:156} ${y}) scale(${side} 1)`}><g className="fx-arrow" style={n(i)}><path d="M0 0H22M0 0L5 -3M0 0L5 3"/></g></g>)}
+  <g className="fx-bell"><path className="fx-bell-body" d="M94 98Q94 48 120 42Q146 48 146 98Z"/><rect className="fx-bell-rim" x={88} y={96} width={64} height={7} rx={3}/><circle className="fx-bell-rim" cx={120} cy={39} r={4}/><path className="fx-bell-line" d="M100 66H140M98 80H142"/><text className="fx-bell-word" x={120} y={62} textAnchor="middle">护</text></g>
+ </>,
+ // 魁星点斗: the seven stars of the Dipper light one by one along their line, then the head star (魁) flares above all.
+ champion:<>
+  <path className="fx-dipper" d="M40 96L72 88L100 92L124 76L136 50L172 40L190 64"/>
+  {[[40,96],[72,88],[100,92],[124,76],[136,50],[172,40],[190,64]].map(([x,y],i)=><circle key={i} className="fx-star" cx={x} cy={y} r={3.2} style={n(i)}/>)}
+  <g className="fx-kui"><path d="M190 46L194 60L208 64L194 68L190 82L186 68L172 64L186 60Z"/></g>
+  <circle className="fx-kui-glow" cx={190} cy={64} r={22}/>
+ </>,
+ // 横扫八方: a bagua octagon opens, a crescent of sword qi sweeps all the way round and eight foes are flung outward.
+ sweep:<>
+  <g className="fx-bagua"><path d="M120 34L142.6 43.4L152 66L142.6 88.6L120 98L97.4 88.6L88 66L97.4 43.4Z"/>{Array.from({length:8},(_,i)=><g key={i} transform={`rotate(${i*45} 120 66)`}><path d="M113 28H127M113 24H118M122 24H127"/></g>)}</g>
+  {Array.from({length:8},(_,i)=><g key={i} transform={`rotate(${i*45} 120 66)`}><circle className="fx-foe" cx={120} cy={22} r={3.2} style={n(i)}/></g>)}
+  <g className="fx-sweep"><path d="M120 6A60 60 0 0 1 180 66A56 56 0 0 0 120 12Z"/></g>
+  <circle className="fx-core" cx={120} cy={66} r={7}/>
+ </>,
+ // 刀尖问道: two blades close in on a hair-thin line and stop a breath apart; a spark leaps across the gap.
+ close:<>
+  <path className="fx-hairline" d="M10 66H230"/>
+  <g transform="translate(83 66)"><g className="fx-blade-in is-left">{sword}</g></g>
+  <g transform="translate(157 66) scale(-1 1)"><g className="fx-blade-in is-right">{sword}</g></g>
+  <g className="fx-sparks is-close">{Array.from({length:8},(_,i)=><path key={i} d="M0 -5V-14" transform={`translate(120 66) rotate(${i*45})`} style={n(i)}/>)}</g>
+  <path className="fx-gap" d="M120 54V78"/>
  </>,
 };

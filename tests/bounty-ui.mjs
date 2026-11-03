@@ -29,8 +29,8 @@ try{
  assert.ok(text(ui.toJSON()).includes('天机阁降下大胜悬赏')&&text(ui.toJSON()).includes('道友可敢接下'));await act(()=>button('接下此令').props.onClick());await act(()=>ui.root.findByProps({'data-dialog':true}).props.onClose());assert.deepEqual(popup,[true,'later']);
  // Every bounty kind pops up its own scene: its own class, seal word and name, hidden from screen readers.
  const scenes=[];for(const kind of bountyKinds){await mount(BountyOffer,{offer:{...offer,kind},title:'Fictional points match',onRespond:()=>{},onLater:()=>{}});const fx=ui.root.findByProps({'data-kind':kind,'aria-hidden':'true'});assert.equal(fx.props.className,'bounty-fx bounty-fx-'+kind);assert.ok(text(fx).includes(bountyEffects[kind].word)&&text(fx).includes(bountyEffects[kind].name));assert.equal(ui.root.findAll(n=>n.props.className==='bounty-offer-seal').length,0);scenes.push(text(fx))}
- assert.equal(new Set(scenes).size,4,'four different scenes');assert.equal(new Set(bountyKinds.map(k=>bountyEffects[k].word)).size,4);
- const fxCss=readFileSync('app/bounty-effects.css','utf8');for(const name of ['fx-sword-in','fx-strike','fx-leap','fx-rush-left','fx-stamp'])assert.ok(fxCss.includes('@keyframes '+name),name);
+ assert.equal(new Set(scenes).size,8,'eight different scenes');assert.equal(new Set(bountyKinds.map(k=>bountyEffects[k].word)).size,8);
+ const fxCss=readFileSync('app/bounty-effects.css','utf8');for(const name of ['fx-sword-in','fx-strike','fx-leap','fx-rush-left','fx-stamp','fx-bell-drop','fx-star-in','fx-sweep-turn','fx-blade-left'])assert.ok(fxCss.includes('@keyframes '+name),name);
  assert.ok(fxCss.includes('@media (prefers-reduced-motion:reduce){')&&fxCss.includes('.bounty-fx *,.bounty-fx *::after{animation:none!important}'),'reduced motion shows the final frame still');
  // Home lists the open offer, then hides accepted bounties of activities that ended more than a day ago.
  let eventId='home-0';for(let i=0;!drawnBounty(eventId,'me');i++)eventId='home-'+i;
@@ -43,8 +43,8 @@ try{
  await mount(HomeBounties,{data:answered,respond:()=>{},onOpen:()=>{},now:event.end+86400000});assert.equal(ui.toJSON(),null);
  const forms=[];await mount(BountySettingsPanel,{settings:defaultBountySettings,open:(...args)=>forms.push(args)});
  assert.ok(text(ui.toJSON()).includes('30%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
- const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,9);assert.equal(values.streakCoins,30);
- assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{streak:{coins:30,points:15},rout:{coins:15,points:9},upset:{coins:20,points:10},deuce:{coins:10,points:6}}});
+ const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,bountyKinds.length*2+1);assert.equal(values.streakCoins,30);
+ assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{...defaultBountySettings.rewards,rout:{coins:15,points:9}}});
  // The club-wide banner announces completed bounties in the cultivation voice, opens the activity and can be closed.
  const honors=[{eventId:'h1',title:'Fictional evening',playerId:'p1',kind:'streak',coins:30,points:15,at:2},{eventId:'h2',title:'Fictional morning',playerId:'p2',kind:'deuce',coins:10,points:0,at:1}],opened=[];
  await mount(BountyHonorBanner,{honors,name:id=>({p1:'Ada',p2:'Bo'})[id],onOpen:id=>opened.push(id)});
