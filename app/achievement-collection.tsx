@@ -14,11 +14,11 @@ export default function AchievementCollection({summary,own=false,players=[]}:{su
  const chosen=achievementCatalog.find(a=>a.id===selected),chosenProgress=chosen&&summary?.progress[chosen.id];
  const matchDays=summary?.matchDays??0;
  const totalLevels=summary?achievementCatalog.reduce((total,a)=>total+achievementLevel(a.id,summary.progress[a.id].current,matchDays),0):0;
- return <section className="achievement-book" aria-label={own?'我的成就':'球友成就'}>
-  <header className="achievement-heading"><div><p className="achievement-eyebrow">羽林仙箓 · 每项五品</p><h3><Medal size={20} aria-hidden="true"/>{own?'我的成就':'球友成就'}</h3></div><span className="achievement-count">{totalLevels}<small> / {achievementCatalog.length*achievementRanks.length} 阶段</small></span></header>
+ return <section className="achievement-book" aria-label={own?'我的仙箓':'道友仙箓'}>
+  <header className="achievement-heading"><div><p className="achievement-eyebrow">羽林仙箓 · 每项五品</p><h3><Medal size={20} aria-hidden="true"/>{own?'我的仙箓':'道友仙箓'}</h3></div><span className="achievement-count">{totalLevels}<small> / {achievementCatalog.length*achievementRanks.length} 阶段</small></span></header>
   <p className="achievement-intro">凡品 → 灵品 → 宝品 → 仙品 → 神品，目标与累计打球日同时达标，才会点亮或晋升徽章；同一天多场只计一天。初阶徽章首个打球日即可点亮，进阶与珍稀徽章分别至少需要 2 个和 3 个打球日。</p>
-  {!summary?<p className="hint" role="status">正在同步成就记录…</p>:<>
-   <div className="achievement-filters" aria-label="成就筛选"><button type="button" aria-pressed={!earnedOnly} onClick={()=>{setEarnedOnly(false);setSelected(null)}}>全部成就</button><button type="button" aria-pressed={earnedOnly} onClick={()=>{setEarnedOnly(true);setSelected(null)}}>已点亮 {summary.unlockedCount}</button></div>
+  {!summary?<p className="hint" role="status">正在同步仙箓…</p>:<>
+   <div className="achievement-filters" aria-label="仙箓筛选"><button type="button" aria-pressed={!earnedOnly} onClick={()=>{setEarnedOnly(false);setSelected(null)}}>全部仙箓</button><button type="button" aria-pressed={earnedOnly} onClick={()=>{setEarnedOnly(true);setSelected(null)}}>已点亮 {summary.unlockedCount}</button></div>
    <ul className="achievement-grid">{achievementCatalog.filter(a=>!earnedOnly||summary.progress[a.id].unlockedAt!==null).map(a=>{
     const p=summary.progress[a.id],level=achievementLevel(a.id,p.current,matchDays),max=level===5,index=Math.min(level,4),target=achievementTargets[a.id][index],daysTarget=achievementParticipationDays[a.id][index],value=Math.min(p.current,target),percent=Math.min(100,p.current/target*100,matchDays/daysTarget*100);
     return <li key={a.id}><button type="button" className={'achievement-card'+(level?' is-earned':' is-locked')+(selected===a.id?' is-selected':'')} aria-expanded={selected===a.id} aria-controls="achievement-detail" onClick={()=>setSelected(selected===a.id?null:a.id)} aria-label={a.name+'，'+(level?achievementRanks[level-1].name+' · '+level+'级':'未解锁')+'，'+(max?'已满级':'下一级目标 '+target+' '+a.unit+'，当前 '+p.current+'，累计打球日 '+matchDays+' / '+daysTarget+' 天')}>
@@ -27,7 +27,7 @@ export default function AchievementCollection({summary,own=false,players=[]}:{su
     </button></li>;
    })}</ul>
    {earnedOnly&&summary.unlockedCount===0&&<p className="achievement-empty">完成第一场比赛，就能点亮第一枚徽章。</p>}
-   {chosen&&chosenProgress&&<div className="achievement-detail" id="achievement-detail" role="region" aria-label={chosen.name+'成就等级与目标'}>
+   {chosen&&chosenProgress&&<div className="achievement-detail" id="achievement-detail" role="region" aria-label={chosen.name+'品阶与目标'}>
     <div className="achievement-detail-heading"><h4>{chosen.name} · 等级路线</h4><p>{chosen.description} 当前累计：{chosenProgress.current} {chosen.unit}。</p>{chosen.metric==='partnerWins'&&chosenProgress.partnerId&&<p>当前记录搭档：{players.find(p=>p.id===chosenProgress.partnerId)?.name??'球友'} · {chosenProgress.current} 胜</p>}</div>
     <ol className="achievement-roadmap">{achievementTargets[chosen.id].map((target,index)=>{
      const level=index+1,daysTarget=achievementParticipationDays[chosen.id][index],earned=chosenProgress.current>=target&&matchDays>=daysTarget,at=chosenProgress.levelUnlockedAt?.[index],remaining=[chosenProgress.current<target?(target-chosenProgress.current)+' '+chosen.unit:'',matchDays<daysTarget?(daysTarget-matchDays)+' 个打球日':''].filter(Boolean).join('、');

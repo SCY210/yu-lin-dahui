@@ -35,7 +35,7 @@ try{
  await act(async()=>{renderer=create(React.createElement(Ranking,{data:initial,period:'2026-10',setPeriod(){},year:2026}))});
  assert.match(text(renderer.toJSON()),/第 2 个连续胜局另加 1 分/);assert.match(text(renderer.toJSON()),/第 3 个另加 2 分/);assert.match(text(renderer.toJSON()),/第 4 个及之后每局另加 3 分/);assert.match(text(renderer.toJSON()),/单打与双打分别累计/);
  assert.ok(!text(renderer.toJSON()).includes('连胜加分 +6'),'Compact rows do not add another line');
- const detail=renderer.root.findAllByType('button').find(b=>text(b)==='详细数据');await act(async()=>detail.props.onClick());assert.match(text(renderer.toJSON()),/连胜加分 \+6/);
+ const detail=renderer.root.findAllByType('button').find(b=>text(b)==='详细数据');await act(async()=>detail.props.onClick());await act(async()=>renderer.root.findAllByType('button').find(b=>b.props['aria-label']?.endsWith('的积分明细')&&b.props['aria-controls']).props.onClick());assert.match(text(renderer.toJSON()),/连胜加分\s*\+6/);
  const correction={matchId:'match1',a:10,b:21,games:[{a:10,b:21}],end:s.matches[1].end,reason:'Fictional correction'};
  const key=crypto.randomUUID();assert.equal((await post('score',correction,key)).status,200);const revision=(await api.load()).revision;assert.equal((await post('score',correction,key)).status,200);assert.equal((await api.load()).revision,revision);
  let view=await (await get()).json();const corrected=view.quarterlyLeaderboard.find(r=>r.playerId==='p0');assert.deepEqual([corrected.wins,corrected.losses,corrected.streakPoints,corrected.points],[3,1,1,9]);
