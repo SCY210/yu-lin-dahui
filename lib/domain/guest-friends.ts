@@ -5,6 +5,7 @@ import {friendKey} from './guest-friend-key';
 import {guestIds} from './guests';
 import {replayRating} from './ranking';
 import {fail,type State,type Account} from './types';
+import {canManageMembers} from './member-managers';
 
 /** Recorded friends (docs/FRIEND_SIGNUP_ENTRY.md). Every activity keeps its own guest record, so one friend is the group
  * of records that share a `guestFriendId`, or, before any merge, the same host and nickname. The owner and admins can
@@ -23,7 +24,7 @@ const schemas={
 };
 export async function applyGuestFriends(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
- if(a.role!=='admin')fail('403: 只有群主和管理员可以管理临时来宾');
+ if(!canManageMembers(a))fail('403: 只有群主、管理员和测试员可以管理临时来宾');
  const audit=(reason:string,changes:Record<string,unknown>)=>s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:command.payload.reason||reason,changes});
  if(command.action==='guestFriendMerge'){
   // One friend from now on: one nickname and one host, who owes their share in new activities and unconfirmed splits.

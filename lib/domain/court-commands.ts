@@ -10,6 +10,8 @@ import { canManageEvent } from './permissions';
 import { cancellationNeedsApproval } from './cancellation';
 import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
+import { canManageMembers } from './member-managers';
+import { duplicateGuestSignup } from './guest-names';
 const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
     courtRegister: z.object({ ...activityAcknowledgementInput, bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
@@ -22,7 +24,9 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
         return false;
     const p = command.payload;
     const b = s.bookings.find(x => x.id === p.bookingId) ?? fail('场地时段不存在'), e = s.events.find(x => x.id === b.eventId && x.deletedAt === undefined) ?? fail('活动不存在或已删除');
-    const manager = canManageEvent(a, e), player = s.players.find(x => x.id === p.playerId) ?? fail('球友不存在');
+    const player = s.players.find(x => x.id === p.playerId) ?? fail('球友不存在');
+    // A tester cancelling a friend's duplicate signup from 临时来宾 acts as an organiser for it (docs/TESTER_MEMBER_MANAGEMENT.md).
+    const manager = canManageEvent(a, e) || (action === 'courtCancel' && canManageMembers(a) && duplicateGuestSignup(s, e.id, player.id));
     if(player.guestEventId&&player.guestEventId!==e.id)fail('临时来宾只能参加原活动，请在本活动重新添加');
     if (!manager && player.ownerId !== a.id)
         fail('403: 只能管理自己及自己代报的朋友');

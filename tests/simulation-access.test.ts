@@ -32,10 +32,12 @@ test('a tester cannot change real roles, rules, points, ratings or their own tes
   const before=structuredClone(s);await assert.rejects(()=>apply(s,tester,action,{},Date.now()),/403/);assert.deepEqual(s,before,action);
  }
 });
-test('tester projections preserve normal-member data visibility and role permissions',()=>{
+test('tester projections keep member data visibility and role permissions, with the account list for member management',()=>{
  const {s,tester,member}=fixture();tester.simulationTester=true;
  const view=(a:Account)=>projectClubState(s,a,'2026-10',2026);
  const testView=view(tester),ordinary=view(member);assert.equal(testView.me.role,'member');assert.equal(testView.me.isOwner,false);
  assert.deepEqual(testView.permissions,{canManageRoles:false,canManageBlockedWords:false,canUseSimulation:true});
- assert.equal(ordinary.permissions.canUseSimulation,false);assert.deepEqual(testView.accounts,[]);assert.deepEqual(testView.audits,[]);assert.ok(testView.players.every(p=>p.rating===null));
+ assert.equal(ordinary.permissions.canUseSimulation,false);assert.deepEqual(ordinary.accounts,[]);
+ // Testers manage member accounts (docs/TESTER_MEMBER_MANAGEMENT.md): they see the list, but may change only ordinary members.
+ assert.deepEqual(testView.accounts.filter(x=>x.canModify).map(x=>x.role),testView.accounts.filter(x=>x.role==='member'&&!x.simulationTester).map(()=>'member'));assert.ok(testView.accounts.some(x=>x.role==='admin'&&!x.canModify));assert.deepEqual(testView.audits,[]);assert.ok(testView.players.every(p=>p.rating===null));
 });
