@@ -55,7 +55,7 @@ try{
  // The recommendation above the selector is always the planned schedule, only for those who can switch.
  Object.assign(e,{status:'open',start:now-600000,end:now+3600000,schedulingMode:'planned'});delete e.livePlay;data.rounds=[];data.matches=[];data.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200},{id:'court-2',eventId:e.id,name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:1200}];
  const advice=()=>ui.root.findAllByProps({'aria-label':'推荐排场方式'}).find(n=>n.type==='aside');
- await mount();assert.match(text(advice()),/推荐：预排赛程 · 正在使用/);assert.match(text(advice()),/修为分/);assert.ok(!buttons().some(b=>/^改用/.test(text(b))),'no switch button for the current mode');
+ await mount();assert.match(text(advice()),/推荐：预排赛程 · 正在使用/);assert.ok(text(advice()).length<40,'the recommendation stays one short line');assert.ok(buttons().some(b=>text(b)==='何时用实时？'),'the why and the live cases open in a dialog');assert.ok(!buttons().some(b=>/^改用/.test(text(b))),'no switch button for the current mode');
  assert.equal(text(ui.root.findByProps({'aria-label':'排场方式'}).findAllByType('option').find(o=>o.props.value==='planned')),'预排赛程（推荐）');
  e.schedulingMode='live';await mount();assert.match(text(advice()),/推荐：预排赛程/);assert.doesNotMatch(text(advice()),/正在使用/);
  await click('改用预排赛程');assert.equal(opened.at(-1)[0],'切换排场方式');assert.equal(opened.at(-1)[2].mode,'planned');

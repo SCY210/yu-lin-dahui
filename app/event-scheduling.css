@@ -49,14 +49,19 @@
 @media(min-width:1000px){.event-scheduling .courts-grid:has(>:nth-child(3):last-child),.event-scheduling .courts-grid:has(>:nth-child(5)){grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* The recommended way of scheduling, highlighted above the selector for organisers (recommendedSchedulingMode). */
-.scheduling-advice{display:flex;align-items:center;gap:10px;margin:6px 0;padding:10px 12px;border:1.5px solid var(--primary);border-radius:12px;background:color-mix(in srgb,var(--primary) 9%,var(--card));color:var(--foreground)}
-.scheduling-advice>svg{flex:none;color:var(--primary)}
-.scheduling-advice>div{flex:1;min-width:0}
-.scheduling-advice strong{display:block;font-size:14px;color:var(--primary)}
-.scheduling-advice p{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--muted-foreground)}
-.scheduling-advice>button{flex:none;min-height:40px;padding:6px 12px;font-size:13px}
+/* The recommendation: one compact line; the why opens in a dialog (docs/COMPACT_MOBILE_LAYOUT.md). */
+.scheduling-advice{margin:6px 0;padding:6px 10px;border:1px solid var(--primary);border-radius:10px;background:var(--card);background:color-mix(in srgb,var(--primary) 7%,var(--card));color:var(--foreground)}
 .scheduling-advice.is-current{border-style:dashed;background:var(--card)}
-@media(max-width:600px){.scheduling-advice{flex-wrap:wrap}.scheduling-advice>button{width:100%}}
+.scheduling-advice-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.scheduling-advice-row>svg{flex:none;color:var(--primary)}
+.scheduling-advice-row>strong{font-size:13px;color:var(--primary)}
+.scheduling-advice-row>.scheduling-advice-why{min-height:32px;margin-left:auto;padding:0 4px;border:0;background:none;color:var(--muted-foreground);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
+.scheduling-advice-row>.primary{min-height:36px;padding:4px 12px;font-size:13px}
+.scheduling-advice-fit{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0;padding:3px 8px;border-radius:8px;background:#fdf1ef;color:#a3291d;font-size:12px;font-weight:600}
+.scheduling-advice-fit>button{min-height:32px;margin-left:auto;padding:2px 10px;font-size:12px}
+.scheduling-advice-dialog .scheduling-advice-live{margin:0;font-weight:600}
+.scheduling-advice-dialog ul{margin:0;padding-left:18px;line-height:1.6;color:var(--muted-foreground)}
+.scheduling-advice-dialog ul>li{list-style:disc}
 /* Rounds not in progress: a horizontal strip of round tabs, one round shown below it (docs/COMPACT_MOBILE_LAYOUT.md). */
 .round-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:10px 0 4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .round-tab{display:grid;justify-items:center;flex:0 0 auto;min-width:64px;min-height:44px;padding:5px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -74,9 +79,3 @@
 .event-scheduling.is-ended .round-tab.is-playing small::before{display:none}
 @media(prefers-reduced-motion:reduce){.round-tab.is-playing small::before{animation:none}}
 /* When live scheduling serves better (lib/domain/scheduling.ts), and a note when this activity's numbers match. */
-.scheduling-advice p.scheduling-advice-live{margin-top:6px;color:var(--foreground);font-weight:600}
-.scheduling-advice ul{margin:2px 0 0;padding-left:16px;list-style:disc;font-size:12px;line-height:1.5;color:var(--muted-foreground)}
-.scheduling-advice p.scheduling-advice-fit{margin-top:6px;padding:4px 8px;border-radius:8px;background:#fdf1ef;color:#a3291d;font-weight:600}
-.scheduling-advice ul>li{list-style:disc}
-.scheduling-advice p.scheduling-advice-fit{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.scheduling-advice p.scheduling-advice-fit>button{min-height:36px;padding:4px 10px;font-size:12px}
