@@ -8,7 +8,7 @@
 .bounty-fx-upset{--fx:#ffcf5a;--fx-deep:#3d1508}
 .bounty-fx-deuce{--fx:#ff8a7a;--fx-deep:#121a20}
 .bounty-fx-unbeaten{--fx:#ffd36b;--fx-deep:#2b1a04}
-.bounty-fx-comeback{--fx:#ff9a3c;--fx-deep:#24070d}
+.bounty-fx-gather{--fx:#8fd0ff;--fx-deep:#071a33}
 .bounty-fx-sweep{--fx:#7dffb2;--fx-deep:#05261b}
 .bounty-fx-close{--fx:#d8dcff;--fx-deep:#0e1230}
 
@@ -104,20 +104,16 @@
 .fx-arrow{opacity:0;animation:fx-arrow .7s ease-in calc(.75s + var(--i) * .12s)}
 @keyframes fx-arrow{0%{opacity:1;transform:translateX(70px)}55%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translate(30px,-16px) rotate(35deg)}}
 
-/* 涅槃 · 浴火涅槃 */
-.fx-ash{fill:#4a2a2a;opacity:.8}
-.fx-ember{fill:var(--fx);opacity:0;animation:fx-ember 2.2s ease-out calc(var(--i) * .18s) infinite}
-@keyframes fx-ember{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
-.fx-phoenix{animation:fx-rise .9s cubic-bezier(.2,.9,.3,1) .5s both,fx-float-up 2.6s ease-in-out 1.5s infinite;filter:drop-shadow(0 0 7px var(--fx))}
-.fx-phoenix-body{fill:#ffd07a}
-.fx-phoenix-crest{fill:#fff2c2}
-.fx-wing{fill:#ff7a2f;opacity:.92;transform-origin:120px 62px;animation:fx-wing-open .6s ease-out 1s both,fx-flap 1.3s ease-in-out 1.6s infinite}
-.fx-wing.is-right{fill:#ff9a3c}
-.fx-tail{fill:none;stroke:#ffb347;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:60;animation:fx-crack .7s ease-out .8s both}
-@keyframes fx-rise{from{opacity:0;transform:translateY(70px) scale(.5)}}
-@keyframes fx-float-up{50%{transform:translateY(-4px)}}
-@keyframes fx-wing-open{from{transform:scaleX(.1)}}
-@keyframes fx-flap{50%{transform:scaleY(.86)}}
+/* 聚气 · 聚气成海 */
+.fx-qi{fill:var(--fx);opacity:0;animation:fx-qi 1.6s cubic-bezier(.5,0,.7,1) calc(var(--i) * .09s) infinite}
+@keyframes fx-qi{0%{opacity:0;transform:translate(0,0)}20%{opacity:.95}100%{opacity:0;transform:translate(var(--dx),var(--dy))}}
+.fx-orb-glow{fill:var(--fx);opacity:.28;transform-origin:120px 66px;animation:fx-swell 1.2s ease-out .3s both,fx-pulse 2.4s ease-in-out 1.5s infinite}
+.fx-orb-core{fill:#eaf7ff;filter:drop-shadow(0 0 10px var(--fx));transform-origin:120px 66px;animation:fx-swell 1.2s ease-out .3s both}
+.fx-orb-swirl{fill:#5fb4f0;transform-origin:120px 66px;animation:fx-swell 1.2s ease-out .3s both,fx-spin 4s linear 1.5s infinite}
+@keyframes fx-swell{from{transform:scale(.15);opacity:0}}
+@keyframes fx-pulse{50%{transform:scale(1.15)}}
+.fx-tide{fill:none;stroke:var(--fx);stroke-width:1.4;opacity:0;transform-origin:120px 66px;animation:fx-shock 1.6s ease-out 1s,fx-shock 2s ease-out 2.6s infinite}
+.fx-tide.is-late{animation-delay:1.3s,3s}
 
 /* 横扫 · 横扫八方 */
 .fx-bagua path{fill:none;stroke:var(--fx);stroke-width:1.6;stroke-linecap:round;opacity:.75}

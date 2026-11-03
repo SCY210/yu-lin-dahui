@@ -30,7 +30,7 @@ try{
  // Every bounty kind pops up its own scene: its own class, seal word and name, hidden from screen readers.
  const scenes=[];for(const kind of bountyKinds){await mount(BountyOffer,{offer:{...offer,kind},title:'Fictional points match',onRespond:()=>{},onLater:()=>{}});const fx=ui.root.findByProps({'data-kind':kind,'aria-hidden':'true'});assert.equal(fx.props.className,'bounty-fx bounty-fx-'+kind);assert.ok(text(fx).includes(bountyEffects[kind].word)&&text(fx).includes(bountyEffects[kind].name));assert.equal(ui.root.findAll(n=>n.props.className==='bounty-offer-seal').length,0);scenes.push(text(fx))}
  assert.equal(new Set(scenes).size,8,'eight different scenes');assert.equal(new Set(bountyKinds.map(k=>bountyEffects[k].word)).size,8);
- const fxCss=readFileSync('app/bounty-effects.css','utf8');for(const name of ['fx-sword-in','fx-strike','fx-leap','fx-rush-left','fx-stamp','fx-bell-drop','fx-rise','fx-sweep-turn','fx-blade-left'])assert.ok(fxCss.includes('@keyframes '+name),name);
+ const fxCss=readFileSync('app/bounty-effects.css','utf8');for(const name of ['fx-sword-in','fx-strike','fx-leap','fx-rush-left','fx-stamp','fx-bell-drop','fx-swell','fx-sweep-turn','fx-blade-left'])assert.ok(fxCss.includes('@keyframes '+name),name);
  assert.ok(fxCss.includes('@media (prefers-reduced-motion:reduce){')&&fxCss.includes('.bounty-fx *,.bounty-fx *::after{animation:none!important}'),'reduced motion shows the final frame still');
  // Home lists the open offer, then hides accepted bounties of activities that ended more than a day ago.
  let eventId='home-0';for(let i=0;!drawnBounty(eventId,'me');i++)eventId='home-'+i;

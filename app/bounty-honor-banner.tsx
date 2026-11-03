@@ -7,7 +7,7 @@ import './bounty-honor-banner.css';
 
 /** What each bounty kind's winner did, in the club's cultivation voice. */
 const deeds:Record<BountyKind,string>={streak:'连斩五阵，剑气如虹',rout:'雷霆一击，压敌于个位',upset:'以弱胜强，鲤跃龙门',deuce:'廿分平后鏖战不退，终压一筹',
- unbeaten:'金身不坏，一局未失',comeback:'连挫之后浴火涅槃，反手夺胜',sweep:'剑扫八方，连败群雄',close:'刀尖问道，两番险胜'};
+ unbeaten:'金身不坏，全场一局未失',gather:'聚气成海，全场净胜三十分有余',sweep:'剑扫八方，连败群雄',close:'刀尖问道，两番险胜'};
 export const honorText=(h:BountyHonor,name:string)=>`天机阁传讯：「${h.title}」一役，${name}道友${deeds[h.kind]}，揭下${bountyTitles[h.kind]}，得赏 ${rewardText(h)}！`;
 
 /** A scrolling banner under the top bar announcing completed bounties of the last day to everyone (docs/BOUNTIES.md).

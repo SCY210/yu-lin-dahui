@@ -9,8 +9,8 @@ export const bountyEffects:Record<BountyKind,{word:string;name:string}>={
  rout:{word:'破',name:'雷霆破军'},
  upset:{word:'逆',name:'鲤跃龙门'},
  deuce:{word:'鏖',name:'两仪鏖战'},
- unbeaten:{word:'金',name:'金身不坏'},
- comeback:{word:'涅',name:'浴火涅槃'},
+ unbeaten:{word:'全',name:'金身不坏'},
+ gather:{word:'聚',name:'聚气成海'},
  sweep:{word:'扫',name:'横扫八方'},
  close:{word:'险',name:'刀尖问道'},
 };
@@ -78,13 +78,14 @@ const scenes:Record<BountyKind,ReactNode>={
   {[[-1,40],[1,52],[-1,76],[1,88],[-1,100],[1,64]].map(([side,y],i)=><g key={i} transform={`translate(${side<0?84:156} ${y}) scale(${side} 1)`}><g className="fx-arrow" style={n(i)}><path d="M0 0H22M0 0L5 -3M0 0L5 3"/></g></g>)}
   <g className="fx-bell"><path className="fx-bell-body" d="M94 98Q94 48 120 42Q146 48 146 98Z"/><rect className="fx-bell-rim" x={88} y={96} width={64} height={7} rx={3}/><circle className="fx-bell-rim" cx={120} cy={39} r={4}/><path className="fx-bell-line" d="M100 66H140M98 80H142"/><text className="fx-bell-word" x={120} y={62} textAnchor="middle">护</text></g>
  </>,
- // 浴火涅槃: embers rise from the ashes, then a flame phoenix soars up and spreads its wings.
- comeback:<>
-  <ellipse className="fx-ash" cx={120} cy={120} rx={70} ry={8}/>
-  {Array.from({length:9},(_,i)=><circle key={i} className="fx-ember" cx={70+i*12} cy={118} r={i%2?1.6:2.4} style={n(i)}/>)}
-  <g className="fx-phoenix"><path className="fx-wing" d="M120 58C100 40 76 34 54 40C74 46 88 56 100 70Z"/><path className="fx-wing is-right" d="M120 58C140 40 164 34 186 40C166 46 152 56 140 70Z"/>
-   <path className="fx-phoenix-body" d="M120 44C126 50 128 62 124 78C122 86 118 86 116 78C112 62 114 50 120 44Z"/><circle className="fx-phoenix-crest" cx={120} cy={42} r={3}/>
-   <path className="fx-tail" d="M120 82C112 98 100 104 92 120M120 82C120 100 120 108 120 124M120 82C128 98 140 104 148 120"/></g>
+ // 聚气成海: qi motes stream in from every side and gather into an orb that swells, with tides ringing it.
+ gather:<>
+  <ellipse className="fx-tide" cx={120} cy={66} rx={70} ry={22}/>
+  <ellipse className="fx-tide is-late" cx={120} cy={66} rx={92} ry={30}/>
+  {Array.from({length:14},(_,i)=>{const a=i*Math.PI*2/14,r=86+(i%3)*14;return <circle key={i} className="fx-qi" cx={120+Math.cos(a)*r} cy={66+Math.sin(a)*r*.55} r={i%2?1.8:2.6} style={n(i,{'--dx':(-Math.cos(a)*r).toFixed(1)+'px','--dy':(-Math.sin(a)*r*.55).toFixed(1)+'px'})}/>})}
+  <circle className="fx-orb-glow" cx={120} cy={66} r={24}/>
+  <circle className="fx-orb-core" cx={120} cy={66} r={13}/>
+  <path className="fx-orb-swirl" d="M120 56A10 10 0 0 1 120 76A5 5 0 0 1 120 66A5 5 0 0 0 120 56Z"/>
  </>,
  // 横扫八方: a bagua octagon opens, a crescent of sword qi sweeps all the way round and eight foes are flung outward.
  sweep:<>

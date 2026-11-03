@@ -72,8 +72,8 @@ test('each challenge is judged on completed games after the scheduled end; a dec
  assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(400,false)),'failed','a loss does not count');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[22,20],[21,9]]),'completed');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[21,9]]),'failed','fewer than four games');assert.equal(await judge('unbeaten',[[21,18],[21,19],[19,21],[21,9],[21,9]]),'failed','one loss breaks the golden body');
- assert.equal(await judge('comeback',[[21,18],[15,21],[19,21],[21,17]]),'completed','two losses in a row, then a win');
- assert.equal(await judge('comeback',[[15,21],[21,19],[19,21],[21,17]]),'failed','the losses must be in a row');assert.equal(await judge('comeback',[[15,21],[19,21]]),'failed','no win after them');
+ assert.equal(await judge('gather',[[21,8],[21,11],[18,21],[21,11]]),'completed','net +13 +10 -3 +10 = +30, exactly enough');
+ assert.equal(await judge('gather',[[21,8],[21,11],[17,21],[21,11]]),'failed','net +29');assert.equal(await judge('gather',[[21,5],[21,5],[5,21]]),'failed','lost games count against: +16 +16 -16');
  assert.equal(await judge('close',[[21,19],[23,21],[21,15]]),'completed','two wins by two points');assert.equal(await judge('close',[[21,19],[19,21],[21,18]]),'failed','one close win and a close loss');
  const sweep=async(opponents:string[][],format?:'singles')=>{const {s,e}=setup('sweep',format?{matchFormat:format}:{});await accept(s,e);opponents.forEach((b,i)=>game(s,e,'sweep-'+i,2+i*13,[21,17],b));return bountyOutcome(s,e,e.bounties![0],e.end)};
  assert.equal(await sweep([['p2','p3'],['p4','p5'],['p6','p7']]),'completed','five or more different opponents beaten');
