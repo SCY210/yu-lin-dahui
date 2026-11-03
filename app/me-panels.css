@@ -23,3 +23,4 @@ body .shell.app-compact .me-achievements-entry .row h3{margin:0}
 body .shell.app-compact .me-achievements-entry .row .secondary,body .shell.app-compact .me-settings-entry .actions>*{min-height:40px}
 body .shell.app-compact .me-settings-entry .actions{gap:8px}
 body .shell.app-compact .me-settings-entry .me-sign-out{margin-left:auto}
+.me-achievements-entry .hint{margin:2px 0 0}

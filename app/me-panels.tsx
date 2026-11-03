@@ -3,11 +3,10 @@ import {useId,useState,type ReactNode} from 'react';
 import {Bell,KeyRound,Medal} from 'lucide-react';
 import './me-panels.css';
 
-export function MyAchievements({children}:{children:ReactNode}) {
- const [expanded,setExpanded]=useState(false),[visited,setVisited]=useState(false),id=useId();
+/** The entry card on My: a short tally; the collection opens on its own page (`page=achievements`). */
+export function MyAchievements({unlocked,stages,totalStages,onOpen}:{unlocked:number;stages:number;totalStages:number;onOpen:()=>void}) {
  return <section className="card me-achievements-entry">
-  <div className="row"><h3><Medal size={20} aria-hidden="true"/> 我的成就</h3><button className="secondary" aria-expanded={expanded} aria-controls={id} onClick={()=>{setVisited(true);setExpanded(value=>!value)}}>{expanded?'收起成就':'查看成就'}</button></div>
-  <div id={id} className="me-panel-content" hidden={!expanded}>{visited&&children}</div>
+  <div className="row"><div><h3><Medal size={20} aria-hidden="true"/> 我的成就</h3><p className="hint">已点亮 {unlocked} 枚 · {stages} / {totalStages} 阶段</p></div><button className="secondary" onClick={onOpen}>查看成就 ›</button></div>
  </section>;
 }
 

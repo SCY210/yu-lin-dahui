@@ -1,19 +1,20 @@
-# My page controls
+# "我的"页控件
 
-Achievements are collapsed by default on My. The visible View achievements button mounts the collection on its first activation; later collapse/reopen preserves its selected filter and achievement. Personal badge images load eagerly only after the collection is opened; other player collections keep lazy image loading. The latest confirmed personal fee split is shown first, with earlier activities behind one history disclosure. Each activity uses its highest confirmed version, excluding drafts.
+"我的"页上的成就只是一张入口卡片：显示已点亮几枚、已获得几个阶段，以及"查看成就 ›"按钮。点按钮会打开单独的成就页（`page=achievements`，地址是 `?page=achievements`），不在"我的"页里原地展开。成就页顶部有"返回我的"按钮；手机返回键也会回到"我的"页，并恢复原来的滚动位置。成就页打开期间，底部导航的"我的"保持高亮，宝阁页也一样。成就页可以直接用链接打开；直接打开时没有上一页，"返回我的"会用"我的"页替换当前页。自己的徽章图片在成就页里立即加载，其他球员主页上的成就仍然延迟加载。
 
-The bond board (`app/bond-board.tsx`, see `docs/BONDS.md`) follows recent matches.
+最新一份已确认的个人费用分摊排在最前面，更早的活动收在一个"历史分摊"折叠项里。每个活动只取已确认的最高版本，不含草稿。
 
-My ends with one settings card (`MySettings`, `extra`). It holds the account/password and notifications/install buttons; for administrators it adds the administrator settings and data export; and it ends with sign-out. The card follows recent matches and the bond board. Only the selected settings panel mounts; clicking the active button closes it. Existing account, password, push notification, and installation flows retain their behavior and permissions. Panel state resets when the account changes or My is left.
+最近比赛之后是道缘榜（`app/bond-board.tsx`，见 `docs/BONDS.md`）。
 
-## Compact layout
+"我的"页最后是一张设置卡片（`MySettings`，`extra`）。卡片里有"账号与密码"和"通知与安装"按钮；管理员还多出管理员设置和数据导出；最后是退出登录。它排在最近比赛和道缘榜之后。只挂载当前选中的设置面板；再点一次当前按钮会关闭它。原有的账号、密码、推送通知和安装流程及其权限不变。切换账号或离开"我的"页时，面板状态会重置。
 
-My is laid out to show more at once on a phone (`app/me-panels.css`, scoped under the club shell):
+## 紧凑布局
 
-- **Profile card.** The My profile link sits with the avatar and name actions, instead of on a row of its own.
-- **Stat tiles.** These use smaller padding and type. The activities tile shows its count with a short unit; its counting note moved to a tooltip.
-- **Section cards.** The realm, achievements, fees and settings cards use tighter spacing.
-- **Bond board.** It shows the first three members; the show-all button lists the rest.
+"我的"页的排版让手机一屏能看到更多内容（`app/me-panels.css`，限定在俱乐部外壳内）：
 
-On a 390 px preview the page went from about 2040 to about 1500 px tall. The first screen now reaches recent matches.
+- **个人资料卡**：我的主页链接和头像、名字操作放在一起，不单独占一行。
+- **数据格**：内边距和字号更小。活动数格只显示数量和简短单位，统计说明移到了悬停提示里。
+- **分区卡片**：境界、成就入口、费用和设置卡片的间距更紧凑。
+- **道缘榜**：只显示前三位成员，"显示全部"按钮列出其余的人。
 
+在 390 px 预览中，页面高度从约 2040 px 降到约 1500 px，第一屏能看到最近比赛。成就改为单独页面后，"我的"页又短了一些，因为成就簿不再挂在这一页上。

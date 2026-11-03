@@ -21,6 +21,14 @@ function browser(href='https://club.example/',state:unknown=null){
  return {navigation,port,entries,moves,flush,back,forward,setScroll:(y:number)=>{scroll=y},get scroll(){return scroll}};
 }
 
+test('my achievements open on their own page; back returns to My at the same scroll',()=>{
+ const route=readClubRoute('https://club.example/?page=achievements&event=E');
+ assert.equal(route.page,'achievements');assert.equal(route.eventId,'');assert.equal(clubRouteUrl('https://club.example/',route),'/?page=achievements');
+ const b=browser();b.navigation.navigate({page:'me'});b.setScroll(420);b.navigation.navigate({page:'achievements'});assert.equal(b.scroll,0,'the new page starts at the top');
+ b.back();assert.equal(b.navigation.route.page,'me');assert.equal(b.scroll,420);
+ b.navigation.navigate({page:'achievements'});b.navigation.backTo({page:'me'});b.flush();assert.equal(b.navigation.route.page,'me');
+});
+
 test('treasure shop deep links and mobile back preserve the originating page and scroll',()=>{
  const route=readClubRoute('https://club.example/?page=treasure&event=E&player=P');
  assert.equal(route.page,'treasure');assert.equal(route.eventId,'');assert.equal(route.playerId,'');
