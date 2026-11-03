@@ -7,7 +7,6 @@
 .bounty-honor-list{display:flex;gap:48px;margin:0;padding:0 48px 0 0;list-style:none}
 .bounty-honor-list button{padding:2px 0;border:0;background:none;color:inherit;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer}
 .bounty-honor-list button:hover{color:var(--honor)}
-.bounty-honor-close{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:none;color:var(--muted-foreground)}
 @keyframes bounty-honor-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 /* Reduced motion: no scrolling; announcements wrap and the duplicate copy is dropped. */
 @media (prefers-reduced-motion:reduce){
