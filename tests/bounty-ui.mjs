@@ -45,14 +45,14 @@ try{
  assert.ok(text(ui.toJSON()).includes('30%')&&text(ui.toJSON()).includes('30 分钟'));await act(()=>button('调整奖励与惩罚').props.onClick());
  const [,action,values,fields,convert]=forms[0];assert.equal(action,'bountySettings');assert.equal(fields.length,bountyKinds.length*2+1);assert.equal(values.streakCoins,30);
  assert.deepEqual(convert({...values,rewards:undefined,rout:undefined,routPoints:'9',penalty:'12'}),{penalty:12,rewards:{...defaultBountySettings.rewards,rout:{coins:15,points:9}}});
- // The club-wide banner announces completed bounties in the cultivation voice, opens the activity and can be closed.
+ // The club-wide banner announces completed bounties in the cultivation voice, opens the activity and cannot be closed.
  const honors=[{eventId:'h1',title:'Fictional evening',playerId:'p1',kind:'streak',coins:30,points:15,at:2},{eventId:'h2',title:'Fictional morning',playerId:'p2',kind:'deuce',coins:10,points:0,at:1}],opened=[];
  await mount(BountyHonorBanner,{honors,name:id=>({p1:'Ada',p2:'Bo'})[id],onOpen:id=>opened.push(id)});
  const banner=ui.root.findByProps({'aria-label':'悬赏捷报'}),lists=banner.findAll(n=>n.type==='ul');
  assert.equal(lists.length,2,'a second copy makes the scroll seamless');assert.equal(lists[1].props['aria-hidden'],true,'the copy is hidden from screen readers');
  shown=text(lists[0]);assert.ok(shown.includes('天机阁传讯：「Fictional evening」一役，Ada道友连斩五阵，剑气如虹，揭下连胜悬赏，得赏 30 羽币 + 15 积分！'),shown);assert.ok(shown.includes('Bo道友')&&shown.includes('鏖战悬赏')&&shown.includes('得赏 10 羽币！'));
  await act(()=>lists[0].findAllByType('button')[1].props.onClick());assert.deepEqual(opened,['h2']);
- await act(()=>ui.root.findByProps({'aria-label':'收起悬赏捷报'}).props.onClick());assert.equal(ui.toJSON(),null,'closed for this visit');
+ assert.equal(ui.root.findAll(n=>n.props['aria-label']==='收起悬赏捷报').length,0,'the banner cannot be closed');
  await mount(BountyHonorBanner,{honors:[],name:()=>'',onOpen:()=>{}});assert.equal(ui.toJSON(),null,'nothing to announce');
  const honorCss=readFileSync('app/bounty-honor-banner.css','utf8');assert.ok(honorCss.includes('@keyframes bounty-honor-scroll')&&honorCss.includes('@media (prefers-reduced-motion:reduce){'),'scrolls, and stands still for reduced motion');
  console.log('PASS bounty UI: club-wide honour banner, offer card answers, accepted/completed/failed states, pop-up accept and later, a different xianxia scene per bounty kind with a still final frame for reduced motion, home timing, settings form');
