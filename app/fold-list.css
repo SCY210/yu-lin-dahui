@@ -1,2 +1,0 @@
-/* The button that shows the rest of a folded list (app/fold-list.tsx). */
-.fold-more{justify-self:start;padding:6px 10px;border:0;border-radius:8px;background:none;color:var(--primary);font:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}

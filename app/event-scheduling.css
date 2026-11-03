@@ -57,3 +57,9 @@
 .scheduling-advice>button{flex:none;min-height:40px;padding:6px 12px;font-size:13px}
 .scheduling-advice.is-current{border-style:dashed;background:var(--card)}
 @media(max-width:600px){.scheduling-advice{flex-wrap:wrap}.scheduling-advice>button{width:100%}}
+/* Rounds not in progress: a horizontal strip of round tabs, one round shown below it (docs/COMPACT_MOBILE_LAYOUT.md). */
+.round-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:10px 0 4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.round-tab{display:grid;justify-items:center;flex:0 0 auto;min-width:64px;min-height:44px;padding:5px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.round-tab small{font-size:11px;font-weight:500;color:var(--muted-foreground)}
+.round-tab.is-complete{opacity:.8}
+.round-tab.is-selected{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--card));color:var(--primary);opacity:1}

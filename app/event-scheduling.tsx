@@ -52,6 +52,8 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
 }
 export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode:'planned'|'round';now:number}){
  const {data,name,send,busy,open,setDanger}=ctx,[selected,setSelected]=useState<{roundId:string;playerId:string;lineup:RoundLineup}|null>(null);
+ /** The round shown from the tab strip of rounds not in progress; empty means the next round. */
+ const [roundTab,setRoundTab]=useState('');
  const currentSelected=currentRoundSelection(selected,data,mode==='planned');
  const playerId=ctx.matchPlayerId??'';
  const manager=!ctx.readOnly&&canScheduleEvent(data.me,e),active=!['ended','cancelled','draft'].includes(eventStatusAt(e,now)),editable=manager&&active;
@@ -77,7 +79,7 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
   {!rounds.length&&<p className="empty">{mode==='planned'?'正式接龙后即可预排赛程。':'正式接龙后可生成第一轮。'}</p>}
   {playerId&&!rounds.some(r=>data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)))&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
   {(()=>{
-   const roundView=(r:Round,index:number)=>{const allMatches=data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId));if(playerId&&!allMatches.length)return null;const matches:Match[]=allMatches.filter(m=>m.status!=='cancelled'),withdrawn=allMatches.filter(m=>m.status==='cancelled'),changeable=manager&&(active||isPlannedLineup(e,r))&&['draft','published','playing'].includes(r.status)&&!fixed,rest=changeable?roundBenchIds(data as unknown as State,e,r,now):r.rest;return <Disclosure key={r.id+':'+r.status} className={'round-disclosure is-'+r.status} defaultOpen={!!playerId||r.status==='playing'||(r.id===next?.id&&!rounds.some(x=>x.status==='playing'))} label={'第 '+(index+1)+' 轮 · '+(mode==='planned'&&['published','playing'].includes(r.status)?'待录分':mode==='planned'&&r.status==='complete'?'已结束':labels[r.status])+(mode==='planned'?'':' · '+hm(r.start))}>
+   const roundView=(r:Round,index:number,open?:boolean)=>{const allMatches=data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId));if(playerId&&!allMatches.length)return null;const matches:Match[]=allMatches.filter(m=>m.status!=='cancelled'),withdrawn=allMatches.filter(m=>m.status==='cancelled'),changeable=manager&&(active||isPlannedLineup(e,r))&&['draft','published','playing'].includes(r.status)&&!fixed,rest=changeable?roundBenchIds(data as unknown as State,e,r,now):r.rest;return <Disclosure key={r.id+':'+r.status} className={'round-disclosure is-'+r.status} defaultOpen={open??(!!playerId||r.status==='playing'||(r.id===next?.id&&!rounds.some(x=>x.status==='playing')))} label={'第 '+(index+1)+' 轮 · '+(mode==='planned'&&['published','playing'].includes(r.status)?'待录分':mode==='planned'&&r.status==='complete'?'已结束':labels[r.status])+(mode==='planned'?'':' · '+hm(r.start))}>
 
    <p className="hint">{data.matches.filter(m=>m.roundId===r.id&&['complete','forfeit','cancelled'].includes(m.status)).length}/{data.matches.filter(m=>m.roundId===r.id).length} 场已结束{mode==='planned'?' · '+matches.filter(m=>editableMatchLineup(m,true)).length+' 场待录分':' · '+data.matches.filter(m=>m.roundId===r.id&&m.status==='playing').length+' 场进行中'}</p>
    <div className="courts-grid">{matches.map(m=><MatchCard key={m.id} m={m} ctx={ctx} interactive={changeable&&editableMatchLineup(m,isPlannedLineup(e,r))} selected={currentSelected?.roundId===r.id?currentSelected.playerId:''} onSelect={id=>swap(r,id)}/>)}</div>
@@ -87,12 +89,15 @@ export function EventRounds({e,ctx,mode,now}:{e:Event;ctx:SchedulingContext;mode
    <Disclosure label="上场与等待机会">{r.eligible.map(id=>{const prior=rounds.filter(x=>['published','playing','complete'].includes(x.status)&&x.eligible.includes(id)),played=prior.filter(x=>data.matches.some(m=>m.roundId===x.id&&m.status!=='cancelled'&&[...m.a,...m.b].includes(id)&&(!m.noShow?.length||m.noShow.includes(id))));return <div className="row small-line" key={id}><span>{name(id)}</span><span>{played.length}/{prior.length} 轮上场</span></div>})}</Disclosure>
    {editable&&<div className="actions">{r.status==='draft'&&<button type="button" className="primary" disabled={busy} onClick={()=>send('publish',{roundId:r.id})}><Check size={17}/>确认发布</button>}{['draft','published'].includes(r.status)&&<button type="button" className="ghost danger" disabled={busy} onClick={()=>setDanger({action:'cancelRound',payload:{roundId:r.id},title:'取消未开始的轮次',description:'仅撤销本轮尚未开始的对局，不修改历史比分。',reason:''})}>取消本轮</button>}</div>}
   </Disclosure>};
-   // Long schedules: three or more finished rounds, or three or more rounds after the next one, fold into one entry
-   // each, so the current and next rounds sit near the top (docs/COMPACT_MOBILE_LAYOUT.md). A player filter shows all.
-   const done=playerId?[]:rounds.filter(r=>r.status==='complete'),later=playerId?[]:pending.slice(1);
-   const fold=(list:Round[],key:string,label:string)=>list.length>=3?<Disclosure key={key} className="round-group" label={label}>{()=>list.map(x=>roundView(x,rounds.indexOf(x)))}</Disclosure>:null;
-   const grouped=(r:Round)=>done.length>=3&&done.includes(r)||later.length>=3&&later.includes(r);
-   return rounds.map((r,index)=>r===done[0]&&done.length>=3?fold(done,'done-rounds','已结束 '+done.length+' 轮'):r===later[0]&&later.length>=3?fold(later,'later-rounds','后面还有 '+later.length+' 轮 · 第 '+(index+1)+'–'+(rounds.indexOf(later.at(-1)!)+1)+' 轮'):grouped(r)?null:roundView(r,index));
+   // Rounds in progress always show. The others are one tab strip with one round open at a time, instead of a long
+   // stack of round sections (docs/COMPACT_MOBILE_LAYOUT.md): a tapped round, or the next round when none is playing.
+   // A player filter shows all.
+   const playingRounds=rounds.filter(r=>r.status==='playing'),others=rounds.filter(r=>r.status!=='playing');
+   if(playerId||others.length<2)return rounds.map((r,index)=>roundView(r,index));
+   const shown=others.find(r=>r.id===roundTab)??(playingRounds.length?undefined:next&&others.includes(next)?next:others.at(-1));
+   return <>{playingRounds.map(r=>roundView(r,rounds.indexOf(r)))}
+    <div className="round-tabs" role="tablist" aria-label="其他轮次">{others.map(r=>{const n=rounds.indexOf(r)+1;return <button type="button" role="tab" key={r.id} aria-selected={r.id===shown?.id} className={'round-tab is-'+r.status+(r.id===shown?.id?' is-selected':'')} onClick={()=>setRoundTab(r.id===shown?.id&&playingRounds.length?'':r.id)}>第 {n} 轮<small>{r.status==='complete'?'已结束':r.status==='draft'?'草稿':'待开始'}</small></button>})}</div>
+    {shown&&roundView(shown,rounds.indexOf(shown),true)}</>;
   })()}
   <Disclosure label="搭档方式与投票"><EventPointsPlan e={e} ctx={ctx} planning/></Disclosure>
  </>;
