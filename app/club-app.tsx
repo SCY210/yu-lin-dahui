@@ -89,7 +89,7 @@ import {disconnectPushForLogout} from '../lib/client/push-notifications';
 const NotificationPrompt=lazy(()=>import('./notification-prompt'));
 const GenderPrompt=lazy(()=>import('./gender-prompt'));
 const NotificationSettings=lazy(()=>import('./notification-settings'));
-import {achievementCatalog} from '../lib/achievement-catalog';
+import {achievementCatalog,achievementRanks} from '../lib/achievement-catalog';
 import AchievementCollection from './achievement-collection';
 const ScoreReminder=lazy(()=>import('./score-reminder'));
 const empty=(t:string)=><div className="empty"><CalendarDays size={30}/><p>{t}</p></div>;
@@ -153,7 +153,7 @@ export default function ClubApp(){
      toast.info('阵容已更新，已同步最新阵容，请重新选择。');
     }
     if(dataSnapshot.current?.me?.id&&dataSnapshot.current.me.id!==d.me?.id){setForm(null);setDanger(null);setPreview(null);setBinding(false);setChangingPassword(false);setChangingUsername(false)}
-    if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>typeof old.progress[a.id]?.level==='number'&&next.progress[a.id]?.level>old.progress[a.id].level);if(fresh.length)toast.success('成就升级：'+fresh.map(a=>a.name+' Lv.'+next.progress[a.id].level).join('、'))}}
+    if(dataSnapshot.current?.me?.id&&d.me?.id&&dataSnapshot.current.me.id===d.me.id){const old=dataSnapshot.current.achievements?.[d.me.playerId],next=d.achievements?.[d.me.playerId];if(old&&next){const fresh=achievementCatalog.filter(a=>typeof old.progress[a.id]?.level==='number'&&next.progress[a.id]?.level>old.progress[a.id].level);if(fresh.length)toast.success('仙箓晋品：'+fresh.map(a=>a.name+' · '+(achievementRanks[next.progress[a.id].level-1]?.name??'Lv.'+next.progress[a.id].level)).join('、'))}}
     const etag=r.headers.get('ETag');readValidator.current=etag&&d.me?{etag,period,year,scope:requestScope}:null;
     dataSnapshot.current=d;setData(d);setError('');
    }

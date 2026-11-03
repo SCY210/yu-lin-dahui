@@ -77,7 +77,7 @@ test('a future completed fact invalidates conditional-read metadata exactly at i
 });
 
 test('catalog identifiers and assets are unique and every target is attainable',()=>{
- assert.equal(new Set(achievementCatalog.map(a=>a.id)).size,8);assert.equal(new Set(achievementCatalog.map(a=>a.metric)).size,8,'Each theme must measure a distinct direction');for(const a of achievementCatalog){assert.ok(a.target>0);assert.ok(Number.isInteger(a.target))}
+ assert.equal(new Set(achievementCatalog.map(a=>a.id)).size,13);assert.equal(new Set(achievementCatalog.map(a=>a.metric)).size,13,'Each theme must measure a distinct direction');for(const a of achievementCatalog){assert.ok(a.target>0);assert.ok(Number.isInteger(a.target))}
 });
 
 test('every badge has a real 256px generated WebP asset and the complete collection stays lightweight',()=>{
@@ -116,17 +116,41 @@ test('repeating many matches on one date cannot substitute for the silver partic
 
 test('corrections revoke unsupported streak tiers; a later loss keeps supported lifetime milestones',()=>{
  const s=fixture();for(let i=0;i<15;i++)s.matches.push(game('w'+i,now-(15-i)*86400000));
- assert.equal(summary(s).progress['three-streak'].level,3);s.matches.push(game('lost',now-1000,false));assert.equal(summary(s).progress['three-streak'].level,3);
- Object.assign(s.matches[7],{scoreA:15,scoreB:21,games:[{a:15,b:21}]});const result=summary(s),p=result.progress['three-streak'];assert.equal(p.current,7);assert.equal(p.level,2);assert.equal(p.levelUnlockedAt[2],null);assert.equal(result.progress['first-victory'].level,2);
+ assert.equal(summary(s).progress['three-streak'].level,2,'fifteen unbeaten: 3 and 10, not yet 20');s.matches.push(game('lost',now-1000,false));assert.equal(summary(s).progress['three-streak'].level,2);
+ Object.assign(s.matches[7],{scoreA:15,scoreB:21,games:[{a:15,b:21}]});const result=summary(s),p=result.progress['three-streak'];assert.equal(p.current,7);assert.equal(p.level,1);assert.equal(p.levelUnlockedAt[1],null);assert.equal(result.progress['first-victory'].level,2);
 });
 
-test('the forty-stage collection remains attainable with months of matches and long-term chemistry',()=>{
- const s=fixture();s.events[0].start=now-80*86400000;for(let i=0;i<20;i++)for(const prefix of ['mate','foe'])s.players.push({id:prefix+i,name:prefix+i,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
- for(let i=0;i<600;i++){const m=game('full'+String(i).padStart(3,'0'),now-(75-Math.floor(i/8))*86400000+(i%8)*900000,true,'mate'+(i<120?0:i%20));m.b=['foe'+i%20,'foe'+(i+1)%20];if(i<50){m.games=[{a:21,b:15},{a:15,b:21},{a:21,b:17}];m.scoreA=2;m.scoreB=1}s.matches.push(m)}
- const p=summary(s);assert.equal(p.matchDays,75);assert.equal(p.unlockedCount,8);assert.equal(p.totalLevels,40);for(const result of Object.values(p.progress)){assert.equal(result.level,5);assert.ok(result.levelUnlockedAt.every(at=>at!==null))}
+test('the whole collection remains attainable with months of matches, long-term chemistry and hard-won feats',()=>{
+ const s=fixture();s.events[0].start=now-90*86400000;for(let i=0;i<20;i++)for(const prefix of ['mate','foe'])s.players.push({id:prefix+i,name:prefix+i,ownerId:'',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});
+ // 600 matches over 74 days: sixteen on the first day, then eight a day. The first 110 are wins (a 110-match unbeaten
+ // run), then thirty rounds of three losses and a win (thirty comebacks), then wins. Won games alternate a rout, a
+ // deuce and a plain win; the first fifty are three-game matches; each match lasts 25 minutes.
+ for(let i=0;i<600;i++){
+  const day=i<16?0:1+Math.floor((i-16)/8),slot=i<16?i:(i-16)%8,end=now-(75-day)*86400000+slot*900000,won=!(i>=110&&i<230&&(i-110)%4<3);
+  const m=game('full'+String(i).padStart(3,'0'),end,won,'mate'+(i<200?0:i%20));m.start=end-25*60000;m.b=['foe'+i%20,'foe'+(i+1)%20];
+  const win=[[21,8],[22,20],[21,15]][i%3];if(won){m.games=[{a:win[0],b:win[1]}];m.scoreA=win[0];m.scoreB=win[1]}
+  if(won&&i<50){m.games=[{a:21,b:15},{a:15,b:21},{a:win[0],b:win[1]}];m.scoreA=2;m.scoreB=1}
+  s.matches.push(m);
+ }
+ const p=summary(s);assert.equal(p.matchDays,74);assert.equal(p.progress['three-streak'].current,371,'the last comeback win and the 370 wins after it');assert.equal(p.progress['phoenix-rebirth'].current,30);assert.equal(p.progress['swift-journey'].current,16);assert.equal(p.progress['secluded-cultivation'].current,250);
+ assert.equal(p.unlockedCount,achievementCatalog.length);assert.equal(p.totalLevels,achievementCatalog.length*5);for(const [id,result] of Object.entries(p.progress)){assert.equal(result.level,5,id);assert.ok(result.levelUnlockedAt.every(at=>at!==null))}
 });
 
-test('rank frames are real generated WebP assets and are shared across all eight achievement themes',()=>{
+test('feats count won games: routs to ten or fewer, deuce games, comebacks after three losses, the best day and court time',()=>{
+ const s=fixture(),day=86400000,at=(d:number,n:number)=>now-d*day+n*900000;
+ const played=(id:string,end:number,a:number,b:number,minutes=20)=>{const m=game(id,end,a>b);m.start=end-minutes*60000;m.games=[{a,b}];m.scoreA=a;m.scoreB=b;s.matches.push(m);return m};
+ played('rout',at(3,0),21,10);played('not-rout',at(3,1),21,11);played('deuce',at(3,2),22,20);played('lost-deuce',at(3,3),20,22,200);
+ played('l1',at(2,0),15,21);played('l2',at(2,1),15,21);played('back',at(2,2),21,17);
+ for(let i=0;i<5;i++)played('day'+i,at(1,i),21,16);
+ const three=game('three-games',at(1,6),true);three.games=[{a:21,b:5},{a:12,b:21},{a:22,b:20}];three.scoreA=2;three.scoreB=1;s.matches.push(three);
+ let p=summary(s).progress;
+ assert.equal(p['thunder-rout'].current,2,'21:10 and the 21:5 game of a three-game match; 21:11 is not a rout');assert.equal(p['endless-duel'].current,2,'22:20 wins only, a lost deuce game does not count');
+ assert.equal(p['phoenix-rebirth'].current,1,'a win after three losses in a row (the lost deuce game, then two more)');assert.equal(p['swift-journey'].current,6,'five wins and the three-game win on one day');
+ assert.equal(p['secluded-cultivation'].current,Math.floor((11*20+90+10)/60),'at most 90 minutes per match');
+ s.matches.find(m=>m.id==='l1')!.status='cancelled';p=summary(s).progress;assert.equal(p['phoenix-rebirth'].current,0,'voiding a loss undoes the comeback');
+});
+
+test('rank frames are real generated WebP assets and are shared across every achievement theme',()=>{
  let bytes=0;for(let level=1;level<=5;level++){const file='public'+rankImage(level),data=readFileSync(file),image=validateImage(new Uint8Array(data),'image/webp');assert.equal(image.width,384);assert.equal(image.height,384);bytes+=data.byteLength}
  assert.ok(bytes<384*1024,'Shared rank ornaments should remain below 384 KiB');
 });

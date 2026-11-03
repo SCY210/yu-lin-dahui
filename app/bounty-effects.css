@@ -7,6 +7,10 @@
 .bounty-fx-rout{--fx:#c9a8ff;--fx-deep:#1b1236}
 .bounty-fx-upset{--fx:#ffcf5a;--fx-deep:#3d1508}
 .bounty-fx-deuce{--fx:#ff8a7a;--fx-deep:#121a20}
+.bounty-fx-unbeaten{--fx:#ffd36b;--fx-deep:#2b1a04}
+.bounty-fx-comeback{--fx:#ff9a3c;--fx-deep:#24070d}
+.bounty-fx-sweep{--fx:#7dffb2;--fx-deep:#05261b}
+.bounty-fx-close{--fx:#d8dcff;--fx-deep:#0e1230}
 
 /* Shared: rising qi motes, the scene name and the seal that stamps down last. */
 .fx-motes circle{fill:var(--fx);opacity:.55;animation:fx-mote 4.8s ease-in calc(var(--i) * -.8s) infinite}
@@ -85,6 +89,53 @@
 .fx-orbit{transform-origin:120px 62px;animation:fx-orbit-in .5s ease-out .95s both,fx-spin 3.4s linear 1.45s infinite reverse}
 .fx-orb{filter:drop-shadow(0 0 6px #fff8)}
 @keyframes fx-orbit-in{from{opacity:0;transform:scale(.4)}}
+
+/* 金身 · 金身不坏 */
+.fx-bell{animation:fx-bell-drop .6s cubic-bezier(.3,1.4,.5,1) .15s both,fx-bell-ring 2.4s ease-in-out 1.4s infinite;transform-origin:120px 40px}
+.fx-bell-body{fill:#e6b23c;stroke:#fff0b8;stroke-width:1.2;filter:drop-shadow(0 0 8px var(--fx))}
+.fx-bell-rim{fill:#ffdf85}
+.fx-bell-line{fill:none;stroke:#9a6a12;stroke-width:1.2}
+.fx-bell-word{fill:#7a4e08;font:700 15px/1 "STKaiti","KaiTi","Kaiti SC","楷体",serif}
+@keyframes fx-bell-drop{from{opacity:0;transform:translateY(-90px)}}
+@keyframes fx-bell-ring{25%{transform:rotate(3deg)}75%{transform:rotate(-3deg)}}
+.fx-halo{fill:none;stroke:var(--fx);stroke-width:2;opacity:0;transform-origin:120px 70px;animation:fx-shock 1.4s ease-out .7s,fx-shock 1.8s ease-out 1.8s infinite}
+.fx-halo.is-late{animation-delay:.9s,2.4s}
+.fx-arrow path{fill:none;stroke:#f3e6c4;stroke-width:1.6;stroke-linecap:round}
+.fx-arrow{opacity:0;animation:fx-arrow .7s ease-in calc(.75s + var(--i) * .12s)}
+@keyframes fx-arrow{0%{opacity:1;transform:translateX(70px)}55%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translate(30px,-16px) rotate(35deg)}}
+
+/* 涅槃 · 浴火涅槃 */
+.fx-ash{fill:#4a2a2a;opacity:.8}
+.fx-ember{fill:var(--fx);opacity:0;animation:fx-ember 2.2s ease-out calc(var(--i) * .18s) infinite}
+@keyframes fx-ember{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+.fx-phoenix{animation:fx-rise .9s cubic-bezier(.2,.9,.3,1) .5s both,fx-float-up 2.6s ease-in-out 1.5s infinite;filter:drop-shadow(0 0 7px var(--fx))}
+.fx-phoenix-body{fill:#ffd07a}
+.fx-phoenix-crest{fill:#fff2c2}
+.fx-wing{fill:#ff7a2f;opacity:.92;transform-origin:120px 62px;animation:fx-wing-open .6s ease-out 1s both,fx-flap 1.3s ease-in-out 1.6s infinite}
+.fx-wing.is-right{fill:#ff9a3c}
+.fx-tail{fill:none;stroke:#ffb347;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:60;animation:fx-crack .7s ease-out .8s both}
+@keyframes fx-rise{from{opacity:0;transform:translateY(70px) scale(.5)}}
+@keyframes fx-float-up{50%{transform:translateY(-4px)}}
+@keyframes fx-wing-open{from{transform:scaleX(.1)}}
+@keyframes fx-flap{50%{transform:scaleY(.86)}}
+
+/* 横扫 · 横扫八方 */
+.fx-bagua path{fill:none;stroke:var(--fx);stroke-width:1.6;stroke-linecap:round;opacity:.75}
+.fx-bagua{transform-origin:120px 66px;animation:fx-born .6s ease-out .1s both,fx-spin 20s linear .7s infinite}
+.fx-foe{fill:#e9fff2;transform-origin:120px 66px;opacity:.25;animation:fx-fling .7s ease-out calc(.65s + var(--i) * .07s) both}
+@keyframes fx-fling{from{opacity:1;transform:translateY(16px)}to{opacity:.25;transform:translateY(-6px)}}
+.fx-sweep path{fill:var(--fx);opacity:.85;filter:drop-shadow(0 0 6px var(--fx))}
+.fx-sweep{transform-origin:120px 66px;opacity:0;animation:fx-sweep-turn 1s cubic-bezier(.5,0,.4,1) .45s}
+@keyframes fx-sweep-turn{from{opacity:1;transform:rotate(-90deg)}90%{opacity:1}to{opacity:0;transform:rotate(270deg)}}
+.fx-core{fill:#e9fff2;filter:drop-shadow(0 0 8px var(--fx))}
+
+/* 险胜 · 刀尖问道 */
+.fx-hairline{stroke:var(--fx);stroke-width:.8;opacity:.6;stroke-dasharray:220;animation:fx-crack .6s ease-out both}
+.fx-blade-in.is-left{animation:fx-blade-left .7s cubic-bezier(.2,.9,.3,1) .3s both}
+.fx-blade-in.is-right{animation:fx-blade-left .7s cubic-bezier(.2,.9,.3,1) .3s both}
+@keyframes fx-blade-left{from{opacity:0;transform:translateX(-140px)}}
+.fx-sparks.is-close path{animation-delay:1s,1s}
+.fx-gap{stroke:#fff;stroke-width:1;opacity:0;animation:fx-flash 1.6s ease-out 1s infinite}
 
 @media (prefers-reduced-motion:reduce){
  .bounty-fx *,.bounty-fx *::after{animation:none!important}

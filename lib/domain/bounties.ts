@@ -9,23 +9,29 @@ import type {RatedGame} from './realm-rating';
 
 /** Bounties (docs/BOUNTIES.md): before a points match some members are offered one challenge about how they play in
  * the games the scheduler gives them. Accepting risks a point penalty; declining costs nothing. */
-export type BountyKind='streak'|'rout'|'upset'|'deuce';
+export type BountyKind='streak'|'rout'|'upset'|'deuce'|'unbeaten'|'comeback'|'sweep'|'close';
 export type BountyReward={coins:number;points:number};
 export type BountySettings={rewards:Record<BountyKind,BountyReward>;penalty:number};
 /** A member's answer, with the reward and penalty frozen when they accepted. */
 export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'declined';at:number;coins:number;points:number;penalty:number};
 export type BountyOutcome='completed'|'failed';
 
-export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce'];
+export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','comeback','sweep','close'];
 /** Share of eligible members offered a bounty, how early, and the thresholds of each challenge. */
-export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20;
-export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6}},penalty:10};
-export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏'};
+export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20,
+ bountyUnbeatenGames=4,bountyComebackLosses=2,bountySweepOpponents={doubles:5,singles:3},bountyCloseWins=2;
+export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
+ unbeaten:{coins:25,points:12},sweep:{coins:18,points:9},comeback:{coins:12,points:6},close:{coins:12,points:6}},penalty:10};
+export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏',unbeaten:'金身悬赏',comeback:'涅槃悬赏',sweep:'横扫悬赏',close:'险胜悬赏'};
 export const bountyGoals:Record<BountyKind,string>={
  streak:`本场活动连赢 ${bountyStreakWins} 局`,
  rout:`赢一局，且对手只得个位数分（不超过 ${bountyRoutMaxScore} 分）`,
  upset:`赢一局对手平均修为比你方高至少 ${bountyUpsetGap} 的比赛`,
  deuce:`赢一局 ${bountyDeuceScore} 平后的加分赛（如 22:20）`,
+ unbeaten:`本场活动至少打 ${bountyUnbeatenGames} 局，一局不输，金身不破`,
+ comeback:`连输 ${bountyComebackLosses} 局之后，紧接着赢下一局，否极泰来`,
+ sweep:`本场活动击败至少 ${bountySweepOpponents.doubles} 位不同对手（单打 ${bountySweepOpponents.singles} 位），横扫八方`,
+ close:`赢下至少 ${bountyCloseWins} 局只领先 2 分的比赛（如 21:19），刀尖问道`,
 };
 export function bountySettings(s:Pick<State,'settings'>):BountySettings{
  const saved=s.settings.bounty;
@@ -70,7 +76,7 @@ export function respondBounty(s:State,a:Account,input:unknown,now:number){
 }
 
 const rewardInput=z.object({coins:z.number().int().min(0).max(1000),points:z.number().int().min(0).max(100)}).strict();
-export const bountySettingsInput=z.object({rewards:z.object({streak:rewardInput,rout:rewardInput,upset:rewardInput,deuce:rewardInput}).strict(),penalty:z.number().int().min(0).max(100)}).strict();
+export const bountySettingsInput=z.object({rewards:z.object(Object.fromEntries(bountyKinds.map(k=>[k,rewardInput])) as Record<BountyKind,typeof rewardInput>).strict(),penalty:z.number().int().min(0).max(100)}).strict();
 /** The owner and administrators set the rewards and the penalty; answers already given keep theirs. */
 export function updateBountySettings(s:State,a:Account,input:unknown,now:number){
  if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有群主和管理员可以调整悬赏令');
@@ -90,6 +96,10 @@ export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecor
  if(record.kind==='streak'){let run=0;for(const g of played){run=g.winner===g.side?run+1:0;if(run>=bountyStreakWins)met=true}}
  else if(record.kind==='rout')met=won.some(g=>loserScore(g)<=bountyRoutMaxScore);
  else if(record.kind==='deuce')met=won.some(g=>loserScore(g)>=bountyDeuceScore);
+ else if(record.kind==='unbeaten')met=played.length>=bountyUnbeatenGames&&won.length===played.length;
+ else if(record.kind==='comeback')met=played.some((g,i)=>i>=bountyComebackLosses&&g.winner===g.side&&played.slice(i-bountyComebackLosses,i).every(x=>x.winner!==x.side));
+ else if(record.kind==='sweep')met=new Set(won.flatMap(g=>g.match[g.side==='a'?'b':'a'])).size>=bountySweepOpponents[eventFormat(e)==='singles'?'singles':'doubles'];
+ else if(record.kind==='close')met=won.filter(g=>Math.abs(g.a-g.b)===2).length>=bountyCloseWins;
  else met=(games??[]).some(g=>g.eventId===e.id&&g.playerId===id&&g.won&&g.opponent-g.team>=bountyUpsetGap);
  return met?'completed':'failed';
 }

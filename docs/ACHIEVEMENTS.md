@@ -1,43 +1,59 @@
-# Lifetime achievements
+# 生涯成就（羽林仙箓）
 
-The collection contains eight original imagegen badge themes, each with five attainable stages: Bronze, Silver, Gold, Platinum and Diamond. Members can inspect their collection under the account tab and on player profiles. Cards show the current rank, the next concrete goal, the play-date requirement and remaining progress. A details panel previews all five rank appearances and factual achievement dates. A same-account refresh announces rank increases only; initial loads, old response schemas, identity switches and rank decreases announce nothing.
+成就簿共十三枚徽章，每枚有五个品阶：凡品、灵品、宝品、仙品、神品（对应原来的青铜、白银、黄金、铂金、钻石边框）。品阶名特意不用炼气、筑基等修为境界名，免得和修为等级混淆。成员在"我的"页和球友主页查看成就。卡片显示当前品阶、下一个具体目标、打球日要求和剩余进度；详情面板预览五个品阶的样子和实际达成日期。同一账号刷新后只播报品阶提升（"仙箓晋品：某某 · 宝品"）；首次加载、旧版响应、切换账号和品阶下降都不播报。
 
-Every stage needs both its metric target and a number of distinct lifetime Madrid play dates. The thresholds are `achievementTargets` and `achievementParticipationDays` in `lib/achievement-catalog.ts`.
+每个品阶都要求两项同时达标：该成就的指标目标，以及生涯累计的马德里打球日数。门槛见 `lib/achievement-catalog.ts` 里的 `achievementTargets` 和 `achievementParticipationDays`。
 
-| Badge ID | Rarity | Metric | Metric target, Bronze / Silver / Gold / Platinum / Diamond | Play dates, Bronze / Silver / Gold / Platinum / Diamond |
-|---|---|---|---|---|
-| first-flight (启程一羽) | 初阶 | Completed matches | 1 / 20 / 60 / 150 / 300 | 1 / 4 / 10 / 20 / 40 |
-| first-victory (初露锋芒) | 初阶 | Wins | 1 / 10 / 35 / 100 / 220 | 1 / 4 / 10 / 20 / 40 |
-| ten-matches (四方论剑) | 进阶 | Distinct defeated opponents | 4 / 6 / 10 / 15 / 20 | 2 / 5 / 12 / 24 / 40 |
-| ten-victories (黄金搭档) | 进阶 | Highest cumulative wins with one teammate | 3 / 8 / 25 / 60 / 120 | 2 / 5 / 12 / 24 / 40 |
-| five-partners (五路同修) | 进阶 | Distinct teammates | 5 / 8 / 12 / 16 / 20 | 2 / 5 / 12 / 24 / 40 |
-| three-game-victory (三局决胜) | 进阶 | Best-of-three wins that reach three games | 1 / 5 / 12 / 25 / 50 | 2 / 5 / 12 / 24 / 40 |
-| fifty-matches (持之以恒) | 珍稀 | Distinct Madrid calendar dates with completed matches | 3 / 6 / 16 / 35 / 60 | 3 / 6 / 14 / 28 / 48 |
-| three-streak (三连之势) | 珍稀 | Lifetime best personal winning streak | 3 / 6 / 10 / 15 / 21 | 3 / 6 / 14 / 28 / 48 |
+| 徽章 ID | 名称 | 稀有度 | 指标 | 指标目标（凡/灵/宝/仙/神） | 打球日（凡/灵/宝/仙/神） |
+|---|---|---|---|---|---|
+| first-flight | 初入仙门 | 初阶 | 完成的比赛场数 | 1 / 20 / 60 / 150 / 300 | 1 / 4 / 10 / 20 / 40 |
+| first-victory | 剑气初成 | 初阶 | 胜场 | 1 / 10 / 35 / 100 / 220 | 1 / 4 / 10 / 20 / 40 |
+| ten-matches | 四方论剑 | 进阶 | 击败过的不同对手 | 4 / 6 / 10 / 15 / 20 | 2 / 5 / 12 / 24 / 40 |
+| ten-victories | 金兰之契 | 进阶 | 与同一搭档的最高累计胜场 | 3 / 8 / 25 / 60 / 120 | 2 / 5 / 12 / 24 / 40 |
+| five-partners | 广结仙缘 | 进阶 | 不同搭档人数 | 5 / 8 / 12 / 16 / 20 | 2 / 5 / 12 / 24 / 40 |
+| three-game-victory | 三局定乾坤 | 进阶 | 打满三局并获胜的三局两胜比赛 | 1 / 5 / 12 / 25 / 50 | 2 / 5 / 12 / 24 / 40 |
+| thunder-rout | 雷霆万钧 | 进阶 | 赢下且对手不超过 10 分的局数 | 1 / 5 / 15 / 40 / 80 | 2 / 5 / 12 / 24 / 40 |
+| endless-duel | 鏖战八荒 | 进阶 | 赢下的 20 平后加分局数 | 1 / 4 / 10 / 25 / 50 | 2 / 5 / 12 / 24 / 40 |
+| secluded-cultivation | 闭关苦修 | 进阶 | 累计比赛小时数 | 3 / 12 / 35 / 90 / 200 | 2 / 5 / 12 / 24 / 40 |
+| fifty-matches | 勤修不辍 | 珍稀 | 有完成比赛的不同马德里日期数 | 3 / 6 / 16 / 35 / 60 | 3 / 6 / 14 / 28 / 48 |
+| three-streak | 不败金身 | 珍稀 | 生涯最长连续不败场数 | 3 / 10 / 20 / 50 / 100 | 3 / 6 / 14 / 28 / 48 |
+| phoenix-rebirth | 浴火涅槃 | 珍稀 | 连输 3 场后紧接着获胜的次数 | 1 / 3 / 6 / 12 / 25 | 3 / 6 / 14 / 28 / 48 |
+| swift-journey | 一日千里 | 珍稀 | 单个马德里日期内的最多胜场 | 4 / 6 / 8 / 11 / 15 | 3 / 6 / 14 / 28 / 48 |
 
-The club plays about once a week. A first play date can light at most the two 初阶 badges: one for the first completed match and one for the first win, however many games are played or won that evening. 进阶 badges need a second play date and 珍稀 badges a third. Silver needs four to six play dates (about a month), Gold ten to fourteen (two to three months), Platinum twenty to twenty-eight (five to six months) and Diamond forty to forty-eight (most of a year). One day with many matches or multiple activities still counts once. Missing weeks impose no penalty, and dates need not be consecutive. At about eight games a week, play dates are usually the limit for match counts, while win, partner, opponent and streak targets can take longer. These are examples, not promised timing.
+## 门槛设计
 
-Earlier versions unlocked far more on a first evening. In a simulation of eight doubles games with about half won, the original 1 / 3 / 5 / 10 / 20 style targets lit about seven themes and thirteen stages, including Gold for completed matches. The first play-date version (Bronze needed one date for every theme) still lit about seven Bronze badges. The current table lights two.
+群里大约每周打一次。第一个打球日最多点亮两枚初阶徽章：一枚为第一场完成的比赛，一枚为第一场胜利，不管当晚打了或赢了多少场。进阶徽章需要第二个打球日，珍稀徽章需要第三个。灵品需要 4–6 个打球日（约一个月），宝品 10–14 个（两到三个月），仙品 20–28 个（五到六个月），神品 40–48 个（大半年）。一天打多场或参加多个活动也只算一天；缺勤的周不扣分，日期不必连续。按每周约八场估算，场数类目标通常卡在打球日上，而胜场、搭档、对手和连胜目标可能更久。这些只是举例，不是承诺的时间。
 
-All eight themes have distinct metrics. Repeated cumulative-match and cumulative-win themes were replaced with opponent breadth, regular play on different dates, and sustained chemistry with one partner. Their legacy IDs and artwork paths stay stable, but their names, rules, progress and dates are derived from the current criteria. Existing records recalculate every theme under the current criteria; original matches and results are preserved.
+早期版本第一晚点亮的太多。在一晚八场双打、约赢一半的模拟里，最初 1 / 3 / 5 / 10 / 20 式的目标点亮了约七个主题、十三个品阶，包括完成场数的黄金。第一个打球日版本（所有主题的第一阶都只要一个打球日）仍点亮约七枚。现行门槛只点亮两枚。
 
-All targets are lifetime cumulative goals. Higher stages require more completed facts, never payment or random rewards. Rank 0 is locked; rank 5 is maximum and has no next goal. Each threshold stores the first factual crossing time when both conditions are supported in the derived response, so historical games backfill all supported ranks immediately. The collection reports both themes unlocked out of eight and stages earned out of forty. A loss does not remove a lifetime best-streak milestone; correcting or voiding its underlying matches can.
+## 各项指标
 
-Regular play counts the Madrid calendar date of the match's end. Multiple matches or activities ending on the same date count once, including across daylight-saving transitions. Wins are unnecessary for that metric. Opponent breadth only adds opposing real player IDs from wins and counts each player once. Partner chemistry maintains a separate win total per real teammate and takes the maximum, rather than adding different teammates together. Its details show the teammate currently holding that record. Ties keep the first record holder in deterministic chronological order. Losing does not subtract wins; score corrections and voiding recalculate all three metrics.
+- 每枚徽章的指标都不相同（目录守卫测试会检查）。部分旧 ID 沿用至今（例如 `three-streak` 现在是不败金身，`ten-matches` 是四方论剑），ID 和图片路径保持稳定，名称、规则、进度和日期都按当前标准推导。
+- **不败金身**：生涯最长的一段连续不败。羽毛球没有平局，所以连续不败就是连胜。20、50、100 场不败分别是宝品、仙品、神品。之后输球不会抹掉已经达成的纪录，但修正或作废其中的比赛会重新计算。
+- **雷霆万钧**、**鏖战八荒**按局计：每一局自己一方赢下且对方不超过 10 分算一次雷霆，赢下且对方至少 20 分（20 平后的加分局，如 22:20）算一次鏖战。三局两胜比赛里的每一局分别计算，即使整场输了，赢下的那一局也算。
+- **浴火涅槃**：按比赛结束时间排序，自己连续输掉至少 3 场后的下一场获胜，记一次。
+- **一日千里**：同一马德里日期内的胜场数，取历史最高的一天。
+- **闭关苦修**：每场比赛按开始到结束的时长累计，单场最多计 90 分钟（防止漏录结束时间把时长拉得过长），取整小时。
+- **勤修不辍**按比赛结束时间的马德里日期计。同一日期内的多场比赛或多个活动只算一次，跨夏令时也一样，不需要赢球。
+- **四方论剑**只统计在胜局中击败过的真实对手 ID，每人只算一次。
+- **金兰之契**对每位真实搭档分别累计胜场，取最高值，不把不同搭档的胜场加在一起。详情里显示当前保持纪录的搭档；并列时按时间顺序保留先达到的那位。输球不扣胜场；修正比分和作废会重新计算。
 
-## Facts, permissions and corrections
+所有目标都是生涯累计目标，更高品阶只需要更多已完成的比赛事实，不靠付费或随机奖励。品阶 0 为未解锁，品阶 5 为满级，没有下一个目标。每个门槛记录两项条件第一次同时满足的时间，所以历史比赛会立刻补齐所有能支持的品阶。成就簿显示已点亮的主题数和已获得的品阶数（共 65 阶）。
 
-Achievements are derived on the server from lifetime completed results, in stable end-time/ID order. Each distinct match counts once; a player's streak changes only for their own valid completed matches. Teammates count as partners, opponents do not. Friendly completed games can count, while cancelled, forfeited, pending, incomplete, malformed or future results cannot.
+## 事实、权限与修正
 
-The projection applies the viewer's event visibility before deriving achievements. A member cannot infer private draft results from new badges. Finished historical facts survive an activity's soft deletion; a corrected loss or voided match recalculates the collection. These are factual achievements, not irrevocable awards: historical corrections can remove a badge or alter its unlock date.
+成就在服务器上由生涯所有已完成比赛推导，按结束时间和 ID 的稳定顺序处理。每场比赛只计一次；某位球员的连胜、连败只随自己的有效完成比赛变化。队友算作搭档，对手不算。友谊赛的完成结果也计入；取消、弃权、未开始、未完成、格式错误或结束时间在未来的结果都不计。
 
-No database migration or new award-write endpoint is required. The derived response exposes matchDays, and cards, stage counts, progress bars, filter states and roadmap dates all use the same dual requirements. Legacy inflated levels are not grandfathered: history is recalculated, so existing members can show fewer badges or lower ranks after a threshold change, while score, ranking points, realm ratings and matchmaking Elo are unchanged. The client never stores earned levels; an open app that refreshes into lower levels shows no message, and a later genuine increase announces the new level. Clients cannot submit unlocks. Achievements do not add ranking points, Elo, financial charges or permissions. Conditional-read metadata expires at future factual completion boundaries so a newly due result is not hidden by an unchanged revision.
+投影先按查看者的活动可见范围过滤，再推导成就，所以成员无法通过新徽章推断私密草稿的结果。活动软删除后，已完成的历史事实仍然保留；修正为输或作废比赛会重新计算。成就是事实记录，不是不可撤销的奖励：修正历史可能取消徽章或改变达成日期。
 
+不需要数据库迁移，也没有写入奖励的接口。推导结果带有 matchDays，卡片、品阶数、进度条、筛选和路线日期都按同样的双重要求显示。门槛变化后不保留旧的高等级：历史会按新门槛重算，所以现有成员可能看到更少的徽章或更低的品阶（例如不败金身灵品从 6 场改为 10 场），而积分、排名积分、修为和排场 Elo 都不变。客户端从不保存已得品阶；打开中的应用刷新后品阶变低不会提示，之后真正提升时才播报新品阶。新增的徽章不会在上线那一刻被当作"晋品"播报。客户端不能提交解锁。成就不增加排名积分、Elo、费用或权限。条件读取元数据会在未来比赛事实生效的时刻过期，所以新生效的结果不会被未变的版本号挡住。
 
-## Assets and performance
+## 图片与性能
 
-Artwork was generated using the built-in imagegen tool. The transparent 256px badge themes total about 175 KiB. Five shared 384px transparent rank frames add about 166 KiB and combine with every theme, providing forty distinct rank/theme appearances without forty redundant images. Bronze is a simple copper rim; silver adds leaves and a pearl; gold adds feather wings and cloud engraving; platinum adds layered wings and teal filigree; diamond adds crystal wings, a crown and jewel. The original theme stays visible inside each hollow frame. Personal collection artwork loads eagerly; other player collections load artwork lazily. Original PNGs remain in ignored local work directories. See [asset prompts and paths](ACHIEVEMENT_ASSETS.md) and [rank frame prompts](ACHIEVEMENT_RANK_ASSETS.md).
+最初八枚徽章和五个品阶边框由内置 imagegen 工具生成，提示词见[徽章图片记录](ACHIEVEMENT_ASSETS.md)和[品阶边框记录](ACHIEVEMENT_RANK_ASSETS.md)。新增的五枚（雷霆万钧、鏖战八荒、浴火涅槃、一日千里、闭关苦修）没有用 imagegen：`scripts/achievement-emblems/render.mjs` 用 Playwright 的 Chromium 取一枚现有徽章的六边形边框，把中间的靛蓝圆盘重新上色，再画上 `scripts/achievement-emblems/emblems.mjs` 里的金色矢量图案，导出 256px WebP。这样边框和配色与原有系列一致，但中间图案是矢量风格，比原图平。以后如果用 imagegen 重新生成，只需替换 `public/badges/<id>.webp`。
 
-## Verification
+全部十三枚 256px 透明徽章合计约 245 KiB，测试要求低于 256 KiB。五个 384px 共享品阶边框约 166 KiB，与每个主题组合，不需要为每种组合单独出图。自己的成就簿图片立即加载，其他球员的延迟加载。
 
-Regression tests cover milestones, factual unlock dates, personal streak order, distinct partners and defeated opponents, Madrid calendar dates, individual partner records, duplicate records, best-of-three wins, invalid/future games, score corrections, voiding, archived activities, private drafts and conditional-read boundaries. A catalog guard prevents two themes from using the same metric. Threshold tests check that only the two 初阶 themes need a single play date, that a perfect eight-game evening lights exactly two badges, and that every later stage needs both more of its metric and more play dates. All eight referenced badge files are validated as actual 256px WebP assets with a combined size below 256 KiB.
+## 验证
+
+`tests/achievements.test.ts` 覆盖：里程碑、实际达成日期、个人连胜顺序、不同搭档与击败的对手、马德里日期、单个搭档纪录、重复记录、三局两胜、无效或未来的比赛、比分修正、作废、归档活动、私密草稿和条件读取边界；新指标的雷霆与鏖战按局计数、输掉的加分局不算、连输三场后反胜、作废一场输球会撤销涅槃、单日最多胜场、单场时长上限。目录守卫防止两个主题使用同一指标。门槛测试检查只有两枚初阶主题只需一个打球日、完美的八场一晚恰好点亮两枚，以及每个更高品阶都同时需要更多指标和更多打球日；另有一个数月的完整场景，证明十三枚徽章的全部 65 个品阶都能达成。所有徽章文件都校验为真正的 256px WebP，总大小低于 256 KiB。
