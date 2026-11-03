@@ -23,7 +23,8 @@ export async function applyFriendSignup(s:State,a:Account,action:string,input:un
  const p=inputSchema.parse(input),work=structuredClone(s),booking=work.bookings.find(b=>b.id===p.bookingId)??fail('场地时段不存在');
  if(now>=booking.end)fail('该场地时段已结束，不能添加接龙');
  let playerId:string;
- if(p.mode!=='existing'&&guestAlreadySignedUp(work,booking.eventId,p.mode==='new'?p.name:work.players.find(x=>x.id===p.sourcePlayerId)?.name??''))fail(duplicateGuestMessage);
+ const sourceGuest=p.mode==='saved'?work.players.find(x=>x.id===p.sourcePlayerId):undefined;
+ if(p.mode!=='existing'&&guestAlreadySignedUp(work,booking.eventId,p.mode==='new'?p.name:sourceGuest?.name??'',sourceGuest?.guestFriendId))fail(duplicateGuestMessage);
  if(p.mode==='saved'){
   // A friend brought before: copy their nickname, gender and latest level into a guest of this activity. The member
   // who first brought them stays responsible for their share. Members reuse their own friends; admins any friend.

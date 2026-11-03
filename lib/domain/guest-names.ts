@@ -1,10 +1,13 @@
 /** Guest nicknames, shared by the server and the friend signup form: one friend is signed up once per activity. */
-export const guestNameKey=(name:string)=>name.trim().toLocaleLowerCase('zh-CN');
+/** Full-width and half-width forms, letter case and every space are ignored, so 「小 王」, 「小王 」 and 「ＡＭＹ」/「amy」 are
+ * one nickname. */
+export const guestNameKey=(name:string)=>name.normalize('NFKC').replace(/\s+/gu,'').toLocaleLowerCase('zh-CN');
 export const duplicateGuestMessage='这位朋友已经在本场接龙了，要报其他场地请用“代朋友接龙”';
-/** A friend who is already signed up for this activity under the same nickname is not added again. */
-export function guestAlreadySignedUp(s:{players:{id:string;name:string;guestEventId?:string}[];registrations:{eventId:string;playerId:string;status:string}[]},eventId:string,name:string){
+/** A friend who is already signed up for this activity under the same nickname, or as the same merged friend
+ * (`guestFriendId`), is not added again. `except` leaves out the friend's own records, for a rename. */
+export function guestAlreadySignedUp(s:{players:{id:string;name:string;guestEventId?:string;guestFriendId?:string}[];registrations:{eventId:string;playerId:string;status:string}[]},eventId:string,name:string,friendId?:string,except?:Set<string>){
  const key=guestNameKey(name);
- return s.players.some(p=>p.guestEventId===eventId&&guestNameKey(p.name)===key&&s.registrations.some(r=>r.eventId===eventId&&r.playerId===p.id&&r.status!=='cancelled'));
+ return s.players.some(p=>p.guestEventId===eventId&&!except?.has(p.id)&&(guestNameKey(p.name)===key||!!friendId&&p.guestFriendId===friendId)&&s.registrations.some(r=>r.eventId===eventId&&r.playerId===p.id&&r.status!=='cancelled'));
 }
 /** Loose nickname match for spotting likely duplicates: case, spaces and a trailing number ("aq", "AQ", "aq 2"). */
 export const looseGuestName=(name:string)=>guestNameKey(name).replace(/\s+/g,'').replace(/\d+$/,'');

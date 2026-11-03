@@ -135,6 +135,8 @@ async function twoActivities(){
 test('the same nickname cannot be added twice to one activity',async()=>{
  const {s,e,member,data}=await twoActivities(),before=structuredClone(s);
  await assert.rejects(()=>apply(s,member,'friendSignup',{...acceptedActivityNotice,mode:'new',gender:'male',name:' AQ ',bookingId:'court',arrival:start,departure:end,note:''},now),/已经在本场接龙了.*代朋友接龙/);
+ // Spaces anywhere and full-width letters do not make a second nickname.
+ for(const name of ['a q','ＡＱ','Ａ　ｑ'])await assert.rejects(()=>apply(s,member,'friendSignup',{...acceptedActivityNotice,mode:'new',gender:'male',name,bookingId:'court',arrival:start,departure:end,note:''},now),/已经在本场接龙了/,name);
  assert.deepEqual(s,before);
  const form=friendSignupForm(e,data(member),now)!;assert.throws(()=>form.convert({...form.values,mode:'new',name:'aq',gender:'female'}),/已经在本场接龙了/);
 });

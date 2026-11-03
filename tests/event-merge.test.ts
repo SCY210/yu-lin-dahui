@@ -52,3 +52,17 @@ test('merging retains original confirmation history without attesting to a new e
  assert.deepEqual(s.registrations.find(r=>r.id===sourceRow.id)!.noticeAcknowledgements,[sourceRecord]);
  assert.equal(s.registrations.filter(r=>r.eventId===target.id).flatMap(r=>r.noticeAcknowledgements??[]).filter(r=>r.eventId===target.id).length,1);
 });
+
+test('合并时同名临时来宾并成一人：两段场地都在同一个来宾名下；时间重叠则拒绝',()=>{
+ for(const overlap of [false,true]){
+  const {s,target,source}=fixture();
+  const guest=(id:string,eventId:string,name:string,arrival:number,departure:number,seq:number)=>{s.players.push({id,name,ownerId:'member1',guestEventId:eventId,guestGender:'female',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});s.registrations.push({id:'r-'+id,eventId,playerId:id,sequence:seq,status:'confirmed',arrival,departure,note:'',registeredAt:now,joinedAsWaitlist:false,cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}})};
+  guest('gt',target.id,'小 Q',overlap?start:start+2*hour,target.end,6);guest('gs',source.id,'小Ｑ',start,source.end,6);
+  const before=structuredClone(s);
+  if(overlap){assert.throws(()=>mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'迁移'),/重叠/);assert.deepEqual(s,before);continue}
+  mergeUpcomingActivities(s,s.accounts[0],target.id,[source.id],now,'迁移');
+  assert.equal(s.players.filter(p=>p.guestEventId===target.id).length,1,'one guest record in the merged activity');
+  const r=s.registrations.find(r=>r.eventId===target.id&&r.playerId==='gt')!;
+  assert.equal(r.bookingSignups!.filter(x=>x.status!=='cancelled').length,2,'both courts are under that guest');
+ }
+});

@@ -60,3 +60,22 @@ test('editing updates every record and sets the level from now on; removing hide
  assert.ok(!options.some(o=>o[1].startsWith('阿Q')),'a removed friend is not offered');assert.ok(guest('AQ 2'));
  await apply(s,admin,'guestFriendHide',{playerId:first.id,hidden:false},now);assert.equal(first.guestHidden,undefined);
 });
+
+test('a rename never gives two guests of one activity the same nickname',async()=>{
+ const {s,admin,bob,add,guest}=await fixture();await add(bob,'zz','court-0');const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,admin,'guestFriendEdit',{playerId:guest('zz').id,name:' A Q ',gender:'male',level:guestLevels[1][0]},now),/同名的临时来宾/);
+ assert.deepEqual(s,before);
+ await apply(s,admin,'guestFriendEdit',{playerId:guest('aq').id,name:'AQ',gender:'female',level:guestLevels[1][0]},now);
+ assert.equal(s.players.filter(p=>p.name==='AQ').length,1,'renaming a friend to another spelling of their own nickname is fine');
+});
+
+test('the same merged friend under another nickname is not brought twice to one activity',async()=>{
+ const {s,admin,alice,bob,guest}=await fixture();
+ await apply(s,admin,'guestFriendMerge',{playerIds:[guest('aq').id,guest('AQ 2').id],name:'aq',hostPlayerId:'p1'},now);
+ // A stray record of the merged friend under an old nickname, signed up for the first activity.
+ const first=guest('aq'),court=s.bookings.find(b=>b.id==='court-0')!;
+ s.players.find(p=>p.id===first.id)!.name='aq-old';const copy=s.players.find(p=>p.guestEventId===s.bookings.find(b=>b.id==='court-1')!.eventId)!;
+ const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,alice,'friendSignup',{...notice,mode:'saved',sourcePlayerId:copy.id,bookingId:court.id,arrival:court.start,departure:court.end,note:''},now),/已经在本场接龙了/);
+ assert.deepEqual(s,before);void bob;
+});
