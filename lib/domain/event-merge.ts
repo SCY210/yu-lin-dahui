@@ -1,3 +1,4 @@
+import {guestNameKey} from './guest-names';
 import {eventFormat} from './match-format';
 import {clubOwnerId,isClubOwner} from './ownership';
 import {cancellationDeadline} from './cancellation';
@@ -46,8 +47,11 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
   const scoped=structuredClone(work);upgradeActivitySignups(scoped,scoped.events.find(e=>e.id===source.id)!);
   for(const stored of scoped.registrations.filter(r=>r.eventId===source.id)){
    const guest=work.players.find(p=>p.id===stored.playerId&&p.guestEventId===source.id);
-   const participantId=guest?crypto.randomUUID():stored.playerId;
-   if(guest)work.players.push({...guest,id:participantId,guestEventId:target.id});
+   // A guest already in the merged activity under the same nickname or merged friend is the same guest: their courts
+   // join that guest's signup (overlapping times are refused below) instead of a second record of them.
+   const same=guest&&work.players.find(p=>p.guestEventId===target.id&&(guestNameKey(p.name)===guestNameKey(guest.name)||!!guest.guestFriendId&&p.guestFriendId===guest.guestFriendId)&&work.registrations.some(r=>r.eventId===target.id&&r.playerId===p.id));
+   const participantId=same?same.id:guest?crypto.randomUUID():stored.playerId;
+   if(guest&&!same)work.players.push({...guest,id:participantId,guestEventId:target.id});
    const original={...stored,playerId:participantId};
    const slots=(original.bookingSignups??[]).map(x=>({...x,bookingId:mapping.get(x.bookingId)??fail('报名关联场地不存在')}));
    let r=work.registrations.find(r=>r.eventId===target.id&&r.playerId===original.playerId);

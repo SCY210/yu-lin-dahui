@@ -1,3 +1,4 @@
+import {guestAlreadySignedUp} from './guest-names';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {guestGenderInput,guestLevelInput} from './guest-commands';
@@ -42,6 +43,9 @@ export async function applyGuestFriends(s:State,a:Account,action:string,input:un
   // Nickname and gender change on every record; a new level applies from now on, from the latest record.
   const p=command.payload,records=friendRecords(s,p.playerId),latest=records.at(-1)!;
   const before={name:latest.name,gender:latest.guestGender??null,level:latest.guestLevels?.at(-1)?.level??latest.rating};
+  // A new nickname may not match another guest already signed up for one of this friend's activities.
+  const own=new Set(records.map(r=>r.id));
+  if(records.some(r=>r.guestEventId&&guestAlreadySignedUp(s,r.guestEventId,p.name,undefined,own)))fail('该活动已有同名的临时来宾，请换一个昵称或先合并');
   for(const r of records){r.name=p.name;r.guestGender=p.gender}
   if(before.level!==p.level){latest.guestLevels=[...(latest.guestLevels??[]),{at:now,level:p.level}];replayRating(s,now)}
   audit('修改临时来宾信息',{playerIds:records.map(r=>r.id),before,after:{name:p.name,gender:p.gender,level:p.level}});
