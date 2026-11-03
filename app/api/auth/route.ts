@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { load, raw, save, committed } from '../../../lib/store';
 import { getAppUser, hashToken, passwordEnabled, sessionCookie } from '../../../lib/auth';
 import { makePassword, checkPassword, sessionToken, normalizeUsername } from '../../../lib/password';
+import { findLoginCredential, usernameTaken } from '../../../lib/username-lookup';
+import { usernameRule } from '../../../lib/username-format';
 import { pushEndpoint } from '../../../lib/push-contract';
 import { removePushSubscription } from '../../../lib/push-subscriptions';
 export const dynamic = 'force-dynamic';
@@ -52,15 +54,11 @@ export async function POST(req: Request) {
         await cleanExpiredRateLimits();
         await consumeRateLimit('auth-ip:' + ip, 120, 15 * 60000, { message: '登录请求较多，请稍后再试' });
         if (action === 'login') {
-            const p = z.object({ username: z.string().trim().min(1).max(254).transform(normalizeUsername), password: z.string().min(1).max(128) }).parse(input);
-            const pairId = await rateLimitId(loginRateKey(p.username, ip));
-            await consumeRateLimit(loginRateKey(p.username, ip), 8, 15 * 60000, { message: '当前网络尝试次数较多，请15分钟后重试' });
-            const c = await raw().prepare('SELECT id,username,salt,hash FROM password_credentials WHERE username=?').bind(p.username).first<{
-                id: string;
-                username: string;
-                salt: string;
-                hash: string;
-            }>();
+            const p = z.object({ username: z.string().trim().min(1).max(254), password: z.string().min(1).max(128) }).parse(input);
+            // Simplified and traditional spellings of one name share an account and its attempt limit (docs/ACCOUNT_LOGIN.md).
+            const rateKey = loginRateKey(normalizeUsername(p.username), ip), pairId = await rateLimitId(rateKey);
+            await consumeRateLimit(rateKey, 8, 15 * 60000, { message: '当前网络尝试次数较多，请15分钟后重试' });
+            const c = await findLoginCredential(p.username);
             const valid = checkPassword(p.password, c?.salt ?? 'dummy-salt-for-timing-v1', c?.hash ?? '00'.repeat(64));
             if (!c || !valid)
                 return denied('账号或密码不正确', 401);
@@ -169,7 +167,7 @@ export async function POST(req: Request) {
                     return denied('账号不可用');
                 if (await passwordEnabled(a.id))
                     return denied('已开通账号密码登录，请直接登录', 409);
-                if (await raw().prepare('SELECT id FROM password_credentials WHERE username=?').bind(p.username).first())
+                if (await usernameTaken(p.username))
                     return denied('这个账号名已被使用', 409);
                 cred ??= makePassword(p.password);
                 const previous = structuredClone(s);
@@ -236,7 +234,7 @@ export async function POST(req: Request) {
                     return denied('管理员权限已变更');
                 if (await committed(key))
                     return result({ ok: true, duplicate: true }, req);
-                if (await raw().prepare('SELECT id FROM password_credentials WHERE username=?').bind(p.username).first())
+                if (await usernameTaken(p.username))
                     return denied('这个账号名已被使用', 409);
                 const existing = p.accountId ? s.accounts.find(a => a.id === p.accountId) : undefined;
                 if (p.accountId && !existing)
@@ -305,7 +303,7 @@ export async function POST(req: Request) {
     }
     catch (e) {
         if (e instanceof z.ZodError)
-            return denied('请检查输入：新登录账号须为2–32位英文字母和数字；密码至少12位', 400);
+            return denied('请检查输入：新登录账号须为' + usernameRule + '；密码至少12位', 400);
         return writeErrorResponse(e);
     }
     finally {

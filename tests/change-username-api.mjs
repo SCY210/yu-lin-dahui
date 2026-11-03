@@ -65,7 +65,7 @@ try{
   assert.equal(credential(A).usernameChangedAt,null);assert.equal((await get(A)).status,200);
  });
  await test('新开通及绑定只收ASCII账号，旧账号格式仍可登录',async()=>{
-  for(const username of ['new_user','新账号','ＦＵＬＬ１２']){assert.equal((await legacyOwnerAuth({action:'createAccount',name:'不会创建',username,password:password(),requestId:randomUUID()})).status,400);assert.equal((await legacyOwnerAuth({action:'bind',username,password:owner.password})).status,400)}
+  for(const username of ['new_user','新 账号','ＦＵＬＬ１２']){assert.equal((await legacyOwnerAuth({action:'createAccount',name:'不会创建',username,password:password(),requestId:randomUUID()})).status,400);assert.equal((await legacyOwnerAuth({action:'bind',username,password:owner.password})).status,400)}
   for(const username of ['旧乙'+suffix,'legacy_'+suffix,'legacy-'+suffix,'legacy'+suffix+'@example.invalid']){sql(`UPDATE password_credentials SET username=${quote(username)} WHERE id=${quote(B.id)}`);B.username=username;await login(B);assert.equal((await get(B,'/api/auth')).data.username,username);assert.equal(credential(B).usernameChangedAt,null)}
  });
  await test('未绑定密码的已验证群主可代改，成员自主机会不消耗',async()=>{

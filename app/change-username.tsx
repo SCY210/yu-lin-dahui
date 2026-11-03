@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {notifySessionChange} from '../lib/client/session-sync';
 import './change-username.css';
+import {isNewUsername,usernamePattern,usernameRule} from '../lib/username-format';
 
 type Props={open:boolean;onOpenChange:(open:boolean)=>void;onChanged:(result:{signedOut:boolean;username:string})=>void|Promise<void>;currentUsername:string;isOwner:boolean;passwordEnabled:boolean;accountId?:string;accountName?:string};
 
@@ -14,7 +15,7 @@ export default function ChangeUsername({open,onOpenChange,onChanged,currentUsern
  async function submit(ev:React.FormEvent){
   ev.preventDefault();if(inFlight.current)return;
   const username=newUsername.trim();
-  if(!/^[A-Za-z0-9]{2,32}$/.test(username)){setError('新账号须为2–32位英文字母或数字');return}
+  if(!isNewUsername(username)){setError('新账号须为'+usernameRule);return}
   if(username.toLowerCase()===currentUsername.toLowerCase()){setError('新账号不能与当前账号相同，英文不区分大小写');return}
   inFlight.current=true;setBusy(true);setError('');
   try{
@@ -27,7 +28,7 @@ export default function ChangeUsername({open,onOpenChange,onChanged,currentUsern
   <DialogHeader><DialogTitle>{accountId?'修改球友登录账号':'修改登录账号'}</DialogTitle><DialogDescription>{accountId?'群主代改不占用或重置球友自主修改账号的机会。该球友需使用新账号重新登录，密码不变。':isOwner?'群主可随时修改自己的登录账号。修改成功后请使用新账号和原密码重新登录。':'每个成员仅有一次自主修改登录账号的机会。修改成功后请使用新账号和原密码重新登录。'}</DialogDescription></DialogHeader>
   <form onSubmit={submit}><div className="form-fields">
    <div className="username-current"><span>{accountName?accountName+'的当前账号':'当前登录账号'}</span><strong>{currentUsername}</strong></div>
-   <label>新登录账号<input type="text" required minLength={2} maxLength={32} pattern="[A-Za-z0-9]{2,32}" title="2–32位英文字母或数字" value={newUsername} onChange={ev=>setNewUsername(ev.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={busy}/><small>2–32位英文字母或数字，英文不区分大小写。登录账号与球友名字分别设置。</small></label>
+   <label>新登录账号<input type="text" required minLength={2} maxLength={32} pattern={usernamePattern} title={usernameRule} value={newUsername} onChange={ev=>setNewUsername(ev.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={busy}/><small>2–32位中文、英文字母或数字；英文不区分大小写，简体和繁体算同一个账号。登录账号与球友名字分别设置。</small></label>
    {passwordEnabled&&<label>{accountId?'你的当前密码':'当前密码'}<input type="password" required minLength={1} maxLength={128} value={currentPassword} onChange={ev=>setCurrentPassword(ev.target.value)} autoComplete="current-password" disabled={busy}/>{accountId&&<small>验证群主本人的密码。</small>}</label>}
   </div>{error&&<p className="error" role="alert">{error}</p>}<div className="change-username-actions"><button type="button" className="secondary" onClick={()=>changeOpen(false)} disabled={busy}>取消</button><button type="submit" className="primary" disabled={busy}>{busy?'正在修改…':'确认修改账号'}</button></div></form>
  </DialogContent></Dialog>;
