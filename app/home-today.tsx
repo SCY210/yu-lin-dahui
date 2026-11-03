@@ -13,7 +13,7 @@ type Tab='overview'|'rounds'|'fees'|'social';
 /** Home "today": things to do, running activities (one highlighted card each) and activities that just ended. */
 /** onScore: open the activity's rounds at that match with its score form (docs/JUMP_TO_MATCH.md); without it the form
  * opens over home. */
-export default function HomeToday({data,onOpen,onBrowse,hasUnpaid,onScore}:{data:ClubData;onOpen:(eventId:string,tab:Tab)=>void;onBrowse:()=>void;hasUnpaid:boolean;onScore?:(eventId:string,matchId:string)=>void}){
+export default function HomeToday({data,onOpen,onBrowse,hasUnpaid,onScore}:{data:ClubData;onOpen:(eventId:string,tab:Tab,section?:'mine'|'awards')=>void;onBrowse:()=>void;hasUnpaid:boolean;onScore?:(eventId:string,matchId:string)=>void}){
  const score=(eventId:string,matchId:string)=>onScore?onScore(eventId,matchId):requestScoreEntry(matchId);
  const [now,setNow]=useState(Date.now);
  useEffect(()=>{
@@ -28,7 +28,7 @@ export default function HomeToday({data,onOpen,onBrowse,hasUnpaid,onScore}:{data
  return <>
   {todos.length>0&&<section className="card home-todos" aria-label="需要你处理">
    <h2>需要你处理</h2>
-   {todos.map(t=>{const Icon=icons[t.kind];return <button type="button" className="home-todo" key={t.kind+t.eventId} onClick={()=>t.matchId?score(t.eventId,t.matchId):onOpen(t.eventId,t.tab)}><Icon size={18} aria-hidden="true"/><span><strong>{t.title}</strong><small>{t.detail}</small></span><span aria-hidden="true">›</span></button>})}
+   {todos.map(t=>{const Icon=icons[t.kind];return <button type="button" className="home-todo" key={t.kind+t.eventId} onClick={()=>t.matchId?score(t.eventId,t.matchId):onOpen(t.eventId,t.tab,t.kind==='promoted'?'mine':undefined)}><Icon size={18} aria-hidden="true"/><span><strong>{t.title}</strong><small>{t.detail}</small></span><span aria-hidden="true">›</span></button>})}
   </section>}
   {live.map(({event,matches,myMatch,registered})=><section className="card home-live-activity" key={event.id} aria-label={event.title+' 进行中'}>
    <div className="home-live-head"><span className="home-live-badge"><span className="home-live-dot" aria-hidden="true"/>{isPractice(event)?'练球中':'进行中'}</span><PointsMatchBadge e={event}/><small>{hm(event.start)}–{hm(event.end)} · {event.venue}</small></div>
@@ -41,8 +41,8 @@ export default function HomeToday({data,onOpen,onBrowse,hasUnpaid,onScore}:{data
   {ended.map(({event,canVote,voted})=><section className={'card home-ended'+(canVote&&!voted?' needs-vote':'')} key={event.id}>
    <div className="home-live-head"><span className="badge">刚结束</span><small>{hm(event.end)} 结束 · {event.venue}</small></div>
    <h2>{event.title}</h2>
-   {canVote&&!voted?<><p className="hint">比赛结束了，选出本场 MVP 吧。</p><button type="button" className="primary" onClick={()=>onOpen(event.id,'social')}><Trophy size={17} aria-hidden="true"/> 去投 MVP</button></>
-    :<button type="button" className="secondary" onClick={()=>onOpen(event.id,isPractice(event)?'overview':'social')}>{isPractice(event)?'查看练球记录':voted?'已投票 · 看看结果':'查看本场结果'}</button>}
+   {canVote&&!voted?<><p className="hint">比赛结束了，选出本场 MVP 吧。</p><button type="button" className="primary" onClick={()=>onOpen(event.id,'social','awards')}><Trophy size={17} aria-hidden="true"/> 去投 MVP</button></>
+    :<button type="button" className="secondary" onClick={()=>onOpen(event.id,isPractice(event)?'overview':'social',isPractice(event)?undefined:'awards')}>{isPractice(event)?'查看练球记录':voted?'已投票 · 看看结果':'查看本场结果'}</button>}
   </section>)}
   {!todos.length&&!live.length&&!ended.length&&!hasUnpaid&&<section className="card home-quiet"><p>现在没有进行中的活动。</p><button type="button" className="secondary" onClick={onBrowse}>查看全部活动</button></section>}
  </>;

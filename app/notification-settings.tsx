@@ -1,7 +1,8 @@
 'use client';
 import {useEffect,useState} from 'react';
 import './notification-settings.css';
-import {reminderLabels,reminderKinds,type ReminderKind,type Reminder} from '../lib/reminder-contract';
+import {reminderFocus,reminderLabels,reminderKinds,type ReminderKind,type Reminder} from '../lib/reminder-contract';
+import type {RouteFocus} from '../lib/client/club-navigation';
 import {Bell,BellOff,CheckCheck} from 'lucide-react';
 import {toast} from 'sonner';
 import {pushSupport,notificationConfig,notificationRequest,localPushSubscription,enablePush,syncPushAccount,pushStateChanged,type NotificationConfig} from '../lib/client/push-notifications';
@@ -11,15 +12,16 @@ import {IosDeniedSteps,IosInstallSteps,isIphone} from './ios-push-steps';
 import {NotificationIncentiveNotice} from './notification-incentive';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 
-/** onOpen also gets a game notice's round, so the rounds tab scrolls to the member's match (docs/JUMP_TO_MATCH.md). */
-export default function NotificationSettings({accountId,onOpen}:{accountId:string;onOpen?:(eventId:string,tab:string,roundId?:string)=>void}){
+/** onOpen also gets what the notice brings into view: a game notice's round (the member's match), else its section, a
+ * registration's slot included (docs/JUMP_TO_MATCH.md). */
+export default function NotificationSettings({accountId,onOpen}:{accountId:string;onOpen?:(eventId:string,tab:string,focus?:RouteFocus)=>void}){
  const [confirmDisable,setConfirmDisable]=useState(false);
  const [config,setConfig]=useState<NotificationConfig|null>(null),[support,setSupport]=useState('checking'),[enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[denied,setDenied]=useState(false),[unreadOnly,setUnreadOnly]=useState(false);
  useEffect(()=>{let current=true;const changed=()=>{void syncPushAccount(accountId).then(value=>{if(current&&value!==null){setEnabled(value);setDenied('Notification' in window&&Notification.permission==='denied')}})};window.addEventListener(pushStateChanged,changed);return()=>{current=false;window.removeEventListener(pushStateChanged,changed)}},[accountId]);
  async function reload(){try{setConfig(await notificationConfig(accountId))}catch(e){setError(e instanceof Error?e.message:'无法读取提醒')}}
  useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')void reload()},60000);return()=>clearInterval(timer)},[accountId]);
  async function preference(kind:ReminderKind,value:boolean){if(!config||busy)return;setBusy(true);setError('');try{const next={...config.preferences,[kind]:value};await notificationRequest(accountId,'preferences',{preferences:next});setConfig({...config,preferences:next})}catch(e){setError(e instanceof Error?e.message:'设置保存失败')}finally{setBusy(false)}}
- async function read(notice?:Reminder){setError('');try{await notificationRequest(accountId,'read',notice?{id:notice.id}:{});setConfig(c=>c?{...c,unread:notice?Math.max(0,c.unread-(notice.readAt?0:1)):0,items:c.items.map(item=>!notice||item.id===notice.id?{...item,readAt:Date.now()}:item)}:c);if(notice)onOpen?.(notice.eventId,notice.tab,notice.roundId)}catch(e){setError(e instanceof Error?e.message:'提醒状态保存失败')}}
+ async function read(notice?:Reminder){setError('');try{await notificationRequest(accountId,'read',notice?{id:notice.id}:{});setConfig(c=>c?{...c,unread:notice?Math.max(0,c.unread-(notice.readAt?0:1)):0,items:c.items.map(item=>!notice||item.id===notice.id?{...item,readAt:Date.now()}:item)}:c);if(notice)onOpen?.(notice.eventId,notice.tab,reminderFocus(notice))}catch(e){setError(e instanceof Error?e.message:'提醒状态保存失败')}}
  useEffect(()=>{let current=true;const supported=pushSupport();
   void (async()=>{try{const cfg=await notificationConfig(accountId);if(!current)return;setSupport(supported);setDenied('Notification' in window&&Notification.permission==='denied');setConfig(cfg);if(supported!=='supported')return;const subscription=await localPushSubscription();if(subscription){const status=await notificationRequest(accountId,'status',{endpoint:subscription.endpoint});if(status.resetDevice)await subscription.unsubscribe();if(current)setEnabled(!!status.enabled&&!status.resetDevice)}}catch(e){if(current){setSupport(supported);setError(e instanceof Error?e.message:'无法读取通知设置')}}})();return()=>{current=false};
  },[accountId]);

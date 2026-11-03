@@ -9,6 +9,14 @@ import './fee-transfers.css';
 type Settlement={id:string;eventId:string;version:number;advances?:Advance[];transfers?:Transfer[];collector?:string};
 type Ctx={data:{me:{playerId:string};payments?:{eventId:string;playerId:string;cents:number;to?:string}[]};name:(id:string)=>string;busy?:boolean;action:(action:string,payload:Record<string,unknown>,close?:boolean)=>Promise<unknown>};
 
+/** The transfer a "去付款" link brings into view (docs/JUMP_TO_MATCH.md): the viewer's first open transfer out, else
+ * their first open transfer in. */
+export function payTransfer(transfers:Transfer[],payments:{eventId:string;playerId:string;cents:number;to?:string}[],eventId:string,me:string){
+ const open=transfers.filter(t=>(t.from===me||t.to===me)&&!transferPaid(payments,eventId,t));
+ return open.find(t=>t.from===me)??open[0];
+}
+export const payRowId=(eventId:string)=>'fee-pay-'+eventId;
+
 /** The fee-advance part of a confirmed split (docs/FEE_ADVANCES.md): who advanced what, and each transfer that settles
  * it. The payer, the receiver and the organisers can mark a transfer as made. */
 export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;title:string;feeRecipient?:{name:string;phone:string;playerId?:string}};settlement:Settlement;ctx:Ctx;manager:boolean}){
@@ -16,9 +24,10 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
  const {data,name}=ctx,me=data.me.playerId,payments=data.payments??[],transfers=settlement.transfers??[];
  const done=(t:Transfer)=>transferPaid(payments,e.id,t);
  const mark=(t:Transfer,paid:boolean)=>void ctx.action('feeTransferPaid',{eventId:e.id,settlementId:settlement.id,from:t.from,to:t.to,paid,reason:paid?'标记已转账':'撤销转账标记'},false).catch(()=>{});
+ const target=payTransfer(transfers,payments,e.id,me);
  const mine=transfers.filter(t=>t.from===me||t.to===me),others=transfers.filter(t=>t.from!==me&&t.to!==me);
  const collectorPhone=settlement.collector&&e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'';
- const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to}>
+ const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to} id={t===target?payRowId(e.id):undefined}>
   <span className="fee-transfer-people"><strong>{t.from===me?'我':name(t.from)}</strong><ArrowRight size={14} aria-label="转给"/><strong>{t.to===me?'我':name(t.to)}</strong></span>
   <b>{euro(t.cents)}</b>
   <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>

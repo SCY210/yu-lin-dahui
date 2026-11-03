@@ -45,6 +45,16 @@ test('a match focus travels in the URL on the rounds tab only, and clearing it k
  assert.ok(!b.port.href().includes('match='),'the URL no longer carries the focus');
  b.back();assert.equal(b.navigation.route.page,'home');
 });
+test('a section focus travels in the URL only on its own tab and is forgotten like a match focus',()=>{
+ const pay=readClubRoute('https://club.example/?page=events&event=E&tab=fees&goto=pay');assert.deepEqual(pay.focus,{section:'pay'});assert.equal(clubRouteUrl('https://club.example/',pay),'/?page=events&event=E&tab=fees&goto=pay');
+ assert.deepEqual(readClubRoute('https://club.example/?page=events&event=E&tab=social&goto=awards').focus,{section:'awards'});
+ const mine=readClubRoute('https://club.example/?page=events&event=E&goto=mine&booking=B1');assert.deepEqual(mine.focus,{section:'mine',bookingId:'B1'});assert.equal(clubRouteUrl('https://club.example/',mine),'/?page=events&event=E&goto=mine&booking=B1');
+ assert.equal(readClubRoute('https://club.example/?page=events&event=E&tab=fees&goto=awards').focus,undefined,'a section belongs to one tab');
+ assert.equal(readClubRoute('https://club.example/?page=events&event=E&tab=rounds&goto=pay').focus,undefined,'the rounds tab takes only a match or round');
+ assert.equal(readClubRoute('https://club.example/?page=events&event=E&tab=fees&goto=pay&booking=B1').focus?.bookingId,undefined,'only the signup focus names a booking');
+ const b=browser();b.navigation.navigate({page:'events',eventId:'E',tab:'fees',focus:{section:'pay'}});assert.ok(b.port.href().includes('goto=pay'));
+ b.setScroll(320);b.navigation.clearFocus();assert.equal(b.navigation.route.focus,undefined);assert.equal(b.scroll,320);assert.ok(!b.port.href().includes('goto='));
+});
 
 test('closing a dialog leaves the page where it is, even if it moved while the dialog opened',()=>{
  const b=browser();b.navigation.navigate({page:'events',eventId:'E',tab:'rounds'});b.setScroll(300);

@@ -176,3 +176,10 @@ input[readonly]{background:#f8f7fb;color:#7c748c}
 
 /* Installed app: preserve touch targets and keep controls above the home indicator. */
 .shell{padding-bottom:calc(114px + env(safe-area-inset-bottom,0px))}.bottom-nav{bottom:calc(10px + env(safe-area-inset-bottom,0px))}.app-install{margin-top:16px}.auth-card .app-install .secondary{width:100%;justify-content:center}.install-app-guide ol{margin:8px 0;padding-left:23px}.install-app-guide li{margin:7px 0}.install-app-guide h3{margin:0;font-size:17px}@media(display-mode:standalone){body{overscroll-behavior-y:none}.shell{padding-top:calc(20px + env(safe-area-inset-top,0px))}.welcome{padding-top:calc(40px + env(safe-area-inset-top,0px))}}
+/* A section a link brings into view (app/section-focus.ts) glows briefly, like a focused match (docs/JUMP_TO_MATCH.md). */
+.is-section-focused{border-radius:12px;animation:section-focus 2.2s ease-out}
+@keyframes section-focus{0%,40%{box-shadow:0 0 0 3px #d4a23a,0 0 18px #d4a23a99}100%{box-shadow:0 0 0 0 transparent}}
+.wuxia-theme .is-section-focused{animation-name:section-focus-ink}
+@keyframes section-focus-ink{0%,40%{box-shadow:0 0 0 3px #a8382a,0 0 14px #a8382a80}100%{box-shadow:0 0 0 0 transparent}}
+@media(prefers-reduced-motion:reduce){.is-section-focused{animation:none;box-shadow:0 0 0 3px #d4a23a}}
+.ev-court-card,.fee-transfer,.fee-main-summary,.section-focus-target{scroll-margin:90px 0 110px}

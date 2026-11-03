@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,type Event,type Registration} from '../lib/domain/types';
-import {remindersForChange} from '../lib/reminder-contract';
+import {reminderFocus,remindersForChange} from '../lib/reminder-contract';
 const now=Date.parse('2026-10-06T12:00:00Z');
 function fixture(){const s=emptyState();s.accounts=['owner','one','two','outside'].map(id=>({id,email:'',role:id==='owner'?'admin' as const:'member' as const,playerId:'p'+id}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));const e:Event={id:'event',title:'周末球局',start:now+3600000,end:now+3*3600000,creatorId:'owner',venue:'球馆',address:'地址',capacity:12,signupDeadline:now+3*3600000,cancelDeadline:now,note:'',status:'open',courtMode:'interval',ballMode:'interval'};s.events=[e];s.bookings=[{id:'court1',eventId:e.id,name:'1号场',start:e.start,end:e.end,pricing:'hourly',cents:1200}];return s;}
 const registration=(status:Registration['status']='confirmed'):Registration=>({id:'reg',eventId:'event',playerId:'pone',sequence:1,status,arrival:now+3600000,departure:now+7200000,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''},bookingSignups:[{bookingId:'court1',status,sequence:1,arrival:now+3600000,departure:now+7200000,note:'',cancelRequested:false,registeredAt:now,joinedAsWaitlist:status==='waitlist'}]});
@@ -24,4 +24,13 @@ test('a new signup and all inbox identities are stable for an identical request'
 test('deleting an activity never creates a new reminder exposing its title',()=>{
  const before=fixture();before.registrations=[registration()];const after=structuredClone(before);after.events[0].deletedAt=0;
  assert.deepEqual(remindersForChange(after,before,'owner','delete',now),[]);
+});
+test('a reminder link brings its own section into view: the round, the open transfer, the MVP vote or the court card',()=>{
+ assert.deepEqual(reminderFocus({kind:'matches',tab:'rounds',roundId:'R1'}),{roundId:'R1'});
+ assert.equal(reminderFocus({kind:'matches',tab:'rounds'}),undefined);
+ assert.deepEqual(reminderFocus({kind:'fees',tab:'fees'}),{section:'pay'});
+ assert.deepEqual(reminderFocus({kind:'awards',tab:'social'}),{section:'awards'});
+ assert.deepEqual(reminderFocus({kind:'registration',tab:'overview',bookingId:'B1'}),{section:'mine',bookingId:'B1'});
+ assert.equal(reminderFocus({kind:'changes',tab:'overview'}),undefined,'a change notice opens the activity as before');
+ assert.equal(reminderFocus({kind:'bounty',tab:'overview'}),undefined);
 });

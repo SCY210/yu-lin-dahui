@@ -46,6 +46,20 @@ test('a game notice opens the rounds tab at its round, so the member\u2019s matc
  await sw.dispatch('push',{data:{json:()=>({title:'x',body:'y',eventId:'fixture-event',kind:'matches',tab:'rounds',roundId:'bad id/../',tag:'t'})}});
  assert.equal((sw.notifications[1].options.data as {path:string}).path,'/?page=events&event=fixture-event&tab=rounds','an unsafe round id is dropped');
 });
+test('a fee, MVP or registration notice opens its tab at the section it is about',async()=>{
+ const sw=worker(),path=(i:number)=>(sw.notifications[i].options.data as {path:string}).path;
+ const push=(message:Record<string,unknown>)=>sw.dispatch('push',{data:{json:()=>({title:'x',body:'y',eventId:'fixture-event',tag:'t',...message})}});
+ await push({kind:'fees',tab:'fees',section:'pay'});assert.equal(path(0),'/?page=events&event=fixture-event&tab=fees&goto=pay');
+ await push({kind:'awards',tab:'social',section:'awards'});assert.equal(path(1),'/?page=events&event=fixture-event&tab=social&goto=awards');
+ await push({kind:'registration',tab:'overview',section:'mine',bookingId:'court-2'});assert.equal(path(2),'/?page=events&event=fixture-event&goto=mine&booking=court-2');
+ await push({kind:'fees',tab:'fees',section:'awards'});assert.equal(path(3),'/?page=events&event=fixture-event&tab=fees','a section of another tab is dropped');
+ await push({kind:'registration',tab:'overview',section:'mine',bookingId:'bad id/../'});assert.equal(path(4),'/?page=events&event=fixture-event&goto=mine','an unsafe booking id is dropped');
+ for(let i=0;i<5;i++){await sw.dispatch('notificationclick',{notification:{close:()=>{},data:{path:path(i)}}});assert.equal(sw.navigated[i],'https://club.example'+path(i),'the click opens the link it built')}
+});
+test('clicking a game notice opens its round instead of falling back to the me page',async()=>{
+ const sw=worker();await sw.dispatch('notificationclick',{notification:{close:()=>{},data:{path:'/?page=events&event=fixture-event&tab=rounds&round=round-1'}}});
+ assert.deepEqual(sw.navigated,['https://club.example/?page=events&event=fixture-event&tab=rounds&round=round-1']);
+});
 test('missing, malformed or null payloads still create a visible fallback notification',async()=>{
  for(const value of [null,'wrong',[],undefined]){const sw=worker();await sw.dispatch('push',{data:{json:()=>value}});assert.equal(sw.notifications.length,1);assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=me')}
  const sw=worker();await sw.dispatch('push',{data:{json:()=>{throw Error('invalid')}}});assert.equal(sw.notifications.length,1);
