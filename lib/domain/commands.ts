@@ -91,6 +91,8 @@ const schemas = {
     notifyFees: z.object({ eventId: pid, settlementId: pid, reason }),
     feePayeeRemove: z.object({ payeeId: pid, reason }),
     settle: z.object({ eventId: pid, confirmed: z.boolean(), reason }),
+    settleRevoke: z.object({ eventId: pid, settlementId: pid, reason }),
+    feeUpdateIgnore: z.object({ eventId: pid, settlementId: pid, fingerprint: z.string().regex(/^[0-9a-f]{16}$/).nullable(), reason }),
     blockedWords: blockedWordsInput,
     settings: z.object({ name: text, invite: z.string().max(100).refine(v => v === '' || v.length >= 8, '邀请码至少8位，或留空保留'), rules: rulesSchema }), rating: z.object({ playerId: pid, value: z.number().min(0).max(4000).optional(), enabled: z.boolean(), reason }), role: z.object({ accountId: pid, role: z.enum(['admin', 'member']), reason }), simulationAccess: z.object({ accountId: pid, enabled: z.boolean(), reason }).strict(),
     historyPreview: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema }), historyRules: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema, reason }),
@@ -762,6 +764,26 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (p.confirmed && latest && sameSettlement(result, latest))
                 return null;
             s.settlements.push({ ...result, id: id(), created: now, version: Math.max(0, ...s.settlements.filter(x => x.eventId === e.id).map(x => x.version)) + 1, confirmed: p.confirmed, reason: p.reason });
+            if (p.confirmed) delete e.feeUpdateIgnored;
+            break;
+        }
+        case 'settleRevoke': {
+            // Withdraw the latest confirmed version: it stays stored, unconfirmed, and the version before it (if any) is
+            // current again. Paid marks belong to the activity and stay (docs/FEE_CONFIRMATION.md).
+            const p = command.payload, e = event(p.eventId);
+            const latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
+            if (!latest || latest.id !== p.settlementId) fail('409: 费用版本已更新，请刷新后再撤回');
+            Object.assign(latest, { confirmed: false, revokedAt: now, revokedBy: a.id });
+            delete e.feeUpdateIgnored;
+            break;
+        }
+        case 'feeUpdateIgnore': {
+            // Keep the current confirmed version for this exact changed preview; null shows the update again.
+            const p = command.payload, e = event(p.eventId);
+            const latest = s.settlements.filter(x => x.eventId === e.id && x.confirmed).sort((a, b) => b.version - a.version)[0];
+            if (!latest || latest.id !== p.settlementId) fail('409: 费用版本已更新，请刷新后再操作');
+            if (p.fingerprint) e.feeUpdateIgnored = { settlementId: latest.id, fingerprint: p.fingerprint, at: now, by: a.id };
+            else delete e.feeUpdateIgnored;
             break;
         }
         case 'blockedWords': {
