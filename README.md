@@ -2,7 +2,7 @@ Engineering verification and modernization: [ENGINEERING.md](docs/ENGINEERING.md
 
 # Yu Lin Da Hui
 
-A private, mobile-first badminton club web application. The existing UI is in Chinese; shared development documentation is in English. Defaults: EUR and Europe/Madrid.
+A private, mobile-first badminton club web application. The UI is in Chinese. Since November 2026 new and rewritten shared documentation is in Chinese; older documents listed in scripts/english-markdown.json stay in English until they are rewritten. Defaults: EUR and Europe/Madrid.
 
 Canonical source: [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui). Hosting uses the existing Sites project with Cloudflare D1 for structured data and R2 for photos. GitHub contains source, not production data, passwords, sessions, uploads, or local runtime state.
 
