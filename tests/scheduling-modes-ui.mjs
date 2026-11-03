@@ -37,7 +37,8 @@ try{
  const keepRounds=data.rounds,keepMatches=data.matches;
  data.rounds=Array.from({length:10},(_,i)=>({id:'long'+i,eventId:e.id,start:now-3600000+i*60000,duration:15,status:i<3?'complete':i===3?'playing':'published',eligible:data.players.map(p=>p.id),rest:[],seed:i+1,pointsSlot:i+1}));data.matches=[];
  await mount();const tabs=()=>ui.root.findAllByType('button').filter(b=>b.props.role==='tab');
- assert.deepEqual(tabs().map(b=>text(b)),['第 1 轮已结束','第 2 轮已结束','第 3 轮已结束','第 5 轮待开始','第 6 轮待开始','第 7 轮待开始','第 8 轮待开始','第 9 轮待开始','第 10 轮待开始']);
+ assert.deepEqual(tabs().map(b=>text(b)),['第 1 轮已结束','第 2 轮已结束','第 3 轮已结束','第 4 轮进行中','第 5 轮待开始','第 6 轮待开始','第 7 轮待开始','第 8 轮待开始','第 9 轮待开始','第 10 轮待开始']);
+ assert.deepEqual(tabs().slice(2,5).map(b=>b.props.className),['round-tab is-complete','round-tab is-playing','round-tab is-published'],'each tab carries its round\u2019s status colour');
  const rounds=()=>ui.root.findAllByType('details').filter(d=>d.props.className?.includes('round-disclosure')).map(d=>[text(d.findAllByType('summary')[0]).split(' · ')[0],d.props.open]);
  assert.deepEqual(rounds(),[['第 4 轮',true]],'while a round plays, the other rounds wait behind their tabs');
  await act(()=>tabs()[0].props.onClick());assert.deepEqual(rounds(),[['第 4 轮',true],['第 1 轮',true]]);assert.equal(tabs()[0].props['aria-selected'],true);

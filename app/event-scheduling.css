@@ -61,5 +61,15 @@
 .round-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:10px 0 4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .round-tab{display:grid;justify-items:center;flex:0 0 auto;min-width:64px;min-height:44px;padding:5px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .round-tab small{font-size:11px;font-weight:500;color:var(--muted-foreground)}
-.round-tab.is-complete{opacity:.8}
-.round-tab.is-selected{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--card));color:var(--primary);opacity:1}
+/* Round tabs share their sections' colours (both themes): green finished, red in progress with a live dot, plain not
+   started. The open round is marked by a ring in its own colour, never by the theme colour, so it cannot read as live. */
+.round-tab.is-complete{border-color:#a9d6bd;background:#eef8f2;color:#176346}
+.round-tab.is-complete small{color:#2f7a55}
+.round-tab.is-playing{border-color:#e7b3ac;background:#fdf1ef;color:#a3291d}
+.round-tab.is-playing small{color:#a3291d}
+.round-tab.is-playing small::before{content:'';display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:50%;background:#c0392b;vertical-align:middle;animation:round-live-dot 1.2s ease-in-out infinite}
+.round-tab.is-selected{box-shadow:0 0 0 2px currentColor;font-weight:800}
+.event-scheduling.is-ended .round-tab.is-playing{border-color:var(--border);background:var(--card);color:inherit}
+.event-scheduling.is-ended .round-tab.is-playing small{color:var(--muted-foreground)}
+.event-scheduling.is-ended .round-tab.is-playing small::before{display:none}
+@media(prefers-reduced-motion:reduce){.round-tab.is-playing small::before{animation:none}}
