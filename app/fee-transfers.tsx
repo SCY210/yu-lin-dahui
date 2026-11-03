@@ -3,7 +3,7 @@ import {ArrowRight,Copy} from 'lucide-react';
 import {toast} from 'sonner';
 import {euro} from './form-fields';
 import {transferPaid,type Advance,type Transfer} from '../lib/domain/fee-transfers';
-import FoldList from './fold-list';
+import {useState} from 'react';
 import './fee-transfers.css';
 
 type Settlement={id:string;eventId:string;version:number;advances?:Advance[];transfers?:Transfer[];collector?:string};
@@ -12,6 +12,7 @@ type Ctx={data:{me:{playerId:string};payments?:{eventId:string;playerId:string;c
 /** The fee-advance part of a confirmed split (docs/FEE_ADVANCES.md): who advanced what, and each transfer that settles
  * it. The payer, the receiver and the organisers can mark a transfer as made. */
 export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;title:string;feeRecipient?:{name:string;phone:string;playerId?:string}};settlement:Settlement;ctx:Ctx;manager:boolean}){
+ const [tab,setTab]=useState<'open'|'done'>('open');
  const {data,name}=ctx,me=data.me.playerId,payments=data.payments??[],transfers=settlement.transfers??[];
  const done=(t:Transfer)=>transferPaid(payments,e.id,t);
  const mark=(t:Transfer,paid:boolean)=>void ctx.action('feeTransferPaid',{eventId:e.id,settlementId:settlement.id,from:t.from,to:t.to,paid,reason:paid?'标记已转账':'撤销转账标记'},false).catch(()=>{});
@@ -29,7 +30,13 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
   <p className="hint">{settlement.collector?`大家把分摊转给收款人 ${name(settlement.collector)}${collectorPhone?'（'+collectorPhone+'）':''}，${name(settlement.collector)} 再把垫付的钱转给约场、出球的人。`:'约场、出球的人已经垫付，按下面的转账结清，转账笔数已尽量少。'}垫付人自己的分摊已从垫付里扣除。</p>
   {(settlement.advances?.length??0)>0&&<p className="fee-advances">已垫付：{settlement.advances!.map(a=><span key={a.playerId}>{a.playerId===me?'我':name(a.playerId)} {euro(a.paid??a.cents)}</span>)}</p>}
   {(()=>{const extra=(settlement.advances??[]).reduce((n,a)=>n+a.cents-(a.paid??a.cents),0);return extra?<p className="hint">大家的分摊按人取整到分，合计{extra>0?'多收':'少收'} {euro(Math.abs(extra))}，已按垫付金额{extra>0?'摊给':'由'}垫付人{extra>0?'':'分担'}。</p>:null})()}
-  {mine.length>0&&<div className="fee-transfer-list" aria-label="和我有关的转账"><FoldList items={[...mine].sort((a,b)=>Number(done(a))-Number(done(b))).map(row)} shown={6} unit="笔转账"/></div>}
+  {mine.length>0&&<div className="fee-transfer-list" aria-label="和我有关的转账">{(()=>{
+   // A collector's long list: once some transfers are done, two tabs keep the open ones in view instead of one long
+   // mixed list. A short list stays as it is.
+   const open=mine.filter(t=>!done(t)),closed=mine.filter(done);
+   if(mine.length<=6||!open.length||!closed.length)return mine.map(row);
+   return <><div className="fee-transfer-tabs" role="tablist" aria-label="我的转账">{(['open','done'] as const).map(k=><button type="button" role="tab" key={k} aria-selected={tab===k} className={tab===k?'is-selected':''} onClick={()=>setTab(k)}>{k==='open'?'待处理 '+open.length:'已完成 '+closed.length}</button>)}</div>{(tab==='open'?open:closed).map(row)}</>;
+  })()}</div>}
   {!mine.length&&<p className="hint">你没有需要转出或收取的钱。</p>}
   {others.length>0&&<details className="fee-transfer-others"><summary>其他人的转账 · {others.length} 笔 · 已转 {others.filter(done).length} 笔</summary><div className="fee-transfer-list">{others.map(row)}</div></details>}
  </section>;

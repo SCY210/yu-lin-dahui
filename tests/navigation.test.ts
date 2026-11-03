@@ -29,6 +29,12 @@ test('my achievements open on their own page; back returns to My at the same scr
  b.navigation.navigate({page:'achievements'});b.navigation.backTo({page:'me'});b.flush();assert.equal(b.navigation.route.page,'me');
 });
 
+test('the money page opens from home and back returns to home at the same scroll',()=>{
+ const route=readClubRoute('https://club.example/?page=money&event=E');
+ assert.equal(route.page,'money');assert.equal(route.eventId,'');assert.equal(clubRouteUrl('https://club.example/',route),'/?page=money');
+ const b=browser();b.setScroll(300);b.navigation.navigate({page:'money'});b.back();assert.equal(b.navigation.route.page,'home');assert.equal(b.scroll,300);
+});
+
 test('treasure shop deep links and mobile back preserve the originating page and scroll',()=>{
  const route=readClubRoute('https://club.example/?page=treasure&event=E&player=P');
  assert.equal(route.page,'treasure');assert.equal(route.eventId,'');assert.equal(route.playerId,'');

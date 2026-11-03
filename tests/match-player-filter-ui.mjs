@@ -36,7 +36,7 @@ try{
  await choose('p7');assert.deepEqual(cards(),[]);assert.ok(text(ui.toJSON()).includes('暂时没有对局'));
  await choose('p9');await expand('已撤销轮次');assert.deepEqual(cards(),['retired']);
  await click('只看我的');assert.ok(cards().includes('first'));assert.ok(!cards().includes('second'));
- await click('清除筛选');await expand('第 2 轮');assert.ok(cards().includes('second'));assert.ok(cards().includes('other-court'));assert.equal(JSON.stringify(data),before);assert.equal(calls.length,0,'filter never writes commands');
+ await click('清除筛选');assert.ok(!cards().includes('second'),'only the next round shows below the round tabs');await act(()=>ui.root.findAllByType('button').find(b=>b.props.role==='tab'&&text(b).startsWith('第 2 轮')).props.onClick());assert.ok(cards().includes('second'));assert.ok(cards().includes('other-court'));assert.equal(JSON.stringify(data),before);assert.equal(calls.length,0,'filter never writes commands');
  e.schedulingMode='live';e.livePlay={enabled:true,paused:false,preferences:[],completions:[],rest:[]};data.rounds=[round('r0',0,'playing'),round('r1',1,'complete')];
  data.matches=[match('live-a','r0',['p0','p1'],['p2','p3'],'playing'),match('live-b','r0',['p4','p6'],['p5','p8'],'playing','court1'),match('past-a','r1',['p0','p4'],['p5','p8'],'complete'),match('past-other','r1',['p0','p1'],['p2','p3'],'complete')];
  await mount();await choose('p5');assert.deepEqual(cards(),['live-b','past-a']);assert.ok(text(ui.toJSON()).includes('已完成积分赛 · 1 局'));
