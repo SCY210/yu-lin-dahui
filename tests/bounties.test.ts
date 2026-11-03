@@ -72,8 +72,12 @@ test('each challenge is judged on completed games after the scheduled end; a dec
  assert.equal(bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,rated(400,false)),'failed','a loss does not count');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[22,20],[21,9]]),'completed');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[21,9]]),'failed','fewer than four games');assert.equal(await judge('unbeaten',[[21,18],[21,19],[19,21],[21,9],[21,9]]),'failed','one loss breaks the golden body');
- assert.equal(await judge('gather',[[21,8],[21,11],[18,21],[21,11]]),'completed','net +13 +10 -3 +10 = +30, exactly enough');
- assert.equal(await judge('gather',[[21,8],[21,11],[17,21],[21,11]]),'failed','net +29');assert.equal(await judge('gather',[[21,5],[21,5],[5,21]]),'failed','lost games count against: +16 +16 -16');
+ // 夺魁: the most games won by anyone at the activity, ties included, and at least three. p0 and p1 share a side here.
+ const champion=async(extra:[string[],string[],number,number][],ownWins:number)=>{const {s,e}=setup('champion');await accept(s,e);for(let i=0;i<ownWins;i++)game(s,e,'own-'+i,2+i*13,[21,15]);extra.forEach(([a,b,x,y],i)=>coinMatch(s,e,'other-'+i,{a,b,scoreA:x,scoreB:y,games:[{a:x,b:y}],start:e.start+(3+i*13)*minute,end:e.start+(15+i*13)*minute}));return bountyOutcome(s,e,e.bounties![0],e.end)};
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10]],3),'completed','three wins, no one else has more');
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10]],3),'completed','a tie for first counts');
+ assert.equal(await champion([[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p5'],['p6','p7'],21,10],[['p4','p6'],['p5','p7'],21,10]],3),'failed','p4 won four');
+ assert.equal(await champion([],2),'failed','at least three wins');
  assert.equal(await judge('close',[[21,19],[23,21],[21,15]]),'completed','two wins by two points');assert.equal(await judge('close',[[21,19],[19,21],[21,18]]),'failed','one close win and a close loss');
  const sweep=async(opponents:string[][],format?:'singles')=>{const {s,e}=setup('sweep',format?{matchFormat:format}:{});await accept(s,e);opponents.forEach((b,i)=>game(s,e,'sweep-'+i,2+i*13,[21,17],b));return bountyOutcome(s,e,e.bounties![0],e.end)};
  assert.equal(await sweep([['p2','p3'],['p4','p5'],['p6','p7']]),'completed','five or more different opponents beaten');

@@ -9,8 +9,8 @@ export const bountyEffects:Record<BountyKind,{word:string;name:string}>={
  rout:{word:'破',name:'雷霆破军'},
  upset:{word:'逆',name:'鲤跃龙门'},
  deuce:{word:'鏖',name:'两仪鏖战'},
- unbeaten:{word:'全',name:'金身不坏'},
- gather:{word:'聚',name:'聚气成海'},
+ unbeaten:{word:'金',name:'金身不坏'},
+ champion:{word:'魁',name:'魁星点斗'},
  sweep:{word:'扫',name:'横扫八方'},
  close:{word:'险',name:'刀尖问道'},
 };
@@ -78,14 +78,12 @@ const scenes:Record<BountyKind,ReactNode>={
   {[[-1,40],[1,52],[-1,76],[1,88],[-1,100],[1,64]].map(([side,y],i)=><g key={i} transform={`translate(${side<0?84:156} ${y}) scale(${side} 1)`}><g className="fx-arrow" style={n(i)}><path d="M0 0H22M0 0L5 -3M0 0L5 3"/></g></g>)}
   <g className="fx-bell"><path className="fx-bell-body" d="M94 98Q94 48 120 42Q146 48 146 98Z"/><rect className="fx-bell-rim" x={88} y={96} width={64} height={7} rx={3}/><circle className="fx-bell-rim" cx={120} cy={39} r={4}/><path className="fx-bell-line" d="M100 66H140M98 80H142"/><text className="fx-bell-word" x={120} y={62} textAnchor="middle">护</text></g>
  </>,
- // 聚气成海: qi motes stream in from every side and gather into an orb that swells, with tides ringing it.
- gather:<>
-  <ellipse className="fx-tide" cx={120} cy={66} rx={70} ry={22}/>
-  <ellipse className="fx-tide is-late" cx={120} cy={66} rx={92} ry={30}/>
-  {Array.from({length:14},(_,i)=>{const a=i*Math.PI*2/14,r=86+(i%3)*14;return <circle key={i} className="fx-qi" cx={120+Math.cos(a)*r} cy={66+Math.sin(a)*r*.55} r={i%2?1.8:2.6} style={n(i,{'--dx':(-Math.cos(a)*r).toFixed(1)+'px','--dy':(-Math.sin(a)*r*.55).toFixed(1)+'px'})}/>})}
-  <circle className="fx-orb-glow" cx={120} cy={66} r={24}/>
-  <circle className="fx-orb-core" cx={120} cy={66} r={13}/>
-  <path className="fx-orb-swirl" d="M120 56A10 10 0 0 1 120 76A5 5 0 0 1 120 66A5 5 0 0 0 120 56Z"/>
+ // 魁星点斗: the seven stars of the Dipper light one by one along their line, then the head star (魁) flares above all.
+ champion:<>
+  <path className="fx-dipper" d="M40 96L72 88L100 92L124 76L136 50L172 40L190 64"/>
+  {[[40,96],[72,88],[100,92],[124,76],[136,50],[172,40],[190,64]].map(([x,y],i)=><circle key={i} className="fx-star" cx={x} cy={y} r={3.2} style={n(i)}/>)}
+  <g className="fx-kui"><path d="M190 46L194 60L208 64L194 68L190 82L186 68L172 64L186 60Z"/></g>
+  <circle className="fx-kui-glow" cx={190} cy={64} r={22}/>
  </>,
  // 横扫八方: a bagua octagon opens, a crescent of sword qi sweeps all the way round and eight foes are flung outward.
  sweep:<>

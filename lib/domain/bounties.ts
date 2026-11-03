@@ -9,27 +9,27 @@ import type {RatedGame} from './realm-rating';
 
 /** Bounties (docs/BOUNTIES.md): before a points match some members are offered one challenge about how they play in
  * the games the scheduler gives them. Accepting risks a point penalty; declining costs nothing. */
-export type BountyKind='streak'|'rout'|'upset'|'deuce'|'unbeaten'|'gather'|'sweep'|'close';
+export type BountyKind='streak'|'rout'|'upset'|'deuce'|'unbeaten'|'champion'|'sweep'|'close';
 export type BountyReward={coins:number;points:number};
 export type BountySettings={rewards:Record<BountyKind,BountyReward>;penalty:number};
 /** A member's answer, with the reward and penalty frozen when they accepted. */
 export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'declined';at:number;coins:number;points:number;penalty:number};
 export type BountyOutcome='completed'|'failed';
 
-export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','gather','sweep','close'];
+export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','champion','sweep','close'];
 /** Share of eligible members offered a bounty, how early, and the thresholds of each challenge. */
 export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20,
- bountyUnbeatenGames=4,bountyGatherMargin=30,bountySweepOpponents={doubles:5,singles:3},bountyCloseWins=2;
+ bountyUnbeatenGames=4,bountyChampionWins=3,bountySweepOpponents={doubles:5,singles:3},bountyCloseWins=2;
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
- unbeaten:{coins:25,points:12},sweep:{coins:18,points:9},gather:{coins:15,points:8},close:{coins:12,points:6}},penalty:10};
-export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏',unbeaten:'全胜悬赏',gather:'聚气悬赏',sweep:'横扫悬赏',close:'险胜悬赏'};
+ unbeaten:{coins:25,points:12},sweep:{coins:18,points:9},champion:{coins:20,points:10},close:{coins:12,points:6}},penalty:10};
+export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏',unbeaten:'金身悬赏',champion:'夺魁悬赏',sweep:'横扫悬赏',close:'险胜悬赏'};
 export const bountyGoals:Record<BountyKind,string>={
  streak:`本场活动连赢 ${bountyStreakWins} 局`,
  rout:`赢一局，且对手只得个位数分（不超过 ${bountyRoutMaxScore} 分）`,
  upset:`赢一局对手平均修为比你方高至少 ${bountyUpsetGap} 的比赛`,
  deuce:`赢一局 ${bountyDeuceScore} 平后的加分赛（如 22:20）`,
- unbeaten:`本场活动每一局都赢，一局不输（至少要打 ${bountyUnbeatenGames} 局）`,
- gather:`本场活动所有局加起来，得分比失分多至少 ${bountyGatherMargin} 分（如 21:15 净胜 6 分，15:21 净输 6 分）`,
+ unbeaten:`本场活动一局不输，金身不破（至少打满 ${bountyUnbeatenGames} 局）`,
+ champion:`本场活动赢的局数力压全场，独占鳌头（并列第一也算，至少赢 ${bountyChampionWins} 局）`,
  sweep:`本场活动击败至少 ${bountySweepOpponents.doubles} 位不同对手（单打 ${bountySweepOpponents.singles} 位），横扫八方`,
  close:`赢下至少 ${bountyCloseWins} 局只领先 2 分的比赛（如 21:19），刀尖问道`,
 };
@@ -97,7 +97,12 @@ export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecor
  else if(record.kind==='rout')met=won.some(g=>loserScore(g)<=bountyRoutMaxScore);
  else if(record.kind==='deuce')met=won.some(g=>loserScore(g)>=bountyDeuceScore);
  else if(record.kind==='unbeaten')met=played.length>=bountyUnbeatenGames&&won.length===played.length;
- else if(record.kind==='gather')met=played.reduce((sum,g)=>sum+(g.side==='a'?g.a-g.b:g.b-g.a),0)>=bountyGatherMargin;
+ else if(record.kind==='champion'){
+  // Games won by everyone at the activity; the bounty holder must have the most (a tie for first counts).
+  const wins=new Map<string,number>();
+  for(const m of s.matches)if(m.eventId===e.id)for(const g of gameFacts(m))for(const pid of m[g.winner])wins.set(pid,(wins.get(pid)??0)+1);
+  met=won.length>=bountyChampionWins&&won.length>=Math.max(0,...wins.values());
+ }
  else if(record.kind==='sweep')met=new Set(won.flatMap(g=>g.match[g.side==='a'?'b':'a'])).size>=bountySweepOpponents[eventFormat(e)==='singles'?'singles':'doubles'];
  else if(record.kind==='close')met=won.filter(g=>Math.abs(g.a-g.b)===2).length>=bountyCloseWins;
  else met=(games??[]).some(g=>g.eventId===e.id&&g.playerId===id&&g.won&&g.opponent-g.team>=bountyUpsetGap);
