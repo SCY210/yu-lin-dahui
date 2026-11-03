@@ -40,13 +40,13 @@ try{
  data.bookings.forEach(b=>{b.start=e.start;b.end=e.end});data.registrations.forEach(r=>{r.arrival=e.start;r.departure=e.end});
  await mount();const overtimeSelector=ui.root.findByProps({'aria-label':'排场方式'});assert.equal(overtimeSelector.props.disabled,false);assert.equal(overtimeSelector.findAllByType('option').find(o=>o.props.value==='live').props.disabled,false);assert.equal(overtimeSelector.findAllByType('option').find(o=>o.props.value==='planned').props.disabled,true);
  e.schedulingMode='live';delete e.livePlay;data.matches=[];data.rounds=[];await mount();const overtimeStart=buttons().find(b=>text(b)==='开始实时排场');assert.ok(overtimeStart&&!overtimeStart.props.disabled);await act(()=>overtimeStart.props.onClick());assert.deepEqual(sent.at(-1),['liveStart',{eventId:e.id}]);
- // The recommendation above the selector: planned with one court, live with two, only for those who can switch.
- Object.assign(e,{status:'open',start:now-600000,end:now+3600000,schedulingMode:'planned'});delete e.livePlay;data.rounds=[];data.matches=[];data.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200}];
+ // The recommendation above the selector is always the planned schedule, only for those who can switch.
+ Object.assign(e,{status:'open',start:now-600000,end:now+3600000,schedulingMode:'planned'});delete e.livePlay;data.rounds=[];data.matches=[];data.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200},{id:'court-2',eventId:e.id,name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:1200}];
  const advice=()=>ui.root.findAllByProps({'aria-label':'推荐排场方式'}).find(n=>n.type==='aside');
- await mount();assert.match(text(advice()),/推荐：预排赛程 · 正在使用/);assert.ok(!buttons().some(b=>/^改用/.test(text(b))),'no switch button for the current mode');
- data.bookings.push({id:'court-2',eventId:e.id,name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:1200});
- await mount();assert.match(text(advice()),/推荐：实时排场/);assert.match(text(advice()),/2 片场/);assert.equal(text(ui.root.findByProps({'aria-label':'排场方式'}).findAllByType('option').find(o=>o.props.value==='live')),'实时排场（推荐）');
- await click('改用实时排场');assert.equal(opened.at(-1)[0],'切换排场方式');assert.equal(opened.at(-1)[2].mode,'live');
+ await mount();assert.match(text(advice()),/推荐：预排赛程 · 正在使用/);assert.match(text(advice()),/修为分/);assert.ok(!buttons().some(b=>/^改用/.test(text(b))),'no switch button for the current mode');
+ assert.equal(text(ui.root.findByProps({'aria-label':'排场方式'}).findAllByType('option').find(o=>o.props.value==='planned')),'预排赛程（推荐）');
+ e.schedulingMode='live';await mount();assert.match(text(advice()),/推荐：预排赛程/);assert.doesNotMatch(text(advice()),/正在使用/);
+ await click('改用预排赛程');assert.equal(opened.at(-1)[0],'切换排场方式');assert.equal(opened.at(-1)[2].mode,'planned');
  ctx.readOnly=true;await mount();assert.equal(advice(),undefined,'members see no recommendation');delete ctx.readOnly;
  e.matchFormat='practice';await mount();assert.equal(ui.toJSON(),null);await act(()=>ui.unmount());ui=null;assert.equal(listeners.size,0);
  console.log('PASS scheduler UI: two-mode confirmation with retired one-round mode, legacy schedule visibility, batch/single publish, draft swap/court controls without locks, manual generation gating, live start, member permissions, historic score correction, the highlighted mode recommendation and practice exclusion');
