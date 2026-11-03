@@ -21,7 +21,7 @@ export default function HomeUnpaid({settlements,payments,players,me,events,onOpe
  const groups=[...new Set(rows.map(r=>r.eventId))].map(eventId=>({eventId,bills:rows.filter(r=>r.eventId===eventId).sort((x,y)=>Number(x.friend)-Number(y.friend))}));
  const transferGroups=[...new Set(transfers.map(t=>t.eventId))].map(eventId=>({eventId,list:transfers.filter(t=>t.eventId===eventId)}));
  const name=(id:string)=>players.find(p=>p.id===id)?.name??'代报名朋友';
- const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);toast.success('收款信息已复制')}catch{toast.error('复制失败，请手动复制号码')}};
+ const copy=async(text:string)=>{try{await navigator.clipboard.writeText(text);toast.success('电话号码已复制')}catch{toast.error('复制失败，请手动复制号码')}};
  return <section className="card home-unpaid" role="status" aria-live="polite">
   <div className="home-unpaid-title"><Wallet size={20} aria-hidden="true"/><strong>有 {groups.length+transferGroups.length} 场活动还没付款</strong></div>
   <p className="hint">{transfers.length?'转账后点“标记已转”（或“标记已付款”），提示就会消失。':'转账后点“标记已付款”，提示就会消失。'}</p>
@@ -31,7 +31,7 @@ export default function HomeUnpaid({settlements,payments,players,me,events,onOpe
    </button>
    {(payee||onMarkPaid)&&<div className="home-unpaid-actions">
     {payee&&<span className="home-unpaid-payee">转账给 <strong>{payee.name}</strong> · {payee.phone}</span>}
-    {payee&&<button type="button" className="ghost" onClick={()=>void copy(payee.name+' · '+payee.phone)}><Copy size={15} aria-hidden="true"/> 复制收款信息</button>}
+    {payee&&<button type="button" className="ghost" onClick={()=>void copy(payee.phone)}><Copy size={15} aria-hidden="true"/> 复制电话号码</button>}
     {onMarkPaid&&<button type="button" className="primary" disabled={busy} onClick={()=>onMarkPaid(bills.map(({eventId,settlementId,playerId})=>({eventId,settlementId,playerId})))}><Check size={15} aria-hidden="true"/> {bills.length>1?'全部标记已付款':'标记已付款'}</button>}
    </div>}
   </div>})}

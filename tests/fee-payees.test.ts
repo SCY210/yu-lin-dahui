@@ -45,6 +45,13 @@ test('页面数据给出常用收款人和是否由自己添加，不暴露添�
  assert.equal(projectClubState(s,other,'2026-10',2026,now).settings.feePayees[0].mine,false);
 });
 
+test('只有群主和管理员标为常用收款人，其他人收进折叠',async()=>{
+ const s=fixture();s.settings.ownerAccountId=other.id;
+ await set(s,organizer,'e1','p1','600 111 222');await set(s,organizer,'e1','p0','600 333 444');await set(s,organizer,'e2','p2','600 555 666');
+ const leader=Object.fromEntries(projectClubState(s,organizer,'2026-10',2026,now).settings.feePayees.map(p=>[p.playerId,p.leader===true]));
+ assert.deepEqual(leader,{p0:true,p1:false,p2:true},'administrator and club owner are regular payees; a member is not');
+});
+
 test('收款人必须是有账号的球友',async()=>{
  const s=fixture();s.players.push({id:'friend',name:'朋友',ownerId:'organizer',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});const before=structuredClone(s);
  for(const playerId of ['friend','missing'])await assert.rejects(()=>set(s,organizer,'e1',playerId,'600 111 222'),/有账号的球友/);
