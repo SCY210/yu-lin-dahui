@@ -40,6 +40,12 @@ test('every reminder kind, bounties included, shows its own title without the cl
  await sw.dispatch('push',{data:{json:()=>({body:'x',eventId:'fixture-event',kind:'fees',tab:'fees'})}});assert.equal(sw.notifications[1].title,'活动提醒');
  for(const n of sw.notifications)assert.ok(!n.title.includes('羽林大会'));
 });
+test('a game notice opens the rounds tab at its round, so the member\u2019s match scrolls into view',async()=>{
+ const sw=worker();await sw.dispatch('push',{data:{json:()=>({title:'轮到你上场了 · 1号场',body:'a 对 b',eventId:'fixture-event',kind:'matches',tab:'rounds',roundId:'round-1',tag:'t'})}});
+ assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=events&event=fixture-event&tab=rounds&round=round-1');
+ await sw.dispatch('push',{data:{json:()=>({title:'x',body:'y',eventId:'fixture-event',kind:'matches',tab:'rounds',roundId:'bad id/../',tag:'t'})}});
+ assert.equal((sw.notifications[1].options.data as {path:string}).path,'/?page=events&event=fixture-event&tab=rounds','an unsafe round id is dropped');
+});
 test('missing, malformed or null payloads still create a visible fallback notification',async()=>{
  for(const value of [null,'wrong',[],undefined]){const sw=worker();await sw.dispatch('push',{data:{json:()=>value}});assert.equal(sw.notifications.length,1);assert.equal((sw.notifications[0].options.data as {path:string}).path,'/?page=me')}
  const sw=worker();await sw.dispatch('push',{data:{json:()=>{throw Error('invalid')}}});assert.equal(sw.notifications.length,1);

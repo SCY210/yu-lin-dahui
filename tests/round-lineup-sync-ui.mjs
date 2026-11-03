@@ -11,6 +11,7 @@ await build({entryPoints:['app/event-scheduling.tsx'],outfile:'.test-output/roun
  });
  b.onLoad({filter:/.*/,namespace:'round-sync'},a=>({loader:'js',contents:a.path==='./match-card'
   ?`import{createElement as h}from'react';export default function Match({m,selected,onSelect}){return h('div',{},[...m.a,...m.b].map(id=>h('button',{key:id,'data-player':id,'data-selected':selected===id,onClick:()=>onSelect(id)},id)))}`
+  :a.path==='./match-focus'?`export function useMatchFocus(){return {}}`
   :a.path==='./group-player'?`import{createElement as h}from'react';export default function Player({id,selected,onSelect}){return h('button',{'data-player':id,'data-selected':selected===id,onClick:()=>onSelect(id)},id)}`
   :`export default function Shell({children}){return children??null}`}));
 }}]});

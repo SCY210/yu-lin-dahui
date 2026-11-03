@@ -9,7 +9,8 @@ type Context={data:ScoreReminderData&{bookings:{id:string;name:string}[]};name:(
 const externalDialog=()=>!!document.querySelector('[role="dialog"],[role="alertdialog"]');
 
 /** hideBar: the page offers its own score buttons (home live cards and to-dos), so only the form is rendered. */
-export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Context;blocked?:boolean;hideBar?:boolean}){
+/** onOpenMatch: the bar's button opens the activity's rounds at the match with its form (docs/JUMP_TO_MATCH.md). */
+export default function ScoreReminder({ctx,blocked=false,hideBar=false,onOpenMatch}:{ctx:Context;blocked?:boolean;hideBar?:boolean;onOpenMatch?:(eventId:string,matchId:string)=>void}){
  const [selection,setSelection]=useState<{id:string;mode:'score'}|null>(null);
  // The bar lists own games; a home score button may open any game this account can score.
  // A game someone else just scored stays open so the form can show their score instead of vanishing.
@@ -23,7 +24,7 @@ export default function ScoreReminder({ctx,blocked=false,hideBar=false}:{ctx:Con
   window.addEventListener(scoreEntryRequest,open);return()=>window.removeEventListener(scoreEntryRequest,open);
  },[]);
  const dismiss=()=>setSelection(null);
- const manualOpen=()=>setSelection({id:pending[0].id,mode:'score'});
+ const manualOpen=()=>onOpenMatch?onOpenMatch(pending[0].eventId,pending[0].id):setSelection({id:pending[0].id,mode:'score'});
  if(!pending.length&&!match)return null;
  const chosen=match??pending[0],event=ctx.data.events.find(e=>e.id===chosen.eventId),court=ctx.data.bookings.find(b=>b.id===chosen.courtId);
  return <>

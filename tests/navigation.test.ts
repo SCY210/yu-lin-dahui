@@ -35,6 +35,23 @@ test('the money page opens from home and back returns to home at the same scroll
  const b=browser();b.setScroll(300);b.navigation.navigate({page:'money'});b.back();assert.equal(b.navigation.route.page,'home');assert.equal(b.scroll,300);
 });
 
+test('a match focus travels in the URL on the rounds tab only, and clearing it keeps the page where it is',()=>{
+ const route=readClubRoute('https://club.example/?page=events&event=E&tab=rounds&match=M1&score=1');
+ assert.deepEqual(route.focus,{matchId:'M1'},'a score request never comes from the URL');assert.equal(clubRouteUrl('https://club.example/',route),'/?page=events&event=E&tab=rounds&match=M1');
+ assert.deepEqual(readClubRoute('https://club.example/?page=events&event=E&tab=rounds&round=R1').focus,{roundId:'R1'});
+ assert.equal(readClubRoute('https://club.example/?page=events&event=E&tab=fees&match=M1').focus,undefined,'only the rounds tab takes a focus');
+ const b=browser();b.navigation.navigate({page:'events',eventId:'E',tab:'rounds',focus:{matchId:'M1'}});assert.deepEqual(b.navigation.route.focus,{matchId:'M1'});
+ b.setScroll(640);b.navigation.clearFocus();assert.equal(b.navigation.route.focus,undefined);assert.equal(b.scroll,640,'clearing the focus does not move the page');
+ assert.ok(!b.port.href().includes('match='),'the URL no longer carries the focus');
+ b.back();assert.equal(b.navigation.route.page,'home');
+});
+
+test('closing a dialog leaves the page where it is, even if it moved while the dialog opened',()=>{
+ const b=browser();b.navigation.navigate({page:'events',eventId:'E',tab:'rounds'});b.setScroll(300);
+ let closed=false;b.navigation.openDialog('score',()=>{closed=true});b.setScroll(1040);
+ b.navigation.dismissDialog('score');b.flush();assert.equal(b.navigation.route.page,'events');assert.equal(b.scroll,1040,'no jump back to where the dialog opened');assert.equal(closed,false,'dismissing does not call the closer again');
+});
+
 test('treasure shop deep links and mobile back preserve the originating page and scroll',()=>{
  const route=readClubRoute('https://club.example/?page=treasure&event=E&player=P');
  assert.equal(route.page,'treasure');assert.equal(route.eventId,'');assert.equal(route.playerId,'');
