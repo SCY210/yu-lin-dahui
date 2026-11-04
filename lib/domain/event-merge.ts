@@ -2,7 +2,7 @@ import {guestNameKey} from './guest-names';
 import {eventFormat} from './match-format';
 import {clubOwnerId,isClubOwner} from './ownership';
 import {cancellationDeadline} from './cancellation';
-import {bookingCapacity,syncRegistration} from './booking-signups';
+import {bookingCapacity,bookingOccupancy,bookingRows,syncRegistration} from './booking-signups';
 import {fail,type Account,type BookingSignup,type Event,type Registration,type State} from './types';
 const day=(at:number)=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(at);
 
@@ -15,7 +15,7 @@ export function upgradeActivitySignups(s:State,e:Event){
   const b=options[0];r.bookingSignups=[{bookingId:b.id,status:r.status,sequence:r.sequence,arrival:r.arrival,departure:r.departure,note:r.note,cancelRequested:r.cancelRequested,registeredAt:r.registeredAt??e.start,joinedAsWaitlist:r.joinedAsWaitlist??false,...(r.promotedAt!==undefined?{promotedAt:r.promotedAt}:{})}];
   syncRegistration(r);
  }
- for(const b of bookings){const formal=s.registrations.flatMap(r=>r.eventId===e.id?r.bookingSignups??[]:[]).filter(x=>x.bookingId===b.id&&x.status==='confirmed').length;b.signupCapacity=Math.max(bookingCapacity(b,e),formal)}
+ for(const b of bookings){const formal=bookingOccupancy(bookingRows(s,b.id),b.start,b.end).peak;b.signupCapacity=Math.max(bookingCapacity(b,e),formal)}
 }
 
 /** Upcoming activities only. Originals stay in the recoverable archive. */
@@ -70,7 +70,7 @@ export function mergeUpcomingActivities(s:State,a:Account,targetId:string,source
   if(source.note&&source.note!==target.note)target.note=[target.note,source.note].filter(Boolean).join('\n');
   source.deletedAt=now;source.deletedBy=a.id;source.mergedInto=target.id;
  }
- for(const b of work.bookings.filter(b=>b.eventId===target.id)){const formal=work.registrations.flatMap(r=>r.eventId===target.id?r.bookingSignups??[]:[]).filter(x=>x.bookingId===b.id&&x.status==='confirmed').length;b.signupCapacity=Math.max(bookingCapacity(b,target),formal)}
+ for(const b of work.bookings.filter(b=>b.eventId===target.id)){const formal=bookingOccupancy(bookingRows(work,b.id),b.start,b.end).peak;b.signupCapacity=Math.max(bookingCapacity(b,target),formal)}
  for(const r of work.rounds.filter(r=>r.eventId===target.id)){if(['draft','published'].includes(r.status)||work.matches.filter(m=>m.roundId===r.id).every(m=>m.status==='cancelled')){r.status='cancelled';work.matches.filter(m=>m.roundId===r.id).forEach(m=>m.status='cancelled')}}
  target.attendanceMode='automatic';target.cancelDeadline=cancellationDeadline(target);
  work.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'mergeEvents',reason,changes:{targetEventId:target.id,sourceEventIds:sourceIds,originalTargetPlayers:oldTargetCount,mergedPlayers:work.registrations.filter(r=>r.eventId===target.id&&r.status!=='cancelled').length,bookings:work.bookings.filter(b=>b.eventId===target.id).map(b=>b.id)}});

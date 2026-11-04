@@ -9,7 +9,7 @@ import { businessTimestamp } from './timestamp';
 import { canManageEvent } from './permissions';
 import { cancellationNeedsApproval } from './cancellation';
 import { archiveDefaultAttendance } from './attendance';
-import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
+import { archiveBooking, bookingCapacity, bookingOccupancy, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
 import { canManageMembers } from './member-managers';
 import { duplicateGuestSignup } from './guest-names';
 import { duplicateSignupMessage, hasSignupOverlap } from './signup-conflicts';
@@ -51,6 +51,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 fail('你已报名其他场地的重叠时段，请先取消或调整');
             if (hasSignupOverlap(s, e.id, player, p.arrival, p.departure, player.id))
                 fail(duplicateSignupMessage);
+            if (row?.status === 'confirmed' && bookingOccupancy(bookingRows(s,b.id).filter(x=>x.playerId!==player.id),p.arrival,p.departure).peak >= bookingCapacity(b,e))
+                fail('调整后的参加时段已满，请保留原时段或先取消后重新候补');
             if (s.matches.some(m => m.eventId === e.id && m.status === 'playing' && [...m.a, ...m.b].includes(player.id)))
                 fail('成员正在比赛，请先完成比赛');
             if (!r) {
@@ -76,7 +78,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 row.note = p.note;
             }
             else {
-                row = { bookingId: b.id, status: 'waitlist', sequence: Math.max(0, ...bookingRows(s, b.id).map(x => x.sequence)) + 1, arrival: p.arrival, departure: p.departure, note: p.note, registeredAt: now, joinedAsWaitlist: bookingRows(s, b.id).filter(x => x.status === 'confirmed').length >= bookingCapacity(b, e), cancelRequested: false };
+                const rows=bookingRows(s,b.id);
+                row = { bookingId: b.id, status: 'waitlist', sequence: Math.max(0, ...rows.map(x => x.sequence)) + 1, arrival: p.arrival, departure: p.departure, note: p.note, registeredAt: now, joinedAsWaitlist: bookingOccupancy(rows,p.arrival,p.departure).peak >= bookingCapacity(b, e), cancelRequested: false };
                 const old = r.bookingSignups!.findIndex(x => x.bookingId === b.id);
                 if (old >= 0)
                     r.bookingSignups![old] = row;
@@ -84,6 +87,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                     r.bookingSignups!.push(row);
             }
             promoteBooking(s, e, b, now);
+            if(row.status==='waitlist')row.joinedAsWaitlist=true;
             syncRegistration(r);
             promoteLegacy(s, e, now);
             break;

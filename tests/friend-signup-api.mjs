@@ -25,6 +25,7 @@ try{
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  s.events=[{id:'event',creatorId:'owner',title:'Fictional guest signup',start,end,venue:'Fictional venue',address:'',capacity:1,signupDeadline:end,cancelDeadline:start-86400000,status:'open',note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
  s.bookings=[{id:'court',eventId:'event',name:'Court',start,end,pricing:'total',cents:1200,signupCapacity:1}];
+ s.events.push({...s.events[0],id:'shift-event'});s.bookings.push({...s.bookings[0],id:'shift-court',eventId:'shift-event'});
  await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
  const origin='https://club.example',signIn=id=>fixture.user=id?{userId:id,method:'password',displayName:'Fictional '+id}:null;
  const post=async(payload,requestId=crypto.randomUUID(),options={})=>api.POST(new Request(origin+'/api/club',{method:'POST',headers:{Origin:options.origin??origin,'Content-Type':'application/json'},body:JSON.stringify({action:options.action??'friendSignup',payload,requestId,actor:options.actor??fixture.user?.userId,revision:options.revision??(await api.load()).revision})}));
@@ -66,5 +67,16 @@ try{
  assert.equal((await post({bookingId:'court',playerId:'p2',reason:'Fictional cancellation'},crypto.randomUUID(),{action:'courtCancel'})).status,200);
  assert.equal((await post(signup)).status,200,'an actually cancelled signup can join again');
  assert.equal((await api.load()).registrations.find(r=>r.playerId==='p2').bookingSignups.length,1);
+ // Separate halves share capacity, including racing requests for the final place in the second half.
+ const middle=start+(end-start)/2,shift=(playerId,arrival,departure)=>({mode:'existing',playerId,bookingId:'shift-court',arrival,departure,note:''});
+ assert.equal((await post(shift('p1',start,middle))).status,200);
+ const secondHalf=await Promise.all(['p0','p2'].map(playerId=>post(shift(playerId,middle,end),crypto.randomUUID(),{action:'courtRegister'})));
+ assert.ok(secondHalf.every(r=>r.status===200));
+ const shiftRows=()=>api.load().then(s=>s.registrations.filter(r=>r.eventId==='shift-event').flatMap(r=>r.bookingSignups.map(x=>({...x,playerId:r.playerId}))));
+ let shifts=await shiftRows();assert.equal(shifts.find(r=>r.playerId==='p1').status,'confirmed');
+ assert.equal(shifts.filter(r=>r.arrival===middle&&r.status==='confirmed').length,1);assert.equal(shifts.filter(r=>r.arrival===middle&&r.status==='waitlist').length,1);
+ const leaving=shifts.find(r=>r.arrival===middle&&r.status==='confirmed').playerId;
+ assert.equal((await post({bookingId:'shift-court',playerId:leaving,reason:'Fictional shift cancellation'},crypto.randomUUID(),{action:'courtCancel'})).status,200);
+ shifts=await shiftRows();assert.equal(shifts.filter(r=>r.status==='confirmed').length,2);assert.equal(shifts.find(r=>r.playerId==='p1').status,'confirmed');
  console.log('PASS friend signup API: one-step persistence, authenticated ownership, CSRF/actor checks, full-court waitlist, replay deduplication, existing-profile reuse, quota and atomic rollback');
 }finally{database.close();delete globalThis.__friendSignupTest}

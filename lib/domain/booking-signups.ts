@@ -2,6 +2,18 @@ import type {Attendance,Booking,Event,Registration,State} from './types';
 import {clearCancellation} from './cancellations';
 
 export function bookingCapacity(b:Booking,e:Event){return b.signupCapacity??e.capacity}
+/** Simultaneous confirmed places in [start,end). Departures free a place for arrivals at the same instant. */
+export function bookingOccupancy(rows:{status:string;arrival:number;departure:number}[],start:number,end:number){
+ const changes=new Map<number,number>([[start,0]]);
+ for(const row of rows){
+  if(row.status!=='confirmed')continue;
+  const a=Math.max(start,row.arrival),z=Math.min(end,row.departure);if(z<=a)continue;
+  changes.set(a,(changes.get(a)??0)+1);changes.set(z,(changes.get(z)??0)-1);
+ }
+ let count=0,peak=0,minimum=Infinity;
+ for(const [at,delta] of [...changes].sort((a,b)=>a[0]-b[0])){if(at>=end)break;count+=delta;peak=Math.max(peak,count);minimum=Math.min(minimum,count)}
+ return {peak,minimum:minimum===Infinity?0:minimum};
+}
 export function promoteLegacy(s:State,e:Event,now:number){
  let room=e.capacity-s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&!r.bookingSignups).length;
  for(const r of s.registrations.filter(r=>r.eventId===e.id&&r.status==='waitlist'&&!r.bookingSignups&&s.players.some(p=>p.id===r.playerId&&p.enabled)).sort((a,b)=>a.sequence-b.sequence||a.id.localeCompare(b.id))){if(room--<=0)break;r.status='confirmed';if(r.joinedAsWaitlist)r.promotedAt=now}
@@ -16,11 +28,13 @@ export function syncRegistration(r:Registration){
  if(active.length){r.arrival=Math.min(...active.map(x=>x.arrival));r.departure=Math.max(...active.map(x=>x.departure))}
 }
 export function promoteBooking(s:State,e:Event,b:Booking,now:number){
- let room=bookingCapacity(b,e)-bookingRows(s,b.id).filter(x=>x.status==='confirmed').length;
- for(const r of s.registrations.filter(r=>r.eventId===e.id&&s.players.some(p=>p.id===r.playerId&&p.enabled)).sort((a,c)=>(a.bookingSignups?.find(x=>x.bookingId===b.id)?.sequence??0)-(c.bookingSignups?.find(x=>x.bookingId===b.id)?.sequence??0)||a.id.localeCompare(c.id))){
-  const row=r.bookingSignups?.find(x=>x.bookingId===b.id);
-  if(row?.status!=='waitlist')continue;if(room--<=0)break;
-  row.status='confirmed';if(row.joinedAsWaitlist)row.promotedAt=now;syncRegistration(r);
+ const capacity=bookingCapacity(b,e),confirmed=bookingRows(s,b.id).filter(x=>x.status==='confirmed'),enabled=new Set(s.players.filter(p=>p.enabled).map(p=>p.id));
+ const waiting=s.registrations.filter(r=>r.eventId===e.id&&enabled.has(r.playerId)).flatMap(r=>{
+  const row=r.bookingSignups?.find(x=>x.bookingId===b.id);return row?.status==='waitlist'?[{r,row}]:[];
+ }).sort((a,c)=>a.row.sequence-c.row.sequence||a.r.id.localeCompare(c.r.id));
+ for(const {r,row} of waiting){
+  if(bookingOccupancy(confirmed,row.arrival,row.departure).peak>=capacity)continue;
+  row.status='confirmed';if(row.joinedAsWaitlist)row.promotedAt=now;syncRegistration(r);confirmed.push({...row,playerId:r.playerId,id:r.id});
  }
 }
 export function registrationSpans(s:Pick<State,'bookings'>,e:Event,r:Registration,bookingId?:string):Attendance[]{

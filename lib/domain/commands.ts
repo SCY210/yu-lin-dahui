@@ -36,7 +36,7 @@ import { pointGrantInput } from './point-grants';
 import { upgradeActivitySignups } from './event-merge';
 import { applyCourtSignup } from './court-commands';
 import {duplicateSignupMessage,hasSignupOverlap} from './signup-conflicts';
-import { bookingRows, promoteBooking, promoteLegacy } from './booking-signups';
+import { bookingRows, bookingOccupancy, promoteBooking, promoteLegacy } from './booking-signups';
 import { bookingParts, continuesCourt, retimeBooking, setPartAdvancer } from './booking-advancers';
 import { fail, month, type State, type Account, type Event } from './types';
 import { propose, validateRound, readyIds } from './grouping';
@@ -304,8 +304,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (p.advancedBy)
                 b.advancedBy = p.advancedBy;
             const slots = bookingRows(s, b.id);
-            if ((p.signupCapacity ?? b.signupCapacity ?? e.capacity) < slots.filter(x => x.status === 'confirmed').length)
-                fail('上限不能低于本场正式人数');
+            if ((p.signupCapacity ?? b.signupCapacity ?? e.capacity) < bookingOccupancy(slots,b.start,b.end).peak)
+                fail('上限不能低于同一时段的正式人数');
             if (slots.some(x => x.arrival < p.start || x.departure > p.end))
                 fail('已有报名时间超出新时段，请先调整报名');
             if (s.bookings.some(x => x.id !== b.id && x.eventId === e.id && x.name === p.name && (x.venue ?? e.venue) === (p.venue ?? b.venue ?? e.venue) && x.start < p.end && x.end > p.start))
