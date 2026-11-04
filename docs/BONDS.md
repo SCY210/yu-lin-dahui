@@ -1,37 +1,45 @@
-# Bonds
+# 道缘
 
-Every pair of members has a bond (`lib/domain/bonds.ts`, stages in `lib/domain/bond-tiers.ts`). The app calls it *dao yuan* ("bond on the Way"), in keeping with the club's cultivation theme, and calls its affinity score *yuan zhi*. The score sets the stage, from the reference table the owner provided. The table glosses the stage names; the app shows the Chinese names in `bondTiers`.
+每对正式球友之间都有道缘，逻辑位于 lib/domain/bonds.ts，阶段与缘值在 lib/domain/bond-tiers.ts。缘值决定当前阶段：
 
-| Stage | Affinity |
+| 阶段 | 起始缘值 |
 | --- | --- |
-| 1. Chance meeting | 0–300 |
-| 2. Passing acquaintance | 300–1,500 |
-| 3. Sworn friendship | 1,500–5,000 |
-| 4. Daily companions | 5,000–15,000 |
-| 5. Through storms together | 15,000–50,000 |
-| 6. Like siblings | 50,000–80,000 |
-| 7. Kindred minds | 80,000–150,000 |
-| 8. In life and death | 150,000–250,000 |
-| 9. Perfect match | 250,000–350,000 |
-| 10. Stronger than gold | 350,000–500,000 |
-| 11. Bosom friends | 500,000+ |
+| 萍水相逢 | 0 |
+| 泛泛之交 | 300 |
+| 金兰之契 | 1,500 |
+| 朝夕相处 | 5,000 |
+| 风雨同舟 | 15,000 |
+| 情同手足 | 50,000 |
+| 心有灵犀 | 80,000 |
+| 生死与共 | 150,000 |
+| 珠联璧合 | 250,000 |
+| 情比金坚 | 350,000 |
+| 莫逆之交 | 500,000 |
 
-Stages are titles with a colour of their own (the table's hues, darkened to read on light cards; the last two have a gradient). They carry no other reward.
+阶段采用各自颜色，最后两阶使用渐变；它们本身不额外发放奖励。
 
-## Earning affinity
+## 缘值来源
 
-- **Playing as partners.** Every game two members play on the same side of a completed match adds 60, plus 40 if they win it. Opponents and singles add nothing. Each game is multiplied by the boost of the stage the pair had reached by then (×1, 1, 2, 4, 8, 10, 14, 18, 22, 26, 30). A pair that partners for about three games a week, winning half, reaches stage 2 within a month, stage 5 in about half a year and the last stage in about three years (`tests/bonds.test.ts` checks this pace). The score is replayed from match history, so games played before the feature count too.
-- **No coin gifts.** Members cannot give each other coins, so nobody can pool coins from others. Coin gifts made in the short time they were allowed (`gift_sent` / `gift_received` rows that move coins) stay in the ledger and still count at 50 per coin.
-- **Giving a shop item** (`treasureRedeem` with `giftTo` and `message`). The giver redeems a product with their own coins as usual; the order records the receiver and the note, and the owner hands the item over. The bond gains 50 per coin of the item's price. A cancelled order refunds the giver and its affinity is removed.
+- 一起搭档：已完成比赛中同队的小局每局加 60，赢球再加 40。对手关系和单打不增加。每局乘以双方当时阶段的倍率（1、1、2、4、8、10、14、18、22、26、30）。每周搭档约三局、胜率约一半时，一个月内可到第二阶，约半年到第五阶，约三年到最高阶；tests/bonds.test.ts 验证此节奏。历史比赛也计入。
+- 不支持直接赠送羽币，避免把多人的羽币汇集到同一账号。旧版短暂开放时产生的 gift_sent / gift_received 转币记录保留，每羽币仍计 50 缘值。
+- 赠送商店礼品：treasureRedeem 的 giftTo 指定接收人，message 保存留言。付款者用自己的羽币兑换，每羽币价值增加双方 50 缘值，不受阶段倍率影响。实物和普通虚拟商品由群主发放；专门的 gift 道缘礼物即时送达，订单直接完成。取消待处理礼品订单会退款，同时去除对应缘值。
 
-Gifts are stored as treasure ledger rows, with no new table: the giver's `redeem` row names the receiver, and the receiver's row (`gift_received`) names the giver. A shop gift's receiver row moves no coins. Both members of a pair derive the same score from their own rows.
+送礼沿用羽币账本：送出方的 redeem 记录保存接收人，接收方的 gift_received 记录保存赠送人。收礼记录不转入羽币；双方分别计算得到相同缘值，无需新建表。
 
-## Where it shows
+## 展示与权限
 
-- **Profiles.** Another member's profile shows the viewer's bond with them (`app/bond-card.tsx`): the stage, affinity, progress to the next stage, the current boost, partner games and gifts, a button to give a shop item, and the full stage table. The section comes right after the two fixed sections, personal details and rackets. A member's own profile and guests' profiles show none.
-- **Bond board on My** (`app/bond-board.tsx`), right below recent matches. The viewer's bond with every enabled member, strongest first; the first three show and the rest open on request. The owner and administrators get a second tab, the whole group, organised by member rather than by pair (twenty members already make over a hundred pairs): one row per member with their avatar, how many bonds they have and their strongest partner, deepest first and searchable by name. Choosing a member lists their bond with everyone else, strongest first, the same way as the viewer's own list. A third tab, gift history, lists every gift between members, newest first: giver, receiver, the item or coins, its value, the note and the time; a refunded shop gift stays marked as cancelled (`giftHistory`, `bonds.gifts`, the latest 200).
-- **Member directory** (`app/player-directory.tsx`). Each row of the directory shows the viewer's bond stage with that member, and the directory can sort by it.
-- **Gift notices.** A member who received a gift sees a popup when the app opens (`app/gift-popup.tsx`): who gave what, with the note. Closing it records the gifts on the account (`giftSeen`, `Account.giftSeen`); gifts older than 30 days are not announced.
-- **Shop.** Ledger rows name gifts given and received; orders bought as a gift say whom they are for.
+- 球友档案：app/bond-card.tsx 显示本人和对方的阶段、缘值、进度、搭档倍率、搭档记录、赠礼价值与送礼按钮。位于个人资料和球拍之后；本人档案及临时来宾不展示。
+- 我的道缘榜：app/bond-board.tsx 位于最近比赛后，先显示缘值最高的三位，再展开其余。群主和管理员还可查看全群道缘，按成员选择后查看其全部关系，支持搜索；赠礼记录页显示最新 200 条赠礼（giftHistory / bonds.gifts），包含双方、物品或旧版羽币、价值、留言、时间及退款取消状态。
+- 成员目录：app/player-directory.tsx 显示与当前查看者的道缘阶段，支持按道缘排序。
+- 收礼提示：app/gift-popup.tsx 展示赠送人、礼物和留言。确认后写入 Account.giftSeen；超过 30 天的礼物不再弹出。
+- 商店账本和订单：显示送出及收到的礼物、订单接收人。
 
-The club view sends each member only their own bonds and gift notices (`bonds.rows`, `me.giftNotices`). Only the owner and administrators also receive the gift history (`bonds.gifts`) and every pair (`bonds.pairs`, from `bondPairs`, which replays history the same way as `bondRows` so both agree); other members never see the bond between two other members.
+普通成员只收到自己的 bonds.rows 与 me.giftNotices。只有群主和管理员收到 bonds.pairs 及 bonds.gifts，不能向普通成员暴露其他两人的关系。全群与个人关系使用相同的历史重算规则。
+
+## 商店即时赠礼
+
+商品详情可选收礼人、数量及最多 60 字留言；购买前再次确认收礼人、总价及增加的缘值。gift 商品必须送给另一个已启用的正式成员；physical 和原有 digital 商品仍可自己兑换，并保留群主发放流程。即时礼物直接成为 fulfilled 订单，不能走待处理订单的取消退款流程。
+
+只有群主可管理商品与库存。服务端检查真实发送者、接收人、价格、库存和余额，扣款、零羽币收礼记录、订单及库存由同一个事务保存。重复请求不会重复扣款或增加道缘。新增流程不增加表、定时任务或轮询请求。
+
+初始正式站目录是群主配置，不由迁移自动覆盖：清风传意 3 羽币 / 150 缘值，同心玉佩 10 / 500，金兰灵契 30 / 1,500。已有商品保留，名称、价格、库存和上下架状态可继续编辑。这些虚拟礼物表达心意并增加道缘，不承诺头像、称号或实物奖励。

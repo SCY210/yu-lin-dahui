@@ -161,5 +161,22 @@ try{
  assert.equal(versioned.version,editedVersion+1);assert.equal(versioned.updated,sameMillisecond);
  const domainBefore=structuredClone(domain);assert.throws(()=>api.treasureProduct(domain,ownerAccount,{...productInput,id:versioned.id,expectedVersion:editedVersion},sameMillisecond),/409/);assert.deepEqual(domain,domainBefore);
  const boughtVersion=versioned.version;api.treasureOrder(domain,ownerAccount,{id:versionedOrder.id,status:'cancelled'},sameMillisecond);assert.equal(versioned.version,boughtVersion+1);assert.equal(versioned.updated,sameMillisecond);
+ // Instant bond gifts: authenticated sender, no coin transfer, symmetric affinity, notice, replay and rollback.
+ state=await succeed('owner','treasureProduct',{...productInput,name:'Fictional instant bond gift',kind:'gift',price:3,stock:8});
+ const instant=state.treasureProducts.find(p=>p.kind==='gift');const giftInput={productId:instant.id,expectedPrice:3,giftTo:'p3',message:'Good game'};
+ for(const giftTo of [undefined,'p2','p4','p5','missing'])await rejectUnchanged('member','treasureRedeem',{...giftInput,giftTo});
+ await rejectUnchanged('member','treasureRedeem',{...giftInput,kind:'gift',status:'fulfilled'});
+ await rejectUnchanged('member','treasureRedeem',{...giftInput,expectedPrice:2},409);
+ const recipientCoins=api.treasureBalance(await api.load(),'p3'),senderCoins=api.treasureBalance(await api.load(),'p2'),giftKey=crypto.randomUUID();
+ state=await succeed('member','treasureRedeem',giftInput,{requestId:giftKey});const instantOrder=state.treasureOrders.find(o=>o.requestId===giftKey);
+ assert.equal(instantOrder.status,'fulfilled');assert.equal(api.treasureBalance(state,'p2'),senderCoins-3);assert.equal(api.treasureBalance(state,'p3'),recipientCoins);
+ const senderView=await view('member'),receiverView=await view('other');assert.equal(senderView.bonds.rows.find(r=>r.playerId==='p3').score,150);assert.equal(receiverView.bonds.rows.find(r=>r.playerId==='p2').score,150);assert.ok(receiverView.me.giftNotices.some(n=>n.item==='Fictional instant bond gift × 1'&&n.message==='Good game'&&n.instant===true));
+ assert.deepEqual(senderView.treasureShop.giftRecipients.map(p=>p.id).sort(),['p0','p1','p3']);assert.equal((await view('admin')).treasureShop.orders.some(o=>o.id===instantOrder.id),false);
+ const single=await api.load();await succeed('member','treasureRedeem',giftInput,{requestId:giftKey});assert.deepEqual(await api.load(),single);
+ await rejectUnchanged('owner','treasureOrder',{id:instantOrder.id,status:'cancelled'});
+ database.injectFailure(query=>query.startsWith('INSERT INTO treasureOrders'));
+ await rejectUnchanged('member','treasureRedeem',giftInput,503);database.injectFailure(null);
+ const instantRaceKey=crypto.randomUUID(),instantRevision=(await api.load()).revision;const instantRace=await Promise.all([0,1].map(()=>post('member','treasureRedeem',giftInput,{requestId:instantRaceKey,revision:instantRevision})));assert.ok(instantRace.every(r=>r.status===200));
+ state=await api.load();assert.equal(state.treasureOrders.filter(o=>o.requestId===instantRaceKey).length,1);assert.equal(api.treasureBalance(state,'p2'),senderCoins-6);assert.equal((await view('member')).bonds.rows.find(r=>r.playerId==='p3').score,300);
  console.log('PASS treasure shop API: true-owner permissions, bound SQL, persisted independent wallet, validation, immutable receipts, private projection, replay, racing purchases, stock/funds guards, cancellation/refund and transactional rollback');
 }finally{database.injectFailure(null);database.close();delete globalThis.__treasureShopTest}

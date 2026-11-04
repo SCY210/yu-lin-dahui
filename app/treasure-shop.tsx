@@ -5,6 +5,7 @@ import type {ClubData} from '../lib/contracts/club';
 import type {CardContext} from './match-card';
 import {choice,fmt,type Field} from './form-fields';
 import Disclosure from './disclosure';
+import {bondCoinPoints} from '../lib/domain/bond-tiers';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import './treasure-shop.css';
 
@@ -15,25 +16,29 @@ type Props={data:ClubData;open:CardContext['open'];busy?:boolean;name?:(id:strin
 const count=(n:number)=>new Intl.NumberFormat('zh-CN').format(n);
 const statusName={pending:'待领取',fulfilled:'已完成',cancelled:'已取消'};
 const ledgerNames:Record<string,string>={grant:'群主调整',redeem:'礼品兑换',refund:'兑换退款',automatic_reward:'活动奖励',automatic_correction:'奖励校正',gift_sent:'赠送球友',gift_received:'收到赠礼'};
-const productFields:Field[]=[{key:'name',label:'商品名称'},{key:'description',label:'商品介绍与领取说明',type:'textarea',required:false},choice('kind','商品类型',[['physical','实物礼品'],['digital','虚拟礼品']]),{key:'price',label:'兑换价格 · 羽币',type:'number',min:1,max:1000000,step:1},{key:'stock',label:'可兑换库存',type:'number',min:0,max:1000000,step:1},{key:'active',label:'上架商品',type:'checkbox'}];
+const productFields:Field[]=[{key:'name',label:'商品名称'},{key:'description',label:'商品介绍与领取说明',type:'textarea',required:false},choice('kind','商品类型',[['physical','实物礼品'],['digital','虚拟礼品'],['gift','道缘礼物']]),{key:'price',label:'兑换价格 · 羽币',type:'number',min:1,max:1000000,step:1},{key:'stock',label:'可兑换库存',type:'number',min:0,max:1000000,step:1},{key:'active',label:'上架商品',type:'checkbox'}];
 
 function ProductCard({product,busy,onOpen}:{product:Product;busy:boolean;onOpen:()=>void}){
  const available=product.active&&product.stock>0;
  return <article className={'ts-product'+(!available?' ts-product-unavailable':'')}><button type="button" className="ts-product-open" disabled={busy} aria-label={'查看'+product.name+'详情'} aria-haspopup="dialog" onClick={onOpen}>
-  <span className="ts-product-meta"><span className="ts-product-kind">{product.kind==='physical'?<Gift size={18} aria-hidden="true"/>:<Sparkles size={18} aria-hidden="true"/>}{product.kind==='physical'?'实物':'虚拟'}</span><span>{available?'余 '+count(product.stock):'已兑完'}</span></span>
+  <span className="ts-product-meta"><span className="ts-product-kind">{product.kind==='physical'?<Gift size={18} aria-hidden="true"/>:<Sparkles size={18} aria-hidden="true"/>}{product.kind==='gift'?'道缘礼物':product.kind==='physical'?'实物':'虚拟'}</span><span>{available?'余 '+count(product.stock):'已兑完'}</span></span>
   <strong className="ts-product-name">{product.name}</strong>
   <span className="ts-product-footer"><span className="ts-price"><Coins size={14} aria-hidden="true"/><strong>{count(product.price)}</strong><span>羽币</span></span><span className="ts-product-cta">{available?'兑换':'详情'}<ArrowUpRight size={13} aria-hidden="true"/></span></span>
  </button></article>;
 }
 
-function ProductDetails({product,balance,busy,onClose,onRedeem}:{product:Product;balance:number;busy:boolean;onClose:()=>void;onRedeem:(product:Product,quantity:number)=>void}){
+function ProductDetails({product,balance,busy,recipients,onClose,onRedeem}:{product:Product;balance:number;busy:boolean;recipients:{id:string;name:string}[];onClose:()=>void;onRedeem:(product:Product,quantity:number,giftTo?:string,message?:string)=>void}){
+ const [giftTo,setGiftTo]=useState(''),[message,setMessage]=useState('');
+ const instant=product.kind==='gift',recipient=recipients.find(p=>p.id===giftTo),needsRecipient=instant&&!recipient;
  const [quantity,setQuantity]=useState(1),max=Math.min(product.stock,99),selected=Math.min(quantity,Math.max(1,max)),total=product.price*selected,available=product.active&&max>0,affordable=balance>=total;
  return <Dialog open onOpenChange={next=>{if(!next)onClose()}}><DialogContent className="app-dialog ts-product-dialog">
   <DialogHeader><DialogTitle>{product.name}</DialogTitle><DialogDescription className="ts-product-description">{product.description||'选择兑换数量，再确认兑换。'}</DialogDescription></DialogHeader>
-  <div className="ts-detail-meta"><span>{product.kind==='physical'?'实物礼品':'虚拟礼品'} · {available?'剩余 '+count(product.stock)+' 件':'暂时兑完'}</span><span>{count(product.price)} 羽币 / 件</span></div>
+  <div className="ts-detail-meta"><span>{product.kind==='gift'?'道缘礼物 · 即时送达':product.kind==='physical'?'实物礼品':'虚拟礼品'} · {available?'剩余 '+count(product.stock)+' 件':'暂时兑完'}</span><span>{count(product.price)} 羽币 / 件</span></div>
   {available&&<div className="ts-detail-quantity"><span>兑换数量</span><div className="ts-stepper" role="group" aria-label={product.name+'兑换数量'}><button type="button" aria-label={'减少'+product.name+'数量'} disabled={busy||selected<=1} onClick={()=>setQuantity(selected-1)}><Minus size={15}/></button><output aria-label="当前数量">{selected}</output><button type="button" aria-label={'增加'+product.name+'数量'} disabled={busy||selected>=max} onClick={()=>setQuantity(selected+1)}><Plus size={15}/></button></div></div>}
+  <label className="ts-gift-field">{instant?'送给球友':'兑换给谁'}<select aria-label="礼物接收人" value={giftTo} disabled={busy} onChange={e=>setGiftTo(e.target.value)}><option value="">{instant?'请选择球友':'自己领取'}</option>{recipients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+  {(instant||recipient)&&<><label className="ts-gift-field">留言（选填）<textarea aria-label="赠礼留言" maxLength={60} value={message} disabled={busy} onChange={e=>setMessage(e.target.value)} placeholder="写一句送给对方的话，最多60字"/></label><p className="ts-gift-affinity">赠送后，你和{recipient?.name??'对方'}的道缘 +{count(total*bondCoinPoints)} 缘值{instant?'，礼物即时送达。':'，礼品由群主安排发放。'}</p></>}
   <div className="ts-detail-total"><span>合计</span><strong>{count(total)} <small>羽币</small></strong></div><p className="ts-detail-balance">当前余额 {count(balance)} 羽币{available&&affordable?' · 兑换后剩余 '+count(balance-total)+' 羽币':''}</p>
-  <button type="button" className="primary ts-redeem" disabled={busy||!available||!affordable} onClick={()=>onRedeem(product,selected)}>{!product.active?'已下架':!available?'库存已兑完':!affordable?'羽币不足':'兑换 · '+count(total)+' 羽币'}</button>
+  <button type="button" className="primary ts-redeem" disabled={busy||!available||!affordable||needsRecipient||!!giftTo&&!recipient} onClick={()=>onRedeem(product,selected,recipient?.id,recipient?message.trim():undefined)}>{!product.active?'已下架':!available?'库存已兑完':!affordable?'羽币不足':needsRecipient?'请选择收礼球友':(recipient?'赠送 · ':'兑换 · ')+count(total)+' 羽币'}</button>
  </DialogContent></Dialog>;
 }
 
@@ -61,7 +66,7 @@ function LedgerRow({row}:{row:Ledger}){
 }
 
 export default function TreasureShop({data,open,busy=false,name}:Props){
- const [filter,setFilter]=useState<'all'|'physical'|'digital'>('all'),[selectedId,setSelectedId]=useState<string|null>(null);
+ const [filter,setFilter]=useState<'all'|'physical'|'digital'|'gift'>('all'),[selectedId,setSelectedId]=useState<string|null>(null);
  const shop=data.treasureShop,owner=!!data.me.isOwner,ownId=data.me.playerId,playerName=name??((id:string)=>data.players.find(p=>p.id===id)?.name??'已移除球友');
  const products:Product[]=shop.products,orders:Order[]=shop.orders,ledger:Ledger[]=shop.ledger;
  const catalog=products.filter(p=>p.active&&(filter==='all'||p.kind===filter)),selectedProduct=products.find(p=>p.id===selectedId&&p.active);
@@ -69,16 +74,16 @@ export default function TreasureShop({data,open,busy=false,name}:Props){
  const ownLedger=ledger.filter(l=>l.playerId===ownId).sort((a,b)=>b.at-a.at||b.id.localeCompare(a.id));
  const walletPlayers=owner?data.players.filter(p=>shop.wallets.some(wallet=>wallet.playerId===p.id)):[];
  const pending=orders.filter(o=>o.status==='pending').sort((a,b)=>a.created-b.created||a.id.localeCompare(b.id));
- const editProduct=(p?:Product)=>open(p?'编辑商品':'添加商品','treasureProduct',p?{id:p.id,expectedVersion:p.version??0,name:p.name,description:p.description,kind:p.kind,price:p.price,stock:p.stock,active:p.active}:{name:'',description:'',kind:'physical',price:10,stock:1,active:true},productFields,v=>({...v.id?{id:v.id,expectedVersion:v.expectedVersion}:{},name:v.name,description:v.description,kind:v.kind,price:v.price,stock:v.stock,active:v.active}),'价格使用整数羽币。库存是当前可兑换数量；下架后不再开放新兑换，已有兑换记录会保留。虚拟礼品也由群主安排发放。');
- const redeem=(p:Product,quantity:number)=>open('确认兑换','treasureRedeem',{productId:p.id,quantity,expectedPrice:p.price},[],v=>({productId:v.productId,quantity:v.quantity,expectedPrice:v.expectedPrice}),`兑换「${p.name}」${quantity} 件，共 ${count(p.price*quantity)} 羽币。当前余额 ${count(shop.balance)} 羽币，兑换后剩余 ${count(shop.balance-p.price*quantity)} 羽币。${p.kind==='physical'?'实物礼品由群主安排领取。':'虚拟礼品由群主安排发放。'}`);
- const handleOrder=(o:Order,status:'fulfilled'|'cancelled')=>open(status==='fulfilled'?'确认礼品已完成':'取消兑换并退款','treasureOrder',{id:o.id,status},[],v=>({id:v.id,status:v.status}),status==='fulfilled'?`确认已向 ${playerName(o.playerId)} 发放「${o.productName}」${o.quantity} 件？完成后将保留兑换记录。`:`取消 ${playerName(o.playerId)} 的「${o.productName}」${o.quantity} 件，退回 ${count(o.total)} 羽币并恢复库存。`);
+ const editProduct=(p?:Product)=>open(p?'编辑商品':'添加商品','treasureProduct',p?{id:p.id,expectedVersion:p.version??0,name:p.name,description:p.description,kind:p.kind,price:p.price,stock:p.stock,active:p.active}:{name:'',description:'',kind:'physical',price:10,stock:1,active:true},productFields,v=>({...v.id?{id:v.id,expectedVersion:v.expectedVersion}:{},name:v.name,description:v.description,kind:v.kind,price:v.price,stock:v.stock,active:v.active}),'价格使用整数羽币。库存是当前可兑换数量；下架后不再开放新兑换，已有兑换记录会保留。道缘礼物需选择球友，购买后即时送达；实物和其他虚拟礼品由群主安排发放。');
+ const redeem=(p:Product,quantity:number,giftTo?:string,message?:string)=>open(giftTo?'确认赠送':'确认兑换','treasureRedeem',{productId:p.id,quantity,expectedPrice:p.price,...(giftTo?{giftTo,message}: {})},[],v=>({productId:v.productId,quantity:v.quantity,expectedPrice:v.expectedPrice,...(v.giftTo?{giftTo:v.giftTo,message:v.message}: {})}),`兑换「${p.name}」${quantity} 件，共 ${count(p.price*quantity)} 羽币。当前余额 ${count(shop.balance)} 羽币，兑换后剩余 ${count(shop.balance-p.price*quantity)} 羽币。${giftTo?'送给 '+playerName(giftTo)+'，双方道缘 +'+count(p.price*quantity*bondCoinPoints)+' 缘值。'+(message?'留言：'+message+'。':''):''}${p.kind==='gift'?'虚拟礼物即时送达。':p.kind==='physical'?'实物礼品由群主安排领取。':'虚拟礼品由群主安排发放。'}`);
+ const handleOrder=(o:Order,status:'fulfilled'|'cancelled')=>open(status==='fulfilled'?'确认礼品已完成':'取消兑换并退款','treasureOrder',{id:o.id,status},[],v=>({id:v.id,status:v.status}),status==='fulfilled'?`确认已向 ${playerName(o.giftTo??o.playerId)} 发放「${o.productName}」${o.quantity} 件？完成后将保留兑换记录。`:`取消 ${playerName(o.playerId)} 的「${o.productName}」${o.quantity} 件，退回 ${count(o.total)} 羽币并恢复库存。`);
  const grant=()=>open('调整球友羽币','treasureGrant',{playerId:'',operation:'add',amount:10,adjustmentReason:''},[choice('playerId','球友',walletPlayers.map(p=>[p.id,p.name])),choice('operation','操作',[['add','发放羽币'],['subtract','扣除羽币']]),{key:'amount',label:'羽币数量（整数）',type:'number',min:1,max:1000000,step:1},{key:'adjustmentReason',label:'调整原因',type:'textarea',required:true}],v=>({playerId:v.playerId,amount:(v.operation==='subtract'?-1:1)*Number(v.amount),reason:String(v.adjustmentReason??'').trim()}),'只允许群主操作，原因会出现在球友自己的羽币明细中。羽币独立于排行积分和修为，余额不能扣成负数。');
  const editStreak=()=>open('调整连续到场奖励','treasureStreakReward',{coins:shop.streakReward.coins},[{key:'coins',label:`每连续 ${shop.streakReward.length} 场积分赛奖励的羽币（0 为关闭）`,type:'number',min:0,max:1000,step:1}],v=>({coins:Number(v.coins)}),`修改后只影响之后满 ${shop.streakReward.length} 场的奖励，已经发出的连续到场奖励不变。`);
  return <div className="treasure-shop">
   <header className="ts-header"><h1>羽林宝阁</h1><div className="ts-wallet" aria-label={'我的羽币余额 '+count(shop.balance)} title="羽币来自活动奖励或群主发放，用于兑换礼品；不影响排行积分与修为。"><Coins size={18} aria-hidden="true"/><strong>{count(shop.balance)}</strong><span>羽币</span></div></header>
   <RewardRules policy={shop.rewardPolicy} pendingCorrection={shop.pendingCorrection} streak={shop.streakReward} onEditStreak={shop.streakReward.canEdit?editStreak:undefined}/>
   <div className="ts-catalog-heading"><h2><ShoppingBag size={20}/>兑换好物</h2><span>{catalog.length} 件商品</span></div>
-  <div className="ts-filters" role="group" aria-label="商品类型">{([['all','全部'],['physical','实物礼品'],['digital','虚拟礼品']] as const).map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>
+  <div className="ts-filters" role="group" aria-label="商品类型">{([['all','全部'],['gift','道缘礼物'],['physical','实物礼品'],['digital','虚拟礼品']] as const).map(([key,label])=><button type="button" key={key} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label}</button>)}</div>
   {catalog.length?<div className="ts-products">{catalog.map(product=><ProductCard key={product.id} product={product} busy={busy} onOpen={()=>setSelectedId(product.id)}/>)}</div>:<div className="ts-empty"><Gift size={34} strokeWidth={1.25}/><strong>{products.some(p=>p.active)?'这一类还没有礼品':'好物正在准备中'}</strong><p>{owner?'添加商品、设置价格和库存，即可开放兑换。':'等群主上架好物，再来看看吧。'}</p>{owner&&<button type="button" className="secondary" disabled={busy} onClick={()=>editProduct()}><Plus size={17}/>添加商品</button>}</div>}
   <div className="ts-tools"><Disclosure label={'我的兑换 · '+ownOrders.length+' 笔'} className="ts-disclosure"><div className="ts-history">{ownOrders.length?ownOrders.map(order=><OrderRow key={order.id} order={order} busy={busy} name={playerName}/>):<p className="muted">还没有兑换记录，遇到喜欢的礼品再出手。</p>}</div></Disclosure>
   <Disclosure label="羽币明细" className="ts-disclosure"><div className="ts-ledger">{ownLedger.length?ownLedger.map(row=><LedgerRow key={row.id} row={row}/>):<p className="muted">暂无羽币收支记录。</p>}</div></Disclosure>
@@ -88,7 +93,7 @@ export default function TreasureShop({data,open,busy=false,name}:Props){
    <Disclosure label="已处理兑换"><div className="ts-history">{orders.filter(o=>o.status!=='pending').sort((a,b)=>b.updated-a.updated).map(order=><OrderRow key={order.id} order={order} owner busy={busy} name={playerName}/>)}{!orders.some(o=>o.status!=='pending')&&<p className="muted">暂无已处理记录。</p>}</div></Disclosure>
    <Disclosure label="球友羽币余额"><div className="ts-owner-wallets">{(shop.wallets??[]).map(wallet=><div key={wallet.playerId}><span>{playerName(wallet.playerId)}</span><div><strong>{count(wallet.balance)} 羽币</strong>{wallet.pendingCorrection>0&&<small>待校正 {count(wallet.pendingCorrection)} 羽币</small>}</div></div>)}</div></Disclosure>
   </Disclosure>}</div>
-  {selectedProduct&&<ProductDetails key={selectedProduct.id} product={selectedProduct} balance={shop.balance} busy={busy} onClose={()=>setSelectedId(null)} onRedeem={(product,quantity)=>{setSelectedId(null);redeem(product,quantity)}}/>}
+  {selectedProduct&&<ProductDetails key={selectedProduct.id} product={selectedProduct} balance={shop.balance} busy={busy} recipients={shop.giftRecipients} onClose={()=>setSelectedId(null)} onRedeem={(product,quantity,giftTo,message)=>{setSelectedId(null);redeem(product,quantity,giftTo,message)}}/>}
  </div>;
 }
 

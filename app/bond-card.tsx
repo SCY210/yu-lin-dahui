@@ -5,7 +5,7 @@ import {choice,number,text,type Field} from './ui';
 import './bond.css';
 
 const count=(n:number)=>new Intl.NumberFormat('zh-CN').format(n);
-type Product={id:string;name:string;price:number;stock:number;active:boolean};
+type Product={kind?:'physical'|'digital'|'gift';id:string;name:string;price:number;stock:number;active:boolean};
 type Values=Record<string,unknown>;
 type BondContext={busy:boolean;open:(title:string,action:string,values:Values,fields:Field[],convert:(v:Values)=>unknown,description:string)=>void;data:{bonds?:{rows:BondRow[]};treasureShop?:{products:Product[]}}};
 const giftNote={...text('message','留言（可不填，最多60字）'),optional:true};
@@ -23,7 +23,7 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
  const giveItem=()=>ctx.open('送礼物给 '+p.name,'treasureRedeem',{productId:products[0]?.id??'',quantity:1,message:''},
   [choice('productId','礼品',products.map(x=>[x.id,`${x.name} · ${count(x.price)} 羽币`])),{...number('quantity','数量'),min:1,max:99,step:1},giftNote],
   (v:Values)=>{const product=products.find(x=>x.id===v.productId);return {productId:v.productId,quantity:Number(v.quantity),expectedPrice:product?.price??0,giftTo:p.id,message:String(v.message??'').trim()}},
-  `用你的羽币在羽林宝阁兑换礼品送给对方，由群主发放。对方进入首页时会收到礼物提示，缘值按礼品价值每羽币 +${bondCoinPoints}。`);
+  `用你的羽币兑换礼品送给对方：道缘礼物即时送达，其他礼品由群主发放。对方进入首页时会收到礼物提示，缘值按礼品价值每羽币 +${bondCoinPoints}。`);
  return <section className={'bond-card bond-tier-'+index} aria-label={'我和'+p.name+'的道缘'}>
   <div className="bond-head">
    <HeartHandshake size={20} aria-hidden="true"/>

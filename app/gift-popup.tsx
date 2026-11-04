@@ -17,7 +17,7 @@ export default function GiftPopup({notices,name,blocked,busy,acknowledge,onDismi
  return <Dialog open onOpenChange={open=>{if(!open)confirm()}}><DialogContent className="app-dialog gift-popup">
   <DialogHeader><div className="gift-popup-icon" aria-hidden="true"><Gift size={34}/></div><DialogTitle>你收到了{shown.length>1?' '+shown.length+' 份':''}礼物！</DialogTitle><DialogDescription>道缘缘值共 +{new Intl.NumberFormat('zh-CN').format(bond)}。</DialogDescription></DialogHeader>
   <ul className="gift-popup-list">{shown.map(n=><li key={n.id}>
-   <span><strong>{name(n.fromPlayerId)}</strong> 送你{n.item?<>：{n.item}<small>由群主发放</small></>:<> <b>{n.coins}</b> 羽币</>}</span>
+   <span><strong>{name(n.fromPlayerId)}</strong> 送你{n.item?<>：{n.item}<small>{n.instant?'心意已送达':'由群主发放'}</small></>:<> <b>{n.coins}</b> 羽币</>}</span>
    {n.message&&<q>{n.message}</q>}
   </li>)}</ul>
   <button type="button" className="primary full gift-popup-confirm" disabled={busy} onClick={confirm}>收下礼物</button>

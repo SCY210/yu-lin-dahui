@@ -67,9 +67,9 @@ export function isBondAction(action:string){return actions.has(action)}
 
 /** Gifts this member received and has not acknowledged yet. */
 export function giftNotices(s:Pick<State,'treasureLedger'|'treasureOrders'>,a:Pick<Account,'playerId'|'giftSeen'>,now:number):GiftNotice[]{
- const seen=new Set(a.giftSeen??[]),since=now-giftNoticeDays*86400000;
+ const seen=new Set(a.giftSeen??[]),since=now-giftNoticeDays*86400000,instant=new Set(s.treasureOrders.filter(o=>o.kind==='gift'&&o.status==='fulfilled').map(o=>o.id));
  return giftRows(s,a.playerId).filter(r=>r.giftFrom&&r.at>=since&&r.at<=now&&!seen.has(r.id))
-  .map(r=>({id:r.id,fromPlayerId:r.giftFrom!,coins:Math.max(0,r.delta),...(r.giftItem?{item:r.giftItem}:{}),value:r.giftValue??r.delta,...(r.message?{message:r.message}:{}),at:r.at}))
+  .map(r=>({id:r.id,fromPlayerId:r.giftFrom!,coins:Math.max(0,r.delta),...(r.giftItem?{item:r.giftItem}:{}),...(r.orderId&&instant.has(r.orderId)?{instant:true}:{}),value:r.giftValue??r.delta,...(r.message?{message:r.message}:{}),at:r.at}))
   .sort((x,y)=>x.at-y.at||x.id.localeCompare(y.id));
 }
 

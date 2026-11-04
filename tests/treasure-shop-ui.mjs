@@ -29,7 +29,7 @@ try{
  await mount({mode:'member'});
  assert.ok(text(renderer.toJSON()).includes('羽林宝阁'));assert.ok(!text(renderer.toJSON()).includes('库存保留款'),'Inactive products hidden from members');
  assert.equal(button('添加商品'),undefined);assert.equal(button('调整羽币'),undefined);assert.ok(!renderer.root.findAllByType('summary').some(n=>text(n).includes('群主管理')));
- let products=renderer.root.findAllByType('article').filter(n=>n.props.className?.includes('ts-product'));assert.equal(products.length,3);
+ let products=renderer.root.findAllByType('article').filter(n=>n.props.className?.includes('ts-product'));assert.equal(products.length,4);
  assert.ok(!buttons().some(b=>b.props['aria-label']?.startsWith('增加')),'Exhibition does not render quantity controls before opening a product');
  await viewProduct('虚构礼品 · 羽毛球挂件');const increment=buttons().find(b=>b.props['aria-label']?.startsWith('增加'));await act(()=>increment.props.onClick());
  await click('兑换 · 40 羽币');let form=forms.at(-1);assert.equal(form.action,'treasureRedeem');assert.equal(form.values.quantity,2);assert.equal(form.values.expectedPrice,20);assert.ok(form.description.includes('40 羽币'));assert.ok(form.description.includes('剩余 60 羽币'));
@@ -48,5 +48,9 @@ try{
  assert.equal(button('调整连续到场奖励'),undefined,'members cannot change the streak reward');
  for(const mode of ['admin',undefined]){await mount(mode?{mode}:{});await expand('羽币奖励规则');await click('调整连续到场奖励');const streakForm=forms.at(-1);
   assert.equal(streakForm.action,'treasureStreakReward');assert.equal(streakForm.values.coins,20);assert.ok(streakForm.fields.some(f=>f.key==='coins'&&f.min===0));assert.deepEqual(streakForm.convert({coins:'30'}),{coins:30});assert.ok(streakForm.description.includes('已经发出的连续到场奖励不变'))}
+ await mount({mode:'member'});await click('道缘礼物');await viewProduct('虚构礼物 · 同心玉佩');assert.ok(button('请选择收礼球友').props.disabled);
+ const receiver=renderer.root.findByProps({'aria-label':'礼物接收人'});assert.ok(!receiver.findAllByType('option').some(o=>o.props.value==='fixture-player-1'));
+ await act(()=>receiver.props.onChange({target:{value:'fixture-player-2'}}));await act(()=>renderer.root.findByProps({'aria-label':'赠礼留言'}).props.onChange({target:{value:'好搭档'}}));assert.ok(text(renderer.toJSON()).includes('道缘 +500'));
+ await click('赠送 · 10 羽币');form=forms.at(-1);assert.equal(form.title,'确认赠送');assert.ok(form.description.includes('虚构管理员丙'));assert.ok(form.description.includes('即时送达'));assert.ok(form.description.includes('好搭档'));await submit();assert.equal(calls.at(-1).payload.giftTo,'fixture-player-2');assert.equal(calls.at(-1).payload.message,'好搭档');await expand('我的兑换');assert.ok(text(renderer.toJSON()).includes('已完成'));
  console.log('PASS treasure shop UI: streak reward rules and owner/admin setting, quantity/total confirmation and expected price, strict payloads, insufficient balance, owner-only management, required reason, pending refund, busy state and failed write recovery');
 }finally{if(renderer)await act(()=>renderer.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=previous}

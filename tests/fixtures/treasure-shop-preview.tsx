@@ -23,6 +23,7 @@ function initialState(){
  treasureProduct(s,owner,{name:'虚构礼品 · 网前小霸王称号',description:'专属趣味称号，由群主安排发放。',price:60,stock:5,kind:'digital',active:true},now);
  treasureProduct(s,owner,{name:'虚构礼品 · 已兑完毛巾',description:'库存为零，不可继续兑换。',price:40,stock:0,kind:'physical',active:true},now);
  treasureProduct(s,owner,{name:'虚构礼品 · 库存保留款',description:'此商品未上架，仅群主可见。',price:80,stock:3,kind:'physical',active:false},now);
+ treasureProduct(s,owner,{name:'虚构礼物 · 同心玉佩',description:'即时送达的道缘礼物。',price:10,stock:50,kind:'gift',active:true},now);
  for(const a of s.accounts)treasureRedeem(s,a,{productId:s.treasureProducts[0].id,quantity:1,expectedPrice:20,requestId:crypto.randomUUID()},now+60000);
  return s;
 }

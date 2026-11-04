@@ -1,108 +1,44 @@
-# Treasure shop
+# 羽林宝阁
 
-The treasure shop uses a separate integer currency. Redeeming an item never
-changes ranking points, strength ratings, cultivation realms, or match results.
-Members start with zero coins. Coins come from automatic activity rewards or
-manual owner adjustments. There are no cash payments, shipping, or default
-catalog items.
+羽币是独立的整数货币，兑换不改变排行积分、实力、修为或赛果。成员初始余额为零，来源为活动自动奖励和群主手动调整。没有现金支付或配送功能，商品由群主配置。
 
-## Automatic activity rewards
+## 活动自动奖励
 
-The activation timestamp is recorded once on the server. Only activities whose
-end time is after that timestamp qualify. Activities that ended before activation
-are not backfilled, including when their scores are later edited.
+服务端只记录一次启用时间，只有结束时间晚于启用时间的活动符合资格。更早活动即使后来修改比分，也不补发。
 
-After a qualifying activity ends, the server settles rewards automatically:
+- 胜局每获得 1 积分奖励 1 羽币，包含逆袭与连胜奖励；按与排行相同的赛季和单打/双打范围计算。输球不扣羽币，但排行积分可独立减少。
+- 连续按时参加 4 场积分赛默认奖励 20 羽币，群主与管理员可调整，见 [活动自动羽币](AUTOMATIC_COINS.md#attendance-streak)。
+- 符合条件的参与者每场获得 5 羽币，多场地、多时段只算一次。已确认且经过的出席时段或完成比赛可证明参加；纯候补、缺席/待到场且未比赛者不计。没有实际参加的取消报名不计，取消前保留的出席仍计。整场取消或删除无奖励。临时来宾无钱包，真实参加后停用账号不抹去已获得的权益。
+- 群主手调积分、MVP/投票及通知奖励不自动发羽币，群主可另行调整羽币。
 
-- Each positive ranking point earned from a match win awards one coin, including
-  the win's upset and consecutive-win bonuses. The server uses the same canonical
-  winning-game points as the ranking, with consecutive wins scoped to their
-  season and singles/doubles format. Losing a match does not deduct coins.
-  Ranking points may still decrease independently.
-- Every 4 points matches in a row attended on time earn an attendance-streak
-  reward, 20 coins by default and adjustable by the owner and administrators.
-  See [Automatic activity coins](AUTOMATIC_COINS.md#attendance-streak).
-- Eligible participants receive five coins per activity, once across all courts
-  and time slots. A confirmed elapsed attendance interval or a completed match
-  establishes participation; waitlist-only entries and no-show/awaiting-arrival
-  holds without completed play do not. Cancellation without actual participation
-  gives no bonus, while preserved attendance before cancellation still counts.
-  An entirely cancelled or deleted activity gives no reward. Temporary guests do
-  not have wallets. Disabling an account after genuine participation does not
-  remove its already-earned entitlement.
-- Manual ranking-point changes, MVP/voting bonuses, and notification bonuses do
-  not create coins. The owner can continue to adjust coins separately.
+以钱包和流水为准，商店默认收起的「羽币奖励规则」说明比例、启用边界和更正。
 
-The wallet and its transactions are the authoritative result. The compact
-"Coin reward rules" disclosure in the shop explains the ratio, the activation
-boundary, and corrections without expanding the catalog page by default.
+重复结算不重复发奖。修正或作废比分会重算奖励，必要时收回尚未花掉的错误自动奖励；普通输球不回收。手动发放和兑换退款始终受保护，兑换优先使用自动奖励。余额不会变负，已花掉的错误奖励作为待校正额抵扣之后的自动奖励，不形成现金收费，也不改排行。手动调整与退款均保留独立账目。
 
-Repeated settlement does not repeat the reward. Correcting or voiding a score
-recalculates the affected reward instead of adding another award. A correction
-may reclaim unspent automatic coins that were awarded incorrectly; an ordinary
-loss never does. Manual grants and redemption refunds are protected, including
-when a correction is first discovered. Redemptions spend automatic coins first.
-Wallet balances remain nonnegative. If incorrect coins have already been spent,
-the outstanding correction is shown separately and offsets later automatic
-earnings. It is not a cash charge and does not change the member's ranking.
-Manual coin grants and redemption refunds retain their own ledger entries.
+## 群主管理
 
-## Club owner
+从首页或「我的」进入宝阁。只有群主能新增、编辑商品，设置整数价格、库存及上下架状态；下架保留订单历史。群主可填写原因发放或扣除羽币，不能扣成负数。普通管理员没有这些权限，临时来宾没有钱包。
 
-Open the shop from Home or My page. The club owner can create and edit products,
-set their coin price and available stock, and take them off sale without losing
-existing order history. Prices and stock must be integers.
+兑换立即占用库存。实物和普通虚拟商品在发放后由群主确认完成。取消待处理订单按原始成本退款，并只恢复一次库存；已完成订单不能通过此流程取消。
 
-The owner can manually grant or deduct coins from a member with a reason. A
-deduction cannot make the member's wallet negative. Other administrators do not
-receive these permissions. Temporary guests do not have wallets.
+## 成员使用
 
-Redemptions reserve stock immediately. The owner marks a pending order as
-fulfilled after handing over the reward. Cancelling a pending order refunds the
-exact original cost and restores its stock once; fulfilled orders cannot be
-cancelled through this flow.
+成员可查看自己的余额、流水与兑换历史。目录显示当前价格和库存，确认使用该展示价格；保存前变价则必须重新确认。服务端自行确定账号、价格、总额、余额和库存。
 
-## Members
+商店直接展示商品，标题右侧显示余额。商品网格手机两列、平板三列、宽屏四列；卡片显示名称、价格及库存。打开详情可看说明、调整数量和实时总额，之后再次确认。分类使用文字标签，兑换历史、流水及群主管理收起显示在商品下方。流水区分活动奖励、更正、手动调整、兑换、退款与收礼。非零待校正额显示在商品上方，群主也可在成员余额旁查看。
 
-Members see their own wallet, coin transactions, and redemption history. The
-catalog shows the current price and available stock. Confirmation uses that
-displayed price; if it changes before saving, the member must review the updated
-price. The server resolves the account, price, total, balance, and stock itself.
+## 即时道缘礼物
 
-The shop opens directly on the catalog. The coin balance sits on the right of
-the compact title row. Products use a compact exhibition grid: two columns on phones, three on tablets
-and four on wider screens. Tiles show the product name, price and stock. Opening
-a tile reveals the full description, quantity controls and live total in a
-dialog; redemption still requires the existing confirmation. Category filters
-remain available as text tabs. History,
-transactions and owner management remain collapsed, compact links below the goods.
-Transactions identify activity rewards, reward corrections, owner adjustments,
-redemptions, and refunds. A pending reward correction is visible above the goods
-only when it is nonzero; the owner can also see it beside each member's balance.
+新增 gift 商品类别，区别于 physical 实物和既有需人工发放的 digital 虚拟商品。gift 必须提供 giftTo，扣币时订单直接成为 fulfilled，收礼方收到礼物提示，双方增加相同缘值，不向接收人转入羽币。商店可选收礼人和留言，确认页明确总成本与道缘变化。详见 [道缘](BONDS.md)。原有 digital 商品继续由群主处理。
 
-## Persistence and concurrency
+## 持久化与并发
 
-Products, coin transactions, reward settlement records, and orders are stored in D1 using additive
-schema migration. They participate in the existing commit-revision transaction
-gate. A conflicting write rolls back the whole batch, preventing overselling or
-partial deductions. Retried redemptions reload current state and validate it
-again. Authenticated request IDs deduplicate writes; order snapshots retain the
-product name, unit price, quantity, and total at redemption time.
+商品、流水、奖励权益与订单存储在 D1，既有表采用增量迁移。所有写入使用原有 commits 版本事务门槛：冲突会回滚整批，避免超卖或只扣钱未下单。重试重新读取并校验当前状态，已认证请求编号用于去重。订单快照保留购买时的名称、单价、数量和总额。
 
-Shop confirmations keep their request ID across manual retries after an
-ambiguous network failure. Opening a new confirmation creates a new ID. Product
-edits also carry the displayed product's integer version: any intervening edit,
-redemption, or refund makes a stale editor fail instead of restoring old stock.
+网络结果不明确时，同一个确认窗口的手动重试沿用请求编号；重新打开确认产生新编号。编辑商品携带整数版本，期间任何编辑、购买或退款都会让旧编辑窗口失效，防止旧库存覆盖新库存。
 
-Ordinary members and administrators receive only their own transactions and
-orders. Only the club owner can inspect all wallets and orders. This also applies
-to non-owner administrator exports and audit views.
+普通成员与非群主管理员只能查看自己的流水和订单，只有群主能看全部钱包和订单；导出与审计视图也遵循这一限制。道缘赠礼记录的管理权限见道缘文档，不能由赠礼记录读取他人的完整钱包流水。
 
-## Validation
+## 验证
 
-Run `npm run verify` for repository checks, type checking, lint regression checks,
-migration history, unit and integration tests, and the production build. The
-shop API suite uses an isolated SQLite database and exercises permissions,
-validation, idempotency, persistence, concurrent redemption, refunds, and view
-privacy. UI coverage checks confirmation payloads and owner controls; browser
-checks should include narrow mobile widths and long product names.
+运行 npm run verify：检查共享源码隐私、仓库规范、类型、lint 回归、迁移、单元/集成测试及生产构建。商店 API 在隔离 SQLite 中验证权限、参数、幂等、持久化、竞态、退款、视图隐私和事务回滚，也验证即时送礼双方道缘、通知及零羽币转入。UI 验证确认载荷、接收人、数量与群主控件；浏览器覆盖窄屏、长名字和减少动态效果偏好。
