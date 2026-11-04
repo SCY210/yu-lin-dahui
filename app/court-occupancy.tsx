@@ -29,7 +29,7 @@ export default function CourtOccupancy({e,bookings,registrations,name}:{e:Event;
 }
 
 /** The bottom of an activity's or competition's signup tab (app/event-view.tsx): its courts' occupancy, for the
- * creator only (the server projects canViewCourtOccupancy). */
+ * creator and club owner (the server projects canViewCourtOccupancy). */
 export function SignupOccupancy({e,bookings,registrations,name}:{e:Event&{canViewCourtOccupancy?:boolean};bookings:Booking[];registrations:Registration[];name:(id:string)=>string}){
  if(e.canViewCourtOccupancy!==true)return null;
  return <CourtOccupancy e={e} bookings={bookings.filter(b=>b.eventId===e.id).sort((a,b)=>a.start-b.start||a.name.localeCompare(b.name))} registrations={registrations} name={name}/>;

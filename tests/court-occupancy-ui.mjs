@@ -30,10 +30,11 @@ try{
  assert.equal(ui.root.findAll(n=>n.type==='section'&&n.props['aria-label']==='场地时间占用').length,0,'occupancy now sits at the bottom of the signup tab (app/event-view.tsx), after every signup section');
  await act(()=>ui.update(React.createElement(SignupOccupancy,{e:data.events[0],bookings:data.bookings,registrations:data.registrations,name:names})));
  assert.match(text(ui.toJSON()),/候补不计入，不代表实际对局/);
- // Use real server projections: being an admin or the club owner is not an exception.
+ // Use real server projections: the stored club owner and event creator may see the timeline.
  const signupCount=()=>ui.root.findAll(n=>n.type==='section'&&n.props['aria-label']==='场地时间占用').length;
- for(const [creator,viewer,visible]of [['other','admin',false],['other','member',false],['self','member',true],['missing','admin',false]]){
-  const document=structuredClone(doc),account=document.state.accounts[0];account.role=viewer;
+ for(const [creator,viewer,visible]of [['other','owner',true],['other','admin',false],['other','member',false],['self','member',true],['missing','owner',true],['missing','admin',false]]){
+  const document=structuredClone(doc),account=document.state.accounts[0];account.role=viewer==='member'?'member':'admin';
+  document.state.settings.ownerAccountId=viewer==='owner'?account.id:'another-owner';
   document.state.events[0].creatorId=creator==='missing'?undefined:creator==='self'?account.id:'another-account';
   const projected=simulationView(document,now-hour).data;
   await act(()=>ui.update(React.createElement(SignupOccupancy,{e:projected.events[0],bookings:projected.bookings,registrations:projected.registrations,name:names})));
