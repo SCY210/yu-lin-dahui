@@ -23,6 +23,9 @@ export function bondTierIndex(score:number){let i=0;while(i+1<bondTiers.length&&
 export type BondRow={playerId:string;score:number;games:number;wins:number;giftsSent:number;giftsReceived:number};
 /** The bond between two members, for the owner's and administrators' list: games as partners, wins, and gifts by value both ways. */
 export type BondPair={a:string;b:string;score:number;games:number;wins:number;gifts:number};
+/** Public only beside an already visible doubles lineup; no score, gifts or other relationships. */
+export type MatchBondSide={players:[string,string];tier:number};
+export type MatchBondTiers=Record<string,{a:MatchBondSide|null;b:MatchBondSide|null}>;
 /** A received gift not yet acknowledged: coins, or a shop gift with its coin value. */
 export type GiftNotice={id:string;fromPlayerId:string;coins:number;item?:string;instant?:boolean;affinity?:number;value:number;message?:string;at:number};
 /** One gift between members, for the owner and administrators' gift history; `cancelled` when its shop order was refunded. */

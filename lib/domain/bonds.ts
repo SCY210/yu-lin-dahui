@@ -6,7 +6,7 @@ import {guestIds,isGuest} from './guests';
 import {isClubOwner} from './ownership';
 import {fail,type Account,type Match,type State} from './types';
 
-import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,giftNoticeDays,recordedGiftPoints,type BondRow,type BondPair,type GiftNotice,type GiftRecord} from './bond-tiers';
+import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,giftNoticeDays,recordedGiftPoints,type BondRow,type BondPair,type GiftNotice,type GiftRecord,type MatchBondTiers,type MatchBondSide} from './bond-tiers';
 export * from './bond-tiers';
 
 /** A gift row of this member's own ledger: a shop gift they gave or received. Members cannot give coins to each other, so
@@ -111,8 +111,8 @@ function replayBondPairs(matches:BondMatch[],gifts:BondGift[],guests:Set<string>
  return [...pairs.values()].filter(p=>p.score>0).sort((x,y)=>y.score-x.score||x.a.localeCompare(y.a)||x.b.localeCompare(y.b));
 }
 
-/** Viewer-independent indexed facts. Replay only the requested member, once; administrative pairs are computed
- * only when an authorized viewer needs them. Keep each ledger side independent: legacy gifts may be asymmetric. */
+/** Viewer-independent indexed facts. Pair replay is shared by administrative views and visible-lineup tiers.
+ * Keep each ledger side independent: legacy gifts may be asymmetric. Raw pair facts never become a public list. */
 export function bondHistory(s:BondState){
  const matches=bondMatches(finished(s as State)),guests=guestIds(s),byPlayer=new Map<string,BondMatch[]>(),gifts=new Map<string,BondGift[]>(),allGifts:BondGift[]=[];
  for(const match of matches)for(const id of new Set([...match.a,...match.b])){
@@ -123,17 +123,30 @@ export function bondHistory(s:BondState){
   const {playerId,giftTo,giftFrom,giftValue,giftAffinity,delta,at,requestId}=gift,snapshot={playerId,giftTo,giftFrom,giftValue,giftAffinity,delta,at,requestId};allGifts.push(snapshot);
   const rows=gifts.get(playerId);if(rows)rows.push(snapshot);else gifts.set(playerId,[snapshot]);
  }
- const rows=new Map<string,BondRow[]>();let pairs:BondPair[]|undefined;
+ const rows=new Map<string,BondRow[]>();let pairs:BondPair[]|undefined,tiers:Map<string,number>|undefined;
+ const pairKey=(a:string,b:string)=>a<b?a+'|'+b:b+'|'+a;
+ const allPairs=()=>pairs??=replayBondPairs(matches,allGifts,guests);
  return {
   rowFor(playerId:string){let value=rows.get(playerId);if(!value){value=replayBondRows(playerId,byPlayer.get(playerId)??[],gifts.get(playerId)??[],guests);rows.set(playerId,value)}return value},
-  pairs(){return pairs??=replayBondPairs(matches,allGifts,guests)},
+  pairs:allPairs,
+  tierFor(a:string,b:string){tiers??=new Map(allPairs().map(p=>[pairKey(p.a,p.b),bondTierIndex(p.score)]));return tiers.get(pairKey(a,b))??0},
  };
 }
 export type BondHistory=ReturnType<typeof bondHistory>;
 
+/** Caller supplies only matches in this viewer's visible workspace. Exposes current tiers for actual teammates,
+ * never all pairs, exact affinity, gift values or giver/recipient history. Singles and guests have no pair badge. */
+export function matchBondView(s:Pick<State,'players'|'accounts'|'matches'>,history:BondHistory):MatchBondTiers{
+ const accounts=new Set(s.accounts.map(a=>a.playerId)),members=new Set(s.players.filter(p=>p.enabled&&!p.guestEventId&&accounts.has(p.id)).map(p=>p.id));
+ const side=(ids:string[]):MatchBondSide|null=>ids.length===2&&ids[0]!==ids[1]&&ids.every(id=>members.has(id))?{players:[ids[0],ids[1]],tier:history.tierFor(ids[0],ids[1])}:null;
+ const result:MatchBondTiers={};
+ for(const m of s.matches){if(m.status==='cancelled'||m.a.length!==2||m.b.length!==2||new Set([...m.a,...m.b]).size!==4)continue;const a=side(m.a),b=side(m.b);if(a||b)result[m.id]={a,b}}
+ return result;
+}
+
 /** The viewer's own bonds; only the owner and administrators also see the bonds between every pair of members.
  * Shared history is internal only. Recheck authorization and return independent rows on every projection. */
-export function bondView(s:State,a:Account,matches?:Match[],history?:BondHistory){
+export function bondView(s:State,a:Account,matches?:Match[],history?:Pick<BondHistory,'rowFor'|'pairs'>){
  const all=history?undefined:matches??finished(s),rows=history?history.rowFor(a.playerId):bondRows(s,a.playerId,all);
  return {rows:history?rows.map(row=>({...row})):rows,...(a.role==='admin'||isClubOwner(s,a)?{pairs:history?history.pairs().map(pair=>({...pair})):bondPairs(s,all),gifts:giftHistory(s)}:{})};
 }
