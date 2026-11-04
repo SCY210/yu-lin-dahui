@@ -12,7 +12,7 @@ export const bondGamePoints=60,bondWinPoints=40;
 /** Legacy gifts and manually fulfilled products retain this rate. Gifts are not boosted. */
 export const bondCoinPoints=50;
 /** Instant gifts supplement play. All sizes have the same rate; older receipts keep their original value. */
-export const instantGiftCoinPoints=10;
+export const instantGiftCoinPoints=1;
 export function productGiftPoints(product:{kind?:string;price:number},quantity=1){return product.price*quantity*(product.kind==='gift'?instantGiftCoinPoints:bondCoinPoints)}
 export function recordedGiftPoints(gift:{giftAffinity?:number;giftValue?:number;delta:number}){return gift.giftAffinity??(gift.giftValue??Math.abs(gift.delta))*bondCoinPoints}
 /** Received gifts are announced for this long; older ones are not brought up again. */
