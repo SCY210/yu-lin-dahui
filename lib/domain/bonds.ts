@@ -6,7 +6,7 @@ import {guestIds,isGuest} from './guests';
 import {isClubOwner} from './ownership';
 import {fail,type Account,type Match,type State} from './types';
 
-import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,bondCoinPoints,giftNoticeDays,type BondRow,type BondPair,type GiftNotice,type GiftRecord} from './bond-tiers';
+import {bondTiers,bondTierIndex,bondGamePoints,bondWinPoints,giftNoticeDays,recordedGiftPoints,type BondRow,type BondPair,type GiftNotice,type GiftRecord} from './bond-tiers';
 export * from './bond-tiers';
 
 /** A gift row of this member's own ledger: a shop gift they gave or received. Members cannot give coins to each other, so
@@ -20,7 +20,7 @@ function giftRows(s:Pick<State,'treasureLedger'|'treasureOrders'>,playerId:strin
 /** Every member this player has a bond with, strongest first. Partner games and gifts are replayed in time order so each
  * game gets the boost of the stage the pair had reached by then. Both members of a pair derive the same score. */
 type BondState=Pick<State,'matches'|'players'|'accounts'|'treasureLedger'|'treasureOrders'>;
-type BondGift=Pick<State['treasureLedger'][number],'playerId'|'giftTo'|'giftFrom'|'giftValue'|'delta'|'at'|'requestId'>;
+type BondGift=Pick<State['treasureLedger'][number],'playerId'|'giftTo'|'giftFrom'|'giftValue'|'giftAffinity'|'delta'|'at'|'requestId'>;
 /** Only immutable replay facts enter the shared cache, never a request's State or mutable match arrays. */
 function bondMatches(matches:Match[]){return matches.map(m=>({id:m.id,end:m.end!,a:[...m.a],b:[...m.b],games:gameFacts(m).map(g=>({index:g.index,winner:g.winner}))}))}
 type BondMatch=ReturnType<typeof bondMatches>[number];
@@ -39,7 +39,7 @@ function replayBondRows(playerId:string,matches:BondMatch[],gifts:BondGift[],gue
  }
  for(const r of gifts){
   const value=r.giftValue??Math.abs(r.delta),other=(r.giftTo??r.giftFrom)!;
-  steps.push({at:r.at,order:r.requestId.replace(/^gift:/,''),other,points:()=>value*bondCoinPoints,...(r.giftTo?{sent:value}:{received:value})});
+  steps.push({at:r.at,order:r.requestId.replace(/^gift:/,''),other,points:()=>recordedGiftPoints(r),...(r.giftTo?{sent:value}:{received:value})});
  }
  steps.sort((x,y)=>x.at-y.at||x.order.localeCompare(y.order)||x.other.localeCompare(y.other));
  const rows=new Map<string,BondRow>();
@@ -69,7 +69,7 @@ export function isBondAction(action:string){return actions.has(action)}
 export function giftNotices(s:Pick<State,'treasureLedger'|'treasureOrders'>,a:Pick<Account,'playerId'|'giftSeen'>,now:number):GiftNotice[]{
  const seen=new Set(a.giftSeen??[]),since=now-giftNoticeDays*86400000,instant=new Set(s.treasureOrders.filter(o=>o.kind==='gift'&&o.status==='fulfilled').map(o=>o.id));
  return giftRows(s,a.playerId).filter(r=>r.giftFrom&&r.at>=since&&r.at<=now&&!seen.has(r.id))
-  .map(r=>({id:r.id,fromPlayerId:r.giftFrom!,coins:Math.max(0,r.delta),...(r.giftItem?{item:r.giftItem}:{}),...(r.orderId&&instant.has(r.orderId)?{instant:true}:{}),value:r.giftValue??r.delta,...(r.message?{message:r.message}:{}),at:r.at}))
+  .map(r=>({id:r.id,fromPlayerId:r.giftFrom!,coins:Math.max(0,r.delta),...(r.giftItem?{item:r.giftItem}:{}),...(r.orderId&&instant.has(r.orderId)?{instant:true}:{}),value:r.giftValue??r.delta,...(r.giftAffinity!==undefined?{affinity:r.giftAffinity}:{}),...(r.message?{message:r.message}:{}),at:r.at}))
   .sort((x,y)=>x.at-y.at||x.id.localeCompare(y.id));
 }
 
@@ -89,7 +89,7 @@ export function bondPairs(s:BondState,matches:Match[]=finished(s as State)):Bond
  return replayBondPairs(bondMatches(matches),s.treasureLedger.filter(r=>r.giftTo&&!(r.orderId&&cancelled.has(r.orderId))),guestIds(s));
 }
 function replayBondPairs(matches:BondMatch[],gifts:BondGift[],guests:Set<string>):BondPair[]{
- const steps:{at:number;order:string;key:string;game?:boolean;won?:boolean;gift?:number}[]=[];
+ const steps:{at:number;order:string;key:string;game?:boolean;won?:boolean;gift?:number;giftPoints?:number}[]=[];
  const key=(x:string,y:string)=>x<y?x+'|'+y:y+'|'+x;
  for(const m of matches)for(const side of ['a','b'] as const){
   const team=[...new Set(m[side])];if(team.length<2)continue;
@@ -98,13 +98,13 @@ function replayBondPairs(matches:BondMatch[],gifts:BondGift[],guests:Set<string>
  }
  // Each gift appears once, on the giver's row.
  for(const r of gifts)if(r.giftTo)
-  steps.push({at:r.at,order:r.requestId.replace(/^gift:/,''),key:key(r.playerId,r.giftTo),gift:r.giftValue??Math.abs(r.delta)});
+  steps.push({at:r.at,order:r.requestId.replace(/^gift:/,''),key:key(r.playerId,r.giftTo),gift:r.giftValue??Math.abs(r.delta),giftPoints:recordedGiftPoints(r)});
  steps.sort((x,y)=>x.at-y.at||x.order.localeCompare(y.order));
  const pairs=new Map<string,BondPair>();
  for(const step of steps){
   const [a,b]=step.key.split('|');if(a===b||guests.has(a)||guests.has(b))continue;
   const pair=pairs.get(step.key)??{a,b,score:0,games:0,wins:0,gifts:0};
-  pair.score+=step.game?(bondGamePoints+(step.won?bondWinPoints:0))*bondTiers[bondTierIndex(pair.score)].boost:step.gift!*bondCoinPoints;
+  pair.score+=step.game?(bondGamePoints+(step.won?bondWinPoints:0))*bondTiers[bondTierIndex(pair.score)].boost:step.giftPoints!;
   if(step.game){pair.games++;if(step.won)pair.wins++}else pair.gifts+=step.gift!;
   pairs.set(step.key,pair);
  }
@@ -120,7 +120,7 @@ export function bondHistory(s:BondState){
  }
  const cancelled=new Set(s.treasureOrders.filter(o=>o.status==='cancelled').map(o=>o.id));
  for(const gift of s.treasureLedger)if((gift.giftTo||gift.giftFrom)&&!(gift.orderId&&cancelled.has(gift.orderId))){
-  const {playerId,giftTo,giftFrom,giftValue,delta,at,requestId}=gift,snapshot={playerId,giftTo,giftFrom,giftValue,delta,at,requestId};allGifts.push(snapshot);
+  const {playerId,giftTo,giftFrom,giftValue,giftAffinity,delta,at,requestId}=gift,snapshot={playerId,giftTo,giftFrom,giftValue,giftAffinity,delta,at,requestId};allGifts.push(snapshot);
   const rows=gifts.get(playerId);if(rows)rows.push(snapshot);else gifts.set(playerId,[snapshot]);
  }
  const rows=new Map<string,BondRow[]>();let pairs:BondPair[]|undefined;

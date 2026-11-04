@@ -29,8 +29,8 @@ try{
  assert.equal(button('送羽币'),undefined,'coins cannot be given');
  await act(()=>button('送礼物').props.onClick());
  const [title,action,,fields,convert]=forms.at(-1);assert.equal(title,'送礼物给 Fictional Ben');
- assert.equal(action,'treasureRedeem');assert.deepEqual(fields[0].options,[['tape','Fictional grip tape · 12 羽币']],'only products in stock');
- assert.deepEqual(convert({productId:'tape',quantity:'2',message:''}),{productId:'tape',quantity:2,expectedPrice:12,giftTo:'p2',message:''});
+ assert.equal(action,'treasureRedeem');assert.deepEqual(fields[0].options,[['tape','Fictional grip tape · 12 羽币 · +600 缘值/件']],'only products in stock');
+ assert.deepEqual(convert({productId:'tape',quantity:'2',message:''}),{productId:'tape',quantity:2,expectedPrice:12,giftTo:'p2',expectedAffinity:1200,message:''});
  await mount(BondCard,{p:friend,ctx:ctx({rows:[]},[])});
  shown=text(ui.toJSON());
  assert.ok(shown.includes('萍水相逢')&&shown.includes('距「泛泛之交」还差 300'),'a pair without history starts at 萍水相逢');
@@ -47,7 +47,7 @@ try{
  for(const part of ['你收到了 2 份礼物！','道缘缘值共 +2,700','Fictional Ann 送你 30 羽币','谢谢搭档','Fictional Cai 送你：Fictional grip tape × 2','由群主发放'])assert.ok(shown.includes(part),part);
  await act(()=>button('收下礼物').props.onClick());
  assert.deepEqual(acknowledged,[['g1','g2']]);assert.equal(ui.toJSON(),null,'closes at once');
- await mount(GiftPopup,{...props,notices:[{id:'instant',fromPlayerId:'p1',coins:0,item:'Fictional instant gift',value:3,instant:true,at:2}]});shown=text(ui.toJSON());assert.ok(shown.includes('心意已送达'));assert.ok(!shown.includes('由群主发放'));
+ await mount(GiftPopup,{...props,notices:[{id:'instant',fromPlayerId:'p1',coins:0,item:'Fictional instant gift',value:3,instant:true,affinity:30,at:2}]});shown=text(ui.toJSON());assert.ok(shown.includes('心意已送达'));assert.ok(shown.includes('道缘缘值共 +30'));assert.ok(!shown.includes('由群主发放'));
  await mount(GiftPopup,{...props,blocked:true});assert.equal(ui.toJSON(),null,'waits behind other popups');
  console.log('PASS bond card and gift popup UI: stage, progress, boost, gift form and payload, no coin gifts, empty and top stages, guests, gift notice acknowledgement');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}

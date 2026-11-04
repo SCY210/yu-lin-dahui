@@ -11,7 +11,7 @@ export default function GiftPopup({notices,name,blocked,busy,acknowledge,onDismi
  const inFlight=useRef(false);
  const shown=notices.filter(n=>!dismissed.includes(n.id)).slice(0,50);
  if(!shown.length||blocked)return null;
- const ids=shown.map(n=>n.id),bond=shown.reduce((sum,n)=>sum+n.value*bondCoinPoints,0);
+ const ids=shown.map(n=>n.id),bond=shown.reduce((sum,n)=>sum+(n.affinity??n.value*bondCoinPoints),0);
  // Close at once; if saving fails the gift is simply announced again on the next visit.
  const confirm=()=>{if(busy||inFlight.current)return;inFlight.current=true;setDismissed(d=>[...d,...ids]);onDismiss?.(ids);void acknowledge(ids).catch(()=>{}).finally(()=>{inFlight.current=false})};
  return <Dialog open onOpenChange={open=>{if(!open)confirm()}}><DialogContent className="app-dialog gift-popup">

@@ -9,8 +9,12 @@ export const bondTiers=[
 ] as const;
 /** 缘值 for one game played as partners, before the stage boost, plus the extra for winning it together. */
 export const bondGamePoints=60,bondWinPoints=40;
-/** 缘值 per 羽币 of a shop gift's value. Gifts are not boosted. */
+/** Legacy gifts and manually fulfilled products retain this rate. Gifts are not boosted. */
 export const bondCoinPoints=50;
+/** Instant gifts supplement play. All sizes have the same rate; older receipts keep their original value. */
+export const instantGiftCoinPoints=10;
+export function productGiftPoints(product:{kind?:string;price:number},quantity=1){return product.price*quantity*(product.kind==='gift'?instantGiftCoinPoints:bondCoinPoints)}
+export function recordedGiftPoints(gift:{giftAffinity?:number;giftValue?:number;delta:number}){return gift.giftAffinity??(gift.giftValue??Math.abs(gift.delta))*bondCoinPoints}
 /** Received gifts are announced for this long; older ones are not brought up again. */
 export const giftNoticeDays=30;
 
@@ -20,6 +24,6 @@ export type BondRow={playerId:string;score:number;games:number;wins:number;gifts
 /** The bond between two members, for the owner's and administrators' list: games as partners, wins, and gifts by value both ways. */
 export type BondPair={a:string;b:string;score:number;games:number;wins:number;gifts:number};
 /** A received gift not yet acknowledged: coins, or a shop gift with its coin value. */
-export type GiftNotice={id:string;fromPlayerId:string;coins:number;item?:string;instant?:boolean;value:number;message?:string;at:number};
+export type GiftNotice={id:string;fromPlayerId:string;coins:number;item?:string;instant?:boolean;affinity?:number;value:number;message?:string;at:number};
 /** One gift between members, for the owner and administrators' gift history; `cancelled` when its shop order was refunded. */
 export type GiftRecord={id:string;from:string;to:string;item?:string;value:number;message?:string;at:number;cancelled?:true};
