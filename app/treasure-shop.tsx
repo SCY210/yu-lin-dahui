@@ -5,6 +5,7 @@ import type {ClubData} from '../lib/contracts/club';
 import type {CardContext} from './match-card';
 import {choice,fmt,type Field} from './form-fields';
 import Disclosure from './disclosure';
+import GiftArt from './gift-art';
 import {productGiftPoints} from '../lib/domain/bond-tiers';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import './treasure-shop.css';
@@ -22,6 +23,7 @@ function ProductCard({product,busy,onOpen}:{product:Product;busy:boolean;onOpen:
  const available=product.active&&product.stock>0;
  return <article className={'ts-product'+(!available?' ts-product-unavailable':'')}><button type="button" className="ts-product-open" disabled={busy} aria-label={'查看'+product.name+'详情'} aria-haspopup="dialog" onClick={onOpen}>
   <span className="ts-product-meta"><span className="ts-product-kind">{product.kind==='physical'?<Gift size={18} aria-hidden="true"/>:<Sparkles size={18} aria-hidden="true"/>}{product.kind==='gift'?'道缘礼物':product.kind==='physical'?'实物':'虚拟'}</span><span>{available?'余 '+count(product.stock):'已兑完'}</span></span>
+  {product.kind==='gift'&&<GiftArt name={product.name} className="ts-product-art"/>}
   <strong className="ts-product-name">{product.name}</strong>
   <span className="ts-product-footer"><span className="ts-price"><Coins size={14} aria-hidden="true"/><strong>{count(product.price)}</strong><span>羽币</span></span><span className="ts-product-cta">{available?'兑换':'详情'}<ArrowUpRight size={13} aria-hidden="true"/></span></span>
  </button></article>;
@@ -33,6 +35,7 @@ function ProductDetails({product,balance,busy,recipients,onClose,onRedeem}:{prod
  const [quantity,setQuantity]=useState(1),max=Math.min(product.stock,99),selected=Math.min(quantity,Math.max(1,max)),total=product.price*selected,available=product.active&&max>0,affordable=balance>=total;
  return <Dialog open onOpenChange={next=>{if(!next)onClose()}}><DialogContent className="app-dialog ts-product-dialog">
   <DialogHeader><DialogTitle>{product.name}</DialogTitle><DialogDescription className="ts-product-description">{product.description||'选择兑换数量，再确认兑换。'}</DialogDescription></DialogHeader>
+  {product.kind==='gift'&&<GiftArt name={product.name} className="ts-detail-art"/>}
   <div className="ts-detail-meta"><span>{product.kind==='gift'?'道缘礼物 · 即时送达':product.kind==='physical'?'实物礼品':'虚拟礼品'} · {available?'剩余 '+count(product.stock)+' 件':'暂时兑完'}</span><span>{count(product.price)} 羽币 / 件</span></div>
   {available&&<div className="ts-detail-quantity"><span>兑换数量</span><div className="ts-stepper" role="group" aria-label={product.name+'兑换数量'}><button type="button" aria-label={'减少'+product.name+'数量'} disabled={busy||selected<=1} onClick={()=>setQuantity(selected-1)}><Minus size={15}/></button><output aria-label="当前数量">{selected}</output><button type="button" aria-label={'增加'+product.name+'数量'} disabled={busy||selected>=max} onClick={()=>setQuantity(selected+1)}><Plus size={15}/></button></div></div>}
   <label className="ts-gift-field">{instant?'送给球友':'兑换给谁'}<select aria-label="礼物接收人" value={giftTo} disabled={busy} onChange={e=>setGiftTo(e.target.value)}><option value="">{instant?'请选择球友':'自己领取'}</option>{recipients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
@@ -42,7 +45,7 @@ function ProductDetails({product,balance,busy,recipients,onClose,onRedeem}:{prod
  </DialogContent></Dialog>;
 }
 
-function OrderRow({order,owner,busy,name,onHandle}:{order:Order;owner?:boolean;busy:boolean;name:(id:string)=>string;onHandle?:(order:Order,status:'fulfilled'|'cancelled')=>void}){return <article className="ts-order"><div className="ts-order-main"><span className="ts-order-icon" aria-hidden="true"><Package size={20}/></span><div><strong>{order.productName}</strong><small>{owner?name(order.playerId)+' · ':''}{order.quantity} 件 · {count(order.total)} 羽币</small>{order.giftTo&&<small className="ts-order-gift">送给 {name(order.giftTo)}{order.message?' · “'+order.message+'”':''}</small>}<small>{fmt(order.created)}</small></div><span className={'ts-order-status ts-order-status-'+order.status}>{statusName[order.status]}</span></div>{order.status==='pending'&&<div className="ts-order-next">{owner?<div className="ts-order-actions"><button type="button" className="secondary" disabled={busy} onClick={()=>onHandle?.(order,'fulfilled')}><Check size={15}/>确认完成</button><button type="button" className="ghost" disabled={busy} onClick={()=>onHandle?.(order,'cancelled')}>取消并退还羽币</button></div>:<span>{order.giftTo?'已为对方兑换，群主会把礼物交给对方。':order.kind==='physical'?'兑换成功，请联系群主安排领取。':'兑换成功，等待群主为你安排。'}</span>}</div>}{order.status==='cancelled'&&<p className="ts-order-note">羽币已退回，库存已恢复。</p>}</article>}
+function OrderRow({order,owner,busy,name,onHandle}:{order:Order;owner?:boolean;busy:boolean;name:(id:string)=>string;onHandle?:(order:Order,status:'fulfilled'|'cancelled')=>void}){return <article className="ts-order"><div className="ts-order-main"><span className="ts-order-icon" aria-hidden="true">{order.kind==='gift'?<GiftArt name={order.productName}/>:<Package size={20}/>}</span><div><strong>{order.productName}</strong><small>{owner?name(order.playerId)+' · ':''}{order.quantity} 件 · {count(order.total)} 羽币</small>{order.giftTo&&<small className="ts-order-gift">送给 {name(order.giftTo)}{order.message?' · “'+order.message+'”':''}</small>}<small>{fmt(order.created)}</small></div><span className={'ts-order-status ts-order-status-'+order.status}>{statusName[order.status]}</span></div>{order.status==='pending'&&<div className="ts-order-next">{owner?<div className="ts-order-actions"><button type="button" className="secondary" disabled={busy} onClick={()=>onHandle?.(order,'fulfilled')}><Check size={15}/>确认完成</button><button type="button" className="ghost" disabled={busy} onClick={()=>onHandle?.(order,'cancelled')}>取消并退还羽币</button></div>:<span>{order.giftTo?'已为对方兑换，群主会把礼物交给对方。':order.kind==='physical'?'兑换成功，请联系群主安排领取。':'兑换成功，等待群主为你安排。'}</span>}</div>}{order.status==='cancelled'&&<p className="ts-order-note">羽币已退回，库存已恢复。</p>}</article>}
 
 type StreakReward=ClubData['treasureShop']['streakReward'];
 function RewardRules({policy,pendingCorrection,streak,onEditStreak}:{policy:ClubData['treasureShop']['rewardPolicy'];pendingCorrection:number;streak:StreakReward;onEditStreak?:()=>void}){
