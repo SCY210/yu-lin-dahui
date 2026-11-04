@@ -48,7 +48,7 @@ try{
  signIn('other');assert.equal((await post('courtRegister',court('p3'))).status,200);saved=await api.load();assert.equal(row(saved,'p3').status,'waitlist');
  signIn('member');assert.equal((await post('courtCancel',{bookingId:'c',playerId:'p2',reason:'Cancel fixture'})).status,200);saved=await api.load();assert.equal(row(saved,visitor.id).status,'confirmed');assert.equal(row(saved,'p3').status,'waitlist');assert.equal(row(saved,'p3').noticeAcknowledgements,undefined);
  assert.equal((await post('courtRegister',court())).status,200);assert.equal(row(await api.load()).noticeAcknowledgements,undefined);
- assert.equal((await post('friendSignup',{mode:'existing',...court(visitor.id),note:'proxy edit'})).status,200);assert.equal(row(await api.load(),visitor.id).noticeAcknowledgements,undefined);
+ assert.equal((await post('courtRegister',{...court(visitor.id),note:'proxy edit'})).status,200);assert.equal(row(await api.load(),visitor.id).noticeAcknowledgements,undefined);
  // Historical receipts stay factual, private and unchanged after edits/rejoins.
  signIn('legacy');assert.deepEqual(row(await api.load(),'p4','legacy').noticeAcknowledgements,[historical]);assert.equal((await post('register',legacy('p4'))).status,200);
  assert.equal((await post('cancel',{eventId:'legacy',playerId:'p4',reason:'Cancel legacy fixture'})).status,200);assert.equal((await post('register',legacy('p4'))).status,200);assert.deepEqual(row(await api.load(),'p4','legacy').noticeAcknowledgements,[historical]);

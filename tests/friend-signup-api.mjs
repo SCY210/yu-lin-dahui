@@ -47,7 +47,9 @@ try{
  assert.equal((await post(fresh('Fictional guest'),requestId)).status,200);assert.equal((await api.load()).players.length,4);assert.equal((await api.load()).registrations.length,1);
  const quotaId=await api.rateLimitId('creation-daily:friend:member:'+api.uploadDayWindow().day);
  assert.equal(database.sql.prepare('SELECT count FROM auth_rate_limits WHERE id=?').get(quotaId).count,1);
- assert.equal((await post({...acceptedActivityNotice,mode:'existing',playerId:friend.id,bookingId:'court',arrival:start,departure:end,note:'Reuse'})).status,200);
+ const beforeDuplicate=await api.load();
+ assert.equal((await post({...acceptedActivityNotice,mode:'existing',playerId:friend.id,bookingId:'court',arrival:start,departure:end,note:'Reuse'})).status,400);
+ assert.deepEqual((await api.load()).registrations,beforeDuplicate.registrations,'duplicate proxy requests cannot overwrite the original signup');
  assert.equal((await api.load()).players.length,4);assert.equal(database.sql.prepare('SELECT count FROM auth_rate_limits WHERE id=?').get(quotaId).count,1,'existing friend does not debit creation quota');
  assert.equal((await post(fresh('Fictional waiting guest'))).status,200);let loaded=await api.load();const waiting=loaded.players.find(p=>p.name==='Fictional waiting guest');assert.equal(loaded.registrations.find(r=>r.playerId===waiting.id).bookingSignups[0].status,'waitlist');
  const before=await api.load();assert.equal((await post({...fresh('Invalid interval'),arrival:start-1800000})).status,400);assert.equal((await post({...acceptedActivityNotice,mode:'existing',playerId:'p2',bookingId:'court',arrival:start,departure:end,note:''})).status,403);
@@ -55,5 +57,14 @@ try{
  database.injectFailure(query=>/INSERT INTO registrations\(/i.test(query));
  const rollback=await post(fresh('Rollback guest'));assert.equal(rollback.status,503);database.injectFailure(null);
  loaded=await api.load();assert.deepEqual(loaded.players,before.players);assert.deepEqual(loaded.registrations,before.registrations);assert.equal(loaded.revision,before.revision,'database failure rolls back the new activity participant and signup together');
+ signIn('owner');
+ const signup={mode:'existing',playerId:'p2',bookingId:'court',arrival:start,departure:end,note:'Concurrent signup'},keys=[crypto.randomUUID(),crypto.randomUUID()];
+ const raced=await Promise.all(keys.map(key=>post(signup,key)));
+ assert.deepEqual(raced.map(r=>r.status).sort(),[200,400],'one concurrent signup succeeds; the rebased duplicate is rejected');
+ assert.equal((await api.load()).registrations.filter(r=>r.eventId==='event'&&r.playerId==='p2').length,1);
+ assert.equal((await post(signup,keys[raced.findIndex(r=>r.status===200)])).status,200,'network replay of the successful request remains idempotent');
+ assert.equal((await post({bookingId:'court',playerId:'p2',reason:'Fictional cancellation'},crypto.randomUUID(),{action:'courtCancel'})).status,200);
+ assert.equal((await post(signup)).status,200,'an actually cancelled signup can join again');
+ assert.equal((await api.load()).registrations.find(r=>r.playerId==='p2').bookingSignups.length,1);
  console.log('PASS friend signup API: one-step persistence, authenticated ownership, CSRF/actor checks, full-court waitlist, replay deduplication, existing-profile reuse, quota and atomic rollback');
 }finally{database.close();delete globalThis.__friendSignupTest}

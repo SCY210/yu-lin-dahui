@@ -35,6 +35,7 @@ import { z } from 'zod';
 import { pointGrantInput } from './point-grants';
 import { upgradeActivitySignups } from './event-merge';
 import { applyCourtSignup } from './court-commands';
+import {duplicateSignupMessage,hasSignupOverlap} from './signup-conflicts';
 import { bookingRows, promoteBooking, promoteLegacy } from './booking-signups';
 import { bookingParts, continuesCourt, retimeBooking, setPartAdvancer } from './booking-advancers';
 import { fail, month, type State, type Account, type Event } from './types';
@@ -353,6 +354,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(e.tournament&&e.tournament.phase!=='setup'&&!manager&&(!old||old.status==='cancelled'))fail('比赛已抽签，报名已截止');
             if (old?.bookingSignups)
                 fail('请在对应的场地时段修改接龙');
+            if (hasSignupOverlap(s,e.id,player(p.playerId),p.arrival,p.departure,p.playerId))
+                fail(duplicateSignupMessage);
             if (old && old.status !== 'cancelled') {
                 old.arrival = p.arrival;
                 old.departure = p.departure;

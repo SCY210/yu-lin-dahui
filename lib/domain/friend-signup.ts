@@ -5,6 +5,7 @@ import {businessTimestamp} from './timestamp';
 import {guestGenderInput,guestLevelInput} from './guest-commands';
 import {isGuest} from './guests';
 import {duplicateGuestMessage,guestAlreadySignedUp} from './guest-names';
+import {duplicateSignupMessage,hasSignupOverlap} from './signup-conflicts';
 import {fail,type State,type Account,type Player} from './types';
 
 const common={...activityAcknowledgementInput,bookingId:z.string().min(1).max(100),arrival:businessTimestamp,departure:businessTimestamp,note:z.string().max(500)};
@@ -35,6 +36,8 @@ export async function applyFriendSignup(s:State,a:Account,action:string,input:un
  }else if(p.mode==='new'){
   playerId=crypto.randomUUID();work.players.push({id:playerId,ownerId:a.id,name:p.name,guestEventId:booking.eventId,initialRating:p.guestLevel??1000,rating:p.guestLevel??1000,ratedGames:0,enabled:true,ratingReason:'本次活动临时来宾',guestGender:p.gender,...(p.guestLevel?{guestLevels:[{at:0,level:p.guestLevel}]}:{})});
  }else{playerId=p.playerId;if(playerId===a.playerId)fail('请通过我的接龙修改本人报名')}
+ const person=work.players.find(x=>x.id===playerId)??fail('球友不存在');
+ if(hasSignupOverlap(work,booking.eventId,person,p.arrival,p.departure))fail(duplicateSignupMessage);
  await applyCourtSignup(work,a,'courtRegister',{bookingId:p.bookingId,playerId,arrival:p.arrival,departure:p.departure,note:p.note,noticeAccepted:p.noticeAccepted,noticeVersion:p.noticeVersion},now);
  work.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'friendSignup',reason:p.mode==='new'?'添加本次活动临时来宾':p.mode==='saved'?'带以前的朋友来本次活动':'代已有朋友接龙',changes:{mode:p.mode,bookingId:p.bookingId,playerId,...(p.mode==='saved'?{sourcePlayerId:p.sourcePlayerId}:{})}});
  Object.assign(s,work);return true;

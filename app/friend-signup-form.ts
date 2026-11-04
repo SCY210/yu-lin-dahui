@@ -7,6 +7,7 @@ import {choice,text,halfTimed,hm,type Field} from './form-fields';
 import {guestLevels,defaultGuestLevel} from '../lib/domain/guests';
 import {duplicateGuestMessage,guestAlreadySignedUp} from '../lib/domain/guest-names';
 import {friendKey} from '../lib/domain/guest-friend-key';
+import {duplicateSignupMessage,hasSignupOverlap} from '../lib/domain/signup-conflicts';
 
 type Data=Pick<ClubData,'me'|'players'|'bookings'|'registrations'>;
 type Court=Data['bookings'][number];
@@ -47,9 +48,12 @@ export function friendSignupForm(e:Event,data:Data,now:number,court?:Court,prefe
   const b=courts.find(b=>b.id===v.bookingId);if(!b)throw new Error('所选场地已不可报名，请重新选择');
   const plan=plannedInterval(b.start,b.end);
   const times={bookingId:b.id,arrival:v.arrival?plannedEpoch(v.arrival,plan.start):plan.start,departure:v.departure?plannedEpoch(v.departure,plan.end):plan.end,note:v.note??''};
+  const selectedId=v.mode==='existing'?v.playerId:v.mode==='saved'?v.saved.split(':')[1]:undefined;
+  const person=v.mode==='new'?{id:'',name:v.name,guestEventId:e.id}:data.players.find(p=>p.id===selectedId);
   if(v.mode==='new'&&!v.gender)throw new Error('请选择朋友性别，用于分队');
   // The same nickname is not added twice to one activity; the friend's other courts go through 代朋友接龙.
   if(v.mode==='new'&&guestAlreadySignedUp(data,e.id,v.name))throw new Error(duplicateGuestMessage);
+  if(person&&hasSignupOverlap(data,e.id,person,times.arrival,times.departure))throw new Error(duplicateSignupMessage);
   if(v.mode==='saved'){const [kind,id]=v.saved.split(':');if(!id)throw new Error('请选择朋友');return kind==='existing'?{...times,mode:'existing' as const,playerId:id}:{...times,mode:'saved' as const,sourcePlayerId:id}}
   return v.mode==='existing'?{...times,mode:'existing' as const,playerId:v.playerId}:{...times,mode:'new' as const,name:v.name,gender:v.gender as 'male'|'female',guestLevel:Number(v.guestLevel)||defaultGuestLevel};
  };

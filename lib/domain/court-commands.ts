@@ -12,6 +12,7 @@ import { archiveDefaultAttendance } from './attendance';
 import { archiveBooking, bookingCapacity, bookingRows, promoteBooking, promoteLegacy, syncRegistration } from './booking-signups';
 import { canManageMembers } from './member-managers';
 import { duplicateGuestSignup } from './guest-names';
+import { duplicateSignupMessage, hasSignupOverlap } from './signup-conflicts';
 const id = z.string().min(1).max(100), reason = editReason;
 const schemas = {
     courtRegister: z.object({ ...activityAcknowledgementInput, bookingId: id, playerId: id, arrival: businessTimestamp, departure: businessTimestamp, note: z.string().max(500) }),
@@ -48,6 +49,8 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
                 fail('参加时间必须在所选场地时段内');
             if (r?.bookingSignups?.some(x => x.bookingId !== b.id && x.status !== 'cancelled' && x.arrival < p.departure && x.departure > p.arrival))
                 fail('你已报名其他场地的重叠时段，请先取消或调整');
+            if (hasSignupOverlap(s, e.id, player, p.arrival, p.departure, player.id))
+                fail(duplicateSignupMessage);
             if (s.matches.some(m => m.eventId === e.id && m.status === 'playing' && [...m.a, ...m.b].includes(player.id)))
                 fail('成员正在比赛，请先完成比赛');
             if (!r) {
