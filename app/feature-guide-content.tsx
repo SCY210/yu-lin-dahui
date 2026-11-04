@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useId,useState} from 'react';
 import {X} from 'lucide-react';
 import {Dialog,DialogClose,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
@@ -29,9 +30,9 @@ export default function FeatureGuideContent({topic,rules,onOpenChange}:{topic:Gu
       </DialogClose>
       <div className="shrink-0">
         <label htmlFor={selectId} className="mb-2 block text-sm font-medium text-[var(--muted-foreground)]">查看其他功能</label>
-        <select id={selectId} value={selected} onChange={e=>navigate(e.target.value as GuideTopic)} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
+        <AppSelect aria-label="功能指引主题" id={selectId} value={selected} onChange={e=>navigate(e.target.value as GuideTopic)} className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
           {guideTopics.filter(item=>item!=='annual').map(item=><option key={item} value={item}>{guideLabels[item]}</option>)}
-        </select>
+        </AppSelect>
       </div>
       <div id={selectId+'-body'} role="region" aria-label={guide.title+'详细说明'} tabIndex={0} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1 text-base leading-7 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]">
         {[guide.table,...(guide.tables??[])].map(table=>table&&<section key={table.caption}>

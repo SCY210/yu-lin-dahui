@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useState} from 'react';
 import type {Event} from '../lib/domain/types';
 import {teamSize} from '../lib/domain/match-format';
@@ -13,7 +14,7 @@ const ruleOf=(key:string)=>scoringOptions.find(([k])=>k===key)?.[1]??defaultScor
 const yuan=(cents:number)=>(cents/100).toFixed(cents%100?2:0);
 const formatHints:Record<TournamentFormat,string>={groups:'先分组打单循环，各组前几名进入淘汰赛。',knockout:'输一场即出局，按修为排种子，最强的两队只会在决赛相遇，签位不足时种子轮空。','round-robin':'所有队伍互相打一场，按胜场、净胜分、总得分排名，第一名夺冠。'};
 const categoryHints:Record<TournamentCategory,string>={'mens-singles':'只限男球友','mens-doubles':'只限男球友','mixed-doubles':'每队一男一女'};
-const ScoringSelect=({label,value,disabled,onChange}:{label:string;value:string;disabled:boolean;onChange:(key:string)=>void})=><label>{label}<select value={value} disabled={disabled} onChange={event=>onChange(event.target.value)}>{scoringOptions.map(([k,r])=><option key={k} value={k}>{(r.games===3?'三局两胜':'一局')+' · '+r.points+' 分'}</option>)}</select><small className="hint">{scoringLabel(ruleOf(value))}</small></label>;
+const ScoringSelect=({label,value,disabled,onChange}:{label:string;value:string;disabled:boolean;onChange:(key:string)=>void})=><label>{label}<AppSelect aria-label={label} value={value} disabled={disabled} onChange={event=>onChange(event.target.value)}>{scoringOptions.map(([k,r])=><option key={k} value={k}>{(r.games===3?'三局两胜':'一局')+' · '+r.points+' 分'}</option>)}</AppSelect><small className="hint">{scoringLabel(ruleOf(value))}</small></label>;
 
 /** The competition's format, category, scoring rules and entry fee (docs/TOURNAMENTS.md). Everyone sees them; the owner
  * and administrators change them, all but the fee only before the draw. Groups and knockout have their own rule. */
@@ -35,9 +36,9 @@ export default function TournamentSettings({e,ctx,organiser}:{e:Event;ctx:Schedu
   <ul className="tournament-rule-list">{summary.map(x=><li key={x}>{x}</li>)}</ul>
   {organiser&&<Disclosure label="调整赛制与奖品" defaultOpen={t.phase==='setup'&&!t.prizes}>
    <div className="tournament-settings-form">
-    <label>赛制<select value={format} disabled={locked} onChange={event=>setFormat(event.target.value as TournamentFormat)}>{(Object.keys(formatLabels) as TournamentFormat[]).map(k=><option key={k} value={k}>{formatLabels[k]}</option>)}</select></label>
+    <label>赛制<AppSelect aria-label="赛制" value={format} disabled={locked} onChange={event=>setFormat(event.target.value as TournamentFormat)}>{(Object.keys(formatLabels) as TournamentFormat[]).map(k=><option key={k} value={k}>{formatLabels[k]}</option>)}</AppSelect></label>
     <p className="hint">{formatHints[format]}</p>
-    <label>项目<select value={category} disabled={locked} onChange={event=>setCategory(event.target.value as TournamentCategory|'')}>{singles?<option value="">单打（不限性别）</option>:!t.category&&<option value="">双打（不限性别）</option>}{categories.map(k=><option key={k} value={k}>{categoryLabels[k]}（{categoryHints[k]}）</option>)}</select></label>
+    <label>项目<AppSelect aria-label="项目" value={category} disabled={locked} onChange={event=>setCategory(event.target.value as TournamentCategory|'')}>{singles?<option value="">单打（不限性别）</option>:!t.category&&<option value="">双打（不限性别）</option>}{categories.map(k=><option key={k} value={k}>{categoryLabels[k]}（{categoryHints[k]}）</option>)}</AppSelect></label>
     {hasGroups&&<ScoringSelect label={format==='groups'?'小组赛计分':'计分'} value={groupKey} disabled={locked} onChange={setGroupKey}/>}
     {hasKnockout&&<ScoringSelect label={format==='groups'?'淘汰赛计分':'计分'} value={knockoutKey} disabled={locked} onChange={setKnockoutKey}/>}
     <fieldset className="tournament-prizes"><legend>冠亚季奖品费用（元）</legend>{([['first','冠军'],['second','亚军'],['third','季军']] as const).map(([k,label])=><label key={k}>{label}<input type="number" inputMode="decimal" min={0} step="0.01" value={prizes[k]} onChange={event=>setPrizes({...prizes,[k]:event.target.value})}/></label>)}</fieldset>

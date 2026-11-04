@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useMemo,useState,type ReactNode} from 'react';
 import {LayoutGrid,List,Search,X} from 'lucide-react';
 import {bondTierIndex,type BondRow} from '../lib/domain/bond-tiers';
@@ -28,9 +29,9 @@ export default function PlayerDirectory({roster,stats,bonds,meId,onProfile,cards
   <div className="pd-tools">
    <label className="pd-search"><Search size={17} aria-hidden="true"/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索名字、口号或战拍" aria-label="搜索球友"/>{query&&<button type="button" aria-label="清空搜索" onClick={()=>setQuery('')}><X size={16} aria-hidden="true"/></button>}</label>
    <div className="pd-row">
-    <select value={sort} onChange={e=>setSort(e.target.value as Sort)} aria-label="排序">
+    <AppSelect value={sort} onChange={e=>setSort(e.target.value as Sort)} aria-label="排序">
      <option value="realm">按修为</option><option value="bond">按我的道缘</option><option value="name">按名字</option>
-    </select>
+    </AppSelect>
     <div className="pd-views" role="group" aria-label="显示方式">
      <button type="button" aria-pressed={view==='list'} onClick={()=>choose('list')}><List size={16} aria-hidden="true"/>名录</button>
      <button type="button" aria-pressed={view==='cards'} onClick={()=>choose('cards')}><LayoutGrid size={16} aria-hidden="true"/>名帖</button>

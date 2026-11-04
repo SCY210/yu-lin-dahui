@@ -14,7 +14,7 @@
 .rv-period-switch { display:inline-flex; gap:3px; padding:4px; border:1px solid #e3ddef; border-radius:14px; background:#f1edf8; justify-self:end; }
 .rv-period-switch button { min-height:44px; padding:8px 19px; border:0; border-radius:10px; background:transparent; color:#756a8b; font-weight:650; white-space:nowrap; }
 .rv-period-switch button[aria-pressed=true] { background:#fff; color:#5e3eb1; box-shadow:0 2px 6px #4030520a; }
-.rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker select:focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
+.rv-period-switch button:focus-visible,.rv-date-picker button:focus-visible,.rv-date-picker :is(select,.app-select-trigger):focus-visible { outline:3px solid #8d71c6; outline-offset:2px; }
 .rv-format-switch { grid-column:1; justify-self:start; }
 .rv-controls { grid-column:1/-1; width:100%; display:grid; grid-template-columns:208px; align-items:center; gap:10px; min-height:48px; }
 .rv-controls>button { justify-self:end; white-space:nowrap; }
@@ -25,7 +25,7 @@
 .rv-date-picker .month-current { box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:5px; width:100%; height:40px; min-width:0; padding:0 3px; white-space:nowrap; font-size:15px; line-height:1; }
 .rv-date-picker .month-current svg { flex-shrink:0; width:18px; height:18px; }
 .rv-date-picker .month-current span { white-space:nowrap; }
-.rv-date-picker select { box-sizing:border-box; display:block; appearance:none; min-width:0; width:100%; height:40px; margin:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:center; cursor:pointer; border-radius:5px; }
+.rv-date-picker :is(select,.app-select-trigger) { box-sizing:border-box; display:block; appearance:none; min-width:0; width:100%; height:40px; margin:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:center; cursor:pointer; border-radius:5px; }
 .rv-progress { display:flex; align-items:center; flex-wrap:wrap; gap:5px 7px; margin-top:6px; color:#8a739b; font-size:11px; line-height:1.4; }
 .rv-progress-track { width:64px; height:4px; border-radius:4px; background:#ede4f4; overflow:hidden; }
 .rv-progress-track>span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#c5a4d6,#9675b9); }

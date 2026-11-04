@@ -68,10 +68,10 @@ export default function PhotoGallery({ctx,eventId,playerId,avatar=false}:{ctx:Ga
   {canUpload&&<div className="upload-form">
    <label>{avatar?'选择头像':'上传活动照片'}<input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>{setFile(event.target.files?.[0]??null);setRightsConfirmed(false)}}/></label>
    {!avatar&&<>
-    <label>关联比赛<Pick value={matchId} onChange={setMatchId} options={[
+    <label>关联比赛<Pick label="关联比赛" value={matchId} onChange={setMatchId} options={[
      ['none','仅关联活动'],...eventMatches.map(match=>[match.id,`${match.a.map(name).join('/')} 对阵 ${match.b.map(name).join('/')}`]),
     ]}/></label>
-    {matchId==='none'&&<label>关联球友（可选）<Pick value={person} onChange={setPerson} options={[
+    {matchId==='none'&&<label>关联球友（可选）<Pick label="关联球友" value={person} onChange={setPerson} options={[
      ['none','暂不关联球友'],...attended.map(item=>[item.id,item.name]),
     ]}/></label>}
     <label>照片说明<input value={caption} maxLength={300} disabled={busy} onChange={event=>setCaption(event.target.value)}/></label>

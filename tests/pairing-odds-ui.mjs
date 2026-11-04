@@ -9,7 +9,7 @@ import renderer from 'react-test-renderer';
 
 mkdirSync('.test-output',{recursive:true});
 writeFileSync('.test-output/pairing-odds-entry.ts',"export {default} from '../app/pairing-odds-panel';");
-await build({entryPoints:['.test-output/pairing-odds-entry.ts'],outfile:'.test-output/pairing-odds-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
+await build({banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},entryPoints:['.test-output/pairing-odds-entry.ts'],outfile:'.test-output/pairing-odds-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
 const {default:PairingOddsPanel}=await import(pathToFileURL(resolve('.test-output/pairing-odds-ui.mjs')).href);
 const prior=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=node=>typeof node==='string'?node:(Array.isArray(node)?node:node?.children??[]).map(text).join('');

@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useState,type ReactNode} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight} from 'lucide-react';
 import {Popover,PopoverTrigger,PopoverContent} from '@/components/ui/popover';
@@ -21,7 +22,7 @@ export default function MonthPicker({value,onChange}:{value:string;onChange:(v:s
 
 export function YearPicker({value,onChange}:{value:number;onChange:(v:number)=>void}) {
  return <DateFrame previous={()=>onChange(value-1)} next={()=>onChange(value+1)} previousLabel="上一年排名" nextLabel="下一年排名" first={value<=2000} last={value>=2100}>
-  <div className="month-current rv-year-current"><CalendarDays size={18}/><select aria-label="选择排名年份" value={value} onChange={e=>onChange(Number(e.target.value))}>{Array.from({length:101},(_,i)=>2000+i).map(year=><option key={year} value={year}>{year}年</option>)}</select></div>
+  <div className="month-current rv-year-current"><CalendarDays size={18}/><AppSelect aria-label="选择排名年份" value={value} onChange={e=>onChange(Number(e.target.value))}>{Array.from({length:101},(_,i)=>2000+i).map(year=><option key={year} value={year}>{year}年</option>)}</AppSelect></div>
  </DateFrame>;
 }
 

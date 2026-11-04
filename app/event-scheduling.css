@@ -2,7 +2,7 @@
 
 .scheduling-options button[aria-pressed=true]{opacity:1}
 .scheduling-mode-select{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px}
-.scheduling-mode-select select{flex:1;min-width:0;max-width:260px;min-height:44px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit;font:inherit}
+.scheduling-mode-select :is(select,.app-select-trigger){flex:1;min-width:0;max-width:260px;min-height:44px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit;font:inherit}
 .scheduling-selector.card,.scheduling-controls.card{padding:14px;margin:10px 0}
 .scheduling-selector h2,.scheduling-controls h2{font-size:16px;margin:0 0 7px}
 .scheduling-selector .hint,.scheduling-controls .hint{font-size:12px;line-height:1.5;margin:7px 0 0}
@@ -18,7 +18,7 @@
 @media(max-width:600px){.event-scheduling>.app-disclosure>.app-disclosure-content{padding:8px}.event-scheduling .scheduling-selector.card,.event-scheduling .scheduling-controls.card{padding:11px}.points-participation-row>strong{flex:1 1 80px}.scheduling-controls .actions{gap:6px}.scheduling-controls .actions>button{flex:1 1 110px;font-size:12px;padding:6px;min-height:44px}}
 .event-scheduling .scheduling-selector.card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:4px 8px;margin:6px 0}
 .scheduling-mode-select{gap:7px;white-space:nowrap;min-width:0}
-.scheduling-mode-select select{max-width:none;padding:5px 6px;font-size:12px}
+.scheduling-mode-select :is(select,.app-select-trigger){max-width:none;padding:5px 6px;font-size:12px}
 .scheduling-mode-info>summary{display:flex;align-items:center;min-height:44px;padding:3px;font-size:12px;white-space:nowrap}
 .scheduling-mode-info[open]{grid-column:1/-1}
 .scheduling-control-info>summary,.round-lineup-help>summary{min-height:32px;padding:4px 0;font-size:11px}

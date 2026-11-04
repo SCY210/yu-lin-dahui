@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useEffect,useRef,useState} from 'react';
 import {Pause,Play,ShieldAlert,X} from 'lucide-react';
 import type {Event,Match} from '../lib/domain/types';
@@ -80,7 +81,7 @@ export default function RefereeConsole({e,m,ctx,close,onNext}:{e:Event;m:Match;c
   {sheet&&<div className="referee-sheet" role="dialog" aria-label="判罚">
    <h3>判罚</h3>
    <div className="referee-sheet-sides">{(['a','b'] as Side[]).map(side=><button type="button" key={side} aria-pressed={cardSide===side} className={cardSide===side?'primary':'secondary'} onClick={()=>{setCardSide(side);setCardPlayer('')}}>{team(side)}</button>)}</div>
-   {m[cardSide].length>1&&<label>球员<select value={cardPlayer} onChange={event=>setCardPlayer(event.target.value)}><option value="">整队</option>{m[cardSide].map(id=><option key={id} value={id}>{ctx.name(id)}</option>)}</select></label>}
+   {m[cardSide].length>1&&<label>球员<AppSelect aria-label="球员" value={cardPlayer} onChange={event=>setCardPlayer(event.target.value)}><option value="">整队</option>{m[cardSide].map(id=><option key={id} value={id}>{ctx.name(id)}</option>)}</AppSelect></label>}
    <div className="referee-card-kinds">{cardKinds.map(kind=><label key={kind} className={'referee-card-kind is-'+kind}><input type="radio" name="card" checked={cardKind===kind} onChange={()=>setCardKind(kind)}/><span className={'card-chip is-'+kind} aria-hidden="true"/><span><strong>{cardRules[kind].label} · {cardRules[kind].effect}</strong><small>{cardRules[kind].detail}</small></span></label>)}</div>
    <div className="referee-sheet-actions">
     <button type="button" className="primary" onClick={()=>{run({op:'card',side:cardSide,kind:cardKind,...(cardPlayer?{playerId:cardPlayer}:{})});setSheet(false);setShown({kind:cardKind,side:cardSide,...(cardPlayer?{playerId:cardPlayer}:{})})}}>出示{cardRules[cardKind].label}</button>

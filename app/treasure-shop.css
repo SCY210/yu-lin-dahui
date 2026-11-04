@@ -22,4 +22,4 @@
 
 @media(min-width:701px) and (max-width:950px){.ts-products{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-.ts-gift-field{display:grid;gap:8px;font-size:14px;min-width:0}.ts-gift-field select,.ts-gift-field textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box;border:1px solid var(--ts-border);border-radius:8px;padding:10px;background:var(--ts-card);color:var(--ts-ink);font:inherit;min-height:44px}.ts-gift-field textarea{resize:vertical;min-height:72px}.ts-gift-affinity{margin:0;font-size:13px;line-height:1.7;overflow-wrap:anywhere;color:var(--ts-primary)}.ts-filters{flex-wrap:wrap}
+.ts-gift-field{display:grid;gap:8px;font-size:14px;min-width:0}.ts-gift-field :is(select,.app-select-trigger),.ts-gift-field textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box;border:1px solid var(--ts-border);border-radius:8px;padding:10px;background:var(--ts-card);color:var(--ts-ink);font:inherit;min-height:44px}.ts-gift-field textarea{resize:vertical;min-height:72px}.ts-gift-affinity{margin:0;font-size:13px;line-height:1.7;overflow-wrap:anywhere;color:var(--ts-primary)}.ts-filters{flex-wrap:wrap}

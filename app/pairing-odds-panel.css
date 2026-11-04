@@ -1,6 +1,6 @@
 /* 临时排场概率 in group management (lib/domain/pairing-odds.ts). */
 .pairing-odds{display:grid;gap:14px}
-.po-event select{min-height:44px}
+.po-event :is(select,.app-select-trigger){min-height:44px}
 .po-block{display:grid;gap:10px}
 .po-block h4{margin:0;font-size:15px}
 .po-rule{position:relative;display:grid;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px}

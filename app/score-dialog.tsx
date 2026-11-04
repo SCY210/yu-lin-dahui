@@ -57,7 +57,7 @@ export default function ScoreDialog({m,ctx,close,pendingMatches=[],choose}:any){
    {format==='best3'&&<label className="check-label"><Checkbox checked={third} onCheckedChange={v=>setThird(v===true)}/>打到第三局</label>}
    {error&&<p className="connection-note" role="alert">{error}</p>}{lineupChanged&&<p className="connection-note" role="alert">本局人员已更新，请关闭后重新打开录分，核对新的参赛者。</p>}
    <div className="simple-score-actions"><button className="primary full" disabled={ctx.busy||lineupChanged}>{ctx.busy?'正在保存…':correcting?'确认修改':'提交比分'}</button>{!correcting&&<button type="button" className="ghost full" disabled={ctx.busy} onClick={close}>稍后再录</button>}</div>
-   {!live&&m.playMode!=='koc'&&!rule&&<details className="simple-score-more"><summary>三局两胜</summary><label>比赛形式<Pick value={format} onChange={setFormat} options={[["single","一局一轮"],["best3","三局两胜"]]}/></label></details>}
+   {!live&&m.playMode!=='koc'&&!rule&&<details className="simple-score-more"><summary>三局两胜</summary><label>比赛形式<Pick label="比赛形式" value={format} onChange={setFormat} options={[["single","一局一轮"],["best3","三局两胜"]]}/></label></details>}
    {choose&&pendingMatches.length>1&&<details className="simple-score-more"><summary>其他待录对局（{pendingMatches.length-1}）</summary><div className="score-reminder-list">{pendingMatches.filter((other:any)=>other.id!==m.id).map((other:any)=><button key={other.id} type="button" className="ghost" disabled={ctx.busy} onClick={()=>choose(other.id)}>{ctx.data.events.find((e:any)=>e.id===other.eventId)?.title} · {fmt(other.start)}</button>)}</div></details>}
   </form>}
  </DialogContent></Dialog>;

@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useState} from 'react';
 import {ArrowUpRight,Check,Coins,Gift,Minus,Package,Plus,ShoppingBag,Sparkles} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
@@ -38,7 +39,7 @@ function ProductDetails({product,balance,busy,recipients,onClose,onRedeem}:{prod
   {product.kind==='gift'&&<GiftArt name={product.name} className="ts-detail-art"/>}
   <div className="ts-detail-meta"><span>{product.kind==='gift'?'道缘礼物 · 即时送达':product.kind==='physical'?'实物礼品':'虚拟礼品'} · {available?'剩余 '+count(product.stock)+' 件':'暂时兑完'}</span><span>{count(product.price)} 羽币 / 件</span></div>
   {available&&<div className="ts-detail-quantity"><span>兑换数量</span><div className="ts-stepper" role="group" aria-label={product.name+'兑换数量'}><button type="button" aria-label={'减少'+product.name+'数量'} disabled={busy||selected<=1} onClick={()=>setQuantity(selected-1)}><Minus size={15}/></button><output aria-label="当前数量">{selected}</output><button type="button" aria-label={'增加'+product.name+'数量'} disabled={busy||selected>=max} onClick={()=>setQuantity(selected+1)}><Plus size={15}/></button></div></div>}
-  <label className="ts-gift-field">{instant?'送给球友':'兑换给谁'}<select aria-label="礼物接收人" value={giftTo} disabled={busy} onChange={e=>setGiftTo(e.target.value)}><option value="">{instant?'请选择球友':'自己领取'}</option>{recipients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+  <label className="ts-gift-field">{instant?'送给球友':'兑换给谁'}<AppSelect aria-label="礼物接收人" value={giftTo} disabled={busy} onChange={e=>setGiftTo(e.target.value)}><option value="">{instant?'请选择球友':'自己领取'}</option>{recipients.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</AppSelect></label>
   {(instant||recipient)&&<><label className="ts-gift-field">留言（选填）<textarea aria-label="赠礼留言" maxLength={60} value={message} disabled={busy} onChange={e=>setMessage(e.target.value)} placeholder="写一句送给对方的话，最多60字"/></label><p className="ts-gift-affinity">赠送后，你和{recipient?.name??'对方'}的道缘 +{count(productGiftPoints(product,selected))} 缘值{instant?'，礼物即时送达。':'，礼品由群主安排发放。'}</p></>}
   <div className="ts-detail-total"><span>合计</span><strong>{count(total)} <small>羽币</small></strong></div><p className="ts-detail-balance">当前余额 {count(balance)} 羽币{available&&affordable?' · 兑换后剩余 '+count(balance-total)+' 羽币':''}</p>
   <button type="button" className="primary ts-redeem" disabled={busy||!available||!affordable||needsRecipient||!!giftTo&&!recipient} onClick={()=>onRedeem(product,selected,recipient?.id,recipient?message.trim():undefined)}>{!product.active?'已下架':!available?'库存已兑完':!affordable?'羽币不足':needsRecipient?'请选择收礼球友':(recipient?'赠送 · ':'兑换 · ')+count(total)+' 羽币'}</button>

@@ -7,7 +7,7 @@ import React from 'react';
 import renderer,{act} from 'react-test-renderer';
 mkdirSync('.test-output',{recursive:true});
 writeFileSync('.test-output/fee-transfers-ui-entry.ts',"export {default as FeeTransfers} from '../app/fee-transfers';export {default as HomeUnpaid} from '../app/home-unpaid';export {default as CourtBookingsField} from '../app/court-bookings-field';export {default as CourtParts} from '../app/court-parts';");
-await build({entryPoints:['.test-output/fee-transfers-ui-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/fee-transfers-ui.mjs',loader:{'.css':'empty'},external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner']});
+await build({banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},entryPoints:['.test-output/fee-transfers-ui-entry.ts'],bundle:true,platform:'node',format:'esm',outfile:'.test-output/fee-transfers-ui.mjs',loader:{'.css':'empty'},external:['react','react/*','react-dom','react-dom/*','lucide-react','sonner']});
 const {FeeTransfers,HomeUnpaid,CourtBookingsField,CourtParts}=await import(pathToFileURL(resolve('.test-output/fee-transfers-ui.mjs')).href);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');

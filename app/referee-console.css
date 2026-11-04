@@ -40,7 +40,7 @@
 .referee-sheet{position:fixed;inset:auto 0 0 0;z-index:46;max-height:85vh;overflow:auto;display:grid;gap:10px;padding:16px 16px max(16px,env(safe-area-inset-bottom));border-radius:20px 20px 0 0;background:#161b22;box-shadow:0 -10px 40px #000a}
 .referee-sheet h3{margin:0}
 .referee-sheet label{display:grid;gap:4px;color:#f5f7fa}
-.referee-sheet select{min-height:44px;border-radius:10px}
+.referee-sheet :is(select,.app-select-trigger){min-height:44px;border-radius:10px}
 .referee-sheet-sides,.referee-sheet-actions{display:flex;flex-wrap:wrap;gap:8px}
 .referee-sheet-sides button{flex:1;min-height:44px;overflow-wrap:anywhere}
 .referee-card-kinds{display:grid;gap:8px}

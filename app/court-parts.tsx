@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useRef,type PointerEvent} from 'react';
 import {madridDateTime} from '../lib/time-planning';
 import {evenBounds,fitParts,moveBound,partCounts,partEpoch as epoch,validBounds,type CourtPart} from './court-parts-model';
@@ -45,9 +46,9 @@ export default function CourtParts({start,end,parts,members,label,onChange}:{sta
   {list.length>1&&<><div className="court-parts-ticks" aria-hidden="true">{ticks.map(h=><span key={h} style={{left:(h/total*100)+'%'}}>{hm(at(h)).slice(0,2)}</span>)}</div><small className="hint">在时间条上左右拖动或轻点，就能移动最近的分界点（按整点）。</small></>}
   {list.map((p,i)=><div className="court-part" key={i}>
    <div className="court-part-head"><strong>{list.length>1?'第 '+(i+1)+' 段':'整个时段'}</strong><span>{hm(p.start)}–{hm(at(edges[i+1]))} · {hoursText(edges[i+1]-edges[i])}</span></div>
-   <label className="court-part-field"><span>{list.length>1?'这一段谁约的（这段场费由他垫付）':'谁约的（场费由他垫付）'}</span><select className="pick native-form-select" required value={p.advancedBy} aria-label={label+(list.length>1?' 第 '+(i+1)+' 段':'')+' 约场人'} onChange={ev=>set(i,ev.target.value)}>
+   <label className="court-part-field"><span>{list.length>1?'这一段谁约的（这段场费由他垫付）':'谁约的（场费由他垫付）'}</span><AppSelect className="pick native-form-select" required value={p.advancedBy} aria-label={label+(list.length>1?' 第 '+(i+1)+' 段':'')+' 约场人'} onChange={ev=>set(i,ev.target.value)}>
     {!p.advancedBy&&<option value="" disabled>请选择约场的球友</option>}{members.map(([id,n])=><option key={id} value={id}>{n}</option>)}
-   </select></label>
+   </AppSelect></label>
   </div>)}
  </div>;
 }

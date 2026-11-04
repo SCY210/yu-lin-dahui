@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useState} from 'react';
 import {Check,Plus,Search,Trash2,X} from 'lucide-react';
 import type {PairingCondition,PairingDefault,PairingOdds} from '../lib/domain/pairing-odds';
@@ -22,7 +23,7 @@ export default function PairingOddsPanel({ctx}:{ctx:Ctx}){
  if(!e)return <p className="empty">没有未结束的双打活动。</p>;
  const entry=saved.find(o=>o.eventId===e.id);
  return <section className="card pairing-odds">
-  <label className="po-event">活动<select value={e.id} onChange={event=>setChosen(event.target.value)}>{events.map(x=><option key={x.id} value={x.id}>{x.title} · {when.format(x.start)}{saved.some(o=>o.eventId===x.id)?' · 已设置':''}</option>)}</select></label>
+  <label className="po-event">活动<AppSelect aria-label="活动" value={e.id} onChange={event=>setChosen(event.target.value)}>{events.map(x=><option key={x.id} value={x.id}>{x.title} · {when.format(x.start)}{saved.some(o=>o.eventId===x.id)?' · 已设置':''}</option>)}</AppSelect></label>
   <OddsEditor key={e.id+JSON.stringify(entry??null)} ctx={ctx} eventId={e.id} saved={entry}/>
  </section>;
 }

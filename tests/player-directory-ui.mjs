@@ -9,7 +9,7 @@ import renderer from 'react-test-renderer';
 
 mkdirSync('.test-output',{recursive:true});
 writeFileSync('.test-output/player-directory-entry.ts',"export {default as PlayerDirectory} from '../app/player-directory';export {default as BondBoard} from '../app/bond-board';");
-await build({entryPoints:['.test-output/player-directory-entry.ts'],outfile:'.test-output/player-directory-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
+await build({banner:{js:"import {createRequire} from 'node:module';const require=createRequire(import.meta.url);"},entryPoints:['.test-output/player-directory-entry.ts'],outfile:'.test-output/player-directory-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',alias:{'@':resolve('.')},external:['react','react/*','react-dom','react-dom/*','lucide-react'],loader:{'.css':'empty'}});
 const {PlayerDirectory,BondBoard}=await import(pathToFileURL(resolve('.test-output/player-directory-ui.mjs')).href);
 const prior=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=node=>typeof node==='string'?node:(Array.isArray(node)?node:node?.children??[]).map(text).join('');

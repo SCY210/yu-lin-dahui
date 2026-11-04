@@ -1,0 +1,15 @@
+'use client';
+import {useState} from 'react';
+import AppSelect from '../../app/app-select';
+import HalfHourDateTime from '../../app/half-hour-date-time';
+import {Dialog,DialogContent,DialogTitle,DialogDescription,DialogHeader} from '../../components/ui/dialog';
+import {ClubNavigationContext,useClubNavigation} from '../../lib/client/club-navigation-react';
+import {VisualThemeProvider,ThemeSwitcher} from '../../app/visual-theme';
+
+export default function AppSelectPreview({theme='wuxia'}:{theme?:'classic'|'wuxia'}){
+ const {navigation}=useClubNavigation('fictional-select-review');
+ const [open,setOpen]=useState(false),[player,setPlayer]=useState(''),[mode,setMode]=useState('live'),[time,setTime]=useState('2027-01-03T18:15'),[saved,setSaved]=useState(''),[changes,setChanges]=useState(0),[disabled,setDisabled]=useState(false),[optional,setOptional]=useState('');
+ return <VisualThemeProvider initialTheme={theme}><ClubNavigationContext.Provider value={navigation}><main className="shell"><div className="topbar"><h1>站内选择器</h1><ThemeSwitcher compact/></div><p className="hint">虚构操作验收，不访问生产数据。</p><label>排场方式<AppSelect aria-label="排场方式" value={mode} onChange={e=>setMode(e.target.value)}><option value="live">实时排场</option><option value="planned">预排赛程</option><option value="retired" disabled>已停用的旧方式</option></AppSelect></label><button className="primary" onClick={()=>setOpen(true)}>打开报名表单</button><output aria-label="已保存资料">{saved}</output><output aria-label="选择变更次数">{changes}</output>
+ <div style={{height:500}}/><label>靠近底部的选择器<AppSelect aria-label="底部选择" value={mode} onChange={e=>setMode(e.target.value)}><option value="live">实时排场</option><option value="planned">预排赛程</option></AppSelect></label>
+ <Dialog open={open} onOpenChange={setOpen}><DialogContent className="app-dialog"><DialogHeader><DialogTitle>选择球友</DialogTitle><DialogDescription>搜索名字，选择后保存。测试内容不会发到服务器。</DialogDescription></DialogHeader><form onSubmit={e=>{e.preventDefault();setSaved(JSON.stringify({player,time,optional}));setOpen(false)}}><label>球友<AppSelect name="player" aria-label="报名球友" required value={player} disabled={disabled} onChange={e=>{setPlayer(e.target.value);setChanges(n=>n+1)}}><option value="" disabled>请选择球友</option><optgroup label="可选球友">{Array.from({length:25},(_,i)=><option key={i} value={'p'+i} disabled={i===12}>{'虚构球友'+String(i).padStart(2,'0')}{i===20?' · 一个很长很长的昵称用来检查换行':''}</option>)}</optgroup><optgroup label="暂不可用" disabled><option value="paused">虚构停用球友</option></optgroup></AppSelect></label><label>补充留言<input name="note" aria-label="补充留言"/></label><label>可选安排<AppSelect name="optional" aria-label="可选安排" value={optional} onChange={e=>setOptional(e.target.value)}><option value="">不指定</option><option value="one">第一组</option></AppSelect></label><HalfHourDateTime label="活动开始" value={time} onChange={setTime}/><button type="button" className="ghost" onClick={()=>setDisabled(v=>!v)}>切换球友选择禁用</button><button className="primary" type="submit">保存测试表单</button></form></DialogContent></Dialog></main></ClubNavigationContext.Provider></VisualThemeProvider>;
+}

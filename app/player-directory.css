@@ -10,7 +10,7 @@
 .pd-search input::-webkit-search-cancel-button{display:none}
 .pd-search button{display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin-right:-6px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer}
 .pd-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch;min-width:0}
-.pd-row select{width:100%;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--foreground,#22203d);font:inherit;font-size:16px}
+.pd-row :is(select,.app-select-trigger){width:100%;min-width:0;min-height:44px;padding:0 10px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff);color:var(--foreground,#22203d);font:inherit;font-size:16px}
 .pd-views{display:flex;padding:3px;border:1px solid var(--border,#ded9ef);border-radius:12px;background:var(--card,#fff)}
 .pd-views button{display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--muted-foreground,#737087);font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
 .pd-views button[aria-pressed=true]{background:color-mix(in srgb,var(--primary,#4f46e5) 13%,transparent);color:var(--primary,#4f46e5);font-weight:700}

@@ -1,4 +1,5 @@
 'use client';
+import AppSelect from './app-select';
 import {useEffect,useState,type ReactNode} from 'react';
 import {ThemeProvider,useTheme} from 'next-themes';
 import {Palette} from 'lucide-react';
@@ -22,15 +23,15 @@ function ThemeBrowserColor(){
  return null;
 }
 
-/** compact: an icon button for the club header, the select laid invisibly over it so it still opens natively. */
+/** compact: an icon button for the club header, the themed trigger overlays the palette icon and opens the site menu. */
 export function ThemeSwitcher({compact=false}:{compact?:boolean}){
  const {theme,setTheme}=useTheme(),[mounted,setMounted]=useState(false);
  const selected=mounted&&theme==='wuxia'?'wuxia':'classic';
  useEffect(()=>setMounted(true),[]);
  return <label className={'visual-theme-picker'+(compact?' is-compact':'')}><Palette size={compact?18:16} aria-hidden="true"/>
-  <select aria-label="切换主题" title="切换主题，并记住这台设备的选择" value={selected} disabled={!mounted} onChange={event=>{const value=event.target.value;if(value==='classic'||value==='wuxia')setTheme(value)}}>
+  <AppSelect aria-label="切换主题" title="切换主题，并记住这台设备的选择" value={selected} disabled={!mounted} onChange={event=>{const value=event.target.value;if(value==='classic'||value==='wuxia')setTheme(value)}}>
    <option value="classic">清雅原版</option><option value="wuxia">水墨江湖</option>
-  </select>
+  </AppSelect>
  </label>;
 }
 
