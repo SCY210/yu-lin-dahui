@@ -53,9 +53,9 @@ test('rout and deuce bounties use the 15-point thresholds',()=>{
  const e={id:'e',start:now-3600000,end:now,status:'ended',ranked:true,matchFormat:'doubles',gamePoints:15} as never;
  const record=(kind:'rout'|'deuce'):BountyRecord=>({playerId:'p0',kind,status:'accepted',at:now-4000000,coins:1,points:1,penalty:1,gamePoints:15});
  const match=(a:number,b:number)=>({matches:[{id:'m',eventId:'e',roundId:'r',a:['p0','p1'],b:['p2','p3'],status:'complete',start:now-3000000,end:now-2000000,scoreA:a,scoreB:b,games:[{a,b}]}]}) as never;
- assert.equal(bountyOutcome(match(15,6),e,record('rout'),now),'completed');
- assert.equal(bountyOutcome(match(15,7),e,record('rout'),now),'failed');
+ assert.equal(bountyOutcome(match(15,5),e,record('rout'),now),'completed');
+ assert.equal(bountyOutcome(match(15,6),e,record('rout'),now),'failed');
  assert.equal(bountyOutcome(match(16,14),e,record('deuce'),now),'completed');
  assert.equal(bountyOutcome(match(15,13),e,record('deuce'),now),'failed');
- assert.match(bountyGoal('rout',15),/不超过 6 分/);assert.match(bountyGoal('deuce',15),/14 平/);
+ assert.match(bountyGoal('rout',15),/不超过 5 分/);assert.match(bountyGoal('deuce',15),/14 平/);
 });

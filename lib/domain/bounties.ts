@@ -25,8 +25,8 @@ export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRou
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
  unbeaten:{coins:25,points:12},sweep:{coins:18,points:9},champion:{coins:20,points:10},close:{coins:12,points:6}},penalty:10};
 export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏',unbeaten:'金身悬赏',champion:'夺魁悬赏',sweep:'横扫悬赏',close:'险胜悬赏'};
-/** In a 15-point game: a rout leaves the opponents at most 6, a deuce game is won after 14:14. */
-export const bountyRoutMaxScore15=6,bountyDeuceScore15=14;
+/** In a 15-point game: a rout leaves the opponents at most 5, a deuce game is won after 14:14. */
+export const bountyRoutMaxScore15=5,bountyDeuceScore15=14;
 export const bountyGoals:Record<BountyKind,string>={
  streak:`本场活动连赢 ${bountyStreakWins} 局`,
  rout:`赢一局，且对手只得个位数分（不超过 ${bountyRoutMaxScore} 分）`,
