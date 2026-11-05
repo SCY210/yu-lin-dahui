@@ -1,5 +1,5 @@
 'use client';
-import {bountyChance,bountyGoals,bountyKinds,bountyOfferMinutes,bountyTitles,type BountySettings} from '../lib/domain/bounties';
+import {bountyChance,bountyGoal,bountyGoals,bountyKinds,bountyOfferMinutes,bountyTitles,type BountySettings} from '../lib/domain/bounties';
 import {rewardText} from './bounty-card';
 
 type Field={key:string;label:string;type:'number';min:number;max:number;step:number};
@@ -14,6 +14,7 @@ export default function BountySettingsPanel({settings,open,busy}:{settings:Bount
  return <div className="bounty-settings">
   <p className="hint">积分赛开始前 {bountyOfferMinutes} 分钟，每位正式报名的球友各自有 {Math.round(bountyChance*100)}% 的概率收到一张随机悬赏，可以接也可以不接。</p>
   <ul>{bountyKinds.map(k=><li key={k}><strong>{bountyTitles[k]}</strong>：{bountyGoals[k]} · 奖励 {rewardText(settings.rewards[k])}</li>)}</ul>
+  <p className="hint">15 分制活动：{bountyTitles.rout}改为{bountyGoal('rout',15)}；{bountyTitles.deuce}改为{bountyGoal('deuce',15)}。</p>
   <p>接下未完成：扣 {settings.penalty} 积分；不接没有惩罚。</p>
   <button type="button" className="secondary" disabled={busy} onClick={edit}>调整奖励与惩罚</button>
  </div>;

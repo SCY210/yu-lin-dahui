@@ -8,10 +8,11 @@ import {Pick} from './ui';
 import {fmt} from './form-fields';
 import {Avatar} from './avatar';
 import {initialScoreDrafts,scoreEntryPayload} from '../lib/client/score-reminder';
+import {eventScoreRules} from '../lib/domain/game-points';
 import './score-reminder.css';
 
 type Game={a:number;b:number};
-type Named={id:string;name?:string;title?:string;avatarId?:string;livePlay?:{enabled?:boolean};tournament?:Tournament};
+type Named={id:string;name?:string;title?:string;gamePoints?:15|21;avatarId?:string;livePlay?:{enabled?:boolean};tournament?:Tournament};
 const sameGames=(x:Game[],y:Game[])=>x.length===y.length&&x.every((g,i)=>g.a===y[i].a&&g.b===y[i].b);
 
 /** Teams face each other with avatars and one score box under each; the viewer's own team is on the left. */
@@ -21,7 +22,7 @@ export default function ScoreDialog({m,ctx,close,pendingMatches=[],choose}:any){
  const [opened,setOpened]=useState(()=>({status:m.status,games:m.games.map((g:Game)=>({a:g.a,b:g.b}))}));
  const [saving,setSaving]=useState(false);
  const event=ctx.data.events.find((e:Named)=>e.id===m.eventId),correcting=opened.status==='complete',live=ctx.data.rounds.find((r:{id:string;live?:boolean})=>r.id===m.roundId)?.live||(!correcting&&event?.livePlay?.enabled);
- const rules=ctx.data.seasons.find((season:Season)=>season.id===month(scoreEntryStart(m,ctx.data)))?.rules??ctx.data.settings.rules,rule:ScoringRule|undefined=matchRule(event?.tournament,m.id),ruleFormat=rule&&(rule.games===3?'best3':'single');
+ const rules=eventScoreRules(ctx.data.seasons.find((season:Season)=>season.id===month(scoreEntryStart(m,ctx.data)))?.rules??ctx.data.settings.rules,event),rule:ScoringRule|undefined=matchRule(event?.tournament,m.id),ruleFormat=rule&&(rule.games===3?'best3':'single');
  const [format,setFormat]=useState(ruleFormat??(live||m.playMode==='koc'?'single':m.games.length>1?'best3':'single')),[third,setThird]=useState(m.games.length===3),[scores,setScores]=useState(()=>initialScoreDrafts(m)),[error,setError]=useState('');
  const [scoreLineup]=useState(()=>({a:[...m.a],b:[...m.b]}));
  const lineupChanged=JSON.stringify(scoreLineup.a)!==JSON.stringify(m.a)||JSON.stringify(scoreLineup.b)!==JSON.stringify(m.b);
@@ -44,7 +45,7 @@ export default function ScoreDialog({m,ctx,close,pendingMatches=[],choose}:any){
    {m[side].map((id:string)=><span key={id} className="score-team-player"><Avatar p={player(id)} size="score-avatar" eager/><span>{ctx.name(id)}</span></span>)}
   </div>;
  const teams=<div className="score-teams">{team(sides[0])}<span className="score-team-vs" aria-hidden="true">VS</span>{team(sides[1])}</div>;
- return <Dialog open historyCloseBlocked={ctx.busy} onOpenChange={open=>{if(!open&&!ctx.busy)close()}}><DialogContent className="app-dialog simple-score-dialog"><DialogHeader><DialogTitle>{savedByOther?'这局已录入比分':correcting?'修正比赛结果':'录入本局比分'}</DialogTitle><DialogDescription className="simple-score-context">{court}{title?' · '+title:''}{rule?' · '+scoringLabel(rule):''}</DialogDescription></DialogHeader>
+ return <Dialog open historyCloseBlocked={ctx.busy} onOpenChange={open=>{if(!open&&!ctx.busy)close()}}><DialogContent className="app-dialog simple-score-dialog"><DialogHeader><DialogTitle>{savedByOther?'这局已录入比分':correcting?'修正比赛结果':'录入本局比分'}</DialogTitle><DialogDescription className="simple-score-context">{court}{title?' · '+title:''}{rule?' · '+scoringLabel(rule):''}{!rule&&event?.gamePoints===15?' · 15 分制':''}</DialogDescription></DialogHeader>
   {teams}
   {savedByOther?<div className="score-conflict" role="alert">
    <p><strong>{m.enteredByPlayerId?ctx.name(m.enteredByPlayerId):'其他球友'}</strong> 刚刚录入了这局比分</p>
