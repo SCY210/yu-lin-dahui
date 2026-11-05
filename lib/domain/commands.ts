@@ -1,5 +1,6 @@
 import {applyParticipation} from './participation-commands';
 import {applyBookingCancellation} from './booking-cancel';
+import {applyBookingClaim} from './booking-claims';
 import {applyFriendSignup} from './friend-signup';
 import {activityAcknowledgementInput} from './activity-acknowledgement';
 import {applyTreasure,isTreasureAction} from './treasure-shop';
@@ -38,7 +39,7 @@ import { upgradeActivitySignups } from './event-merge';
 import { applyCourtSignup } from './court-commands';
 import {duplicateSignupMessage,hasSignupOverlap} from './signup-conflicts';
 import { bookingRows, bookingOccupancy, promoteBooking, promoteLegacy } from './booking-signups';
-import { bookingParts, continuesCourt, retimeBooking, setPartAdvancer } from './booking-advancers';
+import { bookingParts, continuesCourt, retimeBooking, setPartAdvancer, syncBookingClaims } from './booking-advancers';
 import { fail, month, type State, type Account, type Event } from './types';
 import { propose, validateRound, readyIds } from './grouping';
 import { usesAutomaticAttendance, archiveDefaultAttendance } from './attendance';
@@ -101,6 +102,7 @@ const schemas = {
     historyPreview: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema }), historyRules: z.object({ season: z.string().regex(/^\d{4}-\d{2}$/), rules: rulesSchema, reason }),
 };
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
+    if(action==='bookingClaim'){applyBookingClaim(s,a,action,input,now);return null;}
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
     if(applyBookingCancellation(s,a,action,input,now))return null;
@@ -333,6 +335,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             else
                 retimeBooking(b, p.start, p.end);
             Object.assign(b, { name: p.name, pricing: p.pricing, cents: p.cents, ...(p.venue !== undefined ? { venue: p.venue, address: p.address ?? '' } : {}), ...(p.signupCapacity !== undefined ? { signupCapacity: p.signupCapacity } : {}) });
+            syncBookingClaims(b);
             const previousStart=e.start;
             e.start = Math.min(e.start, p.start);
             if(e.start!==previousStart)e.signupDeadline=Math.min(Number.isFinite(e.signupDeadline)?e.signupDeadline:Infinity,initialSignupDeadline(e.start,now));
@@ -704,6 +707,8 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             else
                 item.advancedBy = p.advancedBy;
+            const booking=s.bookings.find(b=>b.id===item.id&&b.eventId===p.eventId);
+            if(booking)syncBookingClaims(booking);
             break;
         }
         case 'bookingBearer': {

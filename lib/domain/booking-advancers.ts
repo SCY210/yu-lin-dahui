@@ -4,7 +4,7 @@ import type {Booking,Handover} from './types';
  * court is often booked by several people. It stays one court slot with one sign-up list; `handovers` record where the
  * next member's booking starts, and each part's court fee is repaid to its own booker. */
 export type BookingPart={start:number;end:number;advancedBy?:string};
-type Timed=Pick<Booking,'start'|'end'|'advancedBy'|'handovers'>;
+type Timed=Pick<Booking,'start'|'end'|'advancedBy'|'handovers'|'claims'>;
 
 const inside=(b:Timed)=>(b.handovers??[]).filter(h=>h.at>b.start&&h.at<b.end).sort((x,y)=>x.at-y.at);
 /** The parts of a court slot and who booked each, in time order. A slot without handovers is one part. */
@@ -25,16 +25,34 @@ function setParts(b:Timed,parts:BookingPart[]){
  for(const p of parts.slice(1)){if(p.advancedBy&&p.advancedBy!==last)handovers.push({at:p.start,advancedBy:p.advancedBy});last=p.advancedBy}
  if(handovers.length)b.handovers=handovers;else delete b.handovers;
 }
+/** Update only this interval, keeping the court id, signup lists and all other bookers. */
+export function setRangeAdvancer(b:Timed,start:number,end:number,advancedBy:string){
+ const parts=bookingParts(b).flatMap(p=>{
+  if(p.end<=start||p.start>=end)return [p];
+  return [...(p.start<start?[{...p,end:start}]:[]),{start:Math.max(p.start,start),end:Math.min(p.end,end),advancedBy},...(p.end>end?[{...p,start:end}]:[])];
+ });
+ setParts(b,parts);
+}
+/** Existing organiser edits remain authoritative; retain claimed coverage only inside the new booking parts. */
+export function syncBookingClaims(b:Timed){
+ if(!b.claims?.length)return;
+ b.claims=b.claims.flatMap(c=>bookingParts(b).flatMap(p=>{
+  const start=Math.max(c.start,p.start),end=Math.min(c.end,p.end);
+  return start<end&&p.advancedBy?[{...c,start,end,playerId:p.advancedBy}]:[];
+ })).sort((a,b)=>a.start-b.start);
+ if(!b.claims.length)delete b.claims;
+}
 /** New start and end of a slot: handovers outside it are dropped, and the part covering the new start keeps its booker. */
 export function retimeBooking(b:Timed,start:number,end:number){
  const first=advancerAt(b,start),kept=inside(b).filter(h=>h.at>start&&h.at<end);
  b.start=start;b.end=end;b.advancedBy=first;
  if(kept.length)b.handovers=kept;else delete b.handovers;
+ syncBookingClaims(b);
 }
 /** Correct who booked the part that starts at `at`. */
 export function setPartAdvancer(b:Timed,at:number,advancedBy:string){
  const parts=bookingParts(b),part=parts.find(p=>p.start===at);if(!part)return false;
- part.advancedBy=advancedBy;setParts(b,parts);return true;
+ part.advancedBy=advancedBy;setParts(b,parts);syncBookingClaims(b);return true;
 }
 /** Whether slot `next` continues `b` on the same court without a gap, so they are shown and signed up as one slot. */
 export function continuesCourt(b:Pick<Booking,'name'|'venue'|'end'|'pricing'|'cents'|'bearer'>,next:Pick<Booking,'name'|'venue'|'start'|'pricing'|'cents'|'bearer'>,venue:string){
@@ -48,6 +66,7 @@ export function mergeCourtSlots<T extends Omit<Booking,'id'|'eventId'>>(rows:T[]
   const before=merged.find(b=>continuesCourt(b,row,venue));
   if(!before){merged.push({...row});continue}
   setParts(before,[...bookingParts(before),...bookingParts(row)]);before.end=row.end;
+  if(row.claims?.length)before.claims=[...(before.claims??[]),...row.claims].sort((a,b)=>a.start-b.start);
  }
  return rows.map(r=>merged.find(m=>m.start<=r.start&&m.end>=r.end&&m.name.trim()===r.name.trim()&&(m.venue??venue)===(r.venue??venue))!).filter((m,i,list)=>list.indexOf(m)===i);
 }
