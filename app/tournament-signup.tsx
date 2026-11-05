@@ -2,7 +2,7 @@
 import {Clock,Plus,Trophy} from 'lucide-react';
 import type {Event} from '../lib/domain/types';
 import type {ClubData} from '../lib/contracts/club';
-import {canManageEvent} from '../lib/domain/permissions';
+import {canManageEvent,canCancelEventCourt} from '../lib/domain/permissions';
 import {signupClosesAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {fmt,hm,choice,why} from './ui';
@@ -42,7 +42,7 @@ export default function TournamentSignup({e,ctx,rules,courts,editCourt,cancelCou
   </section>
   {manager&&<section className="card tournament-courts"><div className="row"><h3>比赛场地</h3><button type="button" className="secondary" onClick={()=>editCourt()}><Plus size={16}/>添加场地</button></div>
    <p className="hint">系统在这些场地上安排对阵；场地费计入报名费。</p>
-   {courts.map(b=><div key={b.id} className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{b.advancedBy?' · 约场 '+bookers(b):''}</small></div><div className="actions"><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button><button type="button" className="ghost danger" disabled={ctx.busy} onClick={()=>cancelCourt(b)}>取消场地</button></div></div>)}
+   {courts.map(b=><div key={b.id} className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{b.advancedBy?' · 约场 '+bookers(b):''}</small></div><div className="actions"><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button>{canCancelEventCourt(data.me,e)&&<button type="button" className="ghost danger" disabled={ctx.busy} onClick={()=>cancelCourt(b)}>取消场地</button>}</div></div>)}
   </section>}
  </div>;
 }

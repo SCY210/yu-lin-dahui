@@ -2,6 +2,12 @@ import {fail,type Account,type Event,type State} from './types';
 import {isPractice} from './match-format';
 import {canEnableEventRanking,canManageRankedEvent,eventRankingEnabled} from './event-ranking';
 import {canRecoverEvent} from './event-privacy';
+import {isClubOwner} from './ownership';
+
+/** UI callers use the projected owner flag; server callers reconstruct it from stored ownership below. */
+export function canCancelEventCourt(account:Pick<Account,'id'>&{isOwner?:boolean},event:Pick<Event,'creatorId'>){
+ return account.isOwner===true||!!event.creatorId&&event.creatorId===account.id;
+}
 
 /** The club owner and administrators manage every activity, its creator their own. `isOwner` comes with the projected
  * `me`; server callers also pass authorizeEventAction, which lets the owner through. */
@@ -49,6 +55,7 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['pointsLate','liveLineup','moveCourt','lock','score','matchScoring','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
+ if(action==='bookingCancel'&&!canCancelEventCourt({id:a.id,isOwner:isClubOwner(s,a)},event))fail('403: 只有活动发起人和群主可以取消场地');
  if(event.deletedAt!==undefined&&rankedManagementActions.has(action))fail('活动已删除，请先恢复活动');
  if(action==='eventRanking'){if(!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');return true;}
  if(eventRankingEnabled(event)&&rankedManagementActions.has(action)&&!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');

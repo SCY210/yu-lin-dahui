@@ -19,7 +19,7 @@ const api=await import(pathToFileURL(resolve('.test-output/booking-cancel-api.mj
 try{
  const s=api.emptyState(),now=Date.now(),hour=3600000,start=Math.ceil((now+3*86400000)/1800000)*1800000,middle=start+hour,end=start+2*hour;
  Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
- s.accounts=['owner','creator','outsider'].map((id,i)=>({id,playerId:'p'+i,role:i?'member':'admin',email:''}));
+ s.accounts=['owner','creator','outsider','admin'].map((id,i)=>({id,playerId:'p'+i,role:id==='owner'||id==='admin'?'admin':'member',email:''}));
  s.players=s.accounts.map(a=>({id:a.playerId,ownerId:a.id,name:'Fictional '+a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  s.events=[{id:'event',creatorId:'creator',title:'Fictional court cancellation',start,end,venue:'Fictional venue',address:'',capacity:8,status:'open',signupDeadline:start-2*hour,cancelDeadline:start-24*hour,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'},{id:'owned-other',creatorId:'outsider',title:'Other activity',start,end,venue:'Other venue',address:'',capacity:8,status:'open',signupDeadline:start-2*hour,cancelDeadline:start-24*hour,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];
  s.bookings=['A','B','C'].map(id=>({id,eventId:'event',name:'Court '+id,start,end,signupCapacity:1,pricing:'total',cents:1000}));
@@ -32,6 +32,7 @@ try{
  signIn('owner');assert.equal((await api.GET(new Request(origin+'/api/club'))).status,200);
  signIn(null);assert.equal((await post('A')).status,401);
  signIn('outsider');const untouched=await api.load(),forbidden=await post('A');assert.equal(forbidden.status,403,await forbidden.clone().text());assert.deepEqual(await api.load(),untouched);
+ signIn('admin');assert.equal((await post('A',crypto.randomUUID(),{payload:{bookingId:'A',isOwner:true}})).status,403);assert.deepEqual(await api.load(),untouched,'an unrelated admin cannot cancel or forge owner access');
  signIn('creator');assert.equal((await post('A',crypto.randomUUID(),{origin:'https://attacker.example'})).status,403);
  database.injectFailure(query=>/DELETE FROM bookings/i.test(query));assert.equal((await post('A')).status,503);database.injectFailure(null);assert.deepEqual(await api.load(),untouched,'booking, signups, audit and revision roll back together');
  const key=crypto.randomUUID(),results=await Promise.all([post('A',key),post('A',key)]);assert.ok(results.every(r=>r.status===200||r.status===409),JSON.stringify(await Promise.all(results.map(async r=>({status:r.status,body:await r.clone().text()})))));assert.ok(results.some(r=>r.status===200));
