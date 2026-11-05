@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';import {build} from 'esbuild';import {mkdirSync} from 'node:fs';import {resolve} from 'node:path';import {pathToFileURL} from 'node:url';import React from 'react';import renderer,{act} from 'react-test-renderer';
+mkdirSync('.test-output',{recursive:true});await build({stdin:{contents:"export {default as BookingClaims,bookingClaimForm} from './app/booking-claims';",resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'node',format:'esm',outfile:'.test-output/booking-claims-ui.mjs',external:['react','react/*','react-dom','lucide-react'],loader:{'.css':'empty'},alias:{'@':resolve('.')}});
+const {BookingClaims,bookingClaimForm}=await import(pathToFileURL(resolve('.test-output/booking-claims-ui.mjs'))),previous=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
+const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join(''),hour=3600000,start=Date.parse('2035-01-06T12:00:00Z');
+const b={id:'court',eventId:'event',name:'1号场',venue:'虚构馆',start,end:start+6*hour,pricing:'hourly',cents:690,advancedBy:'p0'},e={id:'event',creatorId:'creator',status:'open'},opened=[];
+const data={me:{id:'member',playerId:'p1',role:'member'},players:[{id:'p0',name:'组织者',enabled:true},{id:'p1',name:'实际约场者',enabled:true}],settlements:[]},ctx={data,busy:false,name:id=>data.players.find(p=>p.id===id)?.name,open:(...args)=>opened.push(args)};
+const mount=async()=>{if(ui)await act(()=>ui.unmount());await act(()=>{ui=renderer.create(React.createElement(BookingClaims,{b,e,ctx}))});const details=ui.root.findAllByType('details')[0];if(details)await act(()=>details.props.onToggle({currentTarget:{open:true}}))};
+try{
+ await mount();assert.ok(text(ui.toJSON()).includes('当前登记'));assert.ok(!text(ui.toJSON()).includes('纠正约场人'));await act(()=>ui.root.findAllByType('button').find(x=>text(x)==='认领我约的时间').props.onClick());
+ const [title,action,values,fields,convert,description]=opened[0];assert.ok(title.includes('1号场'));assert.equal(action,'bookingClaim');assert.equal(values.playerId,'p1');assert.equal(values.correct,false);assert.ok(description.includes('场费垫付归属'));assert.deepEqual(fields.map(f=>f.type),['select','select']);assert.ok(fields.every(f=>f.options.length===12));assert.equal(convert(values).start,b.start);assert.equal(convert(values).end,b.start+2*hour);
+ data.me.id='creator';await mount();assert.ok(text(ui.toJSON()).includes('纠正约场人'));await act(()=>ui.root.findAllByType('button').find(x=>text(x)==='纠正约场人').props.onClick());assert.equal(opened.at(-1)[2].correct,true);assert.ok(opened.at(-1)[3].some(f=>f.key==='playerId'));
+ b.claims=[{start:b.start,end:b.start+2*hour,playerId:'p0',at:0}];const later=bookingClaimForm(b,'p1');assert.equal(later.convert(later.values).start,b.start+2*hour);
+ data.settlements=[{eventId:'event',confirmed:true}];await mount();assert.ok(text(ui.toJSON()).includes('费用已确认'));assert.equal(ui.root.findAllByType('button').length,0);
+ ctx.readOnly=true;await mount();assert.equal(ui.toJSON(),null);
+ console.log('PASS booking claim UI: own-range form, Madrid choices, price attribution disclosure, organiser correction, claim status, confirmed fees and read-only protection');
+}finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=previous}

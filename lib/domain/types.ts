@@ -19,7 +19,8 @@ export type Event={/** The organiser chose to keep the current confirmed fee ver
 /** advancedBy: the member who booked and paid for the court slot (docs/FEE_ADVANCES.md). A court booked by members in
  * turn stays one slot; each handover says from when the next member booked it (lib/domain/booking-advancers.ts). */
 export type Handover={at:number;advancedBy:string};
-export type Booking={advancedBy?:string;handovers?:Handover[];id:string;eventId:string;name:string;start:number;end:number;pricing:'hourly'|'total';cents:number;bearer?:'members'|'subsidy';signupCapacity?:number;venue?:string;address?:string};
+export type BookingClaim={start:number;end:number;playerId:string;at:number};
+export type Booking={advancedBy?:string;handovers?:Handover[];claims?:BookingClaim[];id:string;eventId:string;name:string;start:number;end:number;pricing:'hourly'|'total';cents:number;bearer?:'members'|'subsidy';signupCapacity?:number;venue?:string;address?:string};
 export type BookingSignup={bookingId:string;status:'confirmed'|'waitlist'|'cancelled';sequence:number;arrival:number;departure:number;note:string;cancelRequested:boolean;registeredAt:number;joinedAsWaitlist:boolean;promotedAt?:number};
 export type AccountNoticeReceipt={id:string;accountId:string;playerId:string;version:string;contentHash:string;contentSnapshot:string;acceptedAt:number;method:'explicit-account-confirmation'};
 export type ActivityAcknowledgement={id:string;eventId:string;bookingId?:string;playerId:string;version:string;at:number;actorId:string;kind:'self'|'proxy'};
