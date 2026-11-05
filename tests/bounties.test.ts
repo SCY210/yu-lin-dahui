@@ -22,11 +22,14 @@ function setup(kind:BountyKind,fields:Partial<Event>={}){
 function game(s:State,e:Event,id:string,offset:number,score:[number,number],b=['p2','p3']){coinMatch(s,e,id,{b,start:e.start+offset*minute,end:e.start+(offset+12)*minute,games:[{a:score[0],b:score[1]}],scoreA:score[0],scoreB:score[1]})}
 const accept=(s:State,e:Event,accept=true,now=bountyOfferAt(e))=>apply(s,s.accounts[0],'bountyRespond',{eventId:e.id,playerId:'p0',accept},now);
 
-test('about 30% of members draw one of the eight bounties, always the same one for the same activity',()=>{
+test('each member independently has a 30% chance to draw one of the eight bounties, always the same one for the same activity',()=>{
  const draws=Array.from({length:2000},(_,i)=>drawnBounty('event-'+i,'player-'+(i%37)));
  const offered=draws.filter(Boolean).length/draws.length;assert.ok(offered>0.25&&offered<0.35,String(offered));
  assert.deepEqual(new Set(draws.filter(Boolean)),new Set(bountyKinds));
  assert.equal(drawnBounty('event-7','player-7'),drawnBounty('event-7','player-7'));
+ // Not a fixed 30% of each activity: with 10 members, some activities give none and some give more than three.
+ const perEvent=Array.from({length:200},(_,i)=>Array.from({length:10},(_,j)=>drawnBounty('event-'+i,'member-'+j)).filter(Boolean).length);
+ assert.ok(perEvent.includes(0)&&perEvent.some(n=>n>3),String(perEvent));
 });
 
 test('the offer opens 30 minutes before the start and closes when the member\'s first game starts or the activity ends',()=>{
@@ -66,13 +69,16 @@ test('each challenge is judged on completed games after the scheduled end; a dec
  assert.equal(await judge('deuce',[[22,20]]),'completed');assert.equal(await judge('deuce',[[21,19],[20,22]]),'failed');
  // 修为 starts equal for everyone and grows with play, so the ratings before the match are given directly: p0's side
  // averages 900; p2 and p3 are the opponents. One opponent far enough above is enough.
- const upset=setup('upset');await accept(upset.s,upset.e);game(upset.s,upset.e,'upset',2,[21,19]);
+ const upset=setup('upset');
+ upset.s.audits.push({id:'strength',actor:'owner',at:at-60000,action:'grantPoints',reason:'Fictional strength',changes:{playerId:'p2',period:month(at),points:0,rating:300,reason:'Fictional strength'}});
+ const planned=coinMatch(upset.s,upset.e,'planned',{status:'published',start:null,end:null,games:[],scoreA:null,scoreB:null});upset.s.rounds.find(r=>r.id===planned.roundId)!.status='published';
+ await accept(upset.s,upset.e);upset.s.matches=[];game(upset.s,upset.e,'upset',2,[21,19]);
  const row=(playerId:string,side:'a'|'b',before:number,opponent:number,team:number,won:boolean)=>({matchId:'upset',eventId:upset.e.id,gameIndex:0,playerId,side,won,before,after:before,delta:0,k:20,expected:.2,opponent,team,start:upset.e.start,end:upset.e.end,margin:2,settled:true,reset:false});
  const rated=(p2:number,p3:number|null,won=true)=>(id:string)=>{const avg=p3===null?p2:(p2+p3)/2;return id==='p0'?[row('p0','a',900,avg,900,won)]:id==='p2'?[row('p2','b',p2,900,avg,!won)]:id==='p3'&&p3!==null?[row('p3','b',p3,900,avg,!won)]:[]};
  const judgeUpset=(gamesOf:(id:string)=>ReturnType<typeof row>[])=>bountyOutcome(upset.s,upset.e,upset.e.bounties![0],upset.e.end,gamesOf);
  assert.equal(judgeUpset(rated(1200,900)),'completed','one opponent 300 above, although the average is only 150 above');
  assert.equal(judgeUpset(rated(1150,1150)),'completed','both opponents exactly 250 above');
- assert.equal(judgeUpset(rated(1149,1000)),'failed','no opponent 250 above');
+ assert.equal(judgeUpset(rated(1149,1000)),'void','no opponent 250 above: no opportunity, no penalty');
  assert.equal(judgeUpset(rated(1400,1400,false)),'failed','a loss does not count');
  assert.equal(judgeUpset(id=>id==='p0'?[row('p0','a',900,1150,900,true)]:[]),'completed','without opponent records the average still decides');
  assert.equal(await judge('unbeaten',[[21,18],[21,19],[22,20],[21,9]]),'completed');

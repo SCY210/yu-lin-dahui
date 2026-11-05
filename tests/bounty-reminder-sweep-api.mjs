@@ -56,5 +56,21 @@ try{
  const original=Date.now;Date.now=()=>start+152*minute;try{await api.flushPushOutbox(fixture.env)}finally{Date.now=original}
  assert.deepEqual(captures,[],'no push after answering');assert.deepEqual(inbox().at(-1),'alice '+later);
  assert.equal(sql.prepare("SELECT state FROM push_deliveries WHERE job_id=?").get('bounty:'+later+':p1').state,'cancelled');
+ // The partial upcoming-activity read must use full historical realm grants for upset eligibility.
+ let upsetId='';for(let i=0;;i++)if(api.drawnBounty('upset-sweep-'+i,'p1')==='upset'){upsetId='upset-sweep-'+i;break}
+ const base=await api.load(),upset=structuredClone(base),upsetStart=start+300*minute,ue=event(upsetId,upsetStart);
+ upset.events.push(ue);upset.bookings.push({id:'upset-court',eventId:upsetId,name:'Court',start:upsetStart,end:ue.end,pricing:'total',cents:0});
+ for(const [i,playerId] of ['p0','p1','p2','p3'].entries())upset.registrations.push({id:upsetId+'-'+playerId,eventId:upsetId,playerId,sequence:i+1,status:'confirmed',arrival:upsetStart,departure:ue.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
+ upset.rounds.push({id:'upset-round',eventId:upsetId,start:upsetStart,duration:15,status:'published',eligible:['p0','p1','p2','p3'],rest:[],seed:1});
+ upset.matches.push({id:'upset-match',eventId:upsetId,roundId:'upset-round',courtId:'upset-court',a:['p1','p3'],b:['p2','p0'],status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[],monthly:true,elo:true,locked:false,enteredBy:null});
+ upset.audits.push({id:'upset-strength',at:start-60000,actor:'owner',action:'grantPoints',reason:'Fictional strength',changes:{playerId:'p2',period:'2026-10',points:0,rating:249,reason:'Fictional strength'}});
+ await api.save(upset,'upset-seed',base);await run(upsetStart-30*minute,false);
+ assert.ok(!inbox().includes('alice '+upsetId),'249 is not enough; no notice for an impossible upset');
+ const low=await api.load(),high=structuredClone(low);high.audits.find(a=>a.id==='upset-strength').changes.rating=250;await api.save(high,'upset-250',low);
+ await run(upsetStart-20*minute,false);assert.ok(inbox().includes('alice '+upsetId),'exactly 250 from the historical grant makes the real published lineup eligible');
+ const scheduled=await api.load(),cancelled=structuredClone(scheduled);cancelled.matches.find(m=>m.id==='upset-match').status='cancelled';await api.save(cancelled,'upset-cancel',scheduled);
+ captures.length=0;Date.now=()=>upsetStart-19*minute;try{await api.flushPushOutbox(fixture.env)}finally{Date.now=original}
+ assert.ok(!captures.includes('https://fcm.googleapis.com/fcm/send/alice'),'a queued upset push is dropped after its lineup is cancelled');
+ assert.equal(sql.prepare('SELECT state FROM push_deliveries WHERE job_id=? AND subscription_id=?').get('bounty:'+upsetId+':p1','sub-alice').state,'cancelled');
  console.log('PASS bounty reminder sweep API: one notice per offered member when the offer opens, waitlist promotions told later, no notice for practices or after the start, old preferences keep it on, a push lapses once answered');
 }finally{globalThis.fetch=originalFetch;sql.close();delete globalThis.__bountySweepTest}

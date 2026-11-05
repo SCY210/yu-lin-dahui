@@ -24,6 +24,7 @@ try{
  await mount(BountyCard,{accepted});assert.ok(text(ui.toJSON()).includes('修行中')&&text(ui.toJSON()).includes('天机阁自会清算'));assert.equal(button('接下此令'),undefined);
  await mount(BountyCard,{accepted:{...accepted,outcome:'completed'}});assert.ok(text(ui.toJSON()).includes('悬赏功成！天机阁赐下 30 羽币 + 15 积分'));
  await mount(BountyCard,{accepted:{...accepted,outcome:'failed'}});assert.ok(text(ui.toJSON()).includes('此令未竟，折损 10 积分'));
+ await mount(BountyCard,{accepted:{...accepted,kind:'upset',outcome:'void'}});shown=text(ui.toJSON());assert.ok(shown.includes('已作废')&&shown.includes('不奖不罚')&&shown.includes('原悬赏扣分已撤销'));assert.ok(!shown.includes('折损 10 积分'));
  await mount(BountyCard,{});assert.equal(ui.toJSON(),null);
  const popup=[];await mount(BountyOffer,{offer,title:'Fictional points match',onRespond:accept=>popup.push(accept),onLater:()=>popup.push('later')});
  assert.ok(text(ui.toJSON()).includes('天机阁降下大胜悬赏')&&text(ui.toJSON()).includes('道友可敢接下'));await act(()=>button('接下此令').props.onClick());await act(()=>ui.root.findByProps({'data-dialog':true}).props.onClose());assert.deepEqual(popup,[true,'later']);

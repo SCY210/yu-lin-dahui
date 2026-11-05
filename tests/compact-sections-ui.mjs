@@ -33,6 +33,14 @@ try{
 
  await act(()=>buttons().find(b=>text(b)==='取消场地').props.onClick());assert.equal(dangers.at(-1).action,'bookingCancel');assert.deepEqual(dangers.at(-1).payload,{bookingId:'court'});assert.match(dangers.at(-1).description,/对应场地费/);
  e.tournament={phase:'setup'};await mount(Signup,{e,ctx,rules:data.settings.rules});await act(()=>buttons().find(b=>text(b)==='取消场地').props.onClick());assert.equal(dangers.at(-1).action,'bookingCancel');delete e.tournament;await mount(Signup,{e,ctx,rules:data.settings.rules});
+ const originalAccount=data.me,originalCreator=e.creatorId;
+ for(const competition of [false,true]){
+  if(competition)e.tournament={phase:'setup'};else delete e.tournament;
+  for(const [account,creator,visible] of [[{...originalAccount,id:'unrelated-admin',role:'admin',isOwner:false},'owner',false],[{...originalAccount,role:'member',isOwner:false},'owner',true],[{...originalAccount,isOwner:true},'other-creator',true],[{...originalAccount,id:'unrelated-tester',role:'member',simulationTester:true,isOwner:false},'owner',false]]){
+   data.me=account;e.creatorId=creator;await mount(Signup,{e,ctx,rules:data.settings.rules});assert.equal(buttons().some(b=>text(b)==='取消场地'),visible,(competition?'competition':'activity')+' / '+account.id);
+  }
+ }
+ data.me=originalAccount;e.creatorId=originalCreator;delete e.tournament;await mount(Signup,{e,ctx,rules:data.settings.rules});
  const originalRoster=data.registrations;data.registrations=structuredClone(originalRoster);const midpoint=(e.start+e.end)/2;
  data.registrations.forEach((r,i)=>{if(i<3)r.bookingSignups[0].departure=midpoint;else r.bookingSignups[0].arrival=midpoint});
  await mount(Signup,{e,ctx,rules:data.settings.rules});assert.equal(text(ui.root.find(n=>n.props.className==='ev-court-count')).replace(/\s/g,''),'高峰3/6人');

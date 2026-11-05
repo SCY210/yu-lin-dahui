@@ -47,7 +47,8 @@ export default function AppSelect({children,value,defaultValue,onChange,disabled
  };
  const activeIndex=highlight?.index??-1;
  useEffect(()=>{if(!open||!list.current||activeIndex<0)return;const element=list.current.querySelector<HTMLElement>(`[data-option-index="${activeIndex}"]`);element?.scrollIntoView({block:'nearest'})},[open,activeIndex,query]);
- return <Popover.Root open={open&&!disabled} onOpenChange={changeOpen}>
+ // A modal popup owns its scroll lock, so a parent dialog cannot block wheel/touch events in the portal.
+ return <Popover.Root modal open={open&&!disabled} onOpenChange={changeOpen}>
   <Popover.Trigger asChild><button ref={trigger} id={triggerId} type="button" role="combobox" aria-expanded={open&&!disabled} aria-haspopup="listbox" aria-controls={open?listId:undefined} aria-label={nativeProps['aria-label']} aria-labelledby={nativeProps['aria-labelledby']} aria-describedby={[nativeProps['aria-describedby'],error?errorId:undefined].filter(Boolean).join(' ')||undefined} aria-required={required} aria-invalid={error||nativeProps['aria-invalid']} title={title??selected?.label} disabled={disabled} className={'app-select-trigger '+className} style={nativeProps.style} onKeyDown={event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();changeOpen(true);if(event.key==='ArrowUp')setActive(options.findLastIndex(o=>!o.disabled))}}}>
    <span className={'app-select-value'+(!selected||!current?' is-placeholder':'')}>{selected?.label??'请选择'}</span><ChevronDown size={16} aria-hidden="true"/>
   </button></Popover.Trigger>

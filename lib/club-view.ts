@@ -27,7 +27,8 @@ import {markIgnoredUpdate} from './domain/settlement-state';
 import {socialHistoryParts,socialSnapshot} from './domain/social';
 import {sharedClubValue,sharedViewValidUntil,sharedRealmLedger} from './club-view-shared';
 import {rotationPlan} from './domain/play';
-import {bountyHonors,bountyOutcome,bountySettings} from './domain/bounties';
+import {bountyHonors,bountyOutcome,bountySettings,bountyOffer,bountyUpsetGap} from './domain/bounties';
+import {upsetOfferEligible} from './domain/bounty-opportunities';
 import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendance';
 
 // Retired profile fields may remain in stored JSON for compatibility, but are never shown: grip/shoes and the self-assessed level.
@@ -93,6 +94,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   bountyHonors:bountyHonors(history,now,id=>ledger.byPlayer.get(id)??[]),
   players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestHostId:guestHostPlayerId(s,p.id),guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,canViewCourtOccupancy:a.id===ownerId||!!e.creatorId&&e.creatorId===a.id,mapUrl:googleMapsUrl(e.venue,e.address),
+   ...(bountyOffer(s,e,a.playerId,now,()=>upsetOfferEligible(s,e,a.playerId,now,ledger.snapshot,bountyUpsetGap))?.kind==='upset'?{bountyUpsetEligible:true}:{}),
    // Bounty answers are private: each member sees their own (with its result once settled); administrators see all.
    ...(e.bounties?{bounties:e.bounties.filter(b=>admin||b.playerId===a.playerId).map(b=>({...b,outcome:bountyOutcome(s,e,b,now,id=>ledger.byPlayer.get(id)??[])}))}:{}),...(e.pointsChoice?{pointsChoice:{...e.pointsChoice,votes:e.pointsChoice.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{}),...(e.shuttlePlan?{shuttlePlan:{...e.shuttlePlan,votes:e.shuttlePlan.votes.map(v=>({...v,voterId:v.voterId===a.id?a.id:''}))}}:{})})),deletedEvents,mergedEventTargets,bookings:s.bookings.map(b=>{const e=s.events.find(e=>e.id===b.eventId);return {...b,mapUrl:googleMapsUrl(b.venue??e?.venue??'',b.address??e?.address??'')}}),registrations:s.registrations.map(({cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason,noticeAcknowledgements:_notice,...r})=>{const notice=visibleActivityAcknowledgements(history,a,{...r,noticeAcknowledgements:_notice}),cancellation=cancellationView(history,{...r,cancelledAt:_at,cancelledBy:_by,cancelledAs:_as,cancelReason:_reason});return {...r,...(notice?.length?{noticeAcknowledgements:notice}:{}),...(cancellation?{cancellation}:{})}}),attendance:s.attendance,rounds:s.rounds,matches:s.matches.map(m=>withScorer(s,m)),costs:s.costs,seasons:s.seasons,
   // Compatibility for tabs opened before deployment; no monthly board is shown.

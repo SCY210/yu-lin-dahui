@@ -12,6 +12,7 @@ export const rewardText=(b:{coins:number;points:number})=>[b.coins?`${b.coins} �
 export function BountyScroll({kind,coins,points,penalty,gamePoints}:{kind:BountyKind;coins:number;points:number;penalty:number;gamePoints?:15}){
  return <div className="bounty-scroll">
   <p className="bounty-goal">悬赏所求：{bountyGoal(kind,gamePoints)}</p>
+  {kind==='upset'&&<p className="hint">仅在已发布排场中存在挑战机会时发令；若实际比赛中从未遇到符合修为差距的对手，此令作废，不奖不罚。</p>}
   <dl><div><dt>功成之赏</dt><dd>{rewardText({coins,points})}</dd></div><div><dt>失手之罚</dt><dd>{penalty?`折损 ${penalty} 积分`:'无罚'}</dd></div></dl>
  </div>;
 }
@@ -24,12 +25,13 @@ export default function BountyCard({title,offer,accepted,busy,onRespond,onOpen}:
   <div className="actions"><button type="button" className="primary" disabled={busy} onClick={()=>onRespond?.(offer,true)}>接下此令</button><button type="button" className="ghost" disabled={busy} onClick={()=>onRespond?.(offer,false)}>婉拒</button></div>
  </section>;
  if(!accepted)return null;
- const done=accepted.outcome==='completed',failed=accepted.outcome==='failed';
+ const done=accepted.outcome==='completed',failed=accepted.outcome==='failed',voided=accepted.outcome==='void';
  return <section className={'card bounty-card'+(done?' is-completed':failed?' is-failed':'')} aria-label="悬赏令" role="status">
-  <BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'功成':failed?'失手':'修行中'}/>
-  <BountyScroll {...accepted}/>
+  <BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'功成':failed?'失手':voided?'已作废':'修行中'}/>
+  <BountyScroll {...accepted} penalty={voided?0:accepted.penalty}/>
   {done?<p className="bounty-result"><CheckCircle2 size={17} aria-hidden="true"/>悬赏功成！天机阁赐下 {rewardText(accepted)}。</p>
    :failed?<p className="bounty-result"><XCircle size={17} aria-hidden="true"/>此令未竟{accepted.penalty?`，折损 ${accepted.penalty} 积分`:''}。</p>
+   :voided?<p className="bounty-result">本场没有符合修为差距的挑战机会，悬赏作废，不奖不罚；原悬赏扣分已撤销。</p>
    :<p className="hint">散场之后，天机阁自会清算；补录比分亦会重新清算。</p>}
  </section>;
 }

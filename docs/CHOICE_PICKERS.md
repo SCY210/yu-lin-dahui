@@ -10,6 +10,8 @@ app/app-select.tsx 统一承接球友、赠礼接收人、表单选项、场地�
 - 在已登录应用内使用既有导航上下文，手机返回键优先关闭菜单，保留表单及其内容。菜单在表单弹窗内打开时，Escape 只关闭当前菜单。
 - 减少动态效果时禁用菜单出现动画。
 
+选择菜单以独立模态浮层处理滚动锁，与外层表单弹窗正确配合。球馆、球友、时间等长列表可用鼠标滚轮或手指滑动，背景表单保持原位；关闭菜单或表单后释放对应滚动锁。不能只给列表设置 `overflow`，外层弹窗仍可能拦截真实的滚轮和触摸事件。
+
 ## 表单兼容
 
 隐藏的 select 仅保留原有 FormData、required 校验和 change 事件语义，display:none、aria-hidden、tabIndex=-1，不能通过触屏或键盘打开系统选择器。界面控件是自定义 combobox 按钮和 listbox。
@@ -19,3 +21,14 @@ app/app-select.tsx 统一承接球友、赠礼接收人、表单选项、场地�
 ## 验证
 
 tests/app-select-ui.mjs 覆盖搜索、键盘、输入法、必填、禁用及兼容事件。已有表单、赛事、赠礼、费用和排场测试仍通过隐藏的标准表单桥接检查原有数据转换。浏览器验收必须使用可见 combobox 与 option 操作，验证真实选择事件、弹窗嵌套、返回键、焦点、移动滚动、屏幕边界以及两个主题；不能只操作隐藏控件来代替视觉交互验收。
+
+`tests/app-select-scroll-browser.mjs` 使用本机已安装的 Chrome 和 Playwright，在虚构页面验证真实滚轮和触摸滚动，覆盖球馆、球友、时间、弹窗外列表、320/390/1000 像素宽度、较矮视口、两种主题及关闭表单后的滚动恢复。直接给 `scrollTop` 赋值只能证明内容溢出，不能证明真实手势可以滚动。
+
+从仓库根目录运行。已安装 Playwright 时直接运行脚本；复用其他本地测试环境时，用环境变量指定其入口，不需要给生产依赖增加浏览器包：
+
+```powershell
+$env:YULIN_PLAYWRIGHT_MODULE = '本机已安装的 Playwright/index.mjs 绝对路径'
+node tests/app-select-scroll-browser.mjs
+```
+
+结果和手机截图保存在忽略目录 `.test-output/app-select-scroll-browser/`，浏览器测试不连接生产数据库。

@@ -1,6 +1,6 @@
 import type {Account,Event,Settings,State} from './domain/types';
 import {awardVotingClosesAt} from './domain/activity-voting';
-import {bountyHonorUntil} from './domain/bounties';
+import {bountyHonorUntil,bountyOfferAt} from './domain/bounties';
 import {attendanceForEvent,usesAutomaticAttendance} from './domain/attendance';
 import {registrationSpans} from './domain/booking-signups';
 import {pointsWindow} from './domain/points-window';
@@ -89,7 +89,7 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
   }
   // The same end boundary also switches live actions to their final signup
   // phase for manual overtime; expired activities are never auto-restarted.
-  boundary(e.start);boundary(e.end);
+  boundary(bountyOfferAt(e));boundary(e.start);boundary(e.end);
   for(const attendance of attendanceForEvent(s,e)){
    boundary(attendance.start);
    if(attendance.end!==null){boundary(attendance.end);boundary(attendance.end-roundDuration+1)}
@@ -105,6 +105,10 @@ export function clubViewValidUntil(s:State,a:Account,now:number){
  for(const e of s.events)if(scored.has(e.id))boundary(e.end);
  const visibleIds=new Set(s.events.filter(e=>a.role==='admin'||e.status!=='draft'||e.creatorId===a.id).map(e=>e.id));
  for(const m of s.matches)if(['complete','forfeit'].includes(m.status)&&visibleIds.has(m.eventId)&&m.end!==null)boundary(m.end);
+ // The member's first start closes their offer; a published opportunity may also pass without a write.
+ for(const m of s.matches)if(visibleIds.has(m.eventId)&&m.start!==null)boundary(m.start);
+ const upcomingRounds=new Set(s.matches.filter(m=>m.status==='published'&&visibleIds.has(m.eventId)).map(m=>m.roundId));
+ for(const r of s.rounds)if(upcomingRounds.has(r.id))boundary(r.start);
  // Derived realm/placement and grouping strength can restart without a write.
  for(const m of s.matches)if(isRatedMatch(m,now))boundary(inactivityDeadline(m.end!));
  // MVP voting closes on the clock: the result, its points and the winner's notice appear without a write.

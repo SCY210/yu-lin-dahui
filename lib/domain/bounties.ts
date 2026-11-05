@@ -6,7 +6,8 @@ import {gameFacts} from './game-facts';
 import {isGuest} from './guests';
 import {isClubOwner} from './ownership';
 import {fail,month,type Account,type Event,type State} from './types';
-import type {RatedGame} from './realm-rating';
+import {realmLedger,type RatedGame} from './realm-rating';
+import {upsetOfferEligible} from './bounty-opportunities';
 
 /** Bounties (docs/BOUNTIES.md): before a points match some members are offered one challenge about how they play in
  * the games the scheduler gives them. Accepting risks a point penalty; declining costs nothing. */
@@ -15,10 +16,10 @@ export type BountyReward={coins:number;points:number};
 export type BountySettings={rewards:Record<BountyKind,BountyReward>;penalty:number};
 /** A member's answer, with the reward and penalty frozen when they accepted. */
 export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'declined';at:number;coins:number;points:number;penalty:number;/** A 15-point activity (lib/domain/game-points.ts), whose rout and deuce thresholds are lower. */gamePoints?:15};
-export type BountyOutcome='completed'|'failed';
+export type BountyOutcome='completed'|'failed'|'void';
 
 export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','champion','sweep','close'];
-/** Share of eligible members offered a bounty, how early, and the thresholds of each challenge. */
+/** Chance that each eligible member, drawn independently, is offered a bounty; how early, and the thresholds of each challenge. */
 export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20,
  bountyUnbeatenGames=4,bountyChampionWins=3,bountySweepOpponents={doubles:5,singles:3},bountyCloseWins=2;
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
@@ -61,12 +62,13 @@ export function bountyEvent(e:Event){return e.deletedAt===undefined&&eventRankin
 type OfferState=Pick<State,'registrations'|'matches'|'players'|'accounts'|'settings'>;
 /** The offer this member can still answer: from 30 minutes before the start until their first game of the activity
  * starts, so nobody accepts after seeing how they play. A confirmed, non-guest member; one answer per activity. */
-export function bountyOffer(s:OfferState,e:Event,playerId:string,now:number){
+export function bountyOffer(s:OfferState,e:Event,playerId:string,now:number,upsetEligible:()=>boolean=()=>false){
  if(!bountyEvent(e)||now<bountyOfferAt(e)||now>=e.end)return null;
  if(e.bounties?.some(b=>b.playerId===playerId))return null;
  if(!s.registrations.some(r=>r.eventId===e.id&&r.playerId===playerId&&r.status==='confirmed')||isGuest(s as State,playerId))return null;
  if(s.matches.some(m=>m.eventId===e.id&&m.start!==null&&m.start<=now&&[...m.a,...m.b].includes(playerId)))return null;
  const kind=drawnBounty(e.id,playerId);if(!kind)return null;
+ if(kind==='upset'&&!upsetEligible())return null;
  const {rewards,penalty}=bountySettings(s);
  return {eventId:e.id,playerId,kind,...rewards[kind],penalty,...(eventGamePoints(e)===15?{gamePoints:15 as const}:{})};
 }
@@ -79,7 +81,7 @@ export function respondBounty(s:State,a:Account,input:unknown,now:number){
  const e=s.events.find(e=>e.id===c.eventId)??fail('活动不存在');
  const existing=e.bounties?.find(b=>b.playerId===c.playerId);
  if(existing){if((existing.status==='accepted')===c.accept)return existing;fail('悬赏令已经回应过，不能更改')}
- const offer=bountyOffer(s,e,c.playerId,now)??fail('这张悬赏令已经失效');
+ const offer=bountyOffer(s,e,c.playerId,now,()=>upsetOfferEligible(s,e,c.playerId,now,realmLedger(s,now).snapshot,bountyUpsetGap))??fail('这张悬赏令已经失效，或当前排场没有符合条件的挑战机会');
  const record:BountyRecord={playerId:c.playerId,kind:offer.kind,status:c.accept?'accepted':'declined',at:now,coins:offer.coins,points:offer.points,penalty:offer.penalty,...(offer.gamePoints?{gamePoints:offer.gamePoints}:{})};
  (e.bounties??=[]).push(record);
  return record;
@@ -119,10 +121,19 @@ export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecor
  else{
   // The upset: a won game where at least one opponent's 修为 before the match was at least bountyUpsetGap above the
   // average of the member's side. A missing opponent record falls back to the opponents' average.
-  const mine=gamesOf?.(id)??[];
-  met=mine.some(g=>{if(g.eventId!==e.id||!g.won)return false;const m=s.matches.find(x=>x.id===g.matchId);
-   const before=(m?(g.side==='a'?m.b:m.a):[]).map(pid=>gamesOf!(pid).find(x=>x.matchId===g.matchId&&x.gameIndex===g.gameIndex)?.before).filter((x):x is number=>x!==undefined);
-   return Math.max(g.opponent,...before)-g.team>=bountyUpsetGap});
+  const matches=new Map(played.map(g=>[g.match.id,g.match])),mine=gamesOf?.(id)??[],opponents=new Map<string,Map<string,number>>();
+  let opportunity=false;
+  for(const g of mine){
+   const m=matches.get(g.matchId);if(g.eventId!==e.id||!m||g.end>now)continue;
+   const before=m[g.side==='a'?'b':'a'].map(pid=>{
+    let rows=opponents.get(pid);if(!rows){rows=new Map((gamesOf?.(pid)??[]).map(x=>[JSON.stringify([x.matchId,x.gameIndex]),x.before]));opponents.set(pid,rows)}
+    return rows.get(JSON.stringify([g.matchId,g.gameIndex]));
+   }).filter((x):x is number=>x!==undefined);
+   // A guest has no rated row: recover their fixed score from the recorded doubles average.
+   if(before.length===1&&m[g.side==='a'?'b':'a'].length===2)before.push(2*g.opponent-before[0]);
+   if(Math.max(g.opponent,...before)-g.team>=bountyUpsetGap){opportunity=true;if(g.won)met=true}
+  }
+  if(!opportunity)return 'void';
  }
  return met?'completed':'failed';
 }
