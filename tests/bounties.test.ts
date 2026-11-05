@@ -22,11 +22,14 @@ function setup(kind:BountyKind,fields:Partial<Event>={}){
 function game(s:State,e:Event,id:string,offset:number,score:[number,number],b=['p2','p3']){coinMatch(s,e,id,{b,start:e.start+offset*minute,end:e.start+(offset+12)*minute,games:[{a:score[0],b:score[1]}],scoreA:score[0],scoreB:score[1]})}
 const accept=(s:State,e:Event,accept=true,now=bountyOfferAt(e))=>apply(s,s.accounts[0],'bountyRespond',{eventId:e.id,playerId:'p0',accept},now);
 
-test('about 30% of members draw one of the eight bounties, always the same one for the same activity',()=>{
+test('each member independently has a 30% chance to draw one of the eight bounties, always the same one for the same activity',()=>{
  const draws=Array.from({length:2000},(_,i)=>drawnBounty('event-'+i,'player-'+(i%37)));
  const offered=draws.filter(Boolean).length/draws.length;assert.ok(offered>0.25&&offered<0.35,String(offered));
  assert.deepEqual(new Set(draws.filter(Boolean)),new Set(bountyKinds));
  assert.equal(drawnBounty('event-7','player-7'),drawnBounty('event-7','player-7'));
+ // Not a fixed 30% of each activity: with 10 members, some activities give none and some give more than three.
+ const perEvent=Array.from({length:200},(_,i)=>Array.from({length:10},(_,j)=>drawnBounty('event-'+i,'member-'+j)).filter(Boolean).length);
+ assert.ok(perEvent.includes(0)&&perEvent.some(n=>n>3),String(perEvent));
 });
 
 test('the offer opens 30 minutes before the start and closes when the member\'s first game starts or the activity ends',()=>{
