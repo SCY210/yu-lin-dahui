@@ -18,7 +18,7 @@ export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'dec
 export type BountyOutcome='completed'|'failed'|'void';
 
 export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','champion','sweep','close'];
-/** Share of eligible members offered a bounty, how early, and the thresholds of each challenge. */
+/** Chance that each eligible member, drawn independently, is offered a bounty; how early, and the thresholds of each challenge. */
 export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRoutMaxScore=9,bountyUpsetGap=250,bountyDeuceScore=20,
  bountyUnbeatenGames=4,bountyChampionWins=3,bountySweepOpponents={doubles:5,singles:3},bountyCloseWins=2;
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
