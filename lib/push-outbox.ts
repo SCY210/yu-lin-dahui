@@ -1,4 +1,7 @@
-import {raw} from './store';
+import {raw,load} from './store';
+import {bountyOffer,drawnBounty,bountyUpsetGap} from './domain/bounties';
+import {upsetOfferEligible} from './domain/bounty-opportunities';
+import {realmLedger} from './domain/realm-rating';
 import {removePushSubscription} from './push-subscriptions';
 import {newlyOpenedSignups,signupPushMessage,pushSubscriptionInput} from './push-contract';
 import {pushConfiguration,sendWebPush,type PushEnvironment} from './push-crypto';
@@ -35,6 +38,7 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
    FROM push_deliveries d JOIN push_jobs j ON j.id=d.job_id JOIN push_subscriptions s ON s.id=d.subscription_id JOIN events e ON e.id=j.event_id JOIN accounts a ON a.id=s.account_id JOIN players p ON p.id=a.player_id LEFT JOIN reminder_settings rs ON rs.account_id=a.id LEFT JOIN registrations r ON r.event_id=e.id AND r.player_id=p.id
    WHERE d.next_at<=? AND d.attempts<3 AND (d.state IN ('pending','retry') OR (d.state='sending' AND d.lease_until<=?)) ORDER BY d.next_at,d.id LIMIT 12`).bind(now,now).all<Delivery>()).results;
   if(!rows.length)break;
+  let upsetState:Promise<{state:State;ledger:ReturnType<typeof realmLedger>}>|undefined;
   await Promise.allSettled(rows.map(async row=>{
    const claimed=await db.prepare("UPDATE push_deliveries SET state='sending',attempts=attempts+1,lease_until=? WHERE id=? AND attempts=? AND (state IN ('pending','retry') OR (state='sending' AND lease_until<=?))").bind(now+60000,row.id,row.attempts,now).run();
    if(!claimed.meta.changes)return;
@@ -49,6 +53,11 @@ export async function flushPushOutbox(source:PushEnvironment,send:typeof fetch=f
     if(notice?.kind==='awards')relevant=relevant&&(event.status==='ended'||event.end<=Date.now());
     // A bounty notice lapses once the member has answered or is no longer confirmed (docs/BOUNTIES.md).
     if(notice?.kind==='bounty'){const r=row.registration?JSON.parse(row.registration):null;relevant=relevant&&r?.status==='confirmed'&&!event.bounties?.some(b=>b.playerId===player.id)}
+    if(relevant&&notice?.kind==='bounty'&&drawnBounty(event.id,player.id)==='upset'){
+     const {state:current,ledger}=await(upsetState??=load().then(state=>({state,ledger:realmLedger(state,now)})));
+     const latest=current.events.find(e=>e.id===event.id);
+     relevant=!!latest&&!!bountyOffer(current,latest,player.id,now,()=>upsetOfferEligible(current,latest,player.id,now,ledger.snapshot,bountyUpsetGap));
+    }
     if(notice?.kind==='fees'){
      const latest=(await db.prepare('SELECT payload FROM settlements WHERE event_id=? ORDER BY version DESC').bind(event.id).all<{payload:string}>()).results.map(r=>JSON.parse(r.payload)).find(b=>b.confirmed);
      // The overdue notice goes to the owner and administrators, who need not have a bill of their own.

@@ -1,5 +1,5 @@
 import {emptyState} from './domain/types';
-import {bountyOfferMinutes} from './domain/bounties';
+import {bountyOfferMinutes,drawnBounty} from './domain/bounties';
 import {bountyReminders} from './bounty-reminders';
 import {noticeStatements} from './reminder-store';
 
@@ -20,7 +20,20 @@ export async function runBountyReminderSweep({db,now}:{db:D1Database;now:number}
  const parse=(index:number)=>rows[index].results.map(row=>JSON.parse(String(row.payload)));
  const s=emptyState(),settings=parse(0)[0];if(!settings?.initialized)return {sent:0};
  s.settings=settings;s.events=parse(1);s.registrations=parse(2);s.matches=parse(3);s.accounts=parse(4);s.players=parse(5);
- const told=new Set(parse(6).map(n=>n.id)),notices=bountyReminders(s,now).filter(n=>!told.has(n.id));
+ const told=new Set(parse(6).map(n=>n.id));
+ // Only an untold upset candidate with a published lineup needs historical ratings. Never replay a partial history.
+ if(s.registrations.some(r=>r.status==='confirmed'&&!told.has(`bounty:${r.eventId}:${r.playerId}`)&&drawnBounty(r.eventId,r.playerId)==='upset'&&s.matches.some(m=>m.eventId===r.eventId&&m.status==='published'&&[...m.a,...m.b].includes(r.playerId)))){
+  const history=await db.batch<{payload:string}>([
+   db.prepare('SELECT payload FROM events'),
+   db.prepare("SELECT payload FROM matches WHERE json_extract(payload,'$.status') IN ('complete','forfeit')"),
+   db.prepare("SELECT payload FROM audits WHERE json_extract(payload,'$.action')='grantPoints'"),
+   db.prepare(`SELECT payload FROM rounds WHERE event_id IN (${soon})`).bind(...window),
+   db.prepare(`SELECT payload FROM bookings WHERE event_id IN (${soon})`).bind(...window),
+  ]);
+  const rows=(i:number)=>history[i].results.map(row=>JSON.parse(String(row.payload)));
+  s.events=rows(0);s.matches=[...new Map([...s.matches,...rows(1)].map(m=>[m.id,m])).values()];s.audits=rows(2);s.rounds=rows(3);s.bookings=rows(4);
+ }
+ const notices=bountyReminders(s,now).filter(n=>!told.has(n.id));
  if(!notices.length)return {sent:0};
  await db.batch(notices.flatMap(notice=>noticeStatements(notice,'bounty-reminders:'+now,now)));
  return {sent:notices.length};
