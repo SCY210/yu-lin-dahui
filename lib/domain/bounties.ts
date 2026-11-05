@@ -1,3 +1,4 @@
+import {eventGamePoints} from './game-points';
 import {z} from 'zod';
 import {eventRankingEnabled} from './event-ranking';
 import {eventFormat} from './match-format';
@@ -13,7 +14,7 @@ export type BountyKind='streak'|'rout'|'upset'|'deuce'|'unbeaten'|'champion'|'sw
 export type BountyReward={coins:number;points:number};
 export type BountySettings={rewards:Record<BountyKind,BountyReward>;penalty:number};
 /** A member's answer, with the reward and penalty frozen when they accepted. */
-export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'declined';at:number;coins:number;points:number;penalty:number};
+export type BountyRecord={playerId:string;kind:BountyKind;status:'accepted'|'declined';at:number;coins:number;points:number;penalty:number;/** A 15-point activity (lib/domain/game-points.ts), whose rout and deuce thresholds are lower. */gamePoints?:15};
 export type BountyOutcome='completed'|'failed';
 
 export const bountyKinds:BountyKind[]=['streak','rout','upset','deuce','unbeaten','champion','sweep','close'];
@@ -23,6 +24,8 @@ export const bountyChance=0.3,bountyOfferMinutes=30,bountyStreakWins=5,bountyRou
 export const defaultBountySettings:BountySettings={rewards:{streak:{coins:30,points:15},upset:{coins:20,points:10},rout:{coins:15,points:8},deuce:{coins:10,points:6},
  unbeaten:{coins:25,points:12},sweep:{coins:18,points:9},champion:{coins:20,points:10},close:{coins:12,points:6}},penalty:10};
 export const bountyTitles:Record<BountyKind,string>={streak:'连胜悬赏',rout:'大胜悬赏',upset:'以弱胜强悬赏',deuce:'鏖战悬赏',unbeaten:'金身悬赏',champion:'夺魁悬赏',sweep:'横扫悬赏',close:'险胜悬赏'};
+/** In a 15-point game: a rout leaves the opponents at most 6, a deuce game is won after 14:14. */
+export const bountyRoutMaxScore15=6,bountyDeuceScore15=14;
 export const bountyGoals:Record<BountyKind,string>={
  streak:`本场活动连赢 ${bountyStreakWins} 局`,
  rout:`赢一局，且对手只得个位数分（不超过 ${bountyRoutMaxScore} 分）`,
@@ -33,6 +36,13 @@ export const bountyGoals:Record<BountyKind,string>={
  sweep:`本场活动击败至少 ${bountySweepOpponents.doubles} 位不同对手（单打 ${bountySweepOpponents.singles} 位），横扫八方`,
  close:`赢下至少 ${bountyCloseWins} 局只领先 2 分的比赛（如 21:19），刀尖问道`,
 };
+/** The goal as the member reads it, with the thresholds of a 15-point activity. */
+export function bountyGoal(kind:BountyKind,gamePoints?:15|21){
+ if(gamePoints!==15)return bountyGoals[kind];
+ if(kind==='rout')return `赢一局，且对手不超过 ${bountyRoutMaxScore15} 分（15 分制）`;
+ if(kind==='deuce')return `赢一局 ${bountyDeuceScore15} 平后的加分赛（如 16:14，15 分制）`;
+ return bountyGoals[kind];
+}
 export function bountySettings(s:Pick<State,'settings'>):BountySettings{
  const saved=s.settings.bounty;
  return {penalty:saved?.penalty??defaultBountySettings.penalty,rewards:Object.fromEntries(bountyKinds.map(k=>[k,{...defaultBountySettings.rewards[k],...saved?.rewards?.[k]}])) as Record<BountyKind,BountyReward>};
@@ -58,7 +68,7 @@ export function bountyOffer(s:OfferState,e:Event,playerId:string,now:number){
  if(s.matches.some(m=>m.eventId===e.id&&m.start!==null&&m.start<=now&&[...m.a,...m.b].includes(playerId)))return null;
  const kind=drawnBounty(e.id,playerId);if(!kind)return null;
  const {rewards,penalty}=bountySettings(s);
- return {eventId:e.id,playerId,kind,...rewards[kind],penalty};
+ return {eventId:e.id,playerId,kind,...rewards[kind],penalty,...(eventGamePoints(e)===15?{gamePoints:15 as const}:{})};
 }
 
 export const bountyRespondInput=z.object({eventId:z.string().min(1).max(100),playerId:z.string().min(1).max(100),accept:z.boolean()}).strict();
@@ -70,7 +80,7 @@ export function respondBounty(s:State,a:Account,input:unknown,now:number){
  const existing=e.bounties?.find(b=>b.playerId===c.playerId);
  if(existing){if((existing.status==='accepted')===c.accept)return existing;fail('悬赏令已经回应过，不能更改')}
  const offer=bountyOffer(s,e,c.playerId,now)??fail('这张悬赏令已经失效');
- const record:BountyRecord={playerId:c.playerId,kind:offer.kind,status:c.accept?'accepted':'declined',at:now,coins:offer.coins,points:offer.points,penalty:offer.penalty};
+ const record:BountyRecord={playerId:c.playerId,kind:offer.kind,status:c.accept?'accepted':'declined',at:now,coins:offer.coins,points:offer.points,penalty:offer.penalty,...(offer.gamePoints?{gamePoints:offer.gamePoints}:{})};
  (e.bounties??=[]).push(record);
  return record;
 }
@@ -93,10 +103,10 @@ export function bountyOutcome(s:Pick<State,'matches'>,e:Event,record:BountyRecor
  const id=record.playerId,played=s.matches.filter(m=>m.eventId===e.id&&[...m.a,...m.b].includes(id)).flatMap(m=>gameFacts(m).map(g=>({...g,side:m.a.includes(id)?'a' as const:'b' as const})))
   .sort((x,y)=>x.match.start!-y.match.start!||x.match.id.localeCompare(y.match.id)||x.index-y.index);
  const won=played.filter(g=>g.winner===g.side),loserScore=(g:typeof played[number])=>g.side==='a'?g.b:g.a;
- let met=false;
+ let met=false;const fifteen=eventGamePoints(e)===15;
  if(record.kind==='streak'){let run=0;for(const g of played){run=g.winner===g.side?run+1:0;if(run>=bountyStreakWins)met=true}}
- else if(record.kind==='rout')met=won.some(g=>loserScore(g)<=bountyRoutMaxScore);
- else if(record.kind==='deuce')met=won.some(g=>loserScore(g)>=bountyDeuceScore);
+ else if(record.kind==='rout')met=won.some(g=>loserScore(g)<=(fifteen?bountyRoutMaxScore15:bountyRoutMaxScore));
+ else if(record.kind==='deuce')met=won.some(g=>loserScore(g)>=(fifteen?bountyDeuceScore15:bountyDeuceScore));
  else if(record.kind==='unbeaten')met=played.length>=bountyUnbeatenGames&&won.length===played.length;
  else if(record.kind==='champion'){
   // Games won by everyone at the activity; the bounty holder must have the most (a tie for first counts).
