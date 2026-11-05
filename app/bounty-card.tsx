@@ -1,17 +1,17 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {ScrollText,CheckCircle2,XCircle} from 'lucide-react';
-import {bountyGoals,bountyTitles,type BountyKind} from '../lib/domain/bounties';
+import {bountyGoal,bountyTitles,type BountyKind} from '../lib/domain/bounties';
 import {myBounty,pendingBountyOffers,type ViewBounty} from '../lib/client/bounties';
 import './bounty.css';
 
-type Offer={eventId:string;playerId:string;kind:BountyKind;coins:number;points:number;penalty:number};
+type Offer={eventId:string;playerId:string;kind:BountyKind;coins:number;points:number;penalty:number;gamePoints?:15};
 export const rewardText=(b:{coins:number;points:number})=>[b.coins?`${b.coins} 羽币`:'',b.points?`${b.points} 积分`:''].filter(Boolean).join(' + ')||'无奖励';
 
 /** The scroll of one bounty: its goal, reward and penalty. */
-export function BountyScroll({kind,coins,points,penalty}:{kind:BountyKind;coins:number;points:number;penalty:number}){
+export function BountyScroll({kind,coins,points,penalty,gamePoints}:{kind:BountyKind;coins:number;points:number;penalty:number;gamePoints?:15}){
  return <div className="bounty-scroll">
-  <p className="bounty-goal">悬赏所求：{bountyGoals[kind]}</p>
+  <p className="bounty-goal">悬赏所求：{bountyGoal(kind,gamePoints)}</p>
   {kind==='upset'&&<p className="hint">仅在已发布排场中存在挑战机会时发令；若实际比赛中从未遇到符合修为差距的对手，此令作废，不奖不罚。</p>}
   <dl><div><dt>功成之赏</dt><dd>{rewardText({coins,points})}</dd></div><div><dt>失手之罚</dt><dd>{penalty?`折损 ${penalty} 积分`:'无罚'}</dd></div></dl>
  </div>;
