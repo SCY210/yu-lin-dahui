@@ -1,4 +1,4 @@
-// Names follow the user's supplied venue list; public addresses checked on 2026-10-04.
+// Municipal addresses checked on 2026-10-04; Fengxing's address supplied by the user on 2026-11-05.
 export const venues = [
  {id:'antonio-diaz-miguel',name:'Antonio Díaz Miguel',address:'Calle de Joaquín Dicenta, 1, 28029 Madrid',district:'Tetuán'},
  {id:'daoiz-velarde',name:'Daoíz y Velarde',address:'Plaza de Daoíz y Velarde, 5, 28007 Madrid',district:'Retiro'},
@@ -11,6 +11,7 @@ export const venues = [
  {id:'marques-samaranch',name:'Marqués de Samaranch',address:'Paseo Imperial, 20, 28005 Madrid',district:'Arganzuela'},
  {id:'orcasur',name:'Orcasur',address:'Calle de Moreja, 11, 28041 Madrid',district:'Usera'},
  {id:'pradillo',name:'Pradillo',address:'Calle de Pradillo, 33, 28002 Madrid',district:'Chamartín'},
+ {id:'fengxing',name:'风行球馆',address:'Calle de San Jaime 7, nave 13, Vallecas 28031',district:'Vallecas'},
 ] as const;
 const normalize=(s:string)=>s.normalize('NFD').replace(/\p{M}/gu,'').trim().toLowerCase();
 export function findVenue(name:string){return venues.find(v=>normalize(v.name)===normalize(name)||v.id===name)}
