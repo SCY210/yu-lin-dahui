@@ -17,7 +17,7 @@ type Court=ClubData['bookings'][number];
 /** A competition's signup (docs/TOURNAMENTS.md): one card for the whole competition. Entrants play when the system
  * schedules them, so nobody picks a court or a time slot; when the field is full, later entrants wait in order. The
  * organisers see the courts below, where they add and change court slots. */
-export default function TournamentSignup({e,ctx,rules,courts,editCourt,bookers}:{e:Event;ctx:SchedulingContext&{openProfile?:(id:string)=>void};rules:unknown;courts:Court[];editCourt:(b?:Court)=>void;bookers:(b:Court)=>string}){
+export default function TournamentSignup({e,ctx,rules,courts,editCourt,cancelCourt,bookers}:{e:Event;ctx:SchedulingContext&{openProfile?:(id:string)=>void};rules:unknown;courts:Court[];editCourt:(b?:Court)=>void;cancelCourt:(b:Court)=>void;bookers:(b:Court)=>string}){
  const {data,open}=ctx,manager=canManageEvent(data.me,e),closes=signupClosesAt(e),now=useActivityClock({...e,start:closes}),closed=now>=closes;
  const regs=data.registrations.filter(r=>r.eventId===e.id&&r.status!=='cancelled').sort((a,b)=>a.sequence-b.sequence);
  const entrants=regs.filter(r=>r.status==='confirmed'),waiting=regs.filter(r=>r.status==='waitlist'),mine=regs.find(r=>r.playerId===data.me.playerId);
@@ -42,7 +42,7 @@ export default function TournamentSignup({e,ctx,rules,courts,editCourt,bookers}:
   </section>
   {manager&&<section className="card tournament-courts"><div className="row"><h3>比赛场地</h3><button type="button" className="secondary" onClick={()=>editCourt()}><Plus size={16}/>添加场地</button></div>
    <p className="hint">系统在这些场地上安排对阵；场地费计入报名费。</p>
-   {courts.map(b=><div key={b.id} className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{b.advancedBy?' · 约场 '+bookers(b):''}</small></div><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button></div>)}
+   {courts.map(b=><div key={b.id} className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{b.advancedBy?' · 约场 '+bookers(b):''}</small></div><div className="actions"><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button><button type="button" className="ghost danger" disabled={ctx.busy} onClick={()=>cancelCourt(b)}>取消场地</button></div></div>)}
   </section>}
  </div>;
 }

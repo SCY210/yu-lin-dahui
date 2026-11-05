@@ -10,6 +10,8 @@
 
 ## 存储及兼容
 
+管理者可取消单个未开打场地，同时取消对应接龙和场地费，见[取消场地](COURT_CANCELLATION.md)。
+
 - `Booking.signupCapacity` 为本场上限，缺省使用活动原上限；`venue/address` 可覆盖活动球馆。
 - `Registration` 保持每活动每球友一条，新增可选 `bookingSignups`，每条含预约 ID、正式/候补/取消状态、序号、参加区间、报名和递补时间、备注、取消申请。活动总状态从各场派生，人数按球友去重。
 - `Attendance.bookingId` 保留取消或调整前已发生的场地参加区间。自动参加采用正式时段的并集，空档不参加，迟报名和递补不追溯计费。

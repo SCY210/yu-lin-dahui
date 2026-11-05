@@ -1,4 +1,5 @@
 import {applyParticipation} from './participation-commands';
+import {applyBookingCancellation} from './booking-cancel';
 import {applyFriendSignup} from './friend-signup';
 import {activityAcknowledgementInput} from './activity-acknowledgement';
 import {applyTreasure,isTreasureAction} from './treasure-shop';
@@ -101,6 +102,7 @@ const schemas = {
 export async function apply(s: State, a: Account, action: string, input: unknown, now: number) {
     authorized(a, action);
     input = restoreMaskedEdits(s, a, action, input);
+    if(applyBookingCancellation(s,a,action,input,now))return null;
     if(applyTreasure(s,a,action,input,now)) return null;
     if(applyBond(s,a,action,input)) return null;
     if(applyPairingOdds(s,a,action,input,now)) return null;

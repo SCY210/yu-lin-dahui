@@ -36,14 +36,14 @@ export function canSwapLivePlayers(s:Pick<State,'registrations'|'players'>,a:Pic
 }
 
 const rankedManagementActions=new Set(['pointsStart','pointsNext','liveStart','livePause','generate','planPoints','publishPoints','publish','start','schedulingMode','playSettings','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart']);
-const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentReferee','tournamentArchive','tournamentArrange','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','settleRevoke','feeUpdateIgnore','playSettings','handicap','challengeMatch']);
+const eventActions=new Set(['eventRanking','pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','tournamentSettings','tournamentReferee','tournamentArchive','tournamentArrange','tournamentDraw','tournamentKnockout','tournamentReopen','tournamentStart','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsNext','planPoints','publishPoints','shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting','deleteEvent','restoreEvent','eventStatus','eventEdit','booking','bookingEdit','bookingCancel','moveQueue','attendance','attendanceEdit','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','cost','costOverride','bookingBearer','deleteCost','modes','exemption','feeRecipient','feeAdvance','notifyFees','settle','settleRevoke','feeUpdateIgnore','playSettings','handicap','challengeMatch']);
 
 // Resolve nested IDs from persisted state: a supplied eventId cannot grant access
 // to a booking, attendance record, round, match or cost belonging to another event.
 export function authorizeEventAction(s:State,a:Account,action:string,p:Record<string,unknown>){
  if(!eventActions.has(action))return false;
  let eventId:unknown=p.eventId;
- if(['bookingEdit','bookingBearer'].includes(action))eventId=s.bookings.find(b=>b.id===p.bookingId)?.eventId;
+ if(['bookingEdit','bookingBearer','bookingCancel'].includes(action))eventId=s.bookings.find(b=>b.id===p.bookingId)?.eventId;
  else if(action==='attendanceEdit')eventId=s.attendance.find(at=>at.id===p.attendanceId)?.eventId;
  else if(['swap','publish','start','cancelRound'].includes(action))eventId=s.rounds.find(r=>r.id===p.roundId)?.eventId;
  else if(['pointsLate','liveLineup','moveCourt','lock','score','matchScoring','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
