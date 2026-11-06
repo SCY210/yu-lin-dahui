@@ -41,6 +41,6 @@ test('every source adds up to the ranking total, owner grants included',async()=
 
 test('zero sources are left out and an unexplained remainder still reconciles',()=>{
  assert.deepEqual(pointsBreakdown({points:0,wins:0,losses:0}),[]);
- assert.deepEqual(pointsBreakdown({points:11,wins:2,losses:1,upsetPoints:2,mvpPoints:5,attendancePoints:-1,bountyPoints:-1,notificationPoints:0}),[{label:'胜局 2 × 3',points:6},{label:'负局 1 × 1',points:-1},{label:'强弱加成',points:2},{label:'MVP 加分',points:5},{label:'悬赏',points:-1},{label:'迟到扣分',points:-1},{label:'其他调整',points:1}]);
+ assert.deepEqual(pointsBreakdown({points:11,wins:2,losses:1,upsetPoints:2,mvpPoints:5,attendancePoints:-1,bountyPoints:-1,bountyWonPoints:9,bountyLostPoints:-10,notificationPoints:0}),[{label:'胜局 2 × 3',points:6},{label:'负局 1 × 1',points:-1},{label:'强弱加成',points:2},{label:'MVP 加分',points:5},{label:'悬赏成功',points:9},{label:'悬赏失败',points:-10},{label:'迟到扣分',points:-1},{label:'其他调整',points:1}]);
  assert.deepEqual(pointsBreakdown({points:3}),[{label:'其他调整',points:3}],'a row without source fields');
 });
