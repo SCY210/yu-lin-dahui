@@ -1,25 +1,25 @@
-# Shared source and personal checkout state
+# 共享源码与个人检出状态
 
-The repository shares application source, reusable build/runtime helpers, reproducible tests, database migrations, required deployment metadata, and third-party notices. It does not share credentials, local databases, editor/agent profiles, generated screenshots, logs, or one person's historical test runs.
+仓库共享应用源码、可复用的构建和运行辅助工具、可复现的测试、数据库迁移、必需的部署元数据和第三方声明。不共享凭据、本地数据库、编辑器或助手配置、生成的截图、日志，也不共享某个人的历史测试运行记录。
 
-AGENTS.md is a shared collaboration policy and stays tracked; it is written in Chinese. .openai/hosting.json identifies the existing deployment and bindings; it is not a personal instruction file and is necessary to build/deploy this app. Do not ignore all hidden directories or all Markdown/JSON files.
+AGENTS.md 是共享的协作规定，纳入版本跟踪，用中文写。.openai/hosting.json 指明现有的部署和绑定；它不是个人指令文件，构建和部署本应用都需要它。不要忽略所有隐藏目录，也不要忽略所有 Markdown 或 JSON 文件。
 
-## Reports removed from tracking
+## 已停止跟踪的报告
 
-These reports describe historical runs in an individual checkout:
+下面这些报告记录的是某个检出目录里的历史运行：
 
 - docs/MANAGED_ACCOUNTS_RESULTS.md
 - docs/MANAGED_ACCOUNTS_RACE_RESULTS.md
 - docs/PLAYER_PROFILE_API_RESULTS.md
 - docs/TEST_RESULTS.md
 
-They are ignored and removed from the Git index with git rm --cached. The originals in the working checkout remain; reproducible tests stay in tests/. Preserve reports if you need them as personal evidence. Historical reports are still in Git history; this change is not a secret-purge or history rewrite.
+它们已加入忽略，并用 git rm --cached 从 Git 索引中移除。工作目录里的原文件仍然保留；可复现的测试留在 tests/。如果你需要把这些报告作为个人证据，请自行保存。历史报告仍在 Git 历史里；这次改动不是清除机密，也没有改写历史。
 
-## Preserve another checkout before pulling
+## 拉取前先备份另一个检出目录
 
-A tracked deletion can remove a clean file when another checkout pulls or switches branches. Adding .gitignore or using --cached in this checkout does not prevent that. Run the backup BEFORE applying the cleanup commit.
+另一个检出目录拉取或切换分支时，被跟踪文件的删除可能会删掉一个没有改动的文件。在本检出目录里加 .gitignore 或使用 --cached 都无法阻止这一点。请在应用清理提交**之前**先备份。
 
-If the backup script is not yet available on the old branch, fetch the PR branch and extract only that script:
+如果旧分支上还没有备份脚本，先获取 PR 分支，只取出这个脚本：
 
 ```powershell
 git fetch origin feature/request-body-security
@@ -29,22 +29,24 @@ node $backupScript
 Remove-Item -LiteralPath $backupScript
 ```
 
-The temporary extracted script is not an original report. Review/run the script from the repository root, verify its successful output, and only then pull/merge/switch. Alternatively copy the four files manually to a safe local backup outside their tracked paths.
+临时取出的脚本不是原始报告。先审阅脚本，再从仓库根目录运行，确认输出成功后，才拉取、合并或切换分支。也可以手动把这四个文件复制到被跟踪路径以外的安全位置。
 
-The script copies existing reports to a unique .local/reports/<timestamp-uuid>/docs/ directory and verifies SHA-256 against the source bytes. It never deletes or overwrites originals; repeat runs use different archives. manifest.json records the verified hashes. .local is ignored.
+脚本把现有报告复制到唯一的 .local/reports/<时间戳-uuid>/docs/ 目录，并按源文件字节校验 SHA-256。它从不删除或覆盖原文件；每次运行都使用不同的归档目录。manifest.json 记录校验过的哈希。.local 已被忽略。
 
-After updating, reports in the archive remain available independently of the tracked deletion. If desired, copy them back to their now-ignored docs paths. Do not use git clean -xfd or any cleanup that deletes ignored backups.
+更新之后，归档里的报告不受被跟踪文件删除的影响，仍然可用。需要的话，可以把它们复制回现在已被忽略的 docs 路径。不要使用 git clean -xfd 或任何会删除被忽略备份的清理命令。
 
-No action in this change directly accesses or deletes another owner's local filesystem. The repository cannot guarantee what a later Git checkout does without the owner's pre-update backup.
+这次改动没有任何操作直接访问或删除其他所有者的本地文件系统。如果所有者更新前没有备份，仓库无法保证之后的 Git 检出会做什么。
 
-## Ignore policy
+## 忽略规则
 
-.gitignore covers dependencies/build outputs; .wrangler/.sites-runtime; .agents/.codex and personal editor state; screenshots, outputs, work, .test-output; .local backups; databases, logs, environment files, and personal instruction overrides.
+.gitignore 涵盖依赖和构建输出；.wrangler、.sites-runtime；.agents、.codex 和个人编辑器状态；截图、outputs、work、.test-output；.local 备份；数据库、日志、环境变量文件和个人指令覆盖文件。
 
-It does not hide normal source, migrations, shared instructions, licenses, or hosting configuration. Credentials and production exports must never enter Git. If a real secret was committed previously, ignoring/deleting the current file is insufficient: rotate it and handle history separately with the owner's authorization.
+它不会隐藏正常的源码、迁移、共享指令、许可证或托管配置。凭据和生产导出绝不能进入 Git。如果以前提交过真实的机密，只忽略或删除当前文件是不够的：要更换这个机密，并在所有者授权后另外处理历史。
 
-Run npm run check:repo to detect prohibited tracked paths, new shared Markdown without Chinese text, listed English documents that gained Chinese text, and broken relative documentation links. This heuristic does not certify translation quality; reviewers still check meaning. Ignored personal reports may keep their original language.
+运行 npm run check:repo 可以检查：被禁止跟踪的路径、不含中文的共享 Markdown、名单上的英文旧文档出现中文、名单只减不增，以及失效的相对文档链接。这个检查只是粗略判断，不保证翻译质量；审查者仍要核对意思。被忽略的个人报告可以保留原来的语言。
 
-## Existing documentation compatibility
+## 文档语言
 
-Since November 2026 shared documentation is written in Chinese (until then it was English, with older Chinese notes exempted). New and rewritten documents must contain Chinese text. The English documents that existed then are listed in scripts/english-markdown.json and may stay in English; a listed document that gains Chinese text fails the check, so a rewrite translates the whole document and removes it from the list. Code identifiers, commands, paths and quoted English stay as they are. Tracked-state restrictions and relative-link validation apply to every shared document.
+仓库里的共享文档一律用中文写。代码标识符、命令、路径、文件名和引用的英文原文保持原样。
+
+2026 年 11 月之前文档用英文写，那时已有的英文文档列在 scripts/english-markdown.json 里，是尚未完成的翻译清单，不是可以长期保留英文的豁免。名单只能减少，不能增加；改动名单上的文档时，要把整篇译成中文并从名单中移出。名单上的文档如果出现中文、名单比 main 上的多，检查都会失败。被跟踪状态的限制和相对链接检查适用于所有共享文档。

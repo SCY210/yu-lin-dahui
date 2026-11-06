@@ -7,8 +7,12 @@ const tracked=execFileSync('git',['ls-files','--cached','-z'],{encoding:'utf8'})
 const shared=execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(Boolean);
 const prohibited=/(?:^|\/)(?:\.codex|\.agents|\.wrangler|\.sites-runtime|\.vscode|\.idea|\.cursor|\.claude|\.cache|\.local|\.test-output|preview-captures|node_modules|dist|outputs|work|coverage|\.next|\.vinext)(?:\/|$)|(?:^|\/)\.env(?:\.|$)|(?:^|\/)(?:AGENTS|CLAUDE)\.local\.md$|\.(?:sqlite3?|db|log|tsbuildinfo)$/;
 const errors=[];let count=0;
-// 共享文档用中文写。名单里是尚未翻译的英文旧文档：可以保持英文，一旦改写就整篇译成中文并移出名单。
+// 共享文档一律用中文写。名单是尚未翻译完的英文旧文档清单：只减不增，改到哪篇就整篇译成中文并移出名单。
 const english=new Set(JSON.parse(await readFile(new URL('./english-markdown.json',import.meta.url),'utf8')));
+// 和 main 上的名单比较：新增的条目不允许。取不到 main（例如浅克隆）时跳过这一项。
+let mainList=null;
+for(const ref of ['origin/main','main'])if(!mainList)try{mainList=new Set(JSON.parse(execFileSync('git',['show',ref+':scripts/english-markdown.json'],{encoding:'utf8',stdio:['ignore','pipe','ignore']})))}catch{}
+if(mainList)for(const path of english)if(!mainList.has(path))errors.push('英文旧文档名单只能减少，不能新增：'+path);
 
 for(const path of tracked){
  if(prohibited.test(path)||localReportPaths.includes(path))errors.push('Local/generated file is tracked: '+path);

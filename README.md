@@ -1,82 +1,80 @@
-Engineering verification and modernization: [ENGINEERING.md](docs/ENGINEERING.md). Incident response and recovery: [OPERATIONS.md](docs/OPERATIONS.md). Use the Node version in `.node-version`, install with `npm ci`, then run `npm run verify`. The lint gate permits only decreasing historical debt; `npm run lint:report` shows the outstanding findings.
+# 羽林大会
 
-# Yu Lin Da Hui
+一个私人使用、以手机为主的羽毛球俱乐部网页应用。界面是中文，默认货币为欧元，默认时区为 Europe/Madrid。仓库里的共享文档一律用中文写（见[仓库与本地状态](docs/REPOSITORY_HYGIENE.md)）。
 
-A private, mobile-first badminton club web application. The UI is in Chinese. Since November 2026 new and rewritten shared documentation is in Chinese; older documents listed in scripts/english-markdown.json stay in English until they are rewritten. Defaults: EUR and Europe/Madrid.
+工程验证与现代化见 [ENGINEERING.md](docs/ENGINEERING.md)，故障处理与恢复见 [OPERATIONS.md](docs/OPERATIONS.md)。使用 `.node-version` 指定的 Node 版本，用 `npm ci` 安装依赖，然后运行 `npm run verify`。lint 检查只允许历史遗留问题减少，`npm run lint:report` 列出尚未解决的问题。
 
-Canonical source: [SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui). Hosting uses the existing Sites project with Cloudflare D1 for structured data and R2 for photos. GitHub contains source, not production data, passwords, sessions, uploads, or local runtime state.
+正式源码仓库：[SCY210/yu-lin-dahui](https://github.com/SCY210/yu-lin-dahui)。托管使用现有的 Sites 项目，结构化数据存放在 Cloudflare D1，照片存放在 R2。GitHub 上只有源码，没有生产数据、密码、会话、上传文件或本地运行状态。
 
-See [collaboration and checkout hygiene](docs/REPOSITORY_HYGIENE.md), [security](docs/SECURITY.md), and [privacy and legal readiness](docs/LEGAL_READINESS.md). Collaborators submit PRs for SCY210's review.
+另见[协作与本地检出规范](docs/REPOSITORY_HYGIENE.md)、[安全](docs/SECURITY.md)和[隐私与法律准备](docs/LEGAL_READINESS.md)。协作者通过 PR 提交，由 SCY210 审查。
 
-## Current application flows
+## 当前的应用流程
 
-Live court rotation advances each court after a recorded score, prioritizes fewer appearances, and honors a one-game break without manual match time inputs. Default avatars, partner voting, owner point adjustments, the realm rating (a long-term Elo-style score that sets the visible realm; grouping replays the same formula over doubles games only; reset only after three months without rated games), season points for the quarterly and annual boards (3 per win, minus 1 per loss, plus an upset bonus) and a singles leaderboard are available. Proxy guest profiles keep their game history but stay outside the global rankings until assigned their own account.
+实时排场在每局录分后推进对应场地，优先安排上场次数少的人，并照顾"休息一局"的要求，不需要手动输入比赛时间。应用提供默认头像、搭档投票、群主调整积分、修为（一种长期的 Elo 式评分，决定显示的境界；分组只用双打对局按同一公式重算；连续三个月没有计分对局才会重置）、季度榜和年度榜使用的赛季积分（每赢一局加 3 分，每输一局扣 1 分，另有以弱胜强加成），以及单打排行榜。代报名的来宾档案保留对局记录，但在分配到自己的账号前不进入全站排名。
 
-## Local setup
+## 本地运行
 
-On Windows, double-click start-local-test.cmd to run this checkout against an isolated local branch database. It never uses production data. See [the local test launcher](docs/LOCAL_TEST_LAUNCHER.md).
+在 Windows 上双击 start-local-test.cmd，可以用一个隔离的本地分支数据库运行当前检出目录，它从不使用生产数据。见[本地测试启动器](docs/LOCAL_TEST_LAUNCHER.md)。
 
-
-Requires Node.js >=22.13.0. Use a supported Node executable in your own environment; do not copy another developer's absolute runtime paths.
+需要 Node.js >=22.13.0。请使用你自己环境里受支持的 Node 程序，不要照抄其他开发者的绝对运行路径。
 
 ```powershell
 npm ci --no-audit --no-fund
 npm run build
 ```
 
-Initialize a new local database by applying the SQL migrations in the order recorded in drizzle/meta/_journal.json. For example:
+初始化新的本地数据库时，按 drizzle/meta/_journal.json 记录的顺序执行 SQL 迁移。例如：
 
 ```powershell
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_handy_freak.sql
 ```
 
-Repeat for each later migration, including 0007_security_limits.sql. For an existing database, apply only unapplied migrations. Never replay historical migrations or reset a database containing real data.
+对之后的每个迁移重复这一步，包括 0007_security_limits.sql。已有数据库只执行尚未执行过的迁移。绝不要重放历史迁移，也不要重置含有真实数据的数据库。
 
 ```powershell
 npm run dev
 ```
 
-Open the address reported by the server (normally http://127.0.0.1:5173). Local data persists in .wrangler/state across refreshes and restarts and is separate from production D1.
+打开服务器给出的地址（通常是 http://127.0.0.1:5173）。本地数据保存在 .wrangler/state，刷新和重启后仍在，并且与生产 D1 分开。
 
-The development preview provides a fictional identity only on loopback. Production builds exclude that mock. Keep development and test servers bound to 127.0.0.1. Production must remain behind the Sites identity distribution layer; never expose a Worker that trusts forwarded identity headers directly.
+开发预览只在本机回环地址上提供一个虚构身份，生产构建不包含这个模拟身份。开发和测试服务器要绑定在 127.0.0.1。生产环境必须留在 Sites 身份分发层之后；绝不要直接暴露一个信任转发身份请求头的 Worker。
 
-## Accounts and permissions
+## 账号与权限
 
-Members sign in using administrator-created usernames and passwords; email and public self-registration are not required. New usernames use 2-32 ASCII letters/digits, with case normalization. Legacy usernames remain compatible. Existing platform identities can enable password login while retaining their original account, profile, and permissions.
+成员用管理员创建的用户名和密码登录，不需要邮箱，也没有公开自助注册。新用户名由 2-32 个 ASCII 字母或数字组成，大小写会统一。旧用户名仍然兼容。已有平台身份可以开启密码登录，同时保留原来的账号、档案和权限。
 
-A member may change their own username once after verifying their current password. The club owner can change usernames repeatedly and manage roles. Other administrators cannot modify the protected owner account or profile. Password changes/reset revoke the appropriate old sessions. There is no default administrator password or test backdoor. See [account management](docs/ACCOUNT_LOGIN.md).
+成员验证当前密码后，可以修改一次自己的用户名。群主可以多次修改用户名并管理角色。其他管理员不能修改受保护的群主账号或档案。修改或重置密码会撤销相应的旧会话。没有默认管理员密码，也没有测试后门。见[账号管理](docs/ACCOUNT_LOGIN.md)。
 
-The login entry is public; club data, photos, events, scores, and costs require server-side authentication and membership. The invitation hash is retained for compatibility and stored as SHA-256, but production does not use it for open enrollment.
+登录入口是公开的；俱乐部数据、照片、活动、比分和费用都需要服务器端验证身份和成员资格。邀请码哈希为兼容保留，以 SHA-256 存储，但生产环境不用它开放注册。
 
-## Main workflow
+## 主要流程
 
-1. An administrator creates an event, signup deadlines, capacity, and one or more court bookings. Noncontiguous booking periods are supported.
-2. Each participant has a separate profile and registration. Full events create a waitlist; cancellation promotes the first eligible waiting participant. Cancellation within 24 hours of the start requires a manager's approval.
-3. Confirmed registrations default to participation without mandatory check-in. Actual participation intervals determine court planning and cost sharing; future time is not treated as completed attendance.
-4. Generate a round draft, inspect rest opportunities, swap players/courts, lock selected matches, and publish. Regeneration preserves locked matches.
-5. Start the round; every complete website match counts toward season points and the realm rating. Record a legal final score (for example, 21:15) or best-of-three result. Correcting scores rebuilds points and replays later ratings.
-6. Record actual shuttle usage per ball: model, price per ball, and ball count (convert whole tubes to balls, e.g. one 12-ball tube plus 4 balls = 16), optionally with a consumption interval. Legacy per-tube records still load and settle with unchanged amounts (see docs/UPDATE_FEES.md). Record other costs and choose independent court and shuttle split modes.
-7. Configure item exemptions and club subsidies. Each result reconciles participant charges, subsidies, and unallocated costs. Unallocatable costs require explicit handling before final settlement.
-8. Save or confirm a settlement version. All club members can view participant shares and details. Corrections create a new version; previous versions remain available.
-9. Administrators can export complete business data and audit records. Treat exports as personal data and keep them outside Git.
+1. 管理员创建活动，设置报名截止时间、人数上限和一个或多个场地预约。支持不连续的预约时段。
+2. 每位参加者有自己的档案和报名记录。活动满员后进入候补；有人取消时，第一位符合条件的候补者自动转正。开始前 24 小时内取消需要活动管理者批准。
+3. 正式报名默认视为参加，不强制签到。实际参加时段决定场地安排和费用分摊；未来的时间不会被当作已经到场。
+4. 生成轮次草稿，查看休息机会，调换球友或场地，锁定选中的对局后发布。重新生成会保留已锁定的对局。
+5. 开始这一轮；网站上每场完整的比赛都计入赛季积分和修为。录入合法的终局比分（例如 21:15）或三局两胜的结果。修改比分会重算积分，并重放之后的修为变化。
+6. 按颗记录实际用球：型号、单颗价格和颗数（整筒换算成颗，例如一筒 12 颗加 4 颗 = 16），也可以记录消耗时段。旧的按筒记录仍可读取，结算金额不变（见 docs/UPDATE_FEES.md）。记录其他费用，并分别选择场地费和球费的分摊方式。
+7. 设置单项豁免和俱乐部补贴。每次计算都会核对参加者应付金额、补贴和未分摊费用。无法分摊的费用必须先明确处理，才能最终结算。
+8. 保存或确认结算版本。所有俱乐部成员都能查看每人的分摊金额和明细。修正会生成新版本，旧版本仍然可查。
+9. 管理员可以导出完整的业务数据和审计记录。导出内容属于个人数据，不要放进 Git。
 
-The app displays how much each person owes for the shared activity. Payment confirmation, paid/unpaid status, refunds, payment collection, and debt tracking are not implemented. Historical payment records remain in storage for compatibility but are not created or exposed by normal business APIs.
+应用显示每个人在共同活动中应付多少钱。付款确认、已付和未付状态、退款、收款和欠款跟踪都没有实现。历史付款记录为兼容仍保存在存储中，但正常业务接口不会创建或返回它们。
 
-## Data and algorithms
+## 数据与算法
 
-Business records use separate relational tables with JSON payloads for detailed fields. Foreign keys, unique registration/version indexes, and unique commit revisions protect relationships and concurrent writes. Credentials, sessions, and rate limits are separate from business exports.
+业务记录分表存放，详细字段放在 JSON 载荷里。外键、唯一的报名和版本索引，以及唯一的提交修订号，保护数据关系和并发写入。凭据、会话和限流数据与业务导出分开。
 
-Writes use atomic D1 batches with a unique revision and idempotency key. Registration conflicts reload state and recompute, with up to five attempts. Administrative writes require the current revision and return 409 when stale. Every API validates identity, role, ownership, and same-origin write requests. Ordinary members cannot access private drafts and their related records.
+写入使用带唯一修订号和幂等键的原子 D1 批处理。报名冲突时重新加载状态并重算，最多尝试五次。管理类写入必须带上当前修订号，过期时返回 409。每个接口都会验证身份、角色、归属，以及写请求是否同源。普通成员不能访问私人草稿及其相关记录。
 
-- lib/domain/commands.ts implements registration order, promotion, permissions, validation, and state transitions.
-- lib/domain/grouping.ts selects by opportunity deficit and waiting time, then runs 600 seeded local-search iterations to balance strength and repeated pairings. Matches require a valid booking that covers their duration. This is a heuristic, not a global-optimum guarantee.
-- lib/domain/money.ts supports equal, duration, and interval splits. BigInt rational arithmetic and deterministic largest-remainder allocation reconcile cents. Item totals are fixed in cents before allocation: new shuttle records (price per ball × count) are already whole cents, while hourly costs and legacy per-tube shuttle records round half-up. Estimated shuttle intervals are marked when precise consumption times are absent.
-- lib/domain/ranking.ts treats matches as the factual source. Leaderboard points are the season points of each rated game in the period by Madrid start month (lib/domain/season-points.ts), plus owner point adjustments on the combined board (see docs/REALM_PROGRESSION.md). All enabled players appear without a minimum-game threshold. Ties use points, win rate, and average point difference. The realm rating replays by completion time and ID; each game's changes sum to zero when both sides use the same K. The first ten rated games are placement games.
+- lib/domain/commands.ts 实现报名顺序、候补转正、权限、校验和状态变化。
+- lib/domain/grouping.ts 先按欠的上场机会和等待时间选人，再用 600 次带种子的局部搜索平衡双方强弱和重复搭配。对局必须落在有效的场地预约时段内。这是启发式算法，不保证全局最优。
+- lib/domain/money.ts 支持平均、按时长和按时段三种分摊方式。用 BigInt 有理数运算和确定性的最大余数分配来核对到分。各项总额在分摊前先定到分：新的球费记录（单颗价格 × 颗数）本来就是整分，按小时计的费用和旧的按筒球费记录四舍五入。没有精确消耗时间时，会标出估算的用球时段。
+- lib/domain/ranking.ts 以比赛记录为事实来源。排行榜积分是该时段内每局计分对局的赛季积分，按马德里时间的开赛月份归属（lib/domain/season-points.ts），综合榜另加群主调整的积分（见 docs/REALM_PROGRESSION.md）。所有已启用的球友都会出现在榜上，没有最低局数门槛。同分时依次比较积分、胜率和平均分差。修为按完成时间和 ID 重放；双方使用相同 K 值时，每局的变化总和为零。前十局计分对局是定级赛。
 
+每月保存的胜、负和上限数值仍可读取，但不再影响积分；境界在每次活动结束后结算。修为从 1000 开始（前 20 局 K=32，之后为 16）；目标分 21、领先 2 分、封顶 30 分。单打和双打活动也可以选择 15 分制（见[每局分制](docs/GAME_POINTS.md)）。规则绑定到月份；修改默认规则不会改写历史月份。修改历史规则需要先预览、再明确确认，并保留审计记录。
 
-Stored per-month win/loss/cap values stay readable but no longer affect points; realms settle after each activity ends. The realm rating starts at 1000 (K=32 for the first 20 games, then 16); target=21, lead=2 and ceiling=30. Rules are bound to a month; default updates do not rewrite historical months. Historical changes require preview and explicit confirmation and retain an audit trail.
-
-## Verification
+## 验证
 
 ```powershell
 npm test
@@ -84,42 +82,42 @@ npm run typecheck
 npm run build
 ```
 
-Reproducible tests remain in tests/. Generated reports belong in .test-output; historical per-checkout Markdown reports are no longer shared. Exact results belong to the PR that performed the run, not a claim that every checkout has been tested.
+可复现的测试放在 tests/。生成的报告放在 .test-output；各检出目录自己的历史 Markdown 报告不再共享。确切的测试结果属于执行那次运行的 PR，不代表每个检出目录都测过。
 
-HTTP suites require dedicated fictional loopback databases. Apply all migrations there, then start an isolated built Worker:
+HTTP 测试套件需要专用的虚构回环数据库。在那里执行全部迁移，然后启动一个隔离的已构建 Worker：
 
 ```powershell
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .test-output/api-state --ip 127.0.0.1 --port 8787 --inspector-port 0
 ```
 
-Follow each test script's fixture requirements. tests/reset-local-test.sql destroys all data in its target and is only for an empty, dedicated fictional test environment. Never run it against production or a real local database. Local identity headers are test infrastructure, not a production login method.
+按每个测试脚本对测试数据的要求准备环境。tests/reset-local-test.sql 会清空目标里的全部数据，只能用于空的、专用的虚构测试环境。绝不要对生产数据库或真实的本地数据库运行它。本地身份请求头是测试设施，不是生产登录方式。
 
-The read-only request-body HTTP regression uses port 8794 by default and requires no account setup or migrations: node tests/request-body-http.mjs. See [security](docs/SECURITY.md) for timing and emulator limitations.
+只读的请求体 HTTP 回归测试默认使用 8794 端口，不需要准备账号或执行迁移：node tests/request-body-http.mjs。计时和模拟器的局限见[安全](docs/SECURITY.md)。
 
-## Deployment
+## 部署
 
-For a standalone deployment in the owner's Cloudflare account, see [Cloudflare deployment](docs/CLOUDFLARE_DEPLOYMENT.md).
+在所有者的 Cloudflare 账号中独立部署，见 [Cloudflare 部署](docs/CLOUDFLARE_DEPLOYMENT.md)。
 
-.openai/hosting.json identifies the shared existing Sites project and logical DB/BUCKET bindings. It is required deployment configuration, not a personal Codex profile. The Sites build plugin produces a Cloudflare Worker ESM bundle and includes Drizzle migrations. Deploy only the supported build artifacts, hosting metadata, and migrations; exclude local state and credentials.
+.openai/hosting.json 指明共用的现有 Sites 项目，以及逻辑上的 DB 和 BUCKET 绑定。它是必需的部署配置，不是个人的 Codex 配置。Sites 构建插件会生成 Cloudflare Worker ESM 包，并包含 Drizzle 迁移。只部署受支持的构建产物、托管元数据和迁移，不包括本地状态和凭据。
 
-Source synchronization to GitHub does not deploy a Site. Follow the authorized Sites hosting workflow and verify its successful receipt. Do not alter audiences, collaborator protections, identities, or production data incidentally.
+把源码同步到 GitHub 不会部署网站。请按授权的 Sites 托管流程操作，并确认部署确实成功。不要顺带改动访问范围、协作者保护、身份或生产数据。
 
-Complete the real operator information and privacy decisions in [legal readiness](docs/LEGAL_READINESS.md) before publishing the new notices. This repository does not certify legal compliance.
+发布新的声明之前，先在[法律准备](docs/LEGAL_READINESS.md)中填好真实的运营者信息和隐私决定。本仓库不保证符合法律要求。
 
-## Feature documentation
+## 功能文档
 
-- [Activity flow](docs/ACTIVITY_UI.md)
-- [Social features and game modes](docs/SOCIAL_FEATURES.md)
-- [Player pages](docs/PLAYER_PAGES.md) and [profiles/equipment](docs/PLAYER_PROFILES.md)
-- [Ranking](docs/RANKING.md), [singles ranking](docs/SINGLES_RANKING.md), [realm rating and realms](docs/REALM_PROGRESSION.md) and [podium](docs/RANKING_PODIUM.md)
-- [Cost sharing](docs/UPDATE_FEES.md) and [fee advances](docs/FEE_ADVANCES.md)
-- [Venues and map links](docs/VENUES.md)
-- [Feature guides](docs/FEATURE_GUIDES.md)
-- [Mobile navigation](docs/MOBILE_BACK_NAVIGATION.md)
-- [Installing the PWA](docs/INSTALL_APP.md)
-- [Performance architecture](docs/PERFORMANCE_SLIMMING.md) and [Worker CPU budget](docs/PERFORMANCE_BUDGET.md)
-- [Visual assets and provenance](docs/VISUAL_ASSETS.md)
+- [活动流程](docs/ACTIVITY_UI.md)
+- [社交功能与玩法](docs/SOCIAL_FEATURES.md)
+- [球友页面](docs/PLAYER_PAGES.md)和[档案与装备](docs/PLAYER_PROFILES.md)
+- [排名](docs/RANKING.md)、[单打排名](docs/SINGLES_RANKING.md)、[修为与境界](docs/REALM_PROGRESSION.md)和[领奖台](docs/RANKING_PODIUM.md)
+- [费用分摊](docs/UPDATE_FEES.md)和[垫付费用](docs/FEE_ADVANCES.md)
+- [球馆与地图链接](docs/VENUES.md)
+- [功能说明](docs/FEATURE_GUIDES.md)
+- [手机返回导航](docs/MOBILE_BACK_NAVIGATION.md)
+- [安装 PWA 应用](docs/INSTALL_APP.md)
+- [性能架构](docs/PERFORMANCE_SLIMMING.md)和 [Worker CPU 预算](docs/PERFORMANCE_BUDGET.md)
+- [视觉素材与来源](docs/VISUAL_ASSETS.md)
 
-Known boundaries: rescheduling a whole event does not automatically update all dependent records; individual bookings and supported event fields can be edited. Chat, payments, inventory, and a multi-club platform are outside scope. Cost forms support two time-adjusted shuttle intervals at once; additional records can represent more intervals. Large historical datasets still need further pagination. Automated checks are not a substitute for real-device, production-access, or load testing.
+已知边界：整场活动改期不会自动更新所有相关记录；单个场地预约和支持的活动字段可以编辑。聊天、付款、库存和多俱乐部平台不在范围内。费用表单一次支持两个按时间调整的用球时段，更多时段可以用额外记录表示。大量历史数据仍需要进一步分页。自动检查不能代替真机测试、生产访问测试或压力测试。
 
-Activity creation supports Singles and Doubles with automatically generated date-based names and separate ranking boards. Modification forms use automatic audit descriptions instead of mandatory notes; see [Singles and doubles activities](docs/SINGLES_RANKING.md).
+创建活动时可以选择单打或双打，名称按日期自动生成，排行榜分开计算。修改类表单自动生成审计说明，不强制填写备注；见[单打与双打活动](docs/SINGLES_RANKING.md)。
