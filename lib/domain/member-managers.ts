@@ -17,5 +17,5 @@ export function canManageAccount(s:State,a:Account,target:Pick<Account,'id'|'rol
 export function assertAccountManageable(s:State,a:Account,targetId:string){
  assertAccountMutable(s,a,targetId);
  const target=s.accounts.find(x=>x.id===targetId);
- if(target&&!canManageAccount(s,a,target))fail('403: 长老只能管理普通道友的账号，副宗主和长老的账号请联系副宗主');
+ if(target&&!canManageAccount(s,a,target))fail('403: 长老只能管理普通道友的账号，副宗主和长老的账号请联系宗主或副宗主');
 }

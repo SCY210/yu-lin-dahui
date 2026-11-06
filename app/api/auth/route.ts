@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         }
         const initial = await load(), actor = initial.accounts.find(a => a.id === user.userId);
         if (!actor)
-            return denied('请联系副宗主开通账号');
+            return denied('请联系宗主、副宗主或长老开通账号');
         if (action === 'bind') {
             if (user.method !== 'chatgpt')
                 return denied('请先使用原账号完成身份确认');

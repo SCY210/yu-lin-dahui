@@ -53,7 +53,7 @@ export async function GET(req: Request) {
         const a = s.accounts.find(a => a.id === user.userId);
         if (!a) {
             if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
-                return response({ error: '请联系副宗主创建登录账号' }, 403);
+                return response({ error: '请联系宗主、副宗主或长老创建登录账号' }, 403);
             return response({ join: true, user: { name: user.displayName } });
         }
         const accountNotice=accountNoticeView(s,a,content);
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
                 return response({ ok: true, duplicate: true });
             if (body.action === 'initialize' || body.action === 'join') {
                 if (!['127.0.0.1', 'localhost', '[::1]'].includes(new URL(req.url).hostname))
-                    fail('403: 请联系副宗主创建账号，网站不开放自行注册');
+                    fail('403: 请联系宗主、副宗主或长老创建账号，网站不开放自行注册');
                 const p = z.object({ name: z.string().trim().min(1).max(150), invite: z.string().min(8).max(100) }).parse(body.payload);
                 if (a)
                     return response({ ok: true });

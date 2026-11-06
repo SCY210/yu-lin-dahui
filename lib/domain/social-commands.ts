@@ -79,7 +79,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             if (s.matches.some(m => (m.id === c.sourceMatchId || m.id === c.matchId) && s.events.some(e => e.id === m.eventId && e.deletedAt !== undefined)))
                 fail('挑战关联的活动已删除，请先恢复活动');
             if (c.matchId)
-                fail('挑战已关联比赛，请由副宗主调整比赛');
+                fail('挑战已关联比赛，请由宗主或副宗主调整比赛');
             if (p.status === 'cancelled') {
                 if (c.challengerId !== a.playerId && a.role !== 'admin')
                     fail('403: 只能撤回自己的挑战');
