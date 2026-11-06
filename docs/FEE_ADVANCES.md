@@ -1,42 +1,42 @@
-# Fee advances
+# 费用垫付
 
-Members book courts and buy balls themselves; a member can book at most two hours a day, so one activity is often booked by several people. Every court slot and expense therefore records who advanced it, and a confirmed split is settled by transfers between members instead of everyone paying one recipient.
+场地和球都是球友自己约、自己买的；每人每天最多约两小时场地，所以一场活动常常由几个人分别约场。因此每个场地时段和每笔费用都记录是谁垫付的，确认分摊后由球友之间互相转账结清，而不是所有人都付给同一个收款人。
 
-## Recording who advanced what
+## 记录谁垫付了什么
 
-- Creating an activity lists its court slots: court name, start, end and **who booked it**, all required. Slots booked by different members, or two courts at the same time, are separate rows: a slot can be split in two at its middle half hour (for example a four-hour court booked by two members for two hours each), and another court is added at the same time as the first slot. Rows move with the activity start. A practice activity with balls also names whose balls they are.
-- **One court booked in turn stays one slot** (`lib/domain/booking-advancers.ts`). Rows of the same court, venue and price that follow each other without a gap are saved as one court slot, so the activity page shows one sign-up list for it, with its whole time and each booker's part. The later bookers are stored as `handovers` (`{at, advancedBy}`, inside the slot and in time order). A slot added later on the activity page right before or after the same court extends that slot the same way. Rows with a gap, another court or another price stay separate.
-- Moving a slot's start or end drops handovers outside it; the part covering the new start keeps its booker.
-- **Each part is visible and editable** (`app/court-parts.tsx`). Every part lasts at least one hour. Members usually book up to two hours, so a new split prefers two-hour parts, but longer parts are allowed for exceptions without a warning (`minPartHours`, `usualPartHours` in `app/court-parts-model.ts`). The creation form and the court settings on the activity page first ask how many members booked the court (six hours: one booker, or 2 to 6 parts; three parts start as 2 + 2 + 2, two parts as 3 + 3). The whole bar of parts, drawn to scale, is the drag area: pressing anywhere picks the nearest boundary, a sideways drag moves it by whole hours, and a tap moves it to the tapped hour, never making a part shorter than one hour. A vertical swipe still scrolls the page. Each part then gets its booker. A single booker for a longer court stays allowed; the form points out how many parts it needs. Settings save the parts as `handovers` on `bookingEdit` (an empty list leaves one booker); `booking` accepts them too. Every part needs a booker.
-- Court fees are shared by everyone taking part while the court is booked, whichever court they signed up for, so two courts at the same time filled 6 and 5 give all 11 the same share, and a court nobody signed up for is shared by those present at that time. When part of a fee still cannot be shared, the fees page names each court or expense and time with its amount. This is unrelated to who advanced it: nobody took part in the activity at that time.
-- Balls and other expenses added on the fees page name who bought or paid them, required on new activities.
-- Organisers can set or correct the advancer of any court slot or expense from its row on the fees page (`feeAdvance`). This also fills in activities created before advancers existed. A slot booked in turn has one button per part; the request names the part by its start (`at`).
-- An advancer is an enabled member with an account. Friends registered by a member cannot advance.
-- New activities carry `feeAdvances: true`; their split cannot be confirmed until every item with a cost has an advancer. Older activities keep the old way of paying until every advancer is filled in. Their next confirmation then uses transfers, and already confirmed versions are never rewritten.
-- The two-hour booking limit is not checked by the app.
+- 创建活动时列出各个场地时段：场地名称、开始、结束和**谁约的**。约场人可以先不填，默认是"待认领"：活动创建后，实际约场的球友在活动页认领自己约的时间（见[约场时段认领](BOOKING_CLAIMS.md)）。不同球友约的时段，或同一时间的两片场地，是分开的行：一个时段可以分段（例如一片四小时的场地由两位球友各约两小时），也可以在第一片场地的同一时间再加一片场地。这些行跟着活动开始时间移动。有用球的练球活动还要写明球是谁的。
+- **同一片场地轮流约，仍是一个时段**（`lib/domain/booking-advancers.ts`）。同一场地、球馆和价格、首尾相接没有空档的行，保存为一个场地时段，活动页上只显示一份接龙名单，并显示整段时间和每位约场人的那一段。后面的约场人保存为 `handovers`（`{at, advancedBy}`，在时段内按时间顺序）。没有 `advancedBy` 的交接表示从这一刻起的时间还待认领。之后在活动页紧挨同一场地前后添加的时段，也按同样方式并入。中间有空档、不同场地或不同价格的行保持分开。相邻两段约场人相同、或都还待认领的，保存时合成一段。
+- 移动时段的开始或结束时间，会去掉落在时段外的交接；覆盖新开始时间的那一段保留它的约场人。
+- **每一段都能看到、能修改**（`app/court-parts.tsx`）。每段至少一小时。球友通常一次最多约两小时，所以新分段优先按两小时一段，但更长的段也允许，不会警告（`app/court-parts-model.ts` 里的 `minPartHours`、`usualPartHours`）。创建表单和活动页的场地设置先问分几段约（六小时：不分段，或 2 到 6 段；三段起始为 2 + 2 + 2，两段为 3 + 3）。按比例画出的整条分段条都是拖动区：按下任意位置选中最近的分界点，左右拖动按整点移动，轻点则移到所点的整点，任何一段都不会短于一小时。上下滑动仍然滚动页面。然后为每一段选约场人，或保留"待认领"。一个人约一片较长的场地也允许；表单会提示需要分几段。场地设置用 `bookingEdit` 把各段保存为 `handovers`（空列表表示整段只有一个约场人；第一段留空就是把它改回待认领）；`booking` 也接受分段。
+- 场地费由场地预约期间所有参加的人分摊，不管他们接龙的是哪片场地。所以同一时间两片场地分别有 6 人和 5 人，11 人分摊相同；没人接龙的场地由当时在场的人分摊。有费用仍无法分摊时，费用页会列出每个场地或费用、时间和金额。这与谁垫付无关：只是那段时间没有人参加活动。
+- 在费用页添加的球和其他费用要写明是谁买的或付的，新活动必须填写。
+- 组织者可以在费用页每一行设置或纠正场地时段或费用的垫付人（`feeAdvance`），也能补填垫付人功能出现之前的活动。轮流约的时段每段一个按钮；请求用开始时间（`at`）指明是哪一段。
+- 垫付人必须是有账号的已启用成员。成员代报名的朋友不能垫付。
+- 新活动带有 `feeAdvances: true`；在每个有费用的项目都有垫付人之前，不能确认分摊。场地还有待认领的时间时，确认会提示先认领或由组织者填写。旧活动在全部垫付人填好之前继续用原来的付款方式；填好后下一次确认改用转账，已确认的版本从不改写。
+- 应用不检查"每人每天最多约两小时"的限制。
 
-## How the split is settled (`lib/domain/fee-transfers.ts`)
+## 分摊如何结清（`lib/domain/fee-transfers.ts`）
 
-Shares are calculated exactly as before. Then, at confirmation:
+各人应付金额的计算方法不变。确认时：
 
-1. Each advancer is repaid what they actually paid: the cost of every court slot, court part or expense they advanced. On a slot booked in turn, each booker's part is the cost of the time they booked, summed exactly and rounded once per slot. Equal shares are rounded up per person (docs/FEE_CONFIRMATION.md), so members together owe a few cents more than the costs. Those cents go to the advancers in proportion to what they paid, so the totals balance to the cent. The fees page lists each advancer's actual payment and notes the rounding cents separately. Until November 2026 each item's advance was the sum of the members' rounded shares of it. With 2 + 1 hours at 6.90 €/hour, 7 € of balls and eight players, that showed 13.84, 6.88 and 7.04 instead of 13.80, 6.90 and 7.00. Older confirmed versions keep their amounts and paid marks. A recalculation that only moves rounding cents (every person's net within 20 cents) does not count as a change, so organisers are not asked to confirm them again, and confirming again keeps the existing version (`sameSettlement` in `lib/domain/settlement-state.ts`). A real change, such as a new advancer, collector or cost, still needs a new version.
-2. A friend's share is owed by the member who registered them, so only members transfer, and never to themselves.
-3. The owner owes the club-subsidised parts (subsidised courts or expenses, and subsidy exemptions).
-4. Each person's net is what they advanced minus what they owe. An advancer whose advance covers their own share owes nothing and shows as paid at once; if their share is larger, they pay the difference.
-5. **With a collector**: the fee recipient is now chosen from the members. Everyone who owes transfers to the collector, and the collector repays every advancer. The collector's home page lists each repayment.
-6. **Without a collector**: debts are matched to advancers largest first, giving at most one transfer fewer than the people involved.
+1. 每位垫付人拿回实际付出的钱：他垫付的每个场地时段、场地分段或费用的金额。轮流约的时段里，每位约场人那一段的金额是他所约时间的费用，精确相加后每个时段只四舍五入一次。平均分摊按人向上取整到分（docs/FEE_CONFIRMATION.md），所以成员合计应付会比费用多几分钱。这几分钱按垫付金额比例分给垫付人，使总额精确到分。费用页列出每位垫付人的实际付款，并单独注明取整产生的几分钱。2026 年 11 月之前，每个项目的垫付额是成员对该项目取整后应付金额之和。按每小时 6.90 欧元约 2 + 1 小时、7 欧元的球、八人参加时，显示的是 13.84、6.88 和 7.04，而不是 13.80、6.90 和 7.00。旧的已确认版本保留原金额和付款标记。重算只移动取整的几分钱（每人净额相差不超过 20 分）不算变化，所以不会要求组织者重新确认，再次确认也保留现有版本（`lib/domain/settlement-state.ts` 里的 `sameSettlement`）。真正的变化，例如新的垫付人、收款人或费用，仍需要确认新版本。
+2. 朋友的份额由代他报名的成员承担，所以只有成员之间转账，也不会转给自己。
+3. 群补贴的部分（群补贴承担的场地或费用，以及补贴豁免）由群主承担。
+4. 每个人的净额是垫付的钱减去应付的钱。垫付额覆盖自己份额的垫付人不用再付，立即显示为已付；份额更大的，补付差额。
+5. **有收款人时**：费用收款人从成员中选择。所有欠款的人转给收款人，收款人再还给每位垫付人。收款人的首页列出每笔要还的钱。
+6. **没有收款人时**：按金额从大到小把欠款配给垫付人，转账笔数最多比涉及人数少一笔。
 
-The advances, the transfers and the collector are stored with the confirmed version (`advances`, `transfers`, `collector`). Changing an advancer or the collector changes the result, so the organiser confirms a new version.
+垫付、转账和收款人随已确认版本一起保存（`advances`、`transfers`、`collector`）。改变垫付人或收款人会改变结果，所以组织者要确认新版本。
 
-## Marking transfers
+## 标记转账
 
-- Every transfer is marked on its own (`feeTransferPaid`), by its payer, its receiver or an organiser.
-- The collector keeps their own share out of what they collect, so their status shows what they still have to repay to advancers (`collectorRepayment`): pending repayment with the amount, then repaid once every repayment is marked. This applies on the fees page and on My. Other members keep the usual paid or pending-transfer status.
-- A person counts as paid once all their transfers are marked; unpaid reminders, the reminder button count and "My page" use this.
-- Marks are stored per payer and receiver (`payments` rows with `to`), so a later version keeps them, and a raised amount shows as unpaid again.
-- Marking a whole bill (`feePaid`) is refused on a version settled by transfers.
-- The fees page shows what each advancer advanced, the viewer's own transfers with mark buttons, and everyone else's transfers. The home page lists each transfer the member still has to make and can mark them all. It also lists the transfers the member is still waiting for, which they can mark as received ([Fee payments](FEE_PAYMENTS.md#where-members-see-unpaid-fees)).
+- 每笔转账单独标记（`feeTransferPaid`），付款人、收款人或组织者都可以标记。
+- 收款人自己的份额从收到的钱里扣下，所以他的状态显示还要还给垫付人多少（`collectorRepayment`）：先显示待还款和金额，每笔还款都标记后显示已还清。费用页和"我的"页都是这样。其他成员仍显示普通的已付或待转账状态。
+- 一个人的转账全部标记后算作已付；未付提醒、提醒按钮上的数字和"我的"页都按这个计算。
+- 标记按付款人和收款人保存（带 `to` 的 `payments` 记录），所以之后的版本会保留它们；金额提高后会重新显示为未付。
+- 按转账结清的版本拒绝整笔标记（`feePaid`）。
+- 费用页显示每位垫付人垫付了什么、查看者自己的转账和标记按钮，以及其他人的转账。首页列出成员还要转出的每笔钱，可以一次全部标记；也列出成员还在等待收到的转账，可以标记为已收到（[费用付款](FEE_PAYMENTS.md#where-members-see-unpaid-fees)）。
 
-## Verification
+## 验证
 
-`tests/court-handovers.test.ts` covers joining rows of one court, repayment by part in every split mode, handover validation, slots added later, moved slots and per-part correction. `tests/fee-advances.test.ts` covers the worked example (two bookers, a ball buyer and a proxied friend), collector mode, the owner's subsidy, transfer marking permissions and kept marks, required advancers on new activities, the old way for older ones, and a randomised balance check of the transfer planner. UI and API tests cover the creation form, the fees page and recipient selection.
+`tests/court-handovers.test.ts` 覆盖同一场地多行合并、各种分段方式下按段还款、交接校验、之后添加的时段、移动的时段、按段纠正，以及创建表单把留空的一段作为待认领提交。`tests/fee-advances.test.ts` 覆盖示例（两位约场人、一位买球的人和一位代报名的朋友）、收款人模式、群主补贴、转账标记权限和保留的标记、新活动可以先留待认领的场地、旧活动沿用原来的方式，以及转账规划的随机平衡检查。`tests/booking-claims.test.ts` 覆盖待认领场地逐段认领、待认领时不能确认分摊、全部认领后按段还款。界面和接口测试覆盖创建表单、费用页和收款人选择。

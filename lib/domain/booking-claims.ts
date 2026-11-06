@@ -29,7 +29,7 @@ export function applyBookingClaim(s:State,a:Account,action:string,input:unknown,
  if((p.start!==b.start&&(p.start-b.start)%halfHour!==0)||(p.end!==b.end&&(p.end-b.start)%halfHour!==0))fail('请按半小时选择认领时间');
  if(p.end-p.start<3600000&&!(p.start===b.start&&p.end===b.end))fail('认领时段至少 1 小时');
  if(!p.correct&&(b.claims??[]).some(c=>c.playerId!==playerId&&c.start<p.end&&c.end>p.start))fail('409: 这个时段已被其他球友认领，请联系组织者纠正');
- if(bookingParts(b).some(part=>!part.advancedBy&&(part.start<p.start||part.end>p.end)))fail('这个场地还有未登记的约场人，请先由组织者补全登记，或整段认领');
+ // Time nobody has claimed yet (待认领) stays unclaimed around the new claim; it is not given to anyone.
  if((b.claims??[]).some(c=>c.playerId===playerId&&c.start<=p.start&&c.end>=p.end)&&bookingParts(b).filter(part=>part.start<p.end&&part.end>p.start).every(part=>part.advancedBy===playerId))return true;
  const next=structuredClone(b);setRangeAdvancer(next,p.start,p.end,playerId);
  const parts=bookingParts(next);
@@ -40,8 +40,9 @@ export function applyBookingClaim(s:State,a:Account,action:string,input:unknown,
  if(next.claims.length>40)fail('认领记录过多，请联系组织者整理');
  const before=structuredClone(b);
  Object.assign(b,next);
- // Object.assign does not remove a now-redundant handover list.
+ // Object.assign does not remove a now-redundant handover list or first booker.
  if(!next.handovers)delete b.handovers;
+ if(!next.advancedBy)delete b.advancedBy;
  s.audits.push({id:crypto.randomUUID(),at:now,actor:actor.id,action,reason:p.reason||(p.correct?'纠正约场认领':'认领本人约场时段'),changes:{eventId:e.id,bookingId:b.id,start:p.start,end:p.end,playerId,correct:p.correct,before,after:structuredClone(b)}});
  return true;
 }

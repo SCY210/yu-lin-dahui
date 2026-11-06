@@ -7,7 +7,7 @@ import './court-bookings-field.css';
 export type {CourtRow};
 
 /** Courts of a new activity. A court booked by members in turn stays one court with several parts; two courts at the
- * same time are separate courts. Every part needs the member who booked it. */
+ * same time are separate courts. A part without a booker is 待认领 until the member who booked it claims it. */
 export default function CourtBookingsField({rows,members,onChange}:{rows:CourtRow[];members:string[][];onChange:(rows:CourtRow[])=>void}){
  const set=(index:number,patch:Partial<CourtRow>)=>onChange(rows.map((row,i)=>{
   if(i!==index)return row;const next={...row,...patch};
@@ -28,6 +28,6 @@ export default function CourtBookingsField({rows,members,onChange}:{rows:CourtRo
    {rows.length>1&&<div className="actions"><button type="button" className="ghost danger" onClick={()=>onChange(rows.filter((_,j)=>j!==i))}>删除这片场地</button></div>}
   </fieldset>)}
   <button type="button" className="secondary" onClick={add}><Plus size={16} aria-hidden="true"/> 添加另一片场地</button>
-  <small className="hint">一片场地由几个人分时段约的，先选由几个人约（默认每段 2 小时），再在时间条上拖动或轻点调整分界（按整点，每段至少 1 小时），最后选每一段是谁约的。同时约了几片场地，用“添加另一片场地”。活动结束后，每段的场费从大家的分摊里还给约那一段的人。</small>
+  <small className="hint">约场人默认是“待认领”：创建后，实际约场的球友在活动页认领自己约的时间。已经知道是谁约的，也可以直接选。知道一片场地由几个人分时段约的，可以先分段（默认每段 2 小时），再在时间条上拖动或轻点调整分界（按整点，每段至少 1 小时）。同时约了几片场地，用“添加另一片场地”。活动结束后，每段的场费从大家的分摊里还给约那一段的人；还有待认领的时段时不能确认分摊。</small>
  </div>;
 }

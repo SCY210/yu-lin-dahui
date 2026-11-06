@@ -47,6 +47,6 @@ test('practice content and unit price are editable, but a scheduled match blocks
 });
 test('creation fields reveal required multiline practice content and ball controls only for practice',()=>{
  const form=newEventForm(start-hour),normal=visibleFormFields(form.fields,form.values),training=visibleFormFields(form.fields,{...form.values,matchFormat:'practice'});assert.ok(form.fields.find(f=>f.key==='matchFormat')!.options!.some(([v])=>v==='practice'));assert.ok(!normal.some(f=>f.key==='practiceShuttleCents'));assert.equal(normal.find(f=>f.key==='note')!.optional,true);assert.equal(training.find(f=>f.key==='note')!.required,true);assert.equal(training.find(f=>f.key==='note')!.type,'textarea');assert.ok(training.some(f=>f.key==='practiceBallCount'));
- assert.throws(()=>form.convert!({...form.values,matchFormat:'practice',note:'步法练习'}),/是谁约的/);
+ assert.equal('advancedBy' in form.convert!({...form.values,matchFormat:'practice',note:'步法练习'}).bookings[0],false,'a court without a booker is sent as 待认领');
  const body=form.convert!({...form.values,courts:form.values.courts.map((r:object)=>({...r,advancedBy:'p0'})),practiceBallBy:'p0',matchFormat:'practice',note:'步法练习',capacity:5,practiceShuttleCents:150,practiceBallCount:3});assert.equal(body.bookings[0].advancedBy,'p0');assert.equal(body.practiceBallBy,'p0');assert.equal(body.practiceBallCount,3);assert.equal(body.bookings[0].signupCapacity,5);assert.equal(body.bookings[0].cents,690);
 });

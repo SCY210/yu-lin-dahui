@@ -45,10 +45,24 @@ test('invalid ranges, inactive accounts, guests and locked financial records rej
  for(const state of ['draft','cancelled','deleted','settled']){const {s,e,b,now}=fixture();if(state==='deleted')e.deletedAt=now;else if(state==='settled')s.settlements.push({...calculateSettlement(s,e,e.end),id:'confirmed',created:e.end,version:1,confirmed:true,reason:''});else e.status=state as 'draft'|'cancelled';const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[1],'bookingClaim',payload(b),now));assert.deepEqual(s,before)}
 });
 
-test('legacy slots with no advancer can be claimed whole but never silently assign the unclaimed remainder',async()=>{
- const {s,b,now}=fixture();delete b.advancedBy;
- await assert.rejects(()=>apply(s,s.accounts[1],'bookingClaim',payload(b),now),/补全登记/);assert.equal(b.advancedBy,undefined);
- await apply(s,s.accounts[1],'bookingClaim',payload(b,b.start,b.end),now);assert.deepEqual(bookingParts(b),[{start:b.start,end:b.end,advancedBy:'p1'}]);
+test('a court left 待认领 is claimed piece by piece; the rest stays unclaimed and blocks confirming the split',async()=>{
+ const {s,e,b,now}=fixture();delete b.advancedBy;
+ await apply(s,s.accounts[1],'bookingClaim',payload(b),now);
+ assert.deepEqual(bookingParts(b).map(p=>[(p.start-b.start)/hour,(p.end-b.start)/hour,p.advancedBy]),[[0,2,undefined],[2,4,'p1'],[4,6,undefined]],'the time around a claim is never given to anyone');
+ assert.equal('advancedBy' in b,false);assert.deepEqual(b.handovers,[{at:b.start+2*hour,advancedBy:'p1'},{at:b.start+4*hour}]);
+ assert.equal(calculateSettlement(s,e,e.end).advances,undefined,'no repayment while time is unclaimed');
+ await assert.rejects(()=>apply(s,s.accounts[0],'settle',{eventId:e.id,confirmed:true,reason:''},e.end+hour),/待认领/);
+ await apply(s,s.accounts[2],'bookingClaim',payload(b,b.start,b.start+2*hour),now);await apply(s,s.accounts[3],'bookingClaim',payload(b,b.start+4*hour,b.end),now);
+ assert.deepEqual(bookingParts(b).map(p=>p.advancedBy),['p2','p1','p3']);assert.deepEqual(calculateSettlement(s,e,e.end).advances?.map(a=>[a.playerId,a.paid??a.cents]),[['p1',2400],['p2',2400],['p3',2400]]);
+ await apply(s,s.accounts[0],'settle',{eventId:e.id,confirmed:true,reason:''},e.end+hour);assert.ok(s.settlements.some(x=>x.eventId===e.id&&x.confirmed));
+});
+
+test('the organiser can set a part back to 待认领 in the court settings; its claim goes with it',async()=>{
+ const {s,b,now}=fixture();await apply(s,s.accounts[1],'bookingClaim',payload(b),now);
+ await apply(s,s.accounts[0],'bookingEdit',{bookingId:b.id,name:b.name,start:b.start,end:b.end,pricing:'hourly',cents:1200,advancedBy:'p0',handovers:[{at:b.start+2*hour},{at:b.start+4*hour,advancedBy:'p0'}],reason:''},now);
+ assert.deepEqual(bookingParts(b).map(p=>p.advancedBy),['p0',undefined,'p0']);assert.equal(b.claims,undefined);
+ await apply(s,s.accounts[0],'bookingEdit',{bookingId:b.id,name:b.name,start:b.start,end:b.end,pricing:'hourly',cents:1200,handovers:[{at:b.start+3*hour}],reason:''},now);
+ assert.deepEqual(bookingParts(b),[{start:b.start,end:b.end,advancedBy:undefined}],'neighbouring 待认领 parts become one');assert.equal(b.handovers,undefined);
 });
 
 test('an authorised date repair moves claim coverage with the court but retains the actual claim time',async()=>{
