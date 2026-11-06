@@ -101,7 +101,7 @@ export class ClubNavigation {
   if(!selection||frame.route.page!=='ranking')return;
   frame.ranking=selection;this.write(false);
  }
- get profileBackLabel(){const source=this.profileSource?.route;if(!source)return '返回球友列表';if(source.page==='events')return source.tab==='signup'?'返回接龙':'返回活动';if(source.page==='ranking')return '返回榜单';if(source.page==='me')return '返回我的';if(source.page==='achievements')return '返回我的成就';if(source.page==='home')return '返回首页';if(source.page==='admin')return '返回群组管理';return source.socialTab==='network'?'返回关系图':source.socialTab==='challenges'?'返回复仇局':source.socialTab==='funny'?'返回趣味榜':'返回球友列表'}
+ get profileBackLabel(){const source=this.profileSource?.route;if(!source)return '返回球友列表';if(source.page==='events')return source.tab==='signup'?'返回接龙':'返回活动';if(source.page==='ranking')return '返回榜单';if(source.page==='me')return '返回我的';if(source.page==='achievements')return '返回我的成就';if(source.page==='home')return '返回首页';if(source.page==='admin')return '返回宗门事务';return source.socialTab==='network'?'返回关系图':source.socialTab==='challenges'?'返回复仇局':source.socialTab==='funny'?'返回趣味榜':'返回球友列表'}
  subscribe(listener:(route:ClubRoute)=>void){this.listeners.add(listener);listener(this.route);return()=>{this.listeners.delete(listener)}}
  private emit(){for(const listener of this.listeners)listener(this.route)}
  private write(push:boolean){
