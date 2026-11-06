@@ -22,6 +22,7 @@ export function stripAllowed(text) {
     .replace(/[@#][\w./-]+/g, ' ')
     // 路径、文件名、标识符和命令参数：带 / . _ = 或数字，或驼峰写法的词。
     .replace(/[\w.\/=-]*[\/._=\d][\w.\/=-]*/g, ' ')
+    .replace(/\w[\w-]*:[\w:-]+/g, ' ') // 带冒号的 npm 脚本名，例如 check:repo
     .replace(/\b[a-z]+[A-Z]\w*\b/g, ' ')
     .replace(/(^|\s)--?[\w-]+/g, ' ');
 }

@@ -9,6 +9,7 @@ test('Chinese PR titles, descriptions and commit messages pass with code, paths 
     '服务端改动符合 Workers Paid 预算，见 docs/PERFORMANCE_BUDGET.md 和 https://github.com/SCY210/yu-lin-dahui/pull/143 。',
     '把 bookingClaim 的 release 参数接到 setRangeAdvancer，CI 和 PR #141 不冲突。\n\n```\nnode scripts/check-shared-source.mjs --check\nThis block may hold any output.\n```',
     '修复约场认领\n\nCo-authored-by: Some Person <someone@example.com>',
+    '本地可运行 npm run check:chinese-text 检查提交。',
     '',
   ]) assert.deepEqual(chineseProblems(text), [], text);
 });
