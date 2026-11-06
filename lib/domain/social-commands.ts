@@ -33,7 +33,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
     const p = command.payload;
     const eventAction = authorizeEventAction(s, a, action, p);
     if (!memberSocialActions.includes(action) && !eventAction && a.role !== 'admin')
-        fail('403: 仅长老可以执行此操作');
+        fail('403: 仅副宗主可以执行此操作');
     const player = (id: string) => s.players.find(x => x.id === id && x.enabled) ?? fail('球友不存在或已停用');
     switch (command.action) {
         case 'profileGender': {
@@ -79,7 +79,7 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             if (s.matches.some(m => (m.id === c.sourceMatchId || m.id === c.matchId) && s.events.some(e => e.id === m.eventId && e.deletedAt !== undefined)))
                 fail('挑战关联的活动已删除，请先恢复活动');
             if (c.matchId)
-                fail('挑战已关联比赛，请由长老调整比赛');
+                fail('挑战已关联比赛，请由副宗主调整比赛');
             if (p.status === 'cancelled') {
                 if (c.challengerId !== a.playerId && a.role !== 'admin')
                     fail('403: 只能撤回自己的挑战');

@@ -110,7 +110,7 @@ try{
   await rejectOldSessions(A);assert.equal((await get(B.cookie)).status,200);assert.equal((await auth({action:'login',username:A.username,password:oldPassword})).status,401);
   A.password=next;await login(A);assert.equal((await get(A.cookie)).data.me.id,A.id);
  });
- await test('撤销的道友令牌加可信旧长老身份头也不会回退或越权',async()=>{
+ await test('撤销的道友令牌加可信旧副宗主身份头也不会回退或越权',async()=>{
   const oldSession=A.cookies[0];assert.equal((await get(oldSession,adminHeaders)).status,401);
   const state=await request('/api/auth',{headers:{Cookie:oldSession,...adminHeaders}});assert.equal(state.data.signedIn,false);
   assert.equal((await auth(changeInput(A.password,password()),oldSession,adminHeaders)).status,401);
@@ -132,7 +132,7 @@ try{
   await rejectOldSessions(A);A.password=winner.password;await login(A);assert.equal((await auth({action:'login',username:A.username,password:inputs[loser].newPassword})).status,401);
   twoChanges={statuses:responses.map(r=>r.status),successfulCommits:1,finalCredentialMatchesCommit:true};
  });
- await test('长老重置与本人改密并发时，本人不能用过期验证覆盖新凭据',async()=>{
+ await test('副宗主重置与本人改密并发时，本人不能用过期验证覆盖新凭据',async()=>{
   const selfInput=changeInput(A.password,password()),resetInput={action:'resetPassword',accountId:A.id,password:password(),requestId:randomUUID()},responses=await Promise.all([auth(selfInput,A.cookie),auth(resetInput,'',adminHeaders)]);
   assert.equal(responses[1].status,200,'Authorized administrator reset must retain its normal behavior');assert.ok([200,401,409].includes(responses[0].status),'Self change may commit first or reject stale credentials');
   const committed=lastCommit([selfInput,resetInput]);assert.ok(committed,'A successful credential transaction must exist');

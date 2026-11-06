@@ -59,12 +59,12 @@ try{
   const a=player((await get(memberA)).data,memberA.playerId),b=player((await get(memberB)).data,memberA.playerId);
   assert.deepEqual(a.profile,{...base,...gear,tension:'25–27 磅'});assert.deepEqual(b.profile,a.profile);assert.equal(b.name,a.name);
  });
- await test('其他道友不能修改档案；长老可以编辑但不改变档案身份',async()=>{
+ await test('其他道友不能修改档案；副宗主可以编辑但不改变档案身份',async()=>{
   const before=player((await get(memberA)).data,memberA.playerId);
   assert.equal((await update(memberB,memberA.playerId,{...gear,racket:'不应保存'})).status,403);
   assert.deepEqual(player((await get(memberA)).data,memberA.playerId),before);
-  assert.equal((await update('admin',memberA.playerId,{...gear,style:'长老编辑的虚构打法'})).status,200);
-  const after=player((await get(memberA)).data,memberA.playerId);assert.equal(after.profile.style,'长老编辑的虚构打法');assert.equal(after.id,before.id);assert.equal(after.name,before.name);assert.equal(after.ownerId,memberA.accountId);
+  assert.equal((await update('admin',memberA.playerId,{...gear,style:'副宗主编辑的虚构打法'})).status,200);
+  const after=player((await get(memberA)).data,memberA.playerId);assert.equal(after.profile.style,'副宗主编辑的虚构打法');assert.equal(after.id,before.id);assert.equal(after.name,before.name);assert.equal(after.ownerId,memberA.accountId);
  });
  await test('旧客户端省略装备字段时保留；显式空字符串可以清空',async()=>{
   assert.equal((await update(memberA,memberA.playerId,{style:'旧客户端更新打法'})).status,200);
@@ -96,7 +96,7 @@ try{
   assert.equal((await get(null,'/api/photos/'+racketId)).status,401);
   const s=(await get(memberB)).data,meta=s.photos.find(p=>p.id===racketId);assert.ok(meta);assert.equal(meta.kind,'racket');assert.deepEqual(meta.playerIds,[memberA.playerId]);assert.equal(meta.eventId,null);assert.equal(meta.matchId,null);assert.equal('key' in meta,false);assert.equal(meta.type,'image/png');assert.equal(meta.size,png.length);assert.equal(player(s,memberA.playerId).avatarId,avatarId);
  });
- await test('其他道友上传球拍照片被拒绝，长老及代报所属道友可以上传',async()=>{
+ await test('其他道友上传球拍照片被拒绝，副宗主及代报所属道友可以上传',async()=>{
   const denied=await upload(memberB,'racket',{playerId:memberA.playerId});assert.equal(denied.status,403);
   const admin=await upload('admin','racket',{playerId:memberB.playerId});assert.equal(admin.status,200);fixtures.adminRacketId=admin.data.id;
   const delegated=await upload(memberA,'racket',{playerId:friendId});assert.equal(delegated.status,200);fixtures.delegatedRacketId=delegated.data.id;

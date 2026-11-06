@@ -32,7 +32,7 @@ export async function applyNoShow(s:State,a:Account,action:string,input:unknown,
   if(absent.some(id=>!players.includes(id)))fail('只能标记本场比赛的选手');
   if(absent.length>=players.length)fail('至少要有一位选手到场；全部没到请由活动创建者取消本局');
   if(adding&&absent.length===m.noShow!.length)fail('这些选手已标记为没到场');
-  if(!canReportNoShow(a,e,m,absent))fail('403: 只有同场到场的选手、活动创建者或长老可以标记没到场');
+  if(!canReportNoShow(a,e,m,absent))fail('403: 只有同场到场的选手、活动创建者或副宗主可以标记没到场');
   if(!canManageEvent(a,e)&&!livePresentIds(s,e,now).includes(a.playerId))fail('403: 只有当前参加时段内的到场选手可以报告缺席');
   const newlyAbsent=absent.filter(id=>!m.noShow?.includes(id));
   if(adding&&s.matches.some(x=>x.id!==m.id&&x.status==='complete'&&(x.start??0)>=(m.end??0)&&[...x.a,...x.b].some(id=>newlyAbsent.includes(id))))fail('该球友已有后续赛果，不能再追加本场缺席，请核对原记录');

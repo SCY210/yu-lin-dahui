@@ -25,12 +25,12 @@ export default function AuthPanel({binding=false,onBound}:{binding?:boolean;onBo
  return <div className={binding?'auth-bind':'auth-card'}>
  {!binding&&<div className="auth-decoration" aria-hidden="true"><img src="/shuttlecock.webp" width={512} height={470} alt=""/></div>}
  <h1>{binding?'开通账号登录':'登录羽林大会'}</h1>
- <p className="muted">{binding?'设置自己的账号和密码，保留现有长老权限、球友档案和比赛记录。':'使用长老为你创建的账号和密码。'}</p>
+ <p className="muted">{binding?'设置自己的账号和密码，保留现有副宗主权限、球友档案和比赛记录。':'使用副宗主为你创建的账号和密码。'}</p>
  <form onSubmit={submit}><div className="form-fields">
  <label>账号<input required minLength={binding?2:1} maxLength={binding?32:254} pattern={binding?usernamePattern:undefined} title={binding?usernameRule:undefined} value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false}/>{binding&&<small>2–32位中文、英文字母或数字；英文不区分大小写，简体和繁体算同一个账号。</small>}</label>
  <label>{binding?'设置密码':'密码'}<input type="password" required minLength={binding?12:1} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={binding?'new-password':'current-password'}/>{binding&&<small>至少12位，可以使用一段容易记住的密码短语。</small>}</label>
  {binding&&<label>确认密码<input type="password" required minLength={12} maxLength={128} value={confirmation} onChange={e=>setConfirmation(e.target.value)} autoComplete="new-password"/></label>}
  </div>{error&&<p className="error" role="alert">{error}</p>}<button className="primary full" disabled={busy}>{busy?'正在处理…':binding?'开通账号登录':'登录'}</button></form>
- {!binding&&<><p className="auth-help">还没有账号或忘记密码？请联系宗门长老。</p><Disclosure label="其他登录方式与安装"><a className="ghost legacy-login" href="/api/auth/legacy" target="_top">长老 / 原账号迁移入口</a><InstallApp/></Disclosure></>}
+ {!binding&&<><p className="auth-help">还没有账号或忘记密码？请联系副宗主。</p><Disclosure label="其他登录方式与安装"><a className="ghost legacy-login" href="/api/auth/legacy" target="_top">副宗主 / 原账号迁移入口</a><InstallApp/></Disclosure></>}
  </div>;
 }

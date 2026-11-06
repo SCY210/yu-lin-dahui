@@ -37,7 +37,7 @@ await test('删除前真实活动照片可读取',async()=>{
  const r=await fetch(origin+'/api/photos',{method:'POST',headers:{Cookie:admin.cookie,Origin:origin},body:form});assert.equal(r.status,200);photoId=(await r.json()).id;
  assert.equal((await fetch(origin+'/api/photos/'+photoId,{headers:{Cookie:B.cookie}})).status,200);
 });
-await test('删除持久化并隐藏活动、关联记录与照片直链，只有创建者和长老可见恢复列表',async()=>{
+await test('删除持久化并隐藏活动、关联记录与照片直链，只有创建者和副宗主可见恢复列表',async()=>{
  assert.equal((await command(A,'deleteEvent',{eventId:e.id,reason:'本地验收删除'})).status,200);
  for(const actor of [A,B,admin]){const v=await get(actor);assert.ok(!v.events.some(x=>x.id===e.id));assert.ok(!v.bookings.some(x=>x.eventId===e.id));assert.ok(!v.photos.some(x=>x.id===photoId));}
  assert.ok((await get(A)).deletedEvents.some(x=>x.id===e.id));assert.ok(!(await get(B)).deletedEvents.some(x=>x.id===e.id));assert.ok((await get(admin)).deletedEvents.some(x=>x.id===e.id));
