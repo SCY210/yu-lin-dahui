@@ -70,3 +70,29 @@ test('an authorised date repair moves claim coverage with the court but retains 
  assert.equal(repairEventDate(s,{eventId:e.id,fromStart:e.start,fromEnd:e.end,toStart:e.start+day,toEnd:e.end+day},e.end+2*day),true);
  assert.deepEqual(s.bookings[0].claims,[{...claim,start:claim.start+day,end:claim.end+day}]);
 });
+
+test('a claimed segment can be set back to 待认领 by its booker or the organiser, never by another member',async()=>{
+ const {s,e,b,now}=fixture();e.creatorId=s.accounts[3].id;await apply(s,s.accounts[1],'bookingClaim',payload(b),now);
+ const release=(start:number,end:number)=>({...payload(b,start,end),release:true});
+ const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,s.accounts[2],'bookingClaim',release(b.start+2*hour,b.start+4*hour),now),/403/);assert.deepEqual(s,before,'another member cannot release it');
+ await assert.rejects(()=>apply(s,s.accounts[1],'bookingClaim',release(b.start,b.start+4*hour),now),/403/,'a member cannot release time someone else booked');
+ await apply(s,s.accounts[1],'bookingClaim',release(b.start+2*hour,b.start+4*hour),now);
+ assert.deepEqual(bookingParts(b).map(p=>[(p.start-b.start)/hour,(p.end-b.start)/hour,p.advancedBy]),[[0,2,'p0'],[2,4,undefined],[4,6,'p0']]);assert.equal(b.claims,undefined);
+ assert.equal(s.audits.at(-1)!.actor,s.accounts[1].id);assert.equal((s.audits.at(-1)!.changes as {release:boolean}).release,true);
+ const count=s.audits.length;await apply(s,s.accounts[1],'bookingClaim',release(b.start+2*hour,b.start+4*hour),now);assert.equal(s.audits.length,count,'releasing 待认领 time again changes nothing');
+ // The stored event creator (an organiser) releases any time; claims around it are trimmed, not lost.
+ await apply(s,s.accounts[2],'bookingClaim',payload(b,b.start+4*hour,b.end),now);
+ await apply(s,s.accounts[3],'bookingClaim',release(b.start,b.start+2*hour),now);
+ assert.deepEqual(bookingParts(b).map(p=>p.advancedBy),[undefined,'p2']);assert.deepEqual(s.bookings.find(x=>x.id===b.id)!.claims?.map(c=>[(c.start-b.start)/hour,(c.end-b.start)/hour,c.playerId]),[[4,6,'p2']]);
+ assert.equal('advancedBy' in b,false);
+ await assert.rejects(()=>apply(s,s.accounts[0],'settle',{eventId:e.id,confirmed:true,reason:''},e.end+hour),/待认领/,'released time blocks confirming the split again');
+});
+
+test('releasing checks the snapshot, range and confirmed fees without mutation',async()=>{
+ for(const kind of ['stale','outside','half','settled']){
+  const {s,e,b,now}=fixture();let input:Record<string,unknown>={...payload(b),release:true};
+  if(kind==='stale')input={...input,expected:'old'};else if(kind==='outside')input={...input,end:b.end+hour};else if(kind==='half')input={...input,start:b.start+hour/4};else s.settlements.push({...calculateSettlement(s,e,e.end),id:'confirmed',created:e.end,version:1,confirmed:true,reason:''});
+  const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[0],'bookingClaim',input,now));assert.deepEqual(s,before,kind);
+ }
+});
