@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {realmLedger} from '../lib/domain/realm-rating';
 import {replayRating} from '../lib/domain/ranking';
-import {guestIds,guestHostName,guestLevelAt} from '../lib/domain/guests';
+import {guestIds,guestHostName,guestLevelAt,guestLevels} from '../lib/domain/guests';
+import {realmByScore} from '../lib/domain/realm-rating';
 import {emptyState,type Match,type State} from '../lib/domain/types';
 
 const start=Date.parse('2026-11-01T15:00:00Z');
@@ -64,6 +65,11 @@ test('only the registrant, an administrator or the activity organiser can change
  await apply(s,s.accounts[3],'guestLevel',{playerId:'g',level:850},start);
  await apply(s,s.accounts[0],'guestLevel',{playerId:'g',level:1150},start+1);
  assert.equal(guestLevelAt(s.players.find(p=>p.id==='g')!),1150);
+ // 萌新 (700, the 炼气 band) is the lowest level a friend can be given.
+ await apply(s,s.accounts[0],'guestLevel',{playerId:'g',level:700},start+2);assert.equal(guestLevelAt(s.players.find(p=>p.id==='g')!),700);
+ await assert.rejects(()=>apply(s,s.accounts[0],'guestLevel',{playerId:'g',level:550},start+3),'only listed levels');
+ assert.deepEqual(guestLevels.map(([v,label])=>[v,label]),[[700,'炼气 · 萌新'],[850,'筑基 · 刚入门'],[1000,'金丹 · 一般'],[1150,'元婴 · 较强'],[1300,'化神 · 很强']]);
+ for(const [value,label] of guestLevels)assert.ok(label.startsWith(realmByScore(value)),label+' matches the realm of '+value);
 });
 
 test('adding a friend with a level stores it for all of the friend\'s games',async()=>{
