@@ -6,10 +6,10 @@ export const photoCacheControl='private, no-cache, must-revalidate';
 const tagPattern=/^"photo-v1-[0-9a-f]{64}"$/;
 export function isPhotoEtag(value:string|null):value is string{return value!==null&&tagPattern.test(value)}
 
-export async function photoEtag(photo:Photo,accountId:string){
+export async function photoEtag(photo:Photo,accountId:string,representation?:string){
  // Uploads create media/<new UUID>; deleting a photo removes its database row
  // before its object. Repairs must use a new key, not overwrite existing bytes.
- const identity=JSON.stringify([accountId,photo.id,photo.key,photo.created,photo.type,photo.size]);
+ const identity=JSON.stringify([accountId,photo.id,photo.key,photo.created,photo.type,photo.size,...(representation?[representation]:[])]);
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(identity));
  const hash=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
  return '"photo-v1-'+hash+'"';

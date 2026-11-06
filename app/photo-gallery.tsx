@@ -1,4 +1,5 @@
 'use client';
+import {photoUrl} from '../lib/photo-url';
 import {useRef,useState} from 'react';
 import {toast} from 'sonner';
 import PhotoDeleteButton from './photo-delete-button';
@@ -82,7 +83,8 @@ export default function PhotoGallery({ctx,eventId,playerId,avatar=false}:{ctx:Ga
   </div>}
   {avatar&&avatarPhoto&&<PhotoDeleteButton photo={avatarPhoto} ctx={ctx} label="删除头像"/>}
   {!avatar&&<div className="photo-grid">{photos.map(photo=><figure key={photo.id}>
-   <a href={'/api/photos/'+photo.id} target="_blank" rel="noreferrer"><img src={'/api/photos/'+photo.id} alt={photo.caption||'活动照片'} loading="lazy"/></a>
+   {/* eslint-disable-next-line @next/next/no-img-element -- Private optimized previews must send the browser's session cookies. */}
+   <a href={'/api/photos/'+photo.id} target="_blank" rel="noreferrer"><img src={photoUrl(photo.id,'preview')} alt={photo.caption||'活动照片'} loading="lazy"/></a>
    <figcaption>{photo.caption}<small>{photo.playerIds.map(name).join(' · ')}</small><PhotoDeleteButton photo={photo} ctx={ctx}/></figcaption>
   </figure>)}{!photos.length&&<p className="muted">还没有关联照片。</p>}</div>}
  </section>;

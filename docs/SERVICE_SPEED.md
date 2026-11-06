@@ -1,17 +1,33 @@
-# Service speed
+# 服务响应速度
 
-A production sample of six full club GET handler metrics before this change ranged from 1044 to 1592 ms, with a median of 1306 ms. These are handler timings, not end-to-end device load times. Clients sent compressed-response weak ETags, which the previous exact-string lookup could not match.
+此前采集的六次生产环境完整群组 GET 处理耗时为 1044–1592 毫秒，中位数 1306 毫秒。这是处理函数耗时，不是设备端从请求到显示的总耗时。客户端发送了压缩响应的弱 ETag，旧的精确字符串查找无法匹配。
 
-GET validators now accept the weak form of a known club token and lists containing it. A hit returns one canonical ETag and 304, avoiding full state reads and view aggregation. Authentication and fresh revision/account/owner/profile-policy metadata still precede every hit. Unknown tokens, expired entries, another account, changed roles/queries and active-activity time boundaries retain full reads. No personalized response or database snapshot is shared in memory. Cold isolates may still miss the bounded validator cache.
+GET 校验器现在接受已知群组令牌的弱形式，以及包含该令牌的校验器列表。命中时返回规范 ETag 和 304，避免读取完整状态并聚合视图。每次命中前仍重新检查身份、当前修订、账号、群主、档案策略等元数据。未知令牌、过期条目、其他账号、角色或查询变化，以及进行中活动的时间边界，仍走完整读取。不在内存中共享个性化响应或数据库快照。新的隔离实例仍可能无法命中有容量上限的校验器缓存。
 
-Completed date-repair and fee-confirmation jobs share one indexed commits lookup instead of two sequential lookups. Pending jobs keep their original order and transactional retry checks. No negative result is cached and no pending job is marked complete merely for speed.
+已完成的日期修正和费用确认任务共用一次有索引的提交记录查询，取代原先两次顺序查询。待处理任务保持原顺序和事务重试校验。不缓存未完成的结果，也不为提速而把待处理任务标为完成。
 
-Production improvements are assessed using normal traffic after release. Local SQL-count checks establish saved database operations rather than predicting network latency.
+生产改善通过发布后的正常流量评估。本地 SQL 查询次数只能证明减少了数据库操作，不能预测网络延迟。
 
-## Image delivery
+## 图片传输
 
-Image reads fetch membership, photo metadata and the associated event in one indexed query after authentication. This removes the separate event lookup without reading club history. Successful reads use a private browser cache with mandatory revalidation: the server checks current membership and event visibility on every request before returning a body-free 304 for unchanged media. This avoids another R2 read and image transfer on repeat views. Failed requests remain `no-store`; the service worker does not cache private media.
+密码会话的图片读取通过一次有索引的 D1 查询，同时验证当前会话、成员资格、照片元数据和活动可见性。此前即使浏览器缓存命中，身份验证与元数据读取也需要两次顺序数据库访问。Sites 身份读取保留其可信身份边界。原图、缩略图和 304 响应之前，都检查会话过期、凭据移除、成员移除、草稿权限和活动删除状态。不缓存授权结果。
 
-Prominent profile, podium and scoring-dialog avatars start loading immediately. Directory avatars remain lazy so long lists do not compete for bandwidth. A card's existing racket image begins loading on pointer or keyboard intent and at the start of a flip, rather than waiting until the back becomes visible. These changes do not add a second image fetch or a persistent JavaScript image cache.
+头像请求最长边 192 像素的固定 WebP 版本，照片列表和球拍预览请求 960 像素版本。图片缩放后保持在此范围内，不放大、不裁剪，保留透明通道，并请求保留动画。原图链接继续返回上传时的字节。16 KiB 及以下的原图跳过转换，避免转换成本超过节省的传输量。
 
-The selected theme illustration is preloaded in the server-rendered head. The landscape background now transfers 153,996 bytes instead of 2,260,846 bytes, retaining its dimensions. First-time private photo downloads still use the uploaded original; their duration depends on image size and the connection. Local regression tests count database and storage reads and check permission revocation; they do not establish a device-specific millisecond improvement.
+这些尺寸对旧上传和新上传都在第一次访问时生效，不需要数据库迁移或批量改写生产数据。
+
+独立 Worker 声明可选的 IMAGES 绑定，直接转换私有 R2 字节流，不创建公开对象地址。派生图片使用现有私有 R2 存储桶中的版本化键，供已获授权的读取者复用。同一隔离实例合并相同图片的并发转换请求，限制转换并发数和输出内存，并在保存结果前后检查原照片记录。删除照片时同时删除原图和两个派生对象；现有删除回执支持重试存储清理。原图仍是权威来源，内容保持不变。
+
+编码绑定缺失、额度错误或转换失败时回退到原图。有容量上限的失败冷却记录避免在同一隔离实例中重复尝试失败转换。原图与每种派生版本使用不同的、绑定查看者的校验器，因此较大的回退原图不会阻止后续成功生成的缩略图加载。成功读取使用私有浏览器缓存，每次复用都必须重新验证；错误响应保持 no-store。Service Worker 不存储私有媒体。首次生成缩略图会增加一次处理工作，不能据此声称每次首次响应的服务端延迟都更低。
+
+选中球友的头像在延迟加载的档案模块之外预加载，让图片和 JavaScript 同时下载。主要头像使用高获取优先级，列表头像仍延迟加载。球拍卡片在指针、键盘或翻面操作表达查看意图时，提高现有图片的加载优先级，不再通过 JavaScript 重复请求。
+
+## 验证与发布
+
+本地检查覆盖真实密码认证、有索引的 SQL 执行计划、授权后的 304、版本隔离、已存缩略图复用、失败回退恢复、删除竞争、输出上限、并发转换和界面资源地址。
+
+本地 Images/R2 测试将一张合成的 3,826,121 字节 PNG 转为 4,722 字节头像和 117,632 字节预览，保留透明通道及原图字节。再次读取仅访问一次已存派生对象，不重新编码或写入存储。此正方形测试图片不能证明生产动画或缩放适配行为：已安装的 Miniflare 实现不支持全部转换选项。本地图片和处理函数测试不代表生产设备耗时或 Cloudflare CPU 测量。
+
+同步前运行 npm run verify。受控私有发布必须保留原访问配置和新的绑定，不能从公开检出目录覆盖生产版本。发布后通过正常的已认证图片流量评估实际效果。
+
+Cloudflare 官方文档说明了[私有字节流转换](https://developers.cloudflare.com/images/optimization/binding/)和 [Images 额度与定价](https://developers.cloudflare.com/images/pricing/)。此更新不购买 Images 套餐，也不修改账号计费设置。绑定不可用的托管环境继续返回原图。

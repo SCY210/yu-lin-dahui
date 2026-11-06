@@ -6,6 +6,7 @@
   "triggers": {"crons":["0 * * * *","10,20,30,40,50 * * * *"]},
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
+  "images": {"binding":"IMAGES"},
   "d1_databases": [
     {
       "binding": "DB",

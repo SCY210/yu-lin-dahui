@@ -7,8 +7,8 @@ import React,{act} from 'react';
 import {create} from 'react-test-renderer';
 
 mkdirSync('.test-output',{recursive:true});
-await build({stdin:{contents:"export {Avatar} from './app/avatar';export {default as PlayerSocialCard} from './app/player-social-card';",resolveDir:process.cwd(),loader:'ts'},outfile:'.test-output/image-loading-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','lucide-react'],loader:{'.css':'empty'}});
-const {Avatar,PlayerSocialCard}=await import(pathToFileURL(resolve('.test-output/image-loading-ui.mjs')).href);
+await build({stdin:{contents:"export {Avatar} from './app/avatar';export {default as ProfileImagePreload} from './app/profile-image-preload';export {default as PlayerSocialCard} from './app/player-social-card';",resolveDir:process.cwd(),loader:'ts'},outfile:'.test-output/image-loading-ui.mjs',bundle:true,platform:'node',format:'esm',jsx:'automatic',external:['react','react/*','lucide-react'],loader:{'.css':'empty'}});
+const {Avatar,PlayerSocialCard,ProfileImagePreload}=await import(pathToFileURL(resolve('.test-output/image-loading-ui.mjs')).href);
 const saved=Object.fromEntries(['window','fetch','Image','setTimeout','clearTimeout','IS_REACT_ACT_ENVIRONMENT'].map(key=>[key,globalThis[key]]));
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 globalThis.window={matchMedia:()=>({matches:false})};
@@ -26,15 +26,26 @@ try{
  await mount(Avatar,{p:player});
  assert.equal(image().props.loading,'lazy','ordinary roster avatars retain deferred loading');
  assert.equal(image().props.decoding,'async');
+ assert.equal(image().props.fetchPriority,'auto');
  for(const extra of [{},{winningStreak:{singles:2,doubles:0}},{losingStreak:{singles:0,doubles:4}}]){
   await act(()=>ui.update(React.createElement(Avatar,{p:{...player,...extra},eager:true})));
   assert.equal(image().props.loading,'eager','prominent avatars start immediately with every decoration');
-  assert.equal(image().props.src,'/api/photos/fictional-avatar');
+  assert.equal(image().props.src,'/api/photos/fictional-avatar?size=avatar');
+  assert.equal(image().props.fetchPriority,'high');
  }
  await act(()=>image().props.onError());
  assert.equal(image().props.src,'/default-avatar.svg');assert.equal(image().props.loading,'eager');
  await act(()=>ui.update(React.createElement(Avatar,{p:{...player,avatarId:'replacement-avatar'},eager:true})));
- assert.equal(image().props.src,'/api/photos/replacement-avatar','replacement avatars recover after an old image failed');
+ assert.equal(image().props.src,'/api/photos/replacement-avatar?size=avatar','replacement avatars recover after an old image failed');
+
+ await mount(ProfileImagePreload,{player});
+ const preload=ui.root.findByType('link');
+ assert.equal(preload.props.href,'/api/photos/fictional-avatar?size=avatar');
+ assert.equal(preload.props.rel,'preload');assert.equal(preload.props.as,'image');assert.equal(preload.props.fetchPriority,'high');
+ for(const hidden of [undefined,{}, {...player,guest:true},{...player,guestEventId:'event'}]){
+  await act(()=>ui.update(React.createElement(ProfileImagePreload,{player:hidden})));
+  assert.equal(ui.root.findAllByType('link').length,0,'no preload for absent or guest portraits');
+ }
 
  for(const intent of ['onPointerEnter','onPointerDown','onFocusCapture']){
   await mount(PlayerSocialCard,props);
@@ -60,12 +71,12 @@ try{
  assert.equal(image().props.loading,'eager');
  assert.equal(ui.root.findByProps({className:'pc-face pc-back'}).props.hidden,true);
  await act(()=>ui.update(React.createElement(PlayerSocialCard,{...props,photo:{id:'replacement-racket'}})));
- assert.equal(image().props.src,'/api/photos/replacement-racket');assert.equal(image().props.loading,'lazy','a different hidden photo waits for its own intent');
+ assert.equal(image().props.src,'/api/photos/replacement-racket?size=preview');assert.equal(image().props.loading,'lazy','a different hidden photo waits for its own intent');
  await act(()=>ui.root.findByType('article').props.onFocusCapture());
  assert.equal(image().props.loading,'eager');
  await act(()=>image().props.onError());assert.equal(ui.root.findAllByType('img').length,0,'failed photos retain the visible fallback');
  await act(()=>ui.update(React.createElement(PlayerSocialCard,{...props,photo:{id:'third-racket'}})));
- assert.equal(image().props.src,'/api/photos/third-racket');assert.equal(image().props.loading,'lazy');
+ assert.equal(image().props.src,'/api/photos/third-racket?size=preview');assert.equal(image().props.loading,'lazy');
  console.log('PASS image loading UI: default lazy roster, eager prominent avatars including streak decorations and fallback, pointer/touch/focus/flip intent loads the existing hidden photo before reveal, no duplicate preloader, retained element across flips and reset for replacement photos.');
 }finally{
  if(ui)await act(()=>ui.unmount());

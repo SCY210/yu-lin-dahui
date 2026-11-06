@@ -2,14 +2,15 @@
 import {useRef,useState,type CSSProperties} from 'react';
 import {seasonPointsPolicy,type WinningStreaks} from '../lib/domain/season-points';
 import {useVisibleAvatarMotion} from '../lib/client/visible-avatar-motion';
+import {photoUrl} from '../lib/photo-url';
 import './avatar-fire.css';
 type AvatarPlayer={name?:string;avatarId?:string;winningStreak?:WinningStreaks;losingStreak?:WinningStreaks};
 function AvatarImage({p,size='',eager=false}:{p?:AvatarPlayer;size?:string;eager?:boolean}){
  const [failedId,setFailedId]=useState<string|null>(null);
  const name=p?.name??'球友',avatarId=p?.avatarId;
  const custom=!!avatarId&&avatarId!==failedId;
- // eslint-disable-next-line @next/next/no-img-element -- Protected photos require the browser's session cookies on the original URL.
- return <img className={'avatar '+size} src={custom?'/api/photos/'+avatarId:'/default-avatar.svg'} alt={name+'的头像'} loading={eager?'eager':'lazy'} decoding="async" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
+ // eslint-disable-next-line @next/next/no-img-element -- Protected photos require the browser's session cookies on the same-origin URL.
+ return <img className={'avatar '+size} src={custom?photoUrl(avatarId!,'avatar'):'/default-avatar.svg'} alt={name+'的头像'} loading={eager?'eager':'lazy'} fetchPriority={eager?'high':'auto'} decoding="async" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
 }
 
 /** A winning streak shows a different cultivation sign as it grows, each with its own word on the seal:

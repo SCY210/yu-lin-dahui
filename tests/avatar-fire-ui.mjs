@@ -23,7 +23,7 @@ try{
  await act(async()=>{document.hidden=true;for(const fn of listeners)fn()});assert.equal(shell().props['data-moving'],'false');
  await act(async()=>{document.hidden=false;for(const fn of listeners)fn()});assert.equal(shell().props['data-moving'],'true');
  await act(async()=>notify([...observed].map(target=>({target,isIntersecting:false}))));assert.equal(shell().props['data-moving'],'false');
- assert.equal(renderer.root.findByType('img').props.src,'/api/photos/fixture-avatar');
+ assert.equal(renderer.root.findByType('img').props.src,'/api/photos/fixture-avatar?size=avatar');
  await act(async()=>renderer.root.findByType('img').props.onError());assert.equal(renderer.root.findByType('img').props.src,'/default-avatar.svg','Broken uploaded images keep the normal fallback and fire');
  await act(async()=>renderer.update(React.createElement(Avatar,{...props,p:{...props.p,avatarId:'new-fixture-avatar',winningStreak:{singles:0,doubles:0}}})));assert.equal(renderer.root.findAllByType('svg').length,0);assert.equal(renderer.root.findByType('img').props.className,'avatar ranking-avatar');assert.equal(observed.size,0);assert.equal(listeners.size,0);
  await act(async()=>renderer.update(React.createElement(Avatar,{...props,p:{...props.p,winningStreak:{singles:2,doubles:0}}})));assert.match(shell().props.title,/单打 2 连胜/);
