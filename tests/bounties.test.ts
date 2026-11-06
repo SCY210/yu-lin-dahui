@@ -10,6 +10,7 @@ import {clubViewValidUntil} from '../lib/club-read-cache';
 import {month,type Event,type State} from '../lib/domain/types';
 import {coinEpoch as at,coinEvent,coinFixture,coinMatch,coinSignup} from './helpers/automatic-coins-fixture';
 import type {ViewBounty} from '../lib/client/bounties';
+import {pointsBreakdown} from '../lib/client/ranking-breakdown';
 
 const minute=60000;
 /** An activity id for which p0 draws the given bounty (the draw is a fixed hash of activity and player). */
@@ -109,6 +110,19 @@ test('season points add the reward or subtract the penalty on the activity\'s bo
  assert.equal(after.bountyPoints,8);assert.equal(after.points-before.points,8);
  activateAutomaticCoins(done.s,at);reconcileAutomaticCoins(done.s,done.e.end);
  assert.deepEqual(done.s.treasureRewardClaims.filter(r=>r.source==='bounty').map(r=>[r.playerId,r.amount]),[['p0',15]]);
+});
+
+test('the ranking breakdown lists completed and failed bounties as separate lines that still add up',async()=>{
+ const {s,e}=setup('rout');await accept(s,e);game(s,e,'big',2,[21,4]);
+ const second=coinEvent(s,eventFor('deuce'),e.end+24*60*minute);for(const p of s.players)coinSignup(s,second,p.id);
+ await accept(s,second);game(s,second,'plain',2,[21,15]);
+ const quarter=`${new Date(e.start).getUTCFullYear()}-Q${Math.floor(new Date(e.start).getUTCMonth()/3)+1}`;
+ const row=quarterlyLeaderboard(s,quarter,second.end).find(r=>r.playerId==='p0')!;
+ assert.equal(row.bountyWonPoints,8);assert.equal(row.bountyLostPoints,-10);assert.equal(row.bountyPoints,-2);
+ const lines=pointsBreakdown(row);
+ assert.deepEqual(lines.filter(line=>line.label.startsWith('悬赏')).map(line=>[line.label,line.points]),[['悬赏成功',8],['悬赏失败',-10]]);
+ assert.equal(lines.reduce((n,line)=>n+line.points,0),row.points);assert.ok(!lines.some(line=>line.label==='其他调整'));
+ const other=quarterlyLeaderboard(s,quarter,second.end).find(r=>r.playerId==='p1')!;assert.equal(other.bountyWonPoints,0);assert.equal(other.bountyLostPoints,0);
 });
 
 test('members see only their own bounty and its result; the result appears at the end without a write',async()=>{
