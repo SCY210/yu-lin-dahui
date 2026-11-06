@@ -37,7 +37,7 @@ test('确认通知：代报名的人收到单独一条，写明朋友的金额�
  assert.match(personal.body,/含小明/,'the short body names the friend');assert.doesNotMatch(personal.body,/€|600|6\.00/,'notices never show amounts');
 });
 
-test('球友自报已付款：本人和代报名的人可以标记和撤销，其他成员不能；创建者可以代为修正',async()=>{
+test('球友自报已付款：本人和代报名的人可以标记和撤销，其他道友不能；创建者可以代为修正',async()=>{
  const s=fixture();
  await apply(s,alice,'feePaid',{eventId:'e',settlementId:'v1',playerId:'p1',paid:true},now);assert.ok(billPaid(s,'e',bill(s,'p1')));
  await apply(s,alice,'feePaid',{eventId:'e',settlementId:'v1',playerId:'friend',paid:true},now);assert.ok(billPaid(s,'e',bill(s,'friend')));

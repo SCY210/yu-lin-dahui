@@ -34,7 +34,7 @@ test('收款人首页：只列最新确认版本里还没转给自己的钱，�
  assert.equal(incomingTransfersFor(settlements,payments,{playerId:'p1'},new Set(['a']),overdueAt)[0].overdue,true);
 });
 
-test('群主和管理员首页：自动提醒结束后仍未付款的人，按欠款人合计，最早的活动在前',()=>{
+test('宗主和长老首页：自动提醒结束后仍未付款的人，按欠款人合计，最早的活动在前',()=>{
  const settlements=[{...transferSplit('a1','a',1,[['p2','p1',500],['p2','p4',100],['p3','p1',400]]),created:confirmedAt+3600000},
   split('c1','c',1,[['p2',600],['p3',600],['p4',0]],true,confirmedAt),transferSplit('d1','d',1,[['p2','p1',100]])];
  const payments=[{eventId:'a',playerId:'p3',cents:400,to:'p1'},{eventId:'c',playerId:'p3',cents:600},{eventId:'d',playerId:'p2',cents:100,to:'p1'}];

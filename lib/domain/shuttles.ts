@@ -27,7 +27,7 @@ export async function applyShuttles(s: State, a: Account, action: string, input:
         case 'shuttleVote': {
             const p = command.payload;
             if (!canVoteForShuttle(s, e, a, now))
-                fail('403: 用球投票仅对已接龙成员开放，且须在活动开始前进行');
+                fail('403: 用球投票仅对已接龙道友开放，且须在活动开始前进行');
             if (p.optionId !== null && !plan.options.some(o => o.id === p.optionId))
                 fail('候选球不存在，请刷新后重试');
             plan.votes = plan.votes.filter(v => v.voterId !== a.id);

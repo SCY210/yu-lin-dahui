@@ -17,7 +17,7 @@ export function createEventShare(event:ShareEvent,clubName:string,origin:string)
  url.searchParams.set('event',event.id);
  url.searchParams.set('tab','signup');
  const title = `${clubName} · ${event.title}`;
- return {title,text:[title,`${date(event.start)} – ${date(event.end)}（马德里时间）`,event.venue,statusNames[event.status],'打开活动查看详情与接龙（需登录成员账号）'].join('\n'),url:url.href};
+ return {title,text:[title,`${date(event.start)} – ${date(event.end)}（马德里时间）`,event.venue,statusNames[event.status],'打开活动查看详情与接龙（需登录道友账号）'].join('\n'),url:url.href};
 }
 
 /** Must be called directly from the click handler to retain user activation. */

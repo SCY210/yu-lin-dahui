@@ -17,7 +17,7 @@ export async function runRequestedThursdaySplit(){
   const owner=s.accounts.find(a=>a.id===clubOwnerId(s)&&a.role==='admin');if(!owner||e.creatorId!==owner.id)return;
   const result=calculateSettlement(s,e,now),latest=s.settlements.filter(x=>x.eventId===e.id&&x.confirmed).sort((a,b)=>b.version-a.version)[0];
   if(!latest||![2020,2022].includes(latest.total)||result.expenseTotal!==2020||result.total!==2022||result.bills.length!==6||result.bills.some(b=>b.total!==337)||result.unallocated)return;
-  await apply(s,owner,'settle',{eventId:e.id,confirmed:true,reason:'群主确认本场六人统一每人3.37欧元，同额取整到分'},now);
+  await apply(s,owner,'settle',{eventId:e.id,confirmed:true,reason:'宗主确认本场六人统一每人3.37欧元，同额取整到分'},now);
   try{await save(s,requestedThursdaySplit.key,previous,clubReminderStatements(s,previous,owner.id,requestedThursdaySplit.key,'settle',now));return}catch(error){
    if(attempt<3&&String(error).includes('UNIQUE constraint failed: commits'))continue;
    throw error;

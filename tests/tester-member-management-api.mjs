@@ -55,7 +55,7 @@ try{
  for(const target of ['owner','admin','tester2']){const r=await auth({action:'resetPassword',accountId:target,password,requestId:crypto.randomUUID()});assert.equal(r.status,403,target+': '+await r.clone().text())}
  assert.equal((await auth({action:'createAccount',accountId:'admin',name:'x',username:'ftakeover',password,requestId:crypto.randomUUID()})).status,403,'no login opened on an administrator account');
  as('member');assert.equal((await auth({action:'createAccount',name:'x',username:'fnope',password,requestId:crypto.randomUUID()})).status,403,'an ordinary member manages no accounts');
- const audit=(await api.load()).audits.find(a=>a.action==='resetAccountPassword'&&a.actor==='tester');assert.equal(audit.reason,'测试员重置登录密码');
+ const audit=(await api.load()).audits.find(a=>a.action==='resetAccountPassword'&&a.actor==='tester');assert.equal(audit.reason,'试剑人重置登录密码');
 
  // Friends: a tester merges, edits and hides friends, and cancels a duplicate signup; an ordinary member cannot.
  as('member');assert.equal((await command('guestFriendHide',{playerId:'guest-2',hidden:true})).status,403);

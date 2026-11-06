@@ -25,12 +25,12 @@ const schemas={
 };
 export async function applyGuestFriends(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
- if(!canManageMembers(a))fail('403: 只有群主、管理员和测试员可以管理临时来宾');
+ if(!canManageMembers(a))fail('403: 只有宗主、长老和试剑人可以管理临时来宾');
  const audit=(reason:string,changes:Record<string,unknown>)=>s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:command.payload.reason||reason,changes});
  if(command.action==='guestFriendMerge'){
   // One friend from now on: one nickname and one host, who owes their share in new activities and unconfirmed splits.
   // Confirmed split versions are stored snapshots and stay as they were.
-  const p=command.payload,host=s.accounts.find(x=>x.playerId===p.hostPlayerId)??fail('请选择一位有账号的成员作为带来人');
+  const p=command.payload,host=s.accounts.find(x=>x.playerId===p.hostPlayerId)??fail('请选择一位有账号的道友作为带来人');
   const records=[...new Map(p.playerIds.flatMap(pid=>friendRecords(s,pid)).map(r=>[r.id,r])).values()];
   if(!records.some(r=>r.ownerId===host.id))fail('带来人需要是这几位来宾的带来人之一');
   const friendId=records.find(r=>r.guestFriendId)?.guestFriendId??crypto.randomUUID();

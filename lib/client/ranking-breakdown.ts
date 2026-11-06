@@ -17,7 +17,7 @@ export function pointsBreakdown(r:BreakdownRow):BreakdownLine[]{
   {label:'悬赏',points:r.bountyPoints??0},
   {label:'通知积分',points:r.notificationPoints??0},
   {label:'迟到扣分',points:r.attendancePoints??0},
-  {label:'群主调整',points:r.manualPoints??0},
+  {label:'宗主调整',points:r.manualPoints??0},
  ];
  const rest=r.points-lines.reduce((n,line)=>n+line.points,0);
  return [...lines,{label:'其他调整',points:rest}].filter(line=>line.points!==0);

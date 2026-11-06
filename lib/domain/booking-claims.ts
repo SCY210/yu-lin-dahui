@@ -14,7 +14,7 @@ const inputSchema=z.object({bookingId:z.string().min(1).max(100),start:businessT
 export function applyBookingClaim(s:State,a:Account,action:string,input:unknown,now:number){
  if(action!=='bookingClaim')return false;
  const p=inputSchema.parse(input),actor=s.accounts.find(x=>x.id===a.id)??fail('403: 账号不可用');
- if(!s.players.some(x=>x.id===actor.playerId&&x.enabled))fail('403: 成员已停用');
+ if(!s.players.some(x=>x.id===actor.playerId&&x.enabled))fail('403: 道友已停用');
  const b=s.bookings.find(x=>x.id===p.bookingId)??fail('场地不存在或已取消'),e=s.events.find(x=>x.id===b.eventId)??fail('活动不存在');
  const manager=canManageEvent({id:actor.id,role:actor.role,isOwner:isClubOwner(s,actor)},e);
  if(e.deletedAt!==undefined||e.status==='cancelled'||e.status==='draft'&&!manager)fail('当前活动不能认领场地');

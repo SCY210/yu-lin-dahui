@@ -33,7 +33,7 @@ test('a newly authenticated member retains the direct event URL',()=>{
 test('invitation contains only event summary fields and Madrid-local dates',()=>{
  const shared=data();
  assert.equal(shared.title,`羽林大会 · ${event.title}`);
- for(const text of [event.title,event.venue,'2026年10月6日','18:00','20:00','报名中','需登录成员账号'])assert.ok(shared.text.includes(text),text);
+ for(const text of [event.title,event.venue,'2026年10月6日','18:00','20:00','报名中','需登录道友账号'])assert.ok(shared.text.includes(text),text);
  for(const text of [event.address,event.note,event.creatorId!,'正式名单','候补名单'])assert.ok(!shared.text.includes(text),text);
  assert.deepEqual(Object.keys(shared),['title','text','url']);
 });

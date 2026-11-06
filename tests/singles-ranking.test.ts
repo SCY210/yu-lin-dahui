@@ -84,7 +84,7 @@ test('单打榜排除代报名朋友与停用球友，作废、未完成和其�
  assert.ok(!rows.some(r=>r.playerId===guest.id||r.playerId==='E'||r.playerId==='A'));
 });
 
-test('群主手动积分只计入综合榜，不进入单打榜',async()=>{
+test('宗主手动积分只计入综合榜，不进入单打榜',async()=>{
  const s=fixture();s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
  await apply(s,s.accounts[0],'grantPoints',{playerId:'B',period:'2026-10',points:30,reason:'组织奖励'},now);
  await apply(s,s.accounts[0],'grantPoints',{playerId:'C',period:'2026-10',points:5,reason:'组织奖励'},now);

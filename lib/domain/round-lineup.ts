@@ -40,7 +40,7 @@ export function roundBenchIds(s:State,e:Event,r:Round,now=r.start){
 /** Stage every change before validation; a rejected substitution cannot partially rewrite a team. */
 export function swapRoundPlayers(s:State,r:Round,p1:string,p2:string,now:number,expected?:RoundLineup){
  const e=s.events.find(e=>e.id===r.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
- if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单轮交换成员，请在开打前重新分配搭档');
+ if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单轮交换道友，请在开打前重新分配搭档');
  const planned=isPlannedLineup(e,r);
  if(!['draft','published','playing'].includes(r.status))fail('只可调整未录分的对局');
  if(!planned&&['draft','ended','cancelled'].includes(eventStatusAt(e,now)))fail('活动未开放或已经结束，不能调整排场');

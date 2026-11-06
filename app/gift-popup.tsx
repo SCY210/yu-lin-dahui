@@ -17,7 +17,7 @@ export default function GiftPopup({notices,name,blocked,busy,acknowledge,onDismi
  return <Dialog open onOpenChange={open=>{if(!open)confirm()}}><DialogContent className="app-dialog gift-popup">
   <DialogHeader><GiftReveal key={shown[0].id} name={shown[0].item}/><DialogTitle>仙鹤衔来{shown.length>1?' '+shown.length+' 份':''}礼物！</DialogTitle><DialogDescription>道友情谊深厚，道缘缘值共 +{new Intl.NumberFormat('zh-CN').format(bond)}。</DialogDescription></DialogHeader>
   <ul className="gift-popup-list">{shown.map(n=><li key={n.id}>
-   <div className="gift-receipt"><GiftArt name={n.item} className="gift-receipt-art"/><span><strong>{name(n.fromPlayerId)}</strong> 送你{n.item?<>：{n.item}<small>{n.instant?'心意已送达':'由群主发放'}</small></>:<> <b>{n.coins}</b> 羽币</>}</span></div>
+   <div className="gift-receipt"><GiftArt name={n.item} className="gift-receipt-art"/><span><strong>{name(n.fromPlayerId)}</strong> 送你{n.item?<>：{n.item}<small>{n.instant?'心意已送达':'由宗主发放'}</small></>:<> <b>{n.coins}</b> 羽币</>}</span></div>
    {n.message&&<q>{n.message}</q>}
   </li>)}</ul>
   <button type="button" className="primary full gift-popup-confirm" disabled={busy} onClick={confirm}>笑纳礼物</button>

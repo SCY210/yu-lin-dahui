@@ -14,7 +14,7 @@ const t=globalThis.__mergeTest={enabled:true,state:structuredClone(state),keys:n
 try{
  await Promise.all(Array.from({length:4},()=>runRequestedEventMerge()));assert.equal(t.saves,1);assert.equal(t.keys.size,1);assert.equal(t.state.events.filter(e=>e.deletedAt===undefined).length,1);assert.equal(t.state.registrations.filter(r=>r.eventId===requestedEventMerge.targetId).length,2);assert.equal(t.state.events.find(e=>e.id==='excluded-deleted').deletedAt,1);
  const after=JSON.stringify(t.state);await runRequestedEventMerge({targetId:'attacker',sourceIds:['excluded-deleted']});assert.equal(JSON.stringify(t.state),after);assert.equal(t.saves,1);
- t.keys.clear();t.state=structuredClone(state);t.state.events[1].creatorId='different-owner';const before=JSON.stringify(t.state);await assert.rejects(()=>runRequestedEventMerge(),/群主创建/);assert.equal(JSON.stringify(t.state),before);
+ t.keys.clear();t.state=structuredClone(state);t.state.events[1].creatorId='different-owner';const before=JSON.stringify(t.state);await assert.rejects(()=>runRequestedEventMerge(),/宗主创建/);assert.equal(JSON.stringify(t.state),before);
  t.state=structuredClone(state);t.state.events=[];await runRequestedEventMerge();assert.equal(t.saves,1);
  console.log('PASS requested event migration: exact approved IDs, stored owner authorization, atomic concurrent retries, once-only ledger, no visitor parameters, deleted-event exclusion and safe missing-plan behavior');
 }finally{delete globalThis.__mergeTest}

@@ -60,7 +60,7 @@ export function convertFriendToMember(s:State,playerId:string,accountId:string,n
  s.players=s.players.filter(p=>!removed.has(p.id));
  for(const r of left)r.guestHidden=true;
  s.accounts.push({id:accountId,email:'',role:'member',playerId:target.id});
- Object.assign(target,{ownerId:accountId,name,initialRating:level,rating:level,ratingReason:'临时来宾转为正式成员'});
+ Object.assign(target,{ownerId:accountId,name,initialRating:level,rating:level,ratingReason:'临时来宾转为正式道友'});
  delete target.guestEventId;delete target.guestFriendId;delete target.guestHidden;delete target.guestLevels;
  replayRating(s,now);
  return {playerId:target.id,before,level,merged:others.map(r=>r.id),left:left.map(r=>r.id)};

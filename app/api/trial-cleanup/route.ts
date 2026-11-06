@@ -36,4 +36,4 @@ export async function POST(req:Request){try{
   if(restoreTrials(s,a,Date.now())){for(const c of credentials)extra.push(db.prepare('INSERT INTO password_credentials(id,username,salt,hash,created,username_changed_at) VALUES(?,?,?,?,?,?)').bind(c.id,c.username,c.salt,c.hash,c.created,c.username_changed_at));extra.push(db.prepare('DELETE FROM trial_credential_archive WHERE id=?').bind(archiveKey))}
  }
  await save(s,key,before,extra,beforeChanges);return reply({ok:true});
- }catch(e){if(String(e).includes('UNIQUE constraint failed: commits'))return reply({error:'其他成员刚刚保存了变更，请刷新重试'},409);return writeErrorResponse(e)}finally{await releaseRejectedWriteBody(req)}}
+ }catch(e){if(String(e).includes('UNIQUE constraint failed: commits'))return reply({error:'其他道友刚刚保存了变更，请刷新重试'},409);return writeErrorResponse(e)}finally{await releaseRejectedWriteBody(req)}}

@@ -5,7 +5,7 @@ export function legacySiteRedirect(request:Request,configured?:string):Response|
  try{
   destination=new URL(configured);
   if(destination.protocol!=='https:'||destination.username||destination.password||destination.pathname!=='/'||destination.search||destination.hash||destination.origin===incoming.origin)throw Error('Invalid canonical origin');
- }catch{return Response.json({error:'网站入口配置暂不可用，请联系管理员'},{status:503,headers:{'Cache-Control':'no-store'}})}
+ }catch{return Response.json({error:'网站入口配置暂不可用，请联系长老'},{status:503,headers:{'Cache-Control':'no-store'}})}
  // Temporary read-only operator exports retain their own expiring-token guard.
  if(incoming.pathname.startsWith('/_operator/migration/'))return null;
  const target=new URL(incoming.pathname+incoming.search,destination.origin);

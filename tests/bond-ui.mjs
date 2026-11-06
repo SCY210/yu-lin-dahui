@@ -44,10 +44,10 @@ try{
  const notices=[{id:'g1',fromPlayerId:'p1',coins:30,value:30,message:'谢谢搭档',at:1},{id:'g2',fromPlayerId:'p3',coins:0,item:'Fictional grip tape × 2',value:24,at:2}];
  const props={notices,name:id=>names[id],busy:false,blocked:false,acknowledge:async ids=>{acknowledged.push(ids)}};
  await mount(GiftPopup,props);shown=text(ui.toJSON());
- for(const part of ['仙鹤衔来 2 份礼物！','道缘缘值共 +2,700','Fictional Ann 送你 30 羽币','谢谢搭档','Fictional Cai 送你：Fictional grip tape × 2','由群主发放'])assert.ok(shown.includes(part),part);
+ for(const part of ['仙鹤衔来 2 份礼物！','道缘缘值共 +2,700','Fictional Ann 送你 30 羽币','谢谢搭档','Fictional Cai 送你：Fictional grip tape × 2','由宗主发放'])assert.ok(shown.includes(part),part);
  await act(()=>button('笑纳礼物').props.onClick());
  assert.deepEqual(acknowledged,[['g1','g2']]);assert.equal(ui.toJSON(),null,'closes at once');
- await mount(GiftPopup,{...props,notices:[{id:'instant',fromPlayerId:'p1',coins:0,item:'Fictional instant gift',value:3,instant:true,affinity:30,at:2}]});shown=text(ui.toJSON());assert.ok(shown.includes('心意已送达'));assert.ok(shown.includes('道缘缘值共 +30'));assert.ok(!shown.includes('由群主发放'));
+ await mount(GiftPopup,{...props,notices:[{id:'instant',fromPlayerId:'p1',coins:0,item:'Fictional instant gift',value:3,instant:true,affinity:30,at:2}]});shown=text(ui.toJSON());assert.ok(shown.includes('心意已送达'));assert.ok(shown.includes('道缘缘值共 +30'));assert.ok(!shown.includes('由宗主发放'));
  await mount(GiftPopup,{...props,blocked:true});assert.equal(ui.toJSON(),null,'waits behind other popups');
  console.log('PASS bond card and gift popup UI: stage, progress, boost, gift form and payload, no coin gifts, empty and top stages, guests, gift notice acknowledgement');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior}

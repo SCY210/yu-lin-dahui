@@ -14,7 +14,7 @@ const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cach
  * POST: one referee operation. Both read only the rows they need. */
 async function member(){
  const user=await getAppUser();if(!user)throw new RequestError('请先登录',401);
- const version=await clubReadVersion(user.userId);if(!version.settings.initialized||!version.account)throw new RequestError('仅群组成员可以查看比分',403);
+ const version=await clubReadVersion(user.userId);if(!version.settings.initialized||!version.account)throw new RequestError('仅群组道友可以查看比分',403);
  const row=await raw().prepare('SELECT payload FROM players WHERE id=?').bind(version.account.playerId).first<{payload:string}>();
  if(!row||!(JSON.parse(row.payload) as Player).enabled)throw new RequestError('账号当前不可用',403);
  return version.account;

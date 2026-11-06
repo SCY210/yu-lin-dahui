@@ -17,8 +17,8 @@ export default function EventShuttles({e,ctx}:{e:Event;ctx:any}){
  const mine=plan?.votes.find(v=>v.voterId===data.me.id);
  const total=Object.values(counts).reduce((sum,count)=>sum+count,0);
  const votingOpen=!!plan?.votingOpen&&now<e.start&&['open','locked'].includes(e.status);
- const add=()=>open('添加候选球','shuttleOption',{eventId:e.id,name:'',note:''},[{key:'name',label:'品牌 / 型号'},{key:'note',label:'球速、价格或其他说明（可选）',optional:true}],undefined,'填入本次可用的球，成员可参考说明投票。');
- const confirm=(option:ShuttleOption)=>open('确认本次用球','shuttleConfirm',{eventId:e.id,optionId:option.id},[],undefined,`选用「${option.name}」后关闭投票并保留票数，成员会看到确认结果。`);
+ const add=()=>open('添加候选球','shuttleOption',{eventId:e.id,name:'',note:''},[{key:'name',label:'品牌 / 型号'},{key:'note',label:'球速、价格或其他说明（可选）',optional:true}],undefined,'填入本次可用的球，道友可参考说明投票。');
+ const confirm=(option:ShuttleOption)=>open('确认本次用球','shuttleConfirm',{eventId:e.id,optionId:option.id},[],undefined,`选用「${option.name}」后关闭投票并保留票数，道友会看到确认结果。`);
  return <section className="card event-shuttles" aria-label="本次用球与投票">
   <div className="row"><h3>本次用球</h3>{editable&&<button type="button" className="secondary" disabled={busy||options.length>=12} onClick={add}><Plus size={17} aria-hidden="true"/>添加候选球</button>}</div>
   {selected?<div className="shuttle-selected"><span className="badge"><Check size={15} aria-hidden="true"/>已确认</span><strong>{selected.name}</strong>{selected.note&&<p>{selected.note}</p>}</div>:<p className="muted">{options.length?'等待创建者确认本次用球。':'尚未设置本次用球。'}</p>}
@@ -37,7 +37,7 @@ export default function EventShuttles({e,ctx}:{e:Event;ctx:any}){
      </div>
     </div>;
    })}</div>
-   <p className="hint">仅正式接龙成员每个账号一票，候补成员不能投票，可改投或撤回。投票仅供参考，最终由创建者确认用球。</p>
+   <p className="hint">仅正式接龙道友每个账号一票，候补道友不能投票，可改投或撤回。投票仅供参考，最终由创建者确认用球。</p>
    {votingOpen&&!participants.has(data.me.playerId)&&<p className="hint">{waiting?'你目前是候补，转为正式接龙后才能投票。':'请使用本人账号正式接龙后再投票。'}</p>}
    {editable&&<div className="actions">
     {now<e.start&&['open','locked'].includes(e.status)&&<button type="button" className="secondary" disabled={busy} onClick={()=>send('shuttleVoting',{eventId:e.id,open:!plan?.votingOpen})}>{plan?.votingOpen?'关闭投票':'开放投票'}</button>}

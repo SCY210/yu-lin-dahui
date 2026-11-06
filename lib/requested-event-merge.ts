@@ -17,8 +17,8 @@ export async function runRequestedEventMerge(){
   if(await committed(requestedEventMerge.key))return;
   const s=await load(),previous=structuredClone(s);
   if(!s.events.some(e=>e.id===requestedEventMerge.targetId)||!s.events.some(e=>e.id===requestedEventMerge.sourceIds[0]))return;
-  const owner=s.accounts.find(a=>a.id===clubOwnerId(s));if(!owner)throw new Error('合并活动需要已验证的群主账号');
-  mergeUpcomingActivities(s,owner,requestedEventMerge.targetId,requestedEventMerge.sourceIds,Date.now(),'群主要求将同日两场活动合为一个，并把原接龙移入对应场地');
+  const owner=s.accounts.find(a=>a.id===clubOwnerId(s));if(!owner)throw new Error('合并活动需要已验证的宗主账号');
+  mergeUpcomingActivities(s,owner,requestedEventMerge.targetId,requestedEventMerge.sourceIds,Date.now(),'宗主要求将同日两场活动合为一个，并把原接龙移入对应场地');
   try{await save(s,requestedEventMerge.key,previous);return}catch(error){
    if(attempt<3&&String(error).includes('UNIQUE constraint failed: commits'))continue;
    throw error;

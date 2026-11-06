@@ -26,7 +26,7 @@ export default function EventPointsPlan({e,ctx,planning=false}:{e:Event;ctx:any;
    <div className="actions"><button type="button" className={'tag-button'+(mine?.mode===mode?' active':'')} aria-pressed={mine?.mode===mode&&canVote} disabled={!canVote||busy} onClick={()=>send('pointsModeVote',{eventId:e.id,mode:mine?.mode===mode?null:mode})}>{mine?.mode===mode?'撤回投票':'投这一种'}</button>
    {editable&&!started&&e.pointsChoice?.selectedMode!==mode&&<button type="button" className="ghost" disabled={busy} onClick={()=>confirm(mode)}>确认此方式</button>}</div>
   </div>)}</div>
-  <p className="hint">仅正式接龙成员每个账号一票，候补成员不能投票，可改投或撤回。未确认搭档方式时默认开放投票；投票仅供参考，创建者确认后关闭投票并按现场可上场人数安排比赛。</p>
+  <p className="hint">仅正式接龙道友每个账号一票，候补道友不能投票，可改投或撤回。未确认搭档方式时默认开放投票；投票仅供参考，创建者确认后关闭投票并按现场可上场人数安排比赛。</p>
   {editable&&!started&&now<e.start&&<button type="button" className="secondary" disabled={busy} onClick={()=>send('pointsModeVoting',{eventId:e.id,open:!votingOpen})}>{votingOpen?'关闭搭档投票':'开放搭档投票'}</button>}
   {!canVote&&<p className="hint" role="status">{waiting?'你目前是候补，转为正式接龙后才能投票。':now>=e.start?'活动已开始，搭档投票已关闭。':votingOpen?'请使用本人账号正式接龙后再投票。':e.pointsChoice?.selectedMode?'创建者已确认搭档方式，投票已关闭。':'创建者已关闭搭档投票。'}</p>}
   {planning&&e.pointsChoice?.teams&&<details><summary>查看固定搭档</summary><div className="points-fixed-teams">{e.pointsChoice.teams.map((team,i)=><p key={i}>第 {i+1} 队 · {team.map(name).join(' / ')}</p>)}</div><p className="hint">两人均在参加时段内才安排上场；人数为奇数或搭档未到场时需要轮休。</p></details>}

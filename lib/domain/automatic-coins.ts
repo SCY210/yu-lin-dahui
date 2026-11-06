@@ -26,7 +26,7 @@ export function activateAutomaticCoins(s:State,now:number){
  return true;
 }
 
-function total(values:number[]){const n=values.reduce((sum,value)=>sum+value,0);if(!Number.isSafeInteger(n))fail('羽币奖励账本异常，请联系群主');return n}
+function total(values:number[]){const n=values.reduce((sum,value)=>sum+value,0);if(!Number.isSafeInteger(n))fail('羽币奖励账本异常，请联系宗主');return n}
 function desiredTotal(s:State,playerId:string){return total((s.treasureRewardClaims??[]).filter(r=>r.playerId===playerId).map(r=>r.amount))}
 function creditedTotal(s:State,playerId:string){return total(s.treasureLedger.filter(r=>r.playerId===playerId&&automaticKinds.has(r.kind)).map(r=>r.delta))}
 /** Outstanding overpayment never becomes a negative spendable wallet. New automatic

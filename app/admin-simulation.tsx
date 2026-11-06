@@ -40,7 +40,7 @@ function SimulationSession({kind,accountId,back,retry}:{kind:Kind;accountId:stri
  },[accept,url]);
  useEffect(()=>{
   const control=new AbortController();lifecycle.current=control;latest.current=null;
-  void fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...scope,action:'initialize',payload:{},requestId:crypto.randomUUID()}),signal:control.signal}).then(async r=>{if(!r.ok)throw new Error('只有群主、管理员和测试员可以进入模拟活动');const next=await r.json() as SimulationView;if(!control.signal.aborted)accept(next)}).catch(e=>{if(!control.signal.aborted)setError(e instanceof Error?e.message:'模拟活动加载失败')});
+  void fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...scope,action:'initialize',payload:{},requestId:crypto.randomUUID()}),signal:control.signal}).then(async r=>{if(!r.ok)throw new Error('只有宗主、长老和试剑人可以进入模拟活动');const next=await r.json() as SimulationView;if(!control.signal.aborted)accept(next)}).catch(e=>{if(!control.signal.aborted)setError(e instanceof Error?e.message:'模拟活动加载失败')});
   const timer=setInterval(()=>{if(!running.current&&!document.hidden)void read(control.signal).catch(e=>{if(!control.signal.aborted)setError(e instanceof Error?e.message:'模拟记录暂时未同步')})},3000);
   return()=>{control.abort();clearInterval(timer)};
  // eslint-disable-next-line react-hooks/exhaustive-deps -- scope follows kind, which remounts the session
@@ -54,9 +54,9 @@ function SimulationSession({kind,accountId,back,retry}:{kind:Kind;accountId:stri
   }catch(e){if(!lifecycle.current?.signal.aborted){const message=e instanceof Error?e.message:'模拟操作未保存';setError(message);showError(message)}throw e}finally{running.current=false;if(!lifecycle.current?.signal.aborted)setBusy(false)}
  };
  if(!view)return <section className="card simulation-loading"><button type="button" className="ghost" onClick={back}>返回活动</button><h1>模拟活动</h1><p role="status">{error||'正在读取模拟记录…'}</p>{error&&<button type="button" className="secondary" onClick={retry}>重试加载</button>}</section>;
- const data=view.data,e=data.events[0],ctx:SchedulingContext&{action:typeof action}={data,action,admin:true,busy,name:id=>data.players.find(p=>p.id===id)?.name??id,open:(title,action,values,fields,convert,description)=>setForm({title,action,values,fields,convert,description:description??'仅保存到授权成员专用模拟空间，不修改真实活动。'}),send:(name,payload)=>void action(name,payload).catch(()=>{}),setDanger};
+ const data=view.data,e=data.events[0],ctx:SchedulingContext&{action:typeof action}={data,action,admin:true,busy,name:id=>data.players.find(p=>p.id===id)?.name??id,open:(title,action,values,fields,convert,description)=>setForm({title,action,values,fields,convert,description:description??'仅保存到授权道友专用模拟空间，不修改真实活动。'}),send:(name,payload)=>void action(name,payload).catch(()=>{}),setDanger};
  if(kind==='competition')return <CompetitionBody view={view as CompetitionSimulationView} ctx={ctx} busy={busy} error={error} back={back} form={form} setForm={setForm} danger={danger} setDanger={setDanger} action={action}/>;
- return <div className="admin-simulation"><button type="button" className="ghost" onClick={back}>返回真实活动</button><section className="card simulation-heading"><span className="badge">授权成员专用 · 模拟数据</span><h1>{e.title}</h1><p>{data.players.length} 位真实球友已加入模拟接龙，使用姓名、头像、性别与修为快照。模拟记录单独保存并在管理员之间同步；仅获授权的测试员和管理员可访问，不进入真实榜单、费用或通知。</p><div className="actions">{!e.pointsSession?.startedAt&&<button type="button" className="primary" disabled={busy} onClick={()=>ctx.open('运行模拟','pointsStart',{eventId:e.id,expectedMode:schedulingMode(data,e),expectedPendingIds:pendingSchedulingIds(data,e.id)},[],undefined,'仅在管理员模拟空间运行当前排场，真实活动按预定时间自动开始。')}>运行模拟</button>}<button type="button" className="secondary" disabled={busy} onClick={()=>void action('preplan',{}).catch(()=>{})}>一键预排90分钟</button><button type="button" className="ghost" disabled={busy} onClick={()=>setForm(resetForm(view))}>重置模拟活动</button></div><p className="hint">可切换三种排场方式。重置时可以改人数、场地数和单双打，并刷新真实球友资料；正式球友不够时按现有人数建活动。录分后检查场下球友是否上场。</p></section>
+ return <div className="admin-simulation"><button type="button" className="ghost" onClick={back}>返回真实活动</button><section className="card simulation-heading"><span className="badge">授权道友专用 · 模拟数据</span><h1>{e.title}</h1><p>{data.players.length} 位真实球友已加入模拟接龙，使用姓名、头像、性别与修为快照。模拟记录单独保存并在长老之间同步；仅获授权的试剑人和长老可访问，不进入真实榜单、费用或通知。</p><div className="actions">{!e.pointsSession?.startedAt&&<button type="button" className="primary" disabled={busy} onClick={()=>ctx.open('运行模拟','pointsStart',{eventId:e.id,expectedMode:schedulingMode(data,e),expectedPendingIds:pendingSchedulingIds(data,e.id)},[],undefined,'仅在长老模拟空间运行当前排场，真实活动按预定时间自动开始。')}>运行模拟</button>}<button type="button" className="secondary" disabled={busy} onClick={()=>void action('preplan',{}).catch(()=>{})}>一键预排90分钟</button><button type="button" className="ghost" disabled={busy} onClick={()=>setForm(resetForm(view))}>重置模拟活动</button></div><p className="hint">可切换三种排场方式。重置时可以改人数、场地数和单双打，并刷新真实球友资料；正式球友不够时按现有人数建活动。录分后检查场下球友是否上场。</p></section>
   {error&&<p className="connection-note" role="alert">{error}</p>}
   <Disclosure label={'已接龙的真实球友 · '+data.players.length+'人'}><div className="simulation-roster">{data.registrations.map(r=><span key={r.id}>{data.players.find(p=>p.id===r.playerId)?.name??r.playerId} · 模拟接龙</span>)}</div></Disclosure>
   <NoShowHold e={e} ctx={ctx}/><EventScheduling e={e} ctx={ctx}/>
@@ -73,7 +73,7 @@ function resetForm(view:SimulationView):Form{
   convert:v=>({...v,players:Number(v.players),courts:Number(v.courts)}),description:`清除模拟测试记录，从当前启用的正式球友中按顺序取所选人数（目前最多 ${most} 位），刷新资料并按所选场地数建立模拟活动。真实活动不受影响。`};
 }
 
-const steps=['用正式的「创建比赛」表单建比赛：项目、时间、球馆、场地','球友报名（可一键全员报名），到点后可「快进到开赛」','群主或管理员设置赛制、小组赛和淘汰赛计分、报名费','选人（双打可按修为自动配对）并抽签','系统自动排场；指定裁判后用「裁判记分」逐分记分，或一键录完','小组赛结束自动生成淘汰赛；决出冠军后确认报名费、查看成绩并归档'];
+const steps=['用正式的「创建比赛」表单建比赛：项目、时间、球馆、场地','球友报名（可一键全员报名），到点后可「快进到开赛」','宗主或长老设置赛制、小组赛和淘汰赛计分、报名费','选人（双打可按修为自动配对）并抽签','系统自动排场；指定裁判后用「裁判记分」逐分记分，或一键录完','小组赛结束自动生成淘汰赛；决出冠军后确认报名费、查看成绩并归档'];
 type Action=(name:string,payload:Record<string,unknown>)=>Promise<unknown>;
 /** The competition sandbox runs the real flow on sandbox data: the real create form, member signups, and the real
  * activity page with its signup, competition and fee tabs. Shortcuts sign everyone up, move the competition to now,
@@ -89,7 +89,7 @@ function CompetitionBody({view,ctx,busy,error,back,form,setForm,danger,setDanger
  const regs=(ev:{id:string})=>data.registrations.filter(r=>r.eventId===ev.id&&r.status!=='cancelled').sort((a,b)=>a.sequence-b.sequence);
  const eventCtx={...ctx,live,regs,refresh:async()=>{},openEvent:()=>setTab('overview'),openProfile:()=>{}};
  return <div className="admin-simulation"><button type="button" className="ghost" onClick={back}>返回选择</button>
-  <section className="card simulation-heading"><span className="badge">授权成员专用 · 模拟数据</span><h1>{e?.title??'模拟比赛'}</h1><p>{data.players.length} 位真实球友的姓名、头像、性别与修为快照。流程与正式比赛一致，记录单独保存，不进入真实榜单、费用或通知。</p>
+  <section className="card simulation-heading"><span className="badge">授权道友专用 · 模拟数据</span><h1>{e?.title??'模拟比赛'}</h1><p>{data.players.length} 位真实球友的姓名、头像、性别与修为快照。流程与正式比赛一致，记录单独保存，不进入真实榜单、费用或通知。</p>
    <ol className="simulation-steps">{steps.map(step=><li key={step}>{step}</li>)}</ol>
    <div className="actions">{!e&&<button type="button" className="primary" disabled={busy} onClick={create}>创建比赛</button>}
     {e&&count<data.players.length&&<button type="button" className="secondary" disabled={busy} onClick={()=>run('signupAll')}>全员报名</button>}

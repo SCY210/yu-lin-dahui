@@ -19,11 +19,11 @@ export const treasureStreakRewardInput=z.object({coins:z.number().int().min(0).m
 const schemas={treasureProduct:treasureProductInput,treasureGrant:treasureGrantInput,treasureRedeem:treasureRedeemInput,treasureOrder:treasureOrderInput,treasureStreakReward:treasureStreakRewardInput};
 const actions=new Set(Object.keys(schemas));
 export function isTreasureAction(action:string){return actions.has(action)}
-function owner(s:State,a:Account){if(!isClubOwner(s,a))fail('403: 只有群主可以管理羽林宝阁')}
+function owner(s:State,a:Account){if(!isClubOwner(s,a))fail('403: 只有宗主可以管理羽林宝阁')}
 function member(s:State,playerId:string){const p=s.players.find(p=>p.id===playerId);if(!p?.enabled||isGuest(s,playerId)||!s.accounts.some(a=>a.playerId===playerId))fail('请选择已启用的正式球友');return p}
 function addLedger(s:State,row:Omit<TreasureLedger,'id'|'balance'|'sequence'>){return appendTreasureLedger(s,row)}
 function audit(s:State,a:Account,action:string,reason:string,now:number,changes:unknown){s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason,changes})}
-function nextProductVersion(version:number|undefined){const next=(version??0)+1;if(!Number.isSafeInteger(next)||next<1)fail('商品版本异常，请联系群主');return next}
+function nextProductVersion(version:number|undefined){const next=(version??0)+1;if(!Number.isSafeInteger(next)||next<1)fail('商品版本异常，请联系宗主');return next}
 
 export function treasureProduct(s:State,a:Account,input:unknown,now:number){
  owner(s,a);const c=treasureProductInput.parse(input),existing=c.id?s.treasureProducts.find(p=>p.id===c.id):undefined;
@@ -72,7 +72,7 @@ export function treasureOrder(s:State,a:Account,input:unknown,now:number){
 }
 /** The owner and administrators set the attendance-streak reward. Runs already awarded keep their amount. */
 export function treasureStreakReward(s:State,a:Account,input:unknown,now:number){
- if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有群主和管理员可以调整连续到场奖励');
+ if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有宗主和长老可以调整连续到场奖励');
  const c=treasureStreakRewardInput.parse(input),before=attendanceStreakCoins(s);
  s.settings.attendanceStreakCoins=c.coins;
  audit(s,a,'treasureStreakReward',`连续 ${attendanceStreakLength} 次积分赛到场奖励：${before} → ${c.coins} 羽币`,now,{before,coins:c.coins});

@@ -50,7 +50,7 @@ try{
   assert.equal((await auth({action:'register',name:'禁止自助注册',username,password,invite,requestId:randomUUID()})).status,400);
  });
  adminBefore=(await get('/api/club','',adminHeaders)).data;assert.equal(adminBefore.me.id,adminId);assert.equal(adminBefore.me.role,'admin');assert.ok(Array.isArray(adminBefore.loginAccounts));
- await test('管理员创建账号验证用户名和强密码，无需邮箱',async()=>{
+ await test('长老创建账号验证用户名和强密码，无需邮箱',async()=>{
   for(const invalid of ['x','has space','has/slash','email@example.invalid','x'.repeat(33)])assert.equal((await adminAuth(create(invalid))).status,400);
   assert.equal((await adminAuth(create(username,{password:'short'}))).status,400);
   const r=await adminAuth(create('JADE'+suffix,{role:'admin'}));assert.equal(r.status,200);assert.equal(r.res.headers.getSetCookie().length,0,'Creating a member must not switch the admin session');
@@ -65,7 +65,7 @@ try{
   const info=await get('/api/auth',cookie);assert.equal(info.data.username,username);assert.equal(info.data.method,'password');assert.equal(info.data.passwordEnabled,true);assert.equal('email' in info.data,false);assert.equal(info.res.headers.get('cache-control'),'no-store');
   const s=(await get('/api/club',cookie)).data;assert.equal(s.me.id,accountId);assert.equal(s.me.role,'member');assert.equal(s.me.playerId,playerId);assert.deepEqual(s.loginAccounts,[]);
  });
- await test('成员不能开户、重置密码、设置管理员角色或导出群组',async()=>{
+ await test('道友不能开户、重置密码、设置长老角色或导出群组',async()=>{
   assert.equal((await auth(create('forbidden'+suffix),cookie)).status,403);
   assert.equal((await auth({action:'resetPassword',accountId,password:replacement,requestId:randomUUID()},cookie)).status,403);
   assert.equal((await auth({action:'resetPassword',accountId,password:replacement,requestId:randomUUID()})).status,401);
@@ -88,13 +88,13 @@ try{
   const signedOut=cookiePair(out.res,'yulin_signed_out');assert.equal((await get('/api/club',signedOut,adminHeaders)).status,401);
   const r=await auth({action:'login',username,password},signedOut);assert.equal(r.status,200);cookie=cookiePair(r.res);assert.equal((await get('/api/club',cookie)).data.me.id,accountId);
  });
- await test('用户名归一后的并发重复开户只产生一个成员及档案',async()=>{
+ await test('用户名归一后的并发重复开户只产生一个道友及档案',async()=>{
   const key='race'+suffix,race=await Promise.all([adminAuth(create(key)),adminAuth(create('RACE'+suffix.toUpperCase()))]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
   const s=(await get('/api/club','',adminHeaders)).data,entries=s.loginAccounts.filter(a=>a.username===key);assert.equal(entries.length,1);
   const a=s.accounts.find(a=>a.id===entries[0].accountId);assert.equal(a.role,'member');assert.equal(s.players.filter(p=>p.id===a.playerId).length,1);
   assert.equal(localSQL(`SELECT count(*) AS total FROM password_credentials WHERE username='${key}'`)[0].results[0].total,1);
  });
- await test('管理员开户requestId幂等，不重复产生账号或登录凭据',async()=>{
+ await test('长老开户requestId幂等，不重复产生账号或登录凭据',async()=>{
   const key='idem'+suffix,input=create(key);assert.equal((await adminAuth(input)).status,200);assert.equal((await adminAuth(input)).status,200);
   const s=(await get('/api/club','',adminHeaders)).data;assert.equal(s.loginAccounts.filter(a=>a.username===key).length,1);
   assert.equal(localSQL(`SELECT count(*) AS total FROM password_credentials WHERE username='${key}'`)[0].results[0].total,1);
@@ -110,7 +110,7 @@ try{
   const login=await auth({action:'login',username:key,password});assert.equal(login.status,200);const own=(await get('/api/club',cookiePair(login.res))).data;assert.equal(own.me.playerId,p.id);assert.equal(own.players.find(x=>x.id===p.id).ownerId,own.me.id);
   assert.equal((await adminAuth(create('claimtwice'+suffix,{name:p.name,playerId:p.id}))).status,409,'Already linked profile cannot be claimed twice');
  });
- await test('既有ChatGPT成员绑定用户名密码保留同一账号、角色和球友档案',async()=>{
+ await test('既有ChatGPT道友绑定用户名密码保留同一账号、角色和球友档案',async()=>{
   const id='managed-legacy-'+suffix,h=legacyHeaders(id);assert.equal((await clubCommand('join',{name:'旧身份迁移虚构球友',invite},h)).status,200);
   const before=(await get('/api/club','',h)).data,key='legacy'+suffix;
   const r=await auth({action:'bind',username:key,password},'',h);assert.equal(r.status,200);
@@ -119,14 +119,14 @@ try{
   assert.equal((await auth({action:'bind',username:key,password},'',h)).status,409);
   const login=await auth({action:'login',username:key,password});assert.equal(login.status,200);assert.equal((await get('/api/club',cookiePair(login.res))).data.me.id,id);
  });
- await test('管理员给既有旧身份账号设置用户名密码不会重复开户',async()=>{
-  const id='managed-provision-'+suffix,h=legacyHeaders(id);assert.equal((await clubCommand('join',{name:'管理员开通旧身份虚构球友',invite},h)).status,200);
+ await test('长老给既有旧身份账号设置用户名密码不会重复开户',async()=>{
+  const id='managed-provision-'+suffix,h=legacyHeaders(id);assert.equal((await clubCommand('join',{name:'长老开通旧身份虚构球友',invite},h)).status,200);
   const before=(await get('/api/club','',adminHeaders)).data,a=before.accounts.find(a=>a.id===id),key='provision'+suffix;
-  assert.equal((await adminAuth(create(key,{name:'管理员开通旧身份虚构球友',accountId:id}))).status,200);
+  assert.equal((await adminAuth(create(key,{name:'长老开通旧身份虚构球友',accountId:id}))).status,200);
   const s=(await get('/api/club','',adminHeaders)).data;assert.equal(s.accounts.length,before.accounts.length);assert.deepEqual(s.accounts.find(x=>x.id===id),a);assert.equal(s.players.length,before.players.length);
   const login=await auth({action:'login',username:key,password});assert.equal(login.status,200);assert.equal((await get('/api/club',cookiePair(login.res))).data.me.id,id);
  });
- await test('管理员重置密码撤销全部旧会话，保留用户名、角色、档案和比赛记录',async()=>{
+ await test('长老重置密码撤销全部旧会话，保留用户名、角色、档案和比赛记录',async()=>{
   const second=await auth({action:'login',username,password});assert.equal(second.status,200);const secondCookie=cookiePair(second.res),before=(await get('/api/club','',adminHeaders)).data;
   const r=await adminAuth({action:'resetPassword',accountId,password:replacement,requestId:randomUUID()});assert.equal(r.status,200);
   assert.equal((await get('/api/club',cookie)).status,401);assert.equal((await get('/api/club',secondCookie)).status,401);assert.equal((await auth({action:'login',username,password})).status,401);
@@ -138,12 +138,12 @@ try{
   assert.equal((await adminAuth({action:'resetPassword',accountId,password:'short',requestId:randomUUID()})).status,400);
   const missing=await adminAuth({action:'resetPassword',accountId:'missing-'+suffix,password:replacement,requestId:randomUUID()});assert.ok([400,404].includes(missing.status),'Unknown account must not be created by reset');
  });
- await test('管理员的旧邮箱形式登录键仍可使用，重置不改变管理员身份',async()=>{
+ await test('长老的旧邮箱形式登录键仍可使用，重置不改变长老身份',async()=>{
   const s=(await get('/api/club','',adminHeaders)).data,entry=s.loginAccounts.find(a=>a.accountId===adminId);assert.ok(entry,'Expected migrated old admin credential');
   const fixturePassword=randomBytes(24).toString('base64url');assert.equal((await adminAuth({action:'resetPassword',accountId:adminId,password:fixturePassword,requestId:randomUUID()})).status,200);
   const login=await auth({action:'login',username:entry.username,password:fixturePassword});assert.equal(login.status,200);const current=(await get('/api/club',cookiePair(login.res))).data;assert.equal(current.me.id,adminId);assert.equal(current.me.role,'admin');assert.equal(current.me.playerId,adminBefore.me.playerId);assert.equal(current.auth.method,'password');assert.deepEqual(current.matches,s.matches);
  });
- await test('旧密码登录与管理员重置并发时，不会产生可用的旧密码会话',async()=>{
+ await test('旧密码登录与长老重置并发时，不会产生可用的旧密码会话',async()=>{
   const key='resetrace'+suffix,created=await adminAuth(create(key));assert.equal(created.status,200);
   const target=created.data.accountId;assert.ok(/^account:[a-f0-9-]{36}$/.test(target),'Unexpected fictional race account ID');
   const snapshot=raceSQL(`SELECT salt,hash FROM password_credentials WHERE id='${target}'`)[0].results[0];
@@ -192,7 +192,7 @@ finally{
  mkdirSync('.test-output',{recursive:true});const passed=results.filter(r=>r.status==='passed').length,failed=results.filter(r=>r.status==='failed').length;
  const report={at:new Date().toISOString(),origin,fictionalClientIP:fixtureIP,testFilter,scope:'Local fictional admin-managed username/password fixtures only; no database resets, hosted requests, or secret logging',passed,failed,transportRetries,loginResetRace,results};
  writeFileSync('.test-output/managed-accounts-results.json',JSON.stringify(report,null,2));
- writeFileSync('.test-output/MANAGED_ACCOUNTS_RESULTS.md',`# 管理员开通账号集成验收\n\n执行时间：${report.at}\n\n环境：${origin}，既有虚构本地数据；未重置数据库或访问线上服务。密码和会话令牌未输出或存储。\n\n通过 ${passed} 项，失败 ${failed} 项。\n\n${results.map(r=>`- ${r.status==='passed'?'通过':'失败'}：${r.name}${r.error?'；'+r.error:''}`).join('\n')}\n\n传输：node:http独立连接；仅对明确Worker重启的503重试一次，本次 ${transportRetries.length} 次。Loopback专用RFC5737客户端IP ${fixtureIP} 隔离本次测试限流桶，未清空既有限流。\n\n限制：HTTPS Secure Cookie及二进制照片上传未在本HTTP认证测试中验证。\n`);
+ writeFileSync('.test-output/MANAGED_ACCOUNTS_RESULTS.md',`# 长老开通账号集成验收\n\n执行时间：${report.at}\n\n环境：${origin}，既有虚构本地数据；未重置数据库或访问线上服务。密码和会话令牌未输出或存储。\n\n通过 ${passed} 项，失败 ${failed} 项。\n\n${results.map(r=>`- ${r.status==='passed'?'通过':'失败'}：${r.name}${r.error?'；'+r.error:''}`).join('\n')}\n\n传输：node:http独立连接；仅对明确Worker重启的503重试一次，本次 ${transportRetries.length} 次。Loopback专用RFC5737客户端IP ${fixtureIP} 隔离本次测试限流桶，未清空既有限流。\n\n限制：HTTPS Secure Cookie及二进制照片上传未在本HTTP认证测试中验证。\n`);
  appendFileSync('.test-output/MANAGED_ACCOUNTS_RESULTS.md',`\n运行模式：${testFilter?'仅选定回归：'+testFilter:'完整脚本'}。未选定的测试未执行或计入本次通过数。\n${loginResetRace?`\n并发证据：${loginResetRace.iterations} 轮，每轮 ${loginResetRace.parallelLoginsPerReset} 次旧密码登录与重置并行；${loginResetRace.oldPasswordCookiesIssued} 个已签发旧密码会话在重置后全部失效。确定性过期凭据条件插入返回 ${loginResetRace.staleCredentialInsertReturnedRows} 行，数据库会话数为0，伪造该会话读取群组返回401。\n`:''}`);
  console.log(JSON.stringify({passed,failed,retries:transportRetries.length}));
 }

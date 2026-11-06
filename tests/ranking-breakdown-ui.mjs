@@ -35,7 +35,7 @@ try{
  const panel=ui.root.findByProps({className:'rv-breakdown'});
  assert.equal(panel.props.id,toggle('Fictional Ann').props['aria-controls'],'the toggle controls its panel');
  const lines=panel.findAllByType('dt').map((dt,i)=>[text(dt),text(panel.findAllByType('dd')[i])]);
- assert.deepEqual(lines,[['胜局 15 × 3','+45'],['负局 6 × 1','-6'],['强弱加成','+3'],['连胜加分','+4'],['MVP 加分','+5'],['迟到扣分','-1'],['群主调整','-8']],'non-zero sources only, signed');
+ assert.deepEqual(lines,[['胜局 15 × 3','+45'],['负局 6 × 1','-6'],['强弱加成','+3'],['连胜加分','+4'],['MVP 加分','+5'],['迟到扣分','-1'],['宗主调整','-8']],'non-zero sources only, signed');
  assert.equal(lines.reduce((n,[,v])=>n+Number(v),0),42);
  assert.match(text(panel.findByProps({className:'rv-breakdown-total'})),/^合计42 分$/);
  assert.match(text(panel),/含进行中 2 局（\+5），活动结束后确认。/);

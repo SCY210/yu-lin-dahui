@@ -28,7 +28,7 @@ function swapLivePlayers(s:State,a:Account,p:{eventId:string;p1:string;p2:string
  const e=s.events.find(e=>e.id===p.eventId&&e.deletedAt===undefined)??fail('活动不存在或已删除');
  if(!e.livePlay?.enabled)fail('只能在实时排场中交换当前上场人员');
  if(!liveActivityAvailable(e,now)||now<e.start)fail('活动已结束或尚未开始，不能调整当前上场人员');
- if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单局交换成员');
+ if(e.pointsChoice?.selectedMode==='fixed')fail('固定搭档不能单局交换道友');
  const expected=[...p.expectedLineup].map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((x,y)=>x.id.localeCompare(y.id));
  if(JSON.stringify(expected)!==JSON.stringify(liveLineupSnapshot(s,e.id)))fail('409: 上场人员已更新，请重新选择要交换的球友');
  if(p.p1===p.p2)fail('请选择两位不同的球友');

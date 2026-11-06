@@ -30,7 +30,7 @@ test('创建者可取消单场，正式及候补接龙撤销，其他场地及�
  const audit=s.audits.at(-1)!,changes=audit.changes as {booking:unknown;registrations:unknown[]};assert.equal(audit.action,'bookingCancel');assert.deepEqual(changes.booking,original);assert.equal(changes.registrations.length,2);
 });
 
-test('权限按服务端场地归属判断，普通成员和测试员不能伪造其他活动权限',async()=>{
+test('权限按服务端场地归属判断，普通道友和试剑人不能伪造其他活动权限',async()=>{
  const {s,e,cancel}=fixture();s.events.push({...e,id:'owned',creatorId:'outsider'});const before=structuredClone(s);
  const forgedOwner={...s.accounts[2],role:'admin' as const,isOwner:true};
  for(const actor of [s.accounts[2],{...s.accounts[2],simulationTester:true},{...s.accounts[2],role:'admin' as const},forgedOwner]){
@@ -39,7 +39,7 @@ test('权限按服务端场地归属判断，普通成员和测试员不能伪�
  await cancel('A',s.accounts[0]);assert.equal(s.bookings.length,1);
 });
 
-test('取消场地只看真实发起人或存储群主身份，不因管理员角色授予例外',async()=>{
+test('取消场地只看真实发起人或存储宗主身份，不因长老角色授予例外',async()=>{
  const {s,cancel}=fixture();await cancel('A',{...s.accounts[0],role:'member'});assert.equal(s.bookings.length,1);
  const other=fixture();other.s.events[0].creatorId=undefined;await other.cancel('A',other.s.accounts[0]);assert.equal(other.s.bookings.length,1);
 });

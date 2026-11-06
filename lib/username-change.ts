@@ -34,7 +34,7 @@ export async function loginAccountMetadata(accountId:string){
 export async function changeLoginUsername(user:AppUser,input:ChangeUsernameInput,req:Request):Promise<UsernameChangeResult>{
  const initial=await load(),actor=initial.accounts.find(a=>a.id===user.userId)??reject('账号不可用',403);
  const targetId=input.accountId??actor.id,owner=isClubOwner(initial,actor);
- if(targetId!==actor.id&&!owner)reject('只有群主可以修改其他人的登录账号',403);
+ if(targetId!==actor.id&&!owner)reject('只有宗主可以修改其他人的登录账号',403);
  if(!initial.accounts.some(a=>a.id===targetId))reject('目标账号不存在',404);
  const actorCredential=await snapshot(actor.id);
  if(actorCredential){
@@ -50,7 +50,7 @@ export async function changeLoginUsername(user:AppUser,input:ChangeUsernameInput
   const freshUser=await getAppUser();
   if(!freshUser||freshUser.userId!==actor.id||freshUser.method!==user.method)reject('登录已失效，请重新登录',401);
   const state=await load(),freshActor=state.accounts.find(a=>a.id===actor.id)??reject('账号不可用',403),freshOwner=isClubOwner(state,freshActor);
-  if(targetId!==actor.id&&!freshOwner)reject('群主权限已变更',403);
+  if(targetId!==actor.id&&!freshOwner)reject('宗主权限已变更',403);
   if(freshOwner!==owner)reject('账号权限已更新，请刷新重试',409);
   if(!state.accounts.some(a=>a.id===targetId))reject('目标账号不存在',404);
   if(!unchanged(actorCredential,await snapshot(actor.id)))reject('本人登录凭据已更新，请重新验证',401);
@@ -69,7 +69,7 @@ export async function changeLoginUsername(user:AppUser,input:ChangeUsernameInput
   // An older name differing only in simplified and traditional form counts as taken (docs/ACCOUNT_LOGIN.md).
   if(await usernameTaken(input.newUsername,targetId))reject('这个登录账号已被使用',409);
   const previous=structuredClone(state),now=Date.now(),changedAt=freshOwner?targetCredential.usernameChangedAt:now;
-  state.audits.push({id:auditId,at:now,actor:actor.id,action:'changeLoginUsername',reason:freshOwner?'群主修改登录账号，保留成员自主修改次数':'本人使用一次自主修改登录账号机会',changes:{accountId:targetId,previousUsername:targetCredential.username,username:input.newUsername,selfChangeConsumed:!freshOwner,requestId:input.requestId}});
+  state.audits.push({id:auditId,at:now,actor:actor.id,action:'changeLoginUsername',reason:freshOwner?'宗主修改登录账号，保留道友自主修改次数':'本人使用一次自主修改登录账号机会',changes:{accountId:targetId,previousUsername:targetCredential.username,username:input.newUsername,selfChangeConsumed:!freshOwner,requestId:input.requestId}});
   const assignments=freshOwner?'username=?':'username=?,username_changed_at=?';
   const values:unknown[]=freshOwner?[input.newUsername]:[input.newUsername,now];
   const conditions=['id=?','username=?','salt=?','hash=?'];

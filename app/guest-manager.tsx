@@ -26,7 +26,7 @@ export default function GuestManager({ctx}:{ctx:Ctx}){
  const chosen=listed.filter(f=>selected.includes(f.key));
  const toggle=(key:string)=>setSelected(list=>list.includes(key)?list.filter(k=>k!==key):[...list,key]);
  const merge=()=>{
-  const hosts=[...new Map(chosen.filter(f=>f.latest.guestHostId).map(f=>[f.latest.guestHostId!,f.latest.guestHost??'成员'])).entries()];
+  const hosts=[...new Map(chosen.filter(f=>f.latest.guestHostId).map(f=>[f.latest.guestHostId!,f.latest.guestHost??'道友'])).entries()];
   open('合并临时来宾','guestFriendMerge',{playerIds:chosen.map(f=>f.latest.id),name:chosen[0].latest.name,hostPlayerId:hosts[0]?.[0]??'',reason:''},
    [text('name','合并后的昵称'),choice('hostPlayerId','以后由谁负责（带来人）',hosts),why],undefined,
    '这几条以后在名单里只算一位朋友，昵称和带来人统一成所选的。历史接龙、比赛和已确认的费用都保留；之后的新活动和还没确认的费用记在所选带来人名下。');

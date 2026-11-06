@@ -27,14 +27,14 @@ async function voting(){
  return {...f,a:f.e.shuttlePlan!.options[0].id,b:f.e.shuttlePlan!.options[1].id};
 }
 
-test('旧活动无用球字段仍可读取，创建者和管理员可添加并明确选用球',async()=>{
+test('旧活动无用球字段仍可读取，创建者和长老可添加并明确选用球',async()=>{
  const {s,e,act}=fixture();assert.equal(e.shuttlePlan,undefined);
  await act('creator','shuttleOption',{name:' 测试型号 ',note:'速度77'});assert.equal(e.shuttlePlan!.options[0].name,'测试型号');assert.equal(e.shuttlePlan!.votingOpen,false);
  await act('admin','shuttleConfirm',{optionId:e.shuttlePlan!.options[0].id});assert.equal(e.shuttlePlan!.selectedId,e.shuttlePlan!.options[0].id);
  const restored=JSON.parse(JSON.stringify(s.events[0])) as Event;assert.deepEqual(restored.shuttlePlan,e.shuttlePlan);
 });
 
-for(const action of ['shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting'])test(`普通接龙成员不能绕过创建者管理权限：${action}`,async()=>{
+for(const action of ['shuttleOption','shuttleRemove','shuttleConfirm','shuttleVoting'])test(`普通接龙道友不能绕过创建者管理权限：${action}`,async()=>{
  const {s,act,a}=await voting(),before=structuredClone(s);
  await assert.rejects(()=>act('formal',action,{name:'伪造',optionId:a,open:true}),/403/);assert.deepEqual(s,before);
 });
@@ -46,7 +46,7 @@ test('仅正式接龙可以投票，每账号一票，改投与撤回改变真�
  await vote('formal',null);assert.deepEqual(shuttleVoteCounts(s,e),{[a]:1,[b]:0});
 });
 
-for(const who of ['creator','admin','waitlist','cancelled','disabled','outsider','foreign'])test(`未接龙或无效成员不能投票：${who}`,async()=>{
+for(const who of ['creator','admin','waitlist','cancelled','disabled','outsider','foreign'])test(`未接龙或无效道友不能投票：${who}`,async()=>{
  const {s,e,account,vote,a}=await voting(),before=structuredClone(s);
  assert.equal(canVoteForShuttle(s,e,account(who),now),false);await assert.rejects(()=>vote(who,a),/403/);assert.deepEqual(s,before);
 });
@@ -66,7 +66,7 @@ test('最高票不自动选用；创建者可选另一款，确认后关闭投�
  await act('creator','shuttleVoting',{open:true});await vote('formal',b);assert.equal(e.shuttlePlan!.selectedId,b);
 });
 
-test('取消报名、停用成员不再计票，代报朋友不带来额外账号票数',async()=>{
+test('取消报名、停用道友不再计票，代报朋友不带来额外账号票数',async()=>{
  const {s,e,vote,a,b,act}=await voting();await vote('formal',a);await vote('second',b);
  s.registrations.find(r=>r.playerId==='formal-player')!.status='cancelled';s.players.find(p=>p.id==='second-player')!.enabled=false;
  assert.deepEqual(shuttleVoteCounts(s,e),{[a]:0,[b]:0});await assert.rejects(()=>vote('formal',b),/403/);
