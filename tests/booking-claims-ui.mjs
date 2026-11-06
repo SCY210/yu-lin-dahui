@@ -6,11 +6,18 @@ const b={id:'court',eventId:'event',name:'1号场',venue:'虚构馆',start,end:s
 const data={me:{id:'member',playerId:'p1',role:'member'},players:[{id:'p0',name:'组织者',enabled:true},{id:'p1',name:'实际约场者',enabled:true}],settlements:[]},ctx={data,busy:false,name:id=>data.players.find(p=>p.id===id)?.name,open:(...args)=>opened.push(args)};
 const mount=async()=>{if(ui)await act(()=>ui.unmount());await act(()=>{ui=renderer.create(React.createElement(BookingClaims,{b,e,ctx}))});const details=ui.root.findAllByType('details')[0];if(details)await act(()=>details.props.onToggle({currentTarget:{open:true}}))};
 try{
- await mount();assert.ok(text(ui.toJSON()).includes('当前登记'));assert.ok(!text(ui.toJSON()).includes('纠正约场人'));await act(()=>ui.root.findAllByType('button').find(x=>text(x)==='认领我约的时间').props.onClick());
+ await mount();assert.ok(text(ui.toJSON()).includes('组织者登记'));assert.equal(ui.root.findAllByType('details').length,0,'the timeline is shown open, not folded');
+ const segments=()=>ui.root.findAll(n=>n.type==='li'&&/^is-/.test(n.props.className??'')&&n.props.style).map(n=>[n.props.className,n.props.style.flexGrow]);
+ assert.deepEqual(segments(),[['is-registered',6*hour]]);assert.ok(!text(ui.toJSON()).includes('纠正约场人'));await act(()=>ui.root.findAllByType('button').find(x=>text(x)==='认领我约的时间').props.onClick());
  const [title,action,values,fields,convert,description]=opened[0];assert.ok(title.includes('1号场'));assert.equal(action,'bookingClaim');assert.equal(values.playerId,'p1');assert.equal(values.correct,false);assert.ok(description.includes('场费垫付归属'));assert.deepEqual(fields.map(f=>f.type),['select','select']);assert.ok(fields.every(f=>f.options.length===12));assert.equal(convert(values).start,b.start);assert.equal(convert(values).end,b.start+2*hour);
  data.me.id='creator';await mount();assert.ok(text(ui.toJSON()).includes('纠正约场人'));await act(()=>ui.root.findAllByType('button').find(x=>text(x)==='纠正约场人').props.onClick());assert.equal(opened.at(-1)[2].correct,true);assert.ok(opened.at(-1)[3].some(f=>f.key==='playerId'));
  b.claims=[{start:b.start,end:b.start+2*hour,playerId:'p0',at:0}];const later=bookingClaimForm(b,'p1');assert.equal(later.convert(later.values).start,b.start+2*hour);
+ await mount();assert.deepEqual(segments(),[['is-claimed',2*hour],['is-registered',4*hour]]);assert.ok(text(ui.toJSON()).includes('已全部登记'));
+ // Time nobody booked is 待认领: its own colour, counted in the header, and where a new claim starts.
+ const open={...b,advancedBy:undefined,handovers:[{at:b.start+2*hour,advancedBy:'p0'},{at:b.start+4*hour}],claims:[{start:b.start+2*hour,end:b.start+4*hour,playerId:'p0',at:0}]};
+ await act(()=>ui.update(React.createElement(BookingClaims,{b:open,e,ctx})));assert.deepEqual(segments(),[['is-pending',2*hour],['is-claimed',2*hour],['is-pending',2*hour]]);assert.ok(text(ui.toJSON()).includes('还有 4 小时待认领'));
+ const fresh=bookingClaimForm(open,'p1');assert.equal(fresh.convert(fresh.values).start,b.start);
  data.settlements=[{eventId:'event',confirmed:true}];await mount();assert.ok(text(ui.toJSON()).includes('费用已确认'));assert.equal(ui.root.findAllByType('button').length,0);
  ctx.readOnly=true;await mount();assert.equal(ui.toJSON(),null);
- console.log('PASS booking claim UI: own-range form, Madrid choices, price attribution disclosure, organiser correction, claim status, confirmed fees and read-only protection');
+ console.log('PASS booking claim UI: open timeline coloured by claim state, 待认领 time, own-range form, Madrid choices, price attribution disclosure, organiser correction, claim status, confirmed fees and read-only protection');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=previous}

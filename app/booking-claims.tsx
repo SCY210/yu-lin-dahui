@@ -1,36 +1,55 @@
 'use client';
-import {bookingParts} from '../lib/domain/booking-advancers';
+import {advancerAt,bookingParts} from '../lib/domain/booking-advancers';
 import {bookingClaimVersion} from '../lib/domain/booking-claims';
 import {canManageEvent} from '../lib/domain/permissions';
 import type {Booking,Event} from '../lib/domain/types';
 import type {SchedulingContext} from './event-scheduling';
 import {choice,dt,epoch,fmt,hm,type Form} from './form-fields';
-import Disclosure from './disclosure';
 import './booking-claims.css';
 
 /** Preserve the exact booking timestamps in option values; labels always use the club's Madrid time. */
 export function bookingClaimForm(b:Booking,playerId:string,correct=false,members:string[][]=[]):Form{
  const cuts=[b.start];for(let t=b.start+1800000;t<b.end;t+=1800000)cuts.push(t);cuts.push(b.end);
  const label=(t:number)=>fmt(t,{month:'numeric',day:'numeric'})+' '+hm(t);
- const available=cuts.slice(0,-1).find(t=>!(b.claims??[]).some(c=>c.playerId!==playerId&&c.start<=t&&c.end>t))??b.start;
+ // Start at the first time still 待认领, else at the first time nobody else has claimed.
+ const open=(t:number)=>!(b.claims??[]).some(c=>c.playerId!==playerId&&c.start<=t&&c.end>t);
+ const available=cuts.slice(0,-1).find(t=>open(t)&&!advancerAt(b,t))??cuts.slice(0,-1).find(open)??b.start;
  const end=Math.min(b.end,available+2*3600000);
  return {title:correct?'纠正约场人 · '+b.name:'认领我的约场时段 · '+b.name,action:'bookingClaim',
-  description:`${b.venue??''} · ${label(b.start)}–${hm(b.end)}。请选择你实际预约并垫付的时间，认领会同步场费垫付归属，不会改变接龙和排场。${correct?'组织者可纠正已认领时段。':'别人已认领的时间不可覆盖；认领错了请联系组织者。'}`,
+  description:`${b.venue?b.venue+' · ':''}${label(b.start)}–${hm(b.end)}。请选择你实际预约并垫付的时间，认领会同步场费垫付归属，不会改变接龙和排场。${correct?'组织者可纠正已认领时段。':'别人已认领的时间不可覆盖；认领错了请联系组织者。'}`,
   values:{bookingId:b.id,start:dt(available),end:dt(end),expected:bookingClaimVersion(b),correct,playerId,reason:''},
   fields:[choice('start','我约的开始时间',cuts.slice(0,-1).map(t=>[dt(t),label(t)])),choice('end','我约的结束时间',cuts.slice(1).map(t=>[dt(t),label(t)])),...(correct?[choice('playerId','实际约场人',members)]:[])],
   convert:v=>({...v,start:epoch(v.start),end:epoch(v.end)}),
  };
 }
 
+/** 待认领: nobody has claimed the time yet. 组织者登记: the organiser named a booker who has not confirmed it. 已认领: the
+ * member who booked it claimed it (or the organiser corrected the claim). */
+type ClaimState='pending'|'registered'|'claimed';
+type Segment={start:number;end:number;playerId?:string;state:ClaimState};
+const stateLabel:Record<ClaimState,string>={pending:'待认领',registered:'组织者登记',claimed:'已认领'};
+const hoursText=(h:number)=>(Number.isInteger(h)?h:h.toFixed(1))+' 小时';
+
+/** One court's booking timeline, shown open: each segment's colour is its claim state; claiming opens a dialog. */
 export default function BookingClaims({b,e,ctx}:{b:Booking;e:Event;ctx:Pick<SchedulingContext,'data'|'busy'|'open'|'name'|'readOnly'>}){
  const {data}=ctx,manager=canManageEvent(data.me,e),me=data.players.find(p=>p.id===data.me.playerId),settled=data.settlements.some(s=>s.eventId===e.id&&s.confirmed);
  if(e.deletedAt!==undefined||e.status==='cancelled'||ctx.readOnly)return null;
  const launch=(correct=false)=>{const form=bookingClaimForm(b,data.me.playerId,correct,data.players.filter(p=>p.enabled&&!p.guest).map(p=>[p.id,p.name]));ctx.open(form.title,form.action,form.values,form.fields,form.convert,form.description)};
  const cuts=[...new Set([b.start,b.end,...bookingParts(b).map(p=>p.start),...(b.claims??[]).flatMap(c=>[c.start,c.end])])].filter(t=>t>=b.start&&t<=b.end).sort((a,b)=>a-b);
- const parts=bookingParts(b),rows=cuts.slice(0,-1).map((start,i)=>({start,end:cuts[i+1],playerId:parts.find(p=>p.start<=start&&p.end>start)?.advancedBy,claimed:(b.claims??[]).some(c=>c.start<=start&&c.end>=cuts[i+1])}));
- return <div className="booking-claims"><Disclosure label={'约场时段认领'+(b.claims?.length?' · '+b.claims.length+' 段已认领':' · 待核对')}>
-  <p className="hint">登记人可以先由组织者代填，再由实际约场的球友认领。</p>
-  <ul className="booking-claim-rows">{rows.map(row=><li key={row.start}><span>{hm(row.start)}–{hm(row.end)}</span><strong>{row.playerId?ctx.name(row.playerId):'未登记'}</strong><small>{row.claimed?'已认领':'当前登记'}</small></li>)}</ul>
+ const parts=bookingParts(b),claims=b.claims??[];
+ // Neighbouring pieces with the same booker and state are one segment of the timeline.
+ const segments:Segment[]=[];
+ for(let i=0;i+1<cuts.length;i++){
+  const from=cuts[i],to=cuts[i+1],playerId=parts.find(p=>p.start<=from&&p.end>from)?.advancedBy;
+  const state:ClaimState=!playerId?'pending':claims.some(c=>c.start<=from&&c.end>=to)?'claimed':'registered',last=segments.at(-1);
+  if(last&&last.state===state&&last.playerId===playerId)last.end=to;else segments.push({start:from,end:to,playerId,state});
+ }
+ const pendingHours=segments.filter(x=>x.state==='pending').reduce((n,x)=>n+(x.end-x.start)/3600000,0);
+ const who=(x:Segment)=>x.playerId?ctx.name(x.playerId):'待认领';
+ return <div className="booking-claims">
+  <div className="booking-claims-head"><strong>约场认领</strong><span className={pendingHours?'is-pending':'is-done'}>{pendingHours?`还有 ${hoursText(pendingHours)}待认领`:segments.every(x=>x.state==='claimed')?'已全部认领':'已全部登记'}</span></div>
+  <ol className="booking-claims-line" aria-label={b.name+' 约场认领时间线'}>{segments.map(x=><li key={x.start} className={'is-'+x.state} style={{flexGrow:x.end-x.start}} title={`${hm(x.start)}–${hm(x.end)} ${who(x)} · ${stateLabel[x.state]}`} aria-label={`${hm(x.start)}到${hm(x.end)}，${who(x)}，${stateLabel[x.state]}`}><small>{hm(x.start)}–{hm(x.end)}</small><b>{who(x)}</b></li>)}</ol>
+  <ul className="booking-claims-legend" aria-label="颜色说明">{(['pending','registered','claimed'] as const).map(state=><li key={state} className={'is-'+state}>{stateLabel[state]}</li>)}</ul>
   {settled?<p className="hint">费用已确认；如需纠正，请联系组织者从费用页调整并重新确认分摊。</p>:<div className="actions"><button type="button" className="secondary" disabled={ctx.busy||!me?.enabled||!!me.guest||e.status==='draft'&&!manager} onClick={()=>launch()}>认领我约的时间</button>{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>launch(true)}>纠正约场人</button>}</div>}
- </Disclosure></div>;
+ </div>;
 }

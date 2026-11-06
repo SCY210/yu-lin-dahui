@@ -43,11 +43,11 @@ try{
  const members=[['p1','爱丽丝'],['p2','小波']],remount=()=>mount(CourtBookingsField,{rows,members,onChange:next=>{rows=next}});
  const pick=(label,value)=>act(()=>ui.root.find(n=>n.type==='select'&&n.props['aria-label']===label).props.onChange({target:{value}}));
  const drag=(label,value)=>act(()=>ui.root.find(n=>n.type==='input'&&n.props['aria-label']===label).props.onChange({target:{value:String(value)}}));
- await remount();assert.deepEqual(button('').filter(b=>/段$|一个人约/.test(text(b.children))).map(b=>text(b.children)),['一个人约','2 段','3 段','4 段','5 段','6 段']);
+ await remount();assert.deepEqual(button('').filter(b=>/段$|不分段/.test(text(b.children))).map(b=>text(b.children)),['不分段','2 段','3 段','4 段','5 段','6 段']);
  assert.doesNotMatch(text(ui.toJSON()),/至少要拆成|最多/,'no two-hour limit or reminder');
  await act(()=>button('3 段')[0].props.onClick());
  assert.deepEqual(rows[0].handovers,[{at:'2026-11-05T14:00',advancedBy:''},{at:'2026-11-05T16:00',advancedBy:''}],'three parts of two hours');assert.equal(rows[0].advancedBy,'p1');
- await remount();assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/12:00–14:00爱丽丝14:00–16:00待选择16:00–18:00待选择/);
+ await remount();assert.match(text(ui.root.find(n=>n.props.className==='court-parts-bar').children),/12:00–14:00爱丽丝14:00–16:00待认领16:00–18:00待认领/);
  // A boundary moves by whole hours; a part may grow beyond two hours but never below one.
  await drag('场地 1 第 1 段和第 2 段的分界',1);assert.equal(rows[0].handovers[0].at,'2026-11-05T13:00');await remount();assert.match(text(ui.toJSON()),/第 2 段13:00–16:00 · 3 小时/);
  await act(()=>button('4 段')[0].props.onClick());assert.deepEqual(rows[0].handovers.map(h=>h.at),['2026-11-05T14:00','2026-11-05T15:00','2026-11-05T16:00']);
@@ -56,7 +56,7 @@ try{
  await remount();assert.match(text(ui.toJSON()),/第 2 段13:00–15:00 · 2 小时/);
  await pick('场地 1 第 2 段 约场人','p2');assert.equal(rows[0].handovers[0].advancedBy,'p2');
  // Back to one booker; shortening the court keeps only parts that fit.
- await remount();await act(()=>button('一个人约')[0].props.onClick());assert.deepEqual(rows[0].handovers,[]);
+ await remount();await act(()=>button('不分段')[0].props.onClick());assert.deepEqual(rows[0].handovers,[]);
  await remount();await act(()=>button('添加另一片场地')[0].props.onClick());assert.deepEqual(rows[1],{name:'2号场',start:'2026-11-05T12:00',end:'2026-11-05T18:00',advancedBy:'',handovers:[]});
  await remount();await act(()=>button('删除这片场地')[1].props.onClick());assert.equal(rows.length,1);
  // The activity page's court settings use the same parts editor.
