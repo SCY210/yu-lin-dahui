@@ -1,11 +1,12 @@
 import type {Account,Player,State} from './types';
 
 /** Levels a registrant can pick for a friend they bring. The level is a fixed rating: it balances teams and is the
- * strength members are rated against, but a friend never gains or loses rating or season points. */
-export const guestLevels=[[850,'刚入门'],[1000,'一般'],[1150,'较强'],[1300,'很强']] as const;
+ * strength members are rated against, but a friend never gains or loses rating or season points. Each is named after
+ * the realm its rating falls in (lib/domain/realm-rating.ts) with the plain wording kept (docs/GUEST_FRIENDS.md). */
+export const guestLevels=[[700,'炼气 · 萌新'],[850,'筑基 · 刚入门'],[1000,'金丹 · 一般'],[1150,'元婴 · 较强'],[1300,'化神 · 很强']] as const;
 export const defaultGuestLevel=1000;
 export const guestLevelValues:readonly number[]=guestLevels.map(([value])=>value);
-export function guestLevelLabel(value:number|undefined){return guestLevels.find(([v])=>v===(value??defaultGuestLevel))?.[1]??'一般'}
+export function guestLevelLabel(value:number|undefined){return guestLevels.find(([v])=>v===(value??defaultGuestLevel))?.[1]??'金丹 · 一般'}
 
 type GuestState={players:Pick<Player,'id'|'ownerId'|'guestLevels'|'guestEventId'>[];accounts?:Pick<Account,'id'|'playerId'>[]};
 /** The friend's level at a time: the last change made before it, or the default. A change only affects later games. */

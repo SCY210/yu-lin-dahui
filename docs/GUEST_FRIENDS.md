@@ -1,30 +1,40 @@
-# Friends brought by members
+# 球友带来的朋友
 
-At the club owner's request, a friend whom a member signs up has no profile and no rating or points. The friend is shown as that member's friend.
+按群主的要求，球友代报名的朋友没有球员档案，也没有修为和积分。朋友显示为这位球友的朋友。
 
-## Who is a friend (`lib/domain/guests.ts`)
+## 谁算朋友（`lib/domain/guests.ts`）
 
-A friend is any player without an account of their own whose owner is another member's account. This covers friends created through "add friend and sign up", the older standalone friend creation, and existing friends. Every member has their own account, so members are never treated as friends. A friend who later joins with their own account becomes a regular member.
+没有自己的账号、档案归属于另一位成员账号的球员都算朋友。这包括通过"添加朋友并接龙"创建的朋友、旧的单独创建朋友功能创建的朋友，以及已有的朋友。每位成员都有自己的账号，所以成员从不会被当成朋友。朋友之后用自己的账号加入，就成为普通成员。
 
-## Rating and points
+## 修为与积分
 
-- A friend has a fixed **level**, picked when they are added. The levels are 850 (just started), 1000 (average, the default), 1150 (strong) and 1300 (very strong).
-- In `replayRealmScores` the friend's score is set to their level at the time of each match. The friend is never updated, never counts games, and never receives season points.
-- Members who play with or against a friend are rated as usual, against that fixed level. Leaderboards already list members only.
-- Grouping and live rotation read `player.rating`, which equals the friend's current level after the replay. The gender rule in `docs/GENDER_BALANCE.md` uses the same value.
-- A new friend must also be given a gender (male or female, `guestGender`), which doubles pairing needs (`docs/GENDER_BALANCE.md`). The same people can change it later with the `guestGender` command; it only affects line-ups generated afterwards.
-- The registrant who brought the friend, an administrator, or the organiser of an activity the friend joined can change the level (`guestLevel`). Each change is stored with its time in `guestLevels` and applies from then on; earlier games keep the level the friend had then.
+- 朋友有一个固定的**水平**，在添加时选择。水平按修为境界命名，后面保留直白的说法，便于一眼看懂（`guestLevels`）：
 
-## Display
+  | 选项 | 分值 | 对应境界区间 |
+  |---|---|---|
+  | 炼气 · 萌新 | 700 | 炼气（849 分及以下） |
+  | 筑基 · 刚入门 | 850 | 筑基（850–999 分） |
+  | 金丹 · 一般（默认） | 1000 | 金丹（1000–1149 分） |
+  | 元婴 · 较强 | 1150 | 元婴（1150–1299 分） |
+  | 化神 · 很强 | 1300 | 化神（1300–1449 分） |
 
-The club projection marks friends with `guest`, the registrant's name in `guestHost`, and the current `guestLevel`. This is needed because members do not receive the account list. On the page:
+  "萌新"是 2026 年 11 月新增的最低一档，给第一次摸拍或几乎没打过球的朋友；已保存的朋友水平分值不变。
+- 在 `replayRealmScores` 里，朋友的分数取每场比赛时的水平。朋友从不更新修为，不计局数，也不获得赛季积分。
+- 和朋友同场或对阵的成员照常计算修为，对手分数用朋友的固定水平。排行榜本来就只列成员。
+- 分组和实时排场读取 `player.rating`，重放后它等于朋友当前的水平。`docs/GENDER_BALANCE.md` 里的性别规则用同一个值。
+- 新朋友还必须填写性别（男或女，`guestGender`），男女搭配要用到（`docs/GENDER_BALANCE.md`）。同样这些人之后可以用 `guestGender` 命令修改；只影响之后生成的阵容。
+- 带朋友来的报名人、管理员，或朋友参加的活动的组织者可以修改水平（`guestLevel`）。每次修改连同时间保存在 `guestLevels` 里，从修改时起生效；之前的比赛保留当时的水平。
 
-- Signup rows, match cards and the live bench show "<registrant>'s friend" next to the name.
-- The name does not open a profile, and friends are left out of the players list.
-- The signup tab has a "temporary friends" section that lists the activity's friends with their levels and a change button for those allowed.
+## 显示
 
-Tests: `tests/guests.test.ts`.
+群组数据给朋友标上 `guest`，在 `guestHost` 里写报名人的名字，并带上当前的 `guestLevel`。这是必需的，因为成员拿不到账号列表。页面上：
 
-New guests keep the activity scope introduced by the Add friend flow: they cannot be reused in another activity. `guestEventId` also identifies a guest when a calculation receives only a partial state without the account list. Merging upcoming activities makes a separate target-scoped guest identity and preserves the recoverable source.
+- 接龙行、比赛卡片和实时候场区在名字旁显示"<报名人>的朋友"。
+- 点名字不会打开档案，球友列表里也不列朋友。
+- 接龙页有"临时朋友"一节，列出本活动的朋友和他们的水平，有权限的人可以看到修改按钮。
 
-Profile, gender, avatar and racket writes for both legacy proxy guests and scoped guests are rejected on the server; activity level changes remain allowed for their authorised registrants/managers. No historical profiles, registrations, scores or fee records are deleted. When applying this rule to existing proxy friends, member rating history and strength-based upset bonuses are replayed against the guest's fixed historical level (1000 when no chosen level exists), so derived member totals can change. Recorded scores remain unchanged.
+测试：`tests/guests.test.ts`。
+
+新来宾保留"添加朋友"流程引入的活动范围：不能在另一场活动里复用。计算只拿到不含账号列表的部分状态时，也靠 `guestEventId` 识别来宾。合并即将开始的活动时，会在目标活动里另建一份来宾身份，并保留可恢复的原来宾。
+
+旧的代报名来宾和限定活动的来宾，服务端都拒绝写入档案、性别、头像和球拍；有权限的报名人和管理者仍可修改活动里的水平。不删除任何历史档案、报名、比分或费用记录。对已有的代报名朋友应用这条规则时，成员的修为历史和按强弱计算的以弱胜强加成，会按来宾固定的历史水平（没选过水平时为 1000）重放，所以成员的派生总分可能变化。已记录的比分不变。

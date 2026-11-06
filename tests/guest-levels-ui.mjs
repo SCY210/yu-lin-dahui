@@ -20,10 +20,10 @@ try{
  assert.ok(text(ui.toJSON()).includes('未填性别'),'a friend added before genders were required is pointed out');assert.ok(text(ui.toJSON()).includes('1 人未填性别'));
  await act(()=>button('改性别').props.onClick());const genderForm=forms.at(-1);assert.equal(genderForm[1],'guestGender');assert.deepEqual(genderForm[2],{playerId:'g',gender:''});assert.deepEqual(genderForm[3][0].options,[['male','男'],['female','女']]);assert.deepEqual(genderForm[4]({gender:'female'}),{playerId:'g',gender:'female'});
  data.players[1].guestGender='female';await mount(GuestLevels,{e,ctx});assert.ok(text(ui.toJSON()).includes('Fictional host的朋友 · 女'));assert.ok(!text(ui.toJSON()).includes('未填性别'));
- await act(()=>button('改水平').props.onClick());const form=forms.at(-1);assert.equal(form[1],'guestLevel');assert.equal(form[2].playerId,'g');assert.equal(form[3][0].options.length,4);assert.deepEqual(form[4]({level:'1300'}),{playerId:'g',level:1300});
+ await act(()=>button('改水平').props.onClick());const form=forms.at(-1);assert.equal(form[1],'guestLevel');assert.equal(form[2].playerId,'g');assert.equal(form[3][0].options.length,5);assert.equal(form[3][0].options[0][0],'700','萌新 is the lowest level');assert.deepEqual(form[4]({level:'1300'}),{playerId:'g',level:1300});
  data.me={id:'outsider',playerId:'p9',role:'member'};await mount(GuestLevels,{e,ctx});assert.equal(ui.root.findAllByType('button').length,0);
  data.me={id:'organizer',playerId:'p8',role:'member'};await mount(GuestLevels,{e,ctx});assert.equal(ui.root.findAllByType('button').length,2);
  await mount(GroupPlayer,{id:'g',ctx});assert.ok(ui.root.findByType('button').props.disabled);assert.ok(text(ui.toJSON()).includes('Fictional host的朋友'));
  await mount(GroupPlayer,{id:'p0',ctx});assert.ok(!ui.root.findByType('button').props.disabled);await act(()=>ui.root.findByType('button').props.onClick());assert.deepEqual(profiles,['p0']);
- console.log('PASS guest levels UI: host label, gender prompt and form, four-level form conversion, registrant/organizer controls, outsider read-only view and disabled guest profile navigation');
+ console.log('PASS guest levels UI: host label, gender prompt and form, five-level form conversion with 萌新, registrant/organizer controls, outsider read-only view and disabled guest profile navigation');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
