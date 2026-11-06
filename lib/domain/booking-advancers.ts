@@ -29,10 +29,11 @@ export function setBookingParts(b:Timed,parts:BookingPart[]){
  if(handovers.length)b.handovers=handovers;else delete b.handovers;
 }
 /** Update only this interval, keeping the court id, signup lists and all other bookers. */
-export function setRangeAdvancer(b:Timed,start:number,end:number,advancedBy:string){
+/** Without `advancedBy` the interval becomes 待认领 again. */
+export function setRangeAdvancer(b:Timed,start:number,end:number,advancedBy?:string){
  const parts=bookingParts(b).flatMap(p=>{
   if(p.end<=start||p.start>=end)return [p];
-  return [...(p.start<start?[{...p,end:start}]:[]),{start:Math.max(p.start,start),end:Math.min(p.end,end),advancedBy},...(p.end>end?[{...p,start:end}]:[])];
+  return [...(p.start<start?[{...p,end:start}]:[]),{start:Math.max(p.start,start),end:Math.min(p.end,end),...(advancedBy?{advancedBy}:{})},...(p.end>end?[{...p,start:end}]:[])];
  });
  setBookingParts(b,parts);
 }
