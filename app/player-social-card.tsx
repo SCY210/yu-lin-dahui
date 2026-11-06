@@ -1,4 +1,5 @@
 'use client';
+import {photoUrl} from '../lib/photo-url';
 import {useEffect,useRef,useState,type ReactNode,type PointerEvent} from 'react';
 import {ArrowUpRight,RotateCcw,RotateCw} from 'lucide-react';
 import {tensionLabel} from '../lib/domain/tension';
@@ -59,7 +60,7 @@ export default function PlayerSocialCard({player,stats,photo,avatar,self,onProfi
     <div className="pc-back-heading"><span>本命战拍</span><span className="pc-back-hint"><RotateCcw size={13} aria-hidden="true"/>轻点翻回</span></div>
     <strong className="pc-back-name">{player.name}</strong>
     {/* eslint-disable-next-line @next/next/no-img-element -- Keep one native, session-authenticated image mounted before and after the flip. */}
-    <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={'/api/photos/'+photo.id} alt={player.name+'的战拍照片'} loading={flipped||requestedPhoto===photo.id?'eager':'lazy'} decoding="async" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
+    <div className="pc-weapon-image">{photo&&failedPhoto!==photo.id?<img src={photoUrl(photo.id,'preview')} alt={player.name+'的战拍照片'} loading={flipped||requestedPhoto===photo.id?'eager':'lazy'} decoding="async" onError={()=>setFailedPhoto(photo.id)}/>:<><RacketMark large/><span>{photo?'照片暂不可用':'尚未上传战拍照'}</span></>}</div>
     <strong className="pc-weapon-model" title={profile.racket}>{profile.racket||'战拍尚未填写'}</strong>
     <div className="pc-weapon-details"><span><span>拍线</span><strong title={profile.strings}>{profile.strings||'尚未填写'}</strong></span><span><span>磅数</span><strong>{tensionLabel(profile)||'尚未填写'}</strong></span></div>
     <p className={'pc-back-motto'+(!motto?' pc-unfilled':'')} title={motto}>{motto?'“'+motto+'”':'尚未填写个人口号'}</p>

@@ -10,8 +10,54 @@ Production improvements are assessed using normal traffic after release. Local S
 
 ## Image delivery
 
-Image reads fetch membership, photo metadata and the associated event in one indexed query after authentication. This removes the separate event lookup without reading club history. Successful reads use a private browser cache with mandatory revalidation: the server checks current membership and event visibility on every request before returning a body-free 304 for unchanged media. This avoids another R2 read and image transfer on repeat views. Failed requests remain `no-store`; the service worker does not cache private media.
+Password-session image reads now authenticate the session and fetch current membership,
+photo metadata and event visibility in one indexed D1 query. Previously authentication
+and metadata required two sequential database trips, including on browser cache hits.
+Sites identity reads retain their trusted identity boundary. Session expiry, credential
+removal, membership removal, draft permissions and deleted events are checked before
+any original or thumbnail response, including 304. No authorization result is cached.
 
-Prominent profile, podium and scoring-dialog avatars start loading immediately. Directory avatars remain lazy so long lists do not compete for bandwidth. A card's existing racket image begins loading on pointer or keyboard intent and at the start of a flip, rather than waiting until the back becomes visible. These changes do not add a second image fetch or a persistent JavaScript image cache.
+Avatars request a fixed 192-pixel WebP representation; gallery and racket previews use
+960 pixels. Both fit within those bounds without upscaling or cropping, retain alpha
+and request animation preservation. Original links still return the uploaded bytes. Originals of 16 KiB or less bypass
+conversion entirely, avoiding work that could cost more than the transfer saved.
+These sizes apply to existing uploads on their first requested view as well as future
+uploads, without a database migration or a bulk production rewrite.
 
-The selected theme illustration is preloaded in the server-rendered head. The landscape background now transfers 153,996 bytes instead of 2,260,846 bytes, retaining its dimensions. First-time private photo downloads still use the uploaded original; their duration depends on image size and the connection. Local regression tests count database and storage reads and check permission revocation; they do not establish a device-specific millisecond improvement.
+The standalone Worker declares the optional IMAGES binding. It transforms private R2
+streams directly; no public object URL is created. Generated representations use
+versioned keys in the existing private R2 bucket and are reused across authorized
+readers. Generation is coalesced within an isolate, bounded in concurrency and output
+memory, and checks the original photo row before and after storing a result. Photo
+removal deletes the original and both derived keys; the existing deletion receipt
+supports retrying storage cleanup. Originals remain authoritative and unchanged.
+
+Missing encoder bindings, quota errors or conversion failures fall back to the original.
+A bounded cooldown prevents repeatedly retrying failed conversions in one isolate.
+Originals and each representation have distinct viewer-bound validators, so a large
+fallback cannot prevent a later thumbnail from loading. Successful reads use private
+browser caching with mandatory revalidation; errors remain no-store. The service worker
+does not store private media. A cold thumbnail generation adds work once; this is not
+a claim that every first response has lower server latency.
+
+The selected profile portrait is preloaded outside the lazy profile modules, so its
+request can run alongside those JavaScript downloads. Prominent avatars get high
+fetch priority; directory avatars remain lazy. A card upgrades its existing racket
+image on pointer, keyboard or flip intent, without a duplicate JavaScript fetch.
+
+Local checks cover real password authentication and indexed SQL plans, authorized 304s,
+representation isolation, stored-thumbnail reuse, fallback recovery, deletion races,
+output bounds, concurrent generation and UI resource URLs. The actual local Images/R2 fixture reduces a synthetic 3,826,121-byte PNG to a
+4,722-byte avatar and a 117,632-byte preview, preserving alpha and original bytes.
+Warm reads use one derived-object read and no encoding or storage writes. This
+square fixture does not prove production animation or fit behavior: the installed
+Miniflare implementation does not honor all transformation options. Local image
+fixtures and handler checks are not production device timings or Cloudflare CPU measurements.
+Run npm run verify before synchronization. The controlled private release must retain
+its access configuration and the new binding; never deploy this shared checkout over
+production. Review the resulting authenticated image traffic after release.
+
+Cloudflare documents [private stream transforms](https://developers.cloudflare.com/images/optimization/binding/)
+and [Images quotas](https://developers.cloudflare.com/images/pricing/). This change does
+not purchase an Images plan or alter account billing settings. Hosts without a usable
+binding continue serving original uploads.
