@@ -50,11 +50,16 @@ try{
  assert.equal(raisedView.quarterlyLeaderboard.find(p=>p.playerId==='p2').points,-25);assert.equal(raisedView.pointGrants.at(-1).points,0);
  user('member');const memberRating=await (await get()).json();assert.equal(memberRating.social.stats.find(p=>p.playerId==='p2').realmScore.score,1125);assert.deepEqual(memberRating.pointGrants,[]);
  for(const id of ['admin','member']){user(id);assert.equal((await post(command(raised.revision,undefined,{...ratingBody.payload,isOwner:true}))).status,403)}
- user('owner');const rollbackRating=command(raised.revision,undefined,{...ratingBody.payload,rating:50}),batch=fixture.env.DB.batch;fixture.env.DB.batch=async()=>{throw new Error('Injected rating failure')};
- assert.equal((await post(rollbackRating)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),raised);assert.equal((await post(rollbackRating)).status,200);
- assert.equal((await api.load()).players.find(p=>p.id==='p2').rating,1175);
+ for(const id of ['admin','member']){user(id);assert.equal((await post(command(raised.revision,undefined,{...ratingBody.payload,rating:-75,isOwner:true,actor:'owner'}))).status,403)}
+ user('owner');const lowerBody=command(raised.revision,undefined,{...ratingBody.payload,rating:-75,reason:'宗主手动减少修为'});
+ assert.equal((await post(lowerBody)).status,200);assert.equal((await post(lowerBody)).status,200);
+ const lowered=await api.load();assert.equal(lowered.audits.length,5);assert.equal(lowered.audits.at(-1).changes.rating,-75);assert.equal(lowered.audits.at(-1).actor,'owner');assert.deepEqual(lowered.matches,raised.matches);
+ const loweredView=await (await get()).json();assert.equal(loweredView.social.stats.find(p=>p.playerId==='p2').realmScore.score,1050);assert.equal(loweredView.social.stats.find(p=>p.playerId==='p2').realmScore.ratedGames,0);assert.equal(loweredView.quarterlyLeaderboard.find(p=>p.playerId==='p2').points,-25);assert.equal(loweredView.pointGrants.at(-1).points,0);assert.equal(loweredView.pointGrants.at(-1).rating,-75);
+ const rollbackRating=command(lowered.revision,undefined,{...ratingBody.payload,rating:50}),batch=fixture.env.DB.batch;fixture.env.DB.batch=async()=>{throw new Error('Injected rating failure')};
+ assert.equal((await post(rollbackRating)).status,503);fixture.env.DB.batch=batch;assert.deepEqual(await api.load(),lowered);assert.equal((await post(rollbackRating)).status,200);
+ assert.equal((await api.load()).players.find(p=>p.id==='p2').rating,1100);
  user('member');const ownBonuses=(await (await get()).json()).me.bonusNotices;assert.equal(ownBonuses.length,2);const beforeBonus=await api.load(),ack={action:'bonusSeen',payload:{ids:ownBonuses.map(n=>n.id)},revision:beforeBonus.revision,requestId:crypto.randomUUID()};assert.equal((await post(ack)).status,200);assert.equal((await post(ack)).status,200);const afterBonus=await api.load();assert.deepEqual(afterBonus.accounts.find(a=>a.id==='member').bonusSeen,ownBonuses.map(n=>n.id));assert.deepEqual(afterBonus.accounts.find(a=>a.id==='owner'),beforeBonus.accounts.find(a=>a.id==='owner'));assert.deepEqual(afterBonus.audits,beforeBonus.audits);assert.deepEqual((await (await get()).json()).me.bonusNotices,[]);
 
- console.log('PASS grants API: stored-owner authorization, rating-only persistence and visible score, unchanged points/games, deduplication, rollback, SQL binding and private ledger');
+ console.log('PASS grants API: stored-owner authorization for rating increases/reductions, exact signed persistence and visible score, unchanged points/games, deduplication, rollback, SQL binding and private ledger');
 
 }finally{sql.close();delete globalThis.__grantsTest}

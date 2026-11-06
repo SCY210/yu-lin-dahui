@@ -1,27 +1,11 @@
-# Owner-only manual rating increases
+# 宗主手动提高或减少修为
 
-Group management has a visible **manual rating increase** card above the existing
-points controls. The owner selects an enabled permanent member and an integer
-increase of 1–300. The player selector shows the member's currently settled visible
-rating. Guest and disabled profiles are excluded.
+入口为「我的 → 设置 → 宗门事务 → 手动调整修为」，位于积分调整入口上方。宗主选择已启用的正式球友，再选择「提高修为」或「减少修为」，填写 1–300 的整数。球友选项显示当前已结算的可见修为；临时来宾、活动来宾和停用球友不在选择范围内。
 
-This uses the existing authenticated `grantPoints` command with `points: 0` and a
-positive `rating` delta. It changes rating, eligible realm progression and doubles
-grouping strength without adding season points, games or wins. Placement remains
-placement. Existing inactivity, settlement and replay policies remain in force.
-The old participant-status toggle still only enables or disables participation.
+界面按选择的方向生成正数或负数 `rating`，通过现有 `grantPoints` 命令提交，固定 `points: 0`，自动记录「宗主手动提高修为」或「宗主手动减少修为」。保存后立即改变修为、符合条件的境界和双打分组实力，不改变赛季积分、比赛局数或胜场。定级中的球友仍保持定级状态；原有的不活跃重置、活动结算和历史回放规则继续生效。原来的参赛状态开关仍只负责启用或停用参加。
 
-The server checks the persisted club owner; an administrator role or a forged
-`isOwner` payload is insufficient. The existing D1 transaction and audit ledger
-persist the adjustment. Reloads and historical rule replays read that ledger.
-No new table or database migration is needed.
+服务端依据持久化的群主身份校验权限。普通管理员（界面名称为副宗主）、测试员（界面名称为长老）和成员均不能调整修为；仅伪造 `isOwner`、`actor` 或群主账号字段不会获得权限。正负调整使用同一条服务端校验、D1 原子事务和审计账本，不新增表，也不迁移或重写历史数据。
 
-Manual grant forms retain one request ID across retry attempts. Explicitly opening
-a new form creates a new operation, preventing an ambiguous response from applying
-the same increase twice. Rating changes have their own compact history; the points
-history excludes rating-only records while preserving earlier mixed adjustments.
+调整表单在同一次提交的重试之间保持相同请求 ID，明确重新打开表单才创建新操作，避免响应不明时重复提高或扣减。修为记录单独显示最近 20 条正负调整。积分记录不显示纯修为调整，但保留过去同时调整积分和修为的记录。
 
-Isolated UI/API tests cover discoverability, ownership, eligible players, a zero
-points payload, persistence, visible rating, grouping strength, replay, unchanged
-game/points totals, duplicate requests and rollback. No real member's rating is
-changed by validation.
+验证使用隔离的界面、域逻辑和 SQLite API 测试，覆盖入口、调整方向、当前修为、可选球友、整数范围、零积分载荷、正负持久化、可见修为、分组实力、历史回放、积分和场次不变、非宗主及伪造身份拒绝、重复请求和事务回滚。不通过修改真实球友的修为来测试。

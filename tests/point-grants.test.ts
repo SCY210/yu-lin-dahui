@@ -37,6 +37,19 @@ test('宗主可单独调整修为：立即改变修为、境界和双打分组�
  await apply(s,owner,'grantPoints',{playerId:'p2',period:'2026-10',points:5,rating:-20,reason:'双项调整'},now+2);
  assert.equal(realmSnapshot(s,now+3).get('p2')!.score,before.score+130);assert.equal(quarterlyLeaderboard(s,'2026-Q4',now+3).find(r=>r.playerId==='p2')!.manualPoints,5);
 });
+test('宗主单独减少修为保留负向账本，之后提高与重算仍准确且不增减积分或场次',async()=>{
+ const s=fixture();await apply(s,owner,'grantPoints',{...grant,points:0,rating:-300,reason:'宗主手动减少修为'},now);
+ assert.equal(realmSnapshot(s,now+1).get('p2')!.score,700);assert.equal(s.players.find(p=>p.id==='p2')!.rating,700);
+ const row=quarterlyLeaderboard(s,'2026-Q4',now+1).find(r=>r.playerId==='p2')!;assert.equal(row.points,0);assert.equal(row.games,0);assert.equal(row.wins,0);assert.equal(row.realmScore.placement,true);
+ await apply(s,owner,'grantPoints',{...grant,points:0,rating:100,reason:'宗主手动提高修为'},now+2);replayRating(s,now+3);
+ assert.equal(realmSnapshot(s,now+3).get('p2')!.score,800);assert.deepEqual(pointGrants(s).map(g=>[g.points,g.rating]),[[0,-300],[0,100]]);
+});
+test('副宗主、长老和道友不能提高或减少修为，伪造宗主字段仍被拒绝',async()=>{
+ for(const actor of [admin,{...member,simulationTester:true},member])for(const rating of [-100,100]){
+  const s=fixture();Object.assign(s.accounts.find(a=>a.id===actor.id)!,actor);const before=structuredClone(s);
+  await assert.rejects(()=>apply(s,{...actor,isOwner:true} as Account,'grantPoints',{...grant,points:0,rating,actor:owner.id,ownerAccountId:owner.id},now),/403/);assert.deepEqual(s,before);
+ }
+});
 test('修为调整的校验：两项不能都为0，超出±300拒绝，旧记录没有修为时按0处理',async()=>{
  for(const bad of [{points:0,rating:0},{points:0},{rating:301},{rating:-301},{rating:1.5}]){const s=fixture(),before=structuredClone(s);await assert.rejects(()=>apply(s,owner,'grantPoints',{...grant,...bad},now));assert.deepEqual(s,before)}
  const s=fixture();s.audits.push({id:'legacy',actor:owner.id,action:'grantPoints',at:now,reason:'旧记录',changes:{...grant}});
