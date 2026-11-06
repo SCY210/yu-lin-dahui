@@ -27,7 +27,7 @@ try{
  await act(async()=>{equipment.props.onToggle({currentTarget:{open:true}});});
  assert.equal(ui.root.findAllByType('input').filter(input=>input.props.type==='file').length,0);
  assert.ok(!buttons().some(button=>/上传照片|删除战拍|更换头像/.test(text(button))));
- assert.ok(ui.root.findAllByType('img').some(image=>image.props.src==='/api/photos/racket'));
+ assert.ok(ui.root.findAllByType('img').some(image=>image.props.src==='/api/photos/racket?size=preview'));
  await act(()=>ui.unmount());calls.length=0;
  const ownerPlayer={...player,profileEditMode:'full'},ownerContext={...ctx,admin:true,data:{...ctx.data,me:{id:'verified-owner',playerId:'owner-player',role:'admin',isOwner:true},players:[ownerPlayer],photos:ctx.data.photos.map(photo=>({...photo,canDelete:true}))}};
  await act(async()=>{ui=renderer.create(React.createElement(PlayerProfile,{p:ownerPlayer,ctx:ownerContext}));});
