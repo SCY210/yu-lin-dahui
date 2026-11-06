@@ -9,7 +9,7 @@ function AvatarImage({p,size='',eager=false}:{p?:AvatarPlayer;size?:string;eager
  const [failedId,setFailedId]=useState<string|null>(null);
  const name=p?.name??'球友',avatarId=p?.avatarId;
  const custom=!!avatarId&&avatarId!==failedId;
- // eslint-disable-next-line @next/next/no-img-element -- Protected photos require the browser's session cookies on the original URL.
+ // eslint-disable-next-line @next/next/no-img-element -- Protected photos require the browser's session cookies on the same-origin URL.
  return <img className={'avatar '+size} src={custom?photoUrl(avatarId!,'avatar'):'/default-avatar.svg'} alt={name+'的头像'} loading={eager?'eager':'lazy'} fetchPriority={eager?'high':'auto'} decoding="async" onError={custom?()=>setFailedId(avatarId!):undefined}/>;
 }
 

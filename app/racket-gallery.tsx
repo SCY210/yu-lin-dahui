@@ -17,6 +17,7 @@ function RacketPhoto({photo, playerName,ctx}:{photo:GalleryPhoto;playerName:stri
   const caption = photo.caption?.trim();
   return <figure className="racket-photo">
     <a className="racket-photo-link" href={'/api/photos/'+photo.id} target="_blank" rel="noreferrer" aria-label={`查看${playerName}的战拍照片${caption ? '：'+caption : ''}（新窗口）`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Private optimized previews must send the browser's session cookies. */}
       {failed ? <span className="racket-image-error"><Camera size={24} aria-hidden="true"/>照片暂时无法加载<span>点此查看原图</span></span> : <img src={photoUrl(photo.id,'preview')} alt={caption || playerName+'的战拍照片'} loading="lazy" onError={()=>setFailed(true)}/>}
     </a>
     <figcaption>{caption || '战拍照片'}<PhotoDeleteButton photo={photo} ctx={ctx}/></figcaption>
