@@ -1,1 +1,23 @@
-.booking-claims{padding:10px 16px;border-bottom:1px solid var(--border,#e4deef);min-width:0}.booking-claims .hint{font-size:12px;line-height:1.7}.booking-claim-rows{list-style:none;margin:10px 0;padding:0}.booking-claim-rows li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:7px 0;font-size:12px}.booking-claim-rows li>span{font-variant-numeric:tabular-nums;white-space:nowrap}.booking-claim-rows strong{flex:1;min-width:60px;overflow-wrap:anywhere}.booking-claim-rows small{font-size:11px;opacity:.7}.booking-claims .actions{flex-wrap:wrap;gap:6px}.booking-claims button{font-size:12px;min-height:36px}
+/* Claim states (app/booking-claims.tsx): 待认领 amber stripes, 组织者登记 the theme colour, 已认领 green. */
+.booking-claims{--claim-pending:#c7801a;--claim-registered:var(--primary);--claim-claimed:#2e8b57;display:grid;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border,#e4deef);min-width:0}
+.booking-claims .hint{font-size:12px;line-height:1.7;margin:0}
+.booking-claims-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px;font-size:13px}
+.booking-claims-head>span{font-size:12px;font-weight:600}
+.booking-claims-head>span.is-pending{color:color-mix(in srgb,var(--claim-pending) 80%,var(--foreground))}
+.booking-claims-head>span.is-done{color:color-mix(in srgb,var(--claim-claimed) 80%,var(--foreground))}
+.booking-claims-line{display:flex;gap:3px;min-width:0;margin:0;padding:0;list-style:none;border-radius:10px;overflow:hidden}
+.booking-claims-line>li{display:grid;gap:1px;min-width:0;flex-basis:0;padding:7px 8px;border-top:4px solid;color:var(--foreground)}
+.booking-claims-line>li.is-pending{border-color:var(--claim-pending);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--claim-pending) 16%,transparent) 0 6px,color-mix(in srgb,var(--claim-pending) 6%,transparent) 6px 12px)}
+.booking-claims-line>li.is-registered{border-color:color-mix(in srgb,var(--claim-registered) 55%,transparent);background:color-mix(in srgb,var(--claim-registered) 10%,transparent)}
+.booking-claims-line>li.is-claimed{border-color:var(--claim-claimed);background:color-mix(in srgb,var(--claim-claimed) 16%,transparent)}
+.booking-claims-line small{font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.booking-claims-line b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.booking-claims-line>li.is-pending b{color:color-mix(in srgb,var(--claim-pending) 75%,var(--foreground))}
+.booking-claims-legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;padding:0;list-style:none;font-size:11px;color:var(--muted-foreground)}
+.booking-claims-legend>li{display:flex;align-items:center;gap:5px}
+.booking-claims-legend>li::before{content:"";width:12px;height:12px;border-radius:3px;flex:none}
+.booking-claims-legend>li.is-pending::before{background:repeating-linear-gradient(135deg,var(--claim-pending) 0 3px,color-mix(in srgb,var(--claim-pending) 35%,transparent) 3px 6px)}
+.booking-claims-legend>li.is-registered::before{background:color-mix(in srgb,var(--claim-registered) 45%,transparent)}
+.booking-claims-legend>li.is-claimed::before{background:var(--claim-claimed)}
+.booking-claims .actions{display:flex;flex-wrap:wrap;gap:6px}
+.booking-claims button{font-size:12px;min-height:36px}

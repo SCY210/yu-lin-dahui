@@ -1,26 +1,18 @@
-# Ranking points breakdown
+# 排名积分明细
 
-Below the top-three podium, each board shows the signed-in player's rank, points and
-board size, with the selected quarter or year and singles/doubles format. The podium
-comes first so the top three are fully visible on a phone. The header uses three rows:
-the board title with the quarterly/annual switch; the doubles/singles switch with the
-details and rules actions; and the period picker. The title is not repeated above it. **Locate me** scrolls
-to and focuses their highlighted row in the full list. It respects reduced-motion
-preferences and leaves room for the mobile navigation. The summary uses the
-server-provided rank, including ties and zero-game players, without changing the
-ranking rules or adding a request. Missing players see an unranked message;
-loading another period hides stale ranks and the locating button. Accounts without
-a linked player do not get a personal summary.
+每个榜单在前三名领奖台下方显示登录球友自己的名次、积分和上榜人数，以及当前选中的季度或年度、单打或双打。领奖台放在最前面，这样手机上能完整看到前三名。标题区分三行：第一行是榜单标题和季度/年度切换；第二行是双打/单打切换，以及详细数据和积分规则按钮；第三行是时段选择。标题不会在上方重复。**定位到我**会滚动到完整名单里高亮的本人那一行并让它获得焦点。它尊重"减少动态效果"的系统设置，并给手机底部导航留出空间。这段个人摘要直接使用服务器给出的名次，包括并列和零局球友，不改变排名规则，也不增加请求。不在榜上的球友看到"未上榜"的提示；读取另一个时段时，旧的名次和定位按钮会先隐藏。没有关联球友档案的账号不显示个人摘要。
 
-Every row of the quarterly and annual boards, singles and doubles, has a breakdown toggle under its total (`app/ranking-view.tsx`). It opens a panel across the row that lists where the points come from and a total line equal to the row's points. One panel is open at a time; tapping the toggle again closes it. The name and avatar still open the player profile.
+季度榜和年度榜、单打和双打的每一行，总分下方都有一个"明细"按钮（`app/ranking-view.tsx`）。点开后在这一行下面展开一个面板，列出积分来源，最后一行是合计，等于这一行的积分。同一时间只展开一个面板，再点一次按钮就收起。点名字和头像仍然打开球员档案。
 
-The lines come from fields every leaderboard row already carries (`aggregateLeaderboard` in `lib/domain/ranking.ts`), so the breakdown adds nothing to the club payload. `pointsBreakdown` in `lib/client/ranking-breakdown.ts` builds them in this order:
+各行数据来自每个排行榜行本来就带的字段（`lib/domain/ranking.ts` 里的 `aggregateLeaderboard`）。悬赏积分按成功和失败分成两个字段（`bountyWonPoints`、`bountyLostPoints`），每行多两个数字，不增加请求；原来的净值字段 `bountyPoints` 保留。`lib/client/ranking-breakdown.ts` 里的 `pointsBreakdown` 按下面的顺序生成各行：
 
-- Won games times the win points and lost games times the loss points (`seasonPointsPolicy`).
-- Upset bonus, winning-streak bonus.
-- MVP points, bounty points, notification points, late deductions.
-- Owner adjustments (`manualPoints`, doubles board only).
+- 胜局数乘以每局胜分，负局数乘以每局负分（`seasonPointsPolicy`）。
+- 强弱加成、连胜加分。
+- MVP 加分。
+- 悬赏成功（完成的悬赏令加的积分）和悬赏失败（接下但没完成扣的积分），分两行显示，不互相抵消。作废的悬赏不奖不罚，不出现在明细里（见[悬赏令](BOUNTIES.md)）。
+- 通知积分、迟到扣分。
+- 群主调整（`manualPoints`，只计入双打榜）。
 
-Only non-zero sources are listed, with signed values. If the known sources ever fail to explain the total, the remainder shows as one extra line, so the lines always add up to the total. When the row includes games of an activity still in progress, the panel notes how many and their points, which are confirmed when the activity ends.
+只列出不为零的来源，数值带正负号。如果已知来源加起来和总分对不上，差额会单独显示为"其他调整"一行，所以各行加起来总是等于总分。这一行包含进行中活动的对局时，面板会注明有几局、合计多少分，这些分数在活动结束后确认。
 
-Validation: `tests/ranking-breakdown.test.ts` checks on a fictional club that every row of the quarterly, annual and singles boards adds up with no unexplained remainder, including owner grants, streaks and upsets. `tests/ranking-breakdown-ui.mjs` covers the toggle, the panel, the in-progress note and the unchanged profile links. It also covers the personal summary across all four boards, tied and zero-game ranks, loading and absent players, the focus target and reduced-motion scrolling.
+验证：`tests/ranking-breakdown.test.ts` 在一个虚构俱乐部上检查季度榜、年度榜和单打榜的每一行都能加总、没有无法解释的差额，包括群主调整、连胜和强弱加成。`tests/bounties.test.ts` 检查同一季度里一次悬赏成功、一次失败时，明细分别显示"悬赏成功 +8"和"悬赏失败 -10"，加起来仍等于总分。`tests/ranking-breakdown-ui.mjs` 覆盖明细按钮、面板、进行中提示和不变的球员档案链接，还覆盖四个榜单上的个人摘要、并列和零局名次、读取中和不在榜上的球友、焦点目标，以及减少动态效果时的滚动。

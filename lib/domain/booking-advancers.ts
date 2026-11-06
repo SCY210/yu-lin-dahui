@@ -18,11 +18,14 @@ export function bookingParts(b:Timed):BookingPart[]{
 export function advancerAt(b:Timed,t:number){let by=b.advancedBy;for(const h of inside(b))if(h.at<=t)by=h.advancedBy;return by}
 /** Every member who booked a part of this slot. */
 export function bookingAdvancers(b:Timed){return bookingParts(b).map(p=>p.advancedBy)}
-/** Rebuild the handovers from parts, dropping a handover to the member who already booked the part before it. */
-function setParts(b:Timed,parts:BookingPart[]){
- b.advancedBy=parts[0].advancedBy;
+/** Whether some time of this slot still has no booker (待认领). */
+export const bookingUnclaimed=(b:Timed)=>bookingParts(b).some(p=>!p.advancedBy);
+/** Rebuild the handovers from parts, dropping a handover to the member who already booked the part before it. A part
+ * nobody has claimed yet after a claimed one is a handover without a booker. */
+export function setBookingParts(b:Timed,parts:BookingPart[]){
+ if(parts[0].advancedBy)b.advancedBy=parts[0].advancedBy;else delete b.advancedBy;
  const handovers:Handover[]=[];let last=parts[0].advancedBy;
- for(const p of parts.slice(1)){if(p.advancedBy&&p.advancedBy!==last)handovers.push({at:p.start,advancedBy:p.advancedBy});last=p.advancedBy}
+ for(const p of parts.slice(1)){if(p.advancedBy!==last)handovers.push(p.advancedBy?{at:p.start,advancedBy:p.advancedBy}:{at:p.start});last=p.advancedBy}
  if(handovers.length)b.handovers=handovers;else delete b.handovers;
 }
 /** Update only this interval, keeping the court id, signup lists and all other bookers. */
@@ -31,7 +34,7 @@ export function setRangeAdvancer(b:Timed,start:number,end:number,advancedBy:stri
   if(p.end<=start||p.start>=end)return [p];
   return [...(p.start<start?[{...p,end:start}]:[]),{start:Math.max(p.start,start),end:Math.min(p.end,end),advancedBy},...(p.end>end?[{...p,start:end}]:[])];
  });
- setParts(b,parts);
+ setBookingParts(b,parts);
 }
 /** Existing organiser edits remain authoritative; retain claimed coverage only inside the new booking parts. */
 export function syncBookingClaims(b:Timed){
@@ -52,7 +55,7 @@ export function retimeBooking(b:Timed,start:number,end:number){
 /** Correct who booked the part that starts at `at`. */
 export function setPartAdvancer(b:Timed,at:number,advancedBy:string){
  const parts=bookingParts(b),part=parts.find(p=>p.start===at);if(!part)return false;
- part.advancedBy=advancedBy;setParts(b,parts);syncBookingClaims(b);return true;
+ part.advancedBy=advancedBy;setBookingParts(b,parts);syncBookingClaims(b);return true;
 }
 /** Whether slot `next` continues `b` on the same court without a gap, so they are shown and signed up as one slot. */
 export function continuesCourt(b:Pick<Booking,'name'|'venue'|'end'|'pricing'|'cents'|'bearer'>,next:Pick<Booking,'name'|'venue'|'start'|'pricing'|'cents'|'bearer'>,venue:string){
@@ -65,7 +68,7 @@ export function mergeCourtSlots<T extends Omit<Booking,'id'|'eventId'>>(rows:T[]
  for(const row of [...rows].sort((a,b)=>a.start-b.start)){
   const before=merged.find(b=>continuesCourt(b,row,venue));
   if(!before){merged.push({...row});continue}
-  setParts(before,[...bookingParts(before),...bookingParts(row)]);before.end=row.end;
+  setBookingParts(before,[...bookingParts(before),...bookingParts(row)]);before.end=row.end;
   if(row.claims?.length)before.claims=[...(before.claims??[]),...row.claims].sort((a,b)=>a.start-b.start);
  }
  return rows.map(r=>merged.find(m=>m.start<=r.start&&m.end>=r.end&&m.name.trim()===r.name.trim()&&(m.venue??venue)===(r.venue??venue))!).filter((m,i,list)=>list.indexOf(m)===i);

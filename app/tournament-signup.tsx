@@ -43,7 +43,7 @@ export default function TournamentSignup({e,ctx,rules,courts,editCourt,cancelCou
   </section>
   {<section className="card tournament-courts"><div className="row"><h3>比赛场地</h3>{manager&&<button type="button" className="secondary" onClick={()=>editCourt()}><Plus size={16}/>添加场地</button>}</div>
    <p className="hint">系统在这些场地上安排对阵；场地费计入报名费。</p>
-   {courts.map(b=><div key={b.id}><div className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{b.advancedBy?' · 约场 '+bookers(b):''}</small></div>{manager&&<div className="actions"><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button>{canCancelEventCourt(data.me,e)&&<button type="button" className="ghost danger" disabled={ctx.busy} onClick={()=>cancelCourt(b)}>取消场地</button>}</div>}</div><BookingClaims b={b} e={e} ctx={ctx}/></div>)}
+   {courts.map(b=><div key={b.id}><div className="row small-line"><div className="grow"><strong>{b.name}</strong><small><Clock size={13}/> {hm(b.start)}–{hm(b.end)}{' · 约场 '+bookers(b)}</small></div>{manager&&<div className="actions"><button type="button" className="ghost" onClick={()=>editCourt(b)}>修改</button>{canCancelEventCourt(data.me,e)&&<button type="button" className="ghost danger" disabled={ctx.busy} onClick={()=>cancelCourt(b)}>取消场地</button>}</div>}</div><BookingClaims b={b} e={e} ctx={ctx}/></div>)}
   </section>}
  </div>;
 }

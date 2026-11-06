@@ -79,10 +79,12 @@ test('each transfer is marked by its payer, receiver or an organiser; nobody els
  await mark(bob,'p0','p2',false);assert.deepEqual(openTransfers(s.payments,v),[{from:'p0',to:'p2',cents:120}]);
 });
 
-test('new activities need every advancer; older ones keep the old way until all are filled in',async()=>{
+test('new activities may leave courts 待认领 but confirm only once every advancer is known; older ones keep the old way',async()=>{
  const {s,e}=await fixture();
  await assert.rejects(()=>apply(s,owner,'cost',{eventId:e.id,type:'other',name:'水',pricing:'total',cents:300,used:0,start:null,end:null,bearer:'members',reason:''},after),/谁付的/);
- await assert.rejects(()=>apply(s,owner,'event',{title:'无人约场',matchFormat:'doubles',start,end,venue:'馆',address:'',capacity:8,cancelDeadline:start-86400000,note:'',status:'open',bookings:[{name:'1号场',start,end,pricing:'hourly',cents:1200}]},start-86400000));
+ // Nobody named as booker: the court is saved 待认领 (confirming it is covered in tests/booking-claims.test.ts).
+ const open=await fixture(),count=open.s.events.length;await apply(open.s,owner,'event',{title:'无人约场',matchFormat:'doubles',start,end,venue:'馆',address:'',capacity:8,cancelDeadline:start-86400000,note:'',status:'open',bookings:[{name:'1号场',start,end,pricing:'hourly',cents:1200}]},start-86400000);
+ const created=open.s.events[count];assert.equal(created.feeAdvances,true);const court=open.s.bookings.find(b=>b.eventId===created.id)!;assert.equal(court.advancedBy,undefined);assert.equal('advancedBy' in court,false);
  await assert.rejects(()=>apply(s,owner,'event',{title:'朋友约场',matchFormat:'doubles',start,end,venue:'馆',address:'',capacity:8,cancelDeadline:start-86400000,note:'',status:'open',bookings:[{name:'1号场',start,end,pricing:'hourly',cents:1200,advancedBy:'friend'}]},start-86400000),/约场的球友/);
  // An activity from before: no flag, no advancers. It confirms and is paid as before.
  const old=await fixture();delete old.e.feeAdvances;for(const x of [...old.s.bookings,...old.s.costs])delete x.advancedBy;
