@@ -11,7 +11,7 @@ export const trialTargets=[
 type Backup={accounts:Account[];players:Player[];registrations:Registration[];tagVotes:State['tagVotes']};
 const accountIds=new Set<string>(trialTargets.map(t=>t.accountId));
 const playerIds=new Set<string>(trialTargets.map(t=>t.playerId));
-function authorize(s:State,a:Account){if(!isClubOwner(s,a)||a.role!=='admin')fail('403: 只有群主可处理试用账号')}
+function authorize(s:State,a:Account){if(!isClubOwner(s,a)||a.role!=='admin')fail('403: 只有宗主可处理试用账号')}
 function validBackup(b:Backup){return b?.accounts?.length===3&&b?.players?.length===3&&trialTargets.every(t=>b.accounts.some(a=>a.id===t.accountId&&a.playerId===t.playerId&&a.role==='member')&&b.players.some(p=>p.id===t.playerId&&p.ownerId===t.accountId&&p.name===t.name))}
 export function trialBackup(s:State){
  const restored=new Set(s.audits.filter(a=>a.action==='restoreTrialAccounts').map(a=>(a.changes as {archiveId?:string})?.archiveId));
@@ -28,12 +28,12 @@ export function archiveTrials(s:State,a:Account,now:number){
  for(const key of ['events','rounds','matches','attendance','settlements','payments','ratingChanges','challenges','awardVotes','photos'] as const){
   if(s[key].some(row=>[...accountIds,...playerIds].some(id=>JSON.stringify(row).includes(id))))fail('试用账号已有比赛、费用、投票或其他关联记录，请先人工核对');
  }
- if(s.tagVotes.some(v=>playerIds.has(v.playerId)&&!accountIds.has(v.voterId)))fail('试用球友收到其他成员的投票，请先人工核对');
+ if(s.tagVotes.some(v=>playerIds.has(v.playerId)&&!accountIds.has(v.voterId)))fail('试用球友收到其他道友的投票，请先人工核对');
  if(s.players.some(p=>!playerIds.has(p.id)&&accountIds.has(p.ownerId)))fail('试用账号还管理其他球友，请先转移档案');
  if(backup.registrations.some(r=>r.status!=='cancelled'&&(r.arrival<=now||!s.events.some(e=>e.id===r.eventId))))fail('试用账号已有开始的报名，请先人工核对');
  s.tagVotes=s.tagVotes.filter(v=>!accountIds.has(v.voterId));s.accounts=s.accounts.filter(a=>!accountIds.has(a.id));s.players=s.players.filter(p=>!playerIds.has(p.id));s.registrations=s.registrations.filter(r=>!playerIds.has(r.playerId));
  for(const eventId of new Set(backup.registrations.map(r=>r.eventId))){const e=s.events.find(e=>e.id===eventId);if(!e||e.deletedAt!==undefined)continue;promoteLegacy(s,e,now);for(const b of s.bookings.filter(b=>b.eventId===e.id))promoteBooking(s,e,b,now)}
- s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'archiveTrialAccounts',reason:'群主移除三个试用账号，档案备份可恢复，取消试用报名并存档试用投票',changes:backup});return true;
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'archiveTrialAccounts',reason:'宗主移除三个试用账号，档案备份可恢复，取消试用报名并存档试用投票',changes:backup});return true;
 }
 export function restoreTrials(s:State,a:Account,now:number){
  authorize(s,a);const audit=trialBackup(s);if(!audit)return false;

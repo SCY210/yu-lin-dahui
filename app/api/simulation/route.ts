@@ -15,7 +15,7 @@ const accessSql="(json_extract(payload,'$.role')='admin' OR json_type(payload,'$
 async function simulationUser(){
  const user=await getAppUser();if(!user)throw new RequestError('请先登录',401);
  const row=await raw().prepare(`SELECT id FROM accounts WHERE id=? AND ${accessSql}`).bind(user.userId).first<{id:string}>();
- if(!row)throw new RequestError('只有群主、管理员和测试员可以访问模拟活动',403);return user.userId;
+ if(!row)throw new RequestError('只有宗主、长老和试剑人可以访问模拟活动',403);return user.userId;
 }
 type Kind=z.infer<typeof kindSchema>;
 const keyOf=(kind:Kind)=>kind==='competition'?competitionSimulationKey:simulationKey;
@@ -45,7 +45,7 @@ export async function POST(req:Request){
   }
   const doc=await readDocument(p.kind);if(!doc)throw new RequestError('请先打开模拟活动',404);
   if(doc.requests.includes(p.requestId))return response(viewOf(doc,Date.now()));
-  if(p.revision!==doc.revision)throw new RequestError('模拟记录刚刚被其他测试成员更新，请刷新后再试',409);
+  if(p.revision!==doc.revision)throw new RequestError('模拟记录刚刚被其他测试道友更新，请刷新后再试',409);
   // Every write reads the current production pairing odds, so the sandbox schedules exactly as production.
   const next=p.kind==='competition'
    ?await changeCompetitionSimulation(doc as CompetitionSimulationDocument,p.action,p.payload,p.requestId,Date.now(),p.action==='reset'?await load():undefined)

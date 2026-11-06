@@ -10,7 +10,7 @@ export default function GenderPrompt({gender,blocked,onFill,onClose}:{gender?:st
  const [dismissed,setDismissed]=useState(false),close=()=>{setDismissed(true);onClose()};
  if(dismissed||!needsGender(gender))return null;
  return <Dialog open={!blocked} onOpenChange={next=>{if(!next)close()}}><DialogContent className="app-dialog gender-prompt" showCloseButton>
-  <DialogHeader><DialogTitle><UserRound size={22} aria-hidden="true"/>请填写性别</DialogTitle><DialogDescription>排场会按性别安排男女搭配，很重要。请选择男或女。</DialogDescription></DialogHeader>
-  <div className="actions"><button type="button" className="primary" onClick={()=>{close();onFill()}}>去填写</button><button type="button" className="secondary" onClick={close}>稍后</button></div>
+  <DialogHeader><DialogTitle><UserRound size={22} aria-hidden="true"/>道友仙箓尚缺阴阳</DialogTitle><DialogDescription>天机阁排场布阵，讲究阴阳相济、男女相配。道友仙箓上尚未写明性别，还请择定男（乾道）或女（坤道），以免阵法失衡。</DialogDescription></DialogHeader>
+  <div className="actions"><button type="button" className="primary" onClick={()=>{close();onFill()}}>即刻补录</button><button type="button" className="secondary" onClick={close}>容后再议</button></div>
  </DialogContent></Dialog>;
 }

@@ -117,7 +117,7 @@ export async function applyTournament(s:State,a:Account,action:string,input:unkn
  const e=s.events.find(e=>e.id===p.eventId)??fail('比赛不存在'),t=e.tournament??fail('此活动不是赛事');
  if(c.action==='tournamentSettings'){
   const p=c.payload;
-  if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 只有群主和管理员可以设置赛制和报名费');
+  if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 只有宗主和长老可以设置赛制和报名费');
   if(e.status==='cancelled')fail('比赛已取消');
   const category=p.category??undefined,singles=teamSize(e)===1;
   if(category&&!categoryFits(category,singles))fail(singles?'单打比赛只能选择单打或男单':'双打比赛只能选择男双或混双');

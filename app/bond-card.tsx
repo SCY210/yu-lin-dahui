@@ -23,7 +23,7 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
  const giveItem=()=>ctx.open('送礼物给 '+p.name,'treasureRedeem',{productId:products[0]?.id??'',quantity:1,message:''},
   [choice('productId','礼品',products.map(x=>[x.id,`${x.name} · ${count(x.price)} 羽币 · +${count(productGiftPoints(x))} 缘值/件`])),{...number('quantity','数量'),min:1,max:99,step:1},giftNote],
   (v:Values)=>{const product=products.find(x=>x.id===v.productId);return {productId:v.productId,quantity:Number(v.quantity),expectedPrice:product?.price??0,giftTo:p.id,expectedAffinity:product?productGiftPoints(product,Number(v.quantity)):0,message:String(v.message??'').trim()}},
-  `用你的羽币兑换礼品送给对方：道缘礼物即时送达，其他礼品由群主发放。对方进入首页时会收到礼物提示，每件礼物增加的缘值见礼品选项，按数量累加，不享受阶段倍率。`);
+  `用你的羽币兑换礼品送给对方：道缘礼物即时送达，其他礼品由宗主发放。对方进入首页时会收到礼物提示，每件礼物增加的缘值见礼品选项，按数量累加，不享受阶段倍率。`);
  return <section className={'bond-card bond-tier-'+index} aria-label={'我和'+p.name+'的道缘'}>
   <div className="bond-head">
    <HeartHandshake size={20} aria-hidden="true"/>

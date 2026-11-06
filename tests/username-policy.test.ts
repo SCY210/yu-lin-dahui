@@ -6,7 +6,7 @@ test('新登录账号允许2–32位中文、英文字母或数字，英文统�
  for(const [input,expected]of [['Alpha123','alpha123'],['12','12'],[' ABC99 ','abc99'],['a'.repeat(32),'a'.repeat(32)],['中文账号','中文账号'],['中文賬號','中文账号'],['羽林Abc','羽林abc']])assert.equal(newUsername.parse(input),expected);
  for(const input of ['a','a'.repeat(33),'中','abc_def','abc-def','email@example.com','abc def','中文 账号','ＦＵＬＬ１２','аbc','éabc','かな','한글',"x' OR 1=1"])assert.equal(newUsername.safeParse(input).success,false);
 });
-test('登录账号自主修改机会按服务端标记判断，零时刻也表示已用，群主无次数限制',()=>{
+test('登录账号自主修改机会按服务端标记判断，零时刻也表示已用，宗主无次数限制',()=>{
  assert.equal(canChangeOwnUsername(false,null),false);assert.equal(canChangeOwnUsername(true,null),false);
  assert.equal(canChangeOwnUsername(false,{usernameChangedAt:null}),true);
  for(const t of [0,Date.now()]){assert.equal(canChangeOwnUsername(false,{usernameChangedAt:t}),false);assert.equal(canChangeOwnUsername(true,{usernameChangedAt:t}),true)}

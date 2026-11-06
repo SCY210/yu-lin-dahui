@@ -34,7 +34,7 @@ export default function EventShare({event,clubName}:{event:Event;clubName:string
   <button ref={shareButton} type="button" className="secondary event-wechat-button" onClick={share} disabled={busy||unavailable} title={unavailable?'草稿开放报名后可分享':undefined}><MessageCircle size={16}/>{busy?'正在打开分享…':'分享至微信群'}</button>
   <Dialog open={!!payload} onOpenChange={open=>{if(!open)setPayload(null)}}>
    <DialogContent className="app-dialog event-share-dialog" onCloseAutoFocus={ev=>{ev.preventDefault();shareButton.current?.focus()}}>
-    <DialogHeader><DialogTitle>分享至微信群</DialogTitle><DialogDescription>{inWeChat?'通过微信右上角菜单转发本次活动，无需复制接龙。':'手机分享菜单中选择微信，再选择群聊。对方需使用成员账号登录后接龙。'}</DialogDescription></DialogHeader>
+    <DialogHeader><DialogTitle>分享至微信群</DialogTitle><DialogDescription>{inWeChat?'通过微信右上角菜单转发本次活动，无需复制接龙。':'手机分享菜单中选择微信，再选择群聊。对方需使用道友账号登录后接龙。'}</DialogDescription></DialogHeader>
     {payload&&targets&&<>
      <section className="event-wechat-guide" aria-label="微信群分享步骤">
       <div className="event-wechat-guide-heading"><MessageCircle size={22} aria-hidden="true"/><strong>{inWeChat?'在微信内直接转发':'发到你的微信群'}</strong>{inWeChat&&<ArrowUpRight size={24} aria-hidden="true"/>}</div>

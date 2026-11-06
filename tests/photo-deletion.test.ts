@@ -19,13 +19,13 @@ function persistence(initial:State){
  return {store,state:()=>structuredClone(current),objects,saves:()=>saves,failSave:(value=true)=>failSave=value,failObject:(value=true)=>failObject=value};
 }
 
-test('上传者与管理员可删除活动照片，关联人物和活动创建者无额外删除权限',()=>{
+test('上传者与长老可删除活动照片，关联人物和活动创建者无额外删除权限',()=>{
  const {s,photo,a}=fixture();assert.equal(canDeletePhoto(s,a('uploader'),photo),true);assert.equal(canDeletePhoto(s,a('admin'),photo),true);assert.equal(canDeletePhoto(s,a('subject'),photo),false);assert.equal(canDeletePhoto(s,a('other'),photo),false);
 });
-test('本人可删除管理员上传的战拍照片和头像；其他成员不能删除',()=>{
+test('本人可删除长老上传的战拍照片和头像；其他道友不能删除',()=>{
  const {s,photo,a}=fixture();for(const kind of ['racket','avatar'] as const){photo.kind=kind;photo.ownerId='admin';assert.equal(canDeletePhoto(s,a('subject'),photo),true);assert.equal(canDeletePhoto(s,a('other'),photo),false)}
 });
-test('群主档案照片受保护，其他管理员或上传者也不能删除',()=>{
+test('宗主档案照片受保护，其他长老或上传者也不能删除',()=>{
  const {s,photo,a}=fixture();photo.playerIds=['owner-player'];for(const kind of ['racket','avatar'] as const){photo.kind=kind;photo.ownerId='admin';assert.equal(canDeletePhoto(s,a('admin'),photo),false);assert.equal(canDeletePhoto(s,a('owner'),photo),true)}
  photo.kind='photo';s.players[0].avatarId=photo.id;assert.equal(canDeletePhoto(s,a('admin'),photo),false);
 });
@@ -62,7 +62,7 @@ test('malformed historical deletion audit cannot trigger storage cleanup',async(
  assert.deepEqual(p.objects,[]);
 });
 
-test('未知成员、越权账号或已删除照片不能触发文件清理',async()=>{
+test('未知道友、越权账号或已删除照片不能触发文件清理',async()=>{
  const {s}=fixture(),p=persistence(s);await assert.rejects(()=>deleteStoredPhoto({userId:'unknown',photoId:'photo',requestId,revision:7},p.store,now),/加入群组/);await assert.rejects(()=>deleteStoredPhoto({userId:'other',photoId:'photo',requestId,revision:7},p.store,now),/403/);await assert.rejects(()=>deleteStoredPhoto({userId:'uploader',photoId:'missing',requestId,revision:7},p.store,now),/不存在/);assert.deepEqual(p.objects,[]);assert.equal(p.saves(),0);
 });
 test('共享资料提供服务端删除权限标记，保留原数据且不泄露照片存储键',()=>{

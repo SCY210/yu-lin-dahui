@@ -28,7 +28,7 @@ export default function ScoreReminder({ctx,blocked=false,hideBar=false,onOpenMat
  if(!pending.length&&!match)return null;
  const chosen=match??pending[0],event=ctx.data.events.find(e=>e.id===chosen.eventId),court=ctx.data.bookings.find(b=>b.id===chosen.courtId);
  return <>
-  {!hideBar&&pending.length>0&&<section className="score-reminder-bar" aria-label="我的待录比分"><div><strong><ClipboardPen size={18} aria-hidden="true"/>你有 {pending.length} 场对局待录比分</strong><small>{event?.title} · {court?.name??'比赛场地'}</small></div><button type="button" className="primary" disabled={blocked||ctx.busy} onClick={manualOpen}>去录分</button></section>}
+  {!hideBar&&pending.length>0&&<section className="score-reminder-bar" aria-label="我的待录比分"><div><strong><ClipboardPen size={18} aria-hidden="true"/>尚有 {pending.length} 场对局战果未录</strong><small>{event?.title} · {court?.name??'比赛场地'}</small></div><button type="button" className="primary" disabled={blocked||ctx.busy} onClick={manualOpen}>前去录分</button></section>}
   {selection?.mode==='score'&&match&&<Deferred><ScoreDialog key={match.id} m={match} ctx={ctx} close={dismiss} pendingMatches={pending} choose={(id:string)=>setSelection({id,mode:'score'})}/></Deferred>}
  </>;
 }

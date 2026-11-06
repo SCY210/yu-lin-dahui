@@ -260,7 +260,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  const manager=canManageEvent(a,e)||canEnableEventRanking(s,a,e);
  if(command.action==='liveNext'){
   // Like score entry: anyone signed up for the activity, its organiser or an administrator.
-  if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
+  if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或长老可以开始组队');
   if(!e.livePlay?.enabled||e.livePlay.paused||now<e.start)fail('实时排场未开启、已暂停或活动尚未开始');
   const started=fillLiveCourts(s,e,now,{courtId:command.payload.courtId,allowSame:command.payload.allowSame});
   if(!started.length)fail('这片场地正在比赛，或可上场的人数不足，暂时无法组队');
@@ -269,7 +269,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  }
  if(command.action==='liveStart'||command.action==='livePause'){
   authorizeEventAction(s,a,command.action,p);
-  if(!manager)fail('403: 只有活动创建者或管理员可以开始或暂停排场');
+  if(!manager)fail('403: 只有活动创建者或长老可以开始或暂停排场');
  }else{
   const p=command.payload;
   const player=s.players.find(player=>player.id===p.playerId);

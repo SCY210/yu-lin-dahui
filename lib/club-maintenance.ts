@@ -39,7 +39,7 @@ export async function loadClubState(options:{incremental?:boolean}={}){
   const coinRewardsChanged=reconcileAutomaticCoins(state,now,quiet&&!strengthMerge&&!pointsStarted&&!unplayedDeleted.length&&!coinPolicyStarted?sharedRealmLedger(state,now):undefined);
   if(!unplayedDeleted.length&&!coinPolicyStarted&&!coinRewardsChanged&&!pointsStarted&&!ownershipChanged&&!attendanceChanged&&!realmMigration&&!rankingChanged&&!allRankedChanged&&!rankedEventsChanged&&!strengthMerge)return state;
   if(unplayedDeleted.length)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:planned-cleanup',action:'deleteUnplayedPlanned',reason:'活动结束，删除未开打也未录分的预排对局',changes:{matchIds:unplayedDeleted}});
-  if(ownershipChanged)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:club-owner',action:'protectClubOwner',reason:'为已验证的网站所有者启用群主最高权限保护',changes:{accountId:clubOwnerId(state)}});
+  if(ownershipChanged)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:club-owner',action:'protectClubOwner',reason:'为已验证的网站所有者启用宗主最高权限保护',changes:{accountId:clubOwnerId(state)}});
   if(attendanceChanged)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:default-attendance',action:'enableDefaultAttendance',reason:'正式报名默认参加，移除签到操作'});
   if(realmMigration)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:elo-realms',action:'enableEloRealms',reason:'累计成长规则停用，境界改由修为（Elo，每人从1000起）决定；按全部已有比赛记录从头回算，季度与年度榜积分改为修为变化之和',changes:realmMigration});
   if(strengthMerge)state.audits.push({id:crypto.randomUUID(),at:now,actor:'system:strength-merge',action:'mergeStrengthRating',reason:'隐藏分组实力分并入修为：自动分组、搭档模式和让分建议改用只按双打小局计算的修为；赛季积分改为胜负积分加强弱加成',changes:strengthMerge});

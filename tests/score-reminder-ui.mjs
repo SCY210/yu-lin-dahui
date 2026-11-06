@@ -27,11 +27,11 @@ try{
  assert.equal(headings().includes('录入本局比分'),false,'An existing dialog/write must defer the reminder');
  await act(()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'fixture-match'})});assert.equal(headings().includes('录入本局比分'),false,'home score events respect blocked dialogs');
  await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview,{blocked:false})));await pause()});assert.equal(headings().includes('录入本局比分'),false,'a player in a game is never interrupted: the form does not open by itself');
- assert.ok(button('去录分'),'the bar still offers score entry');
+ assert.ok(button('前去录分'),'the bar still offers score entry');
  await act(async()=>{renderer.update(React.createElement(React.StrictMode,null,React.createElement(Preview)));await pause()});assert.equal(headings().includes('录入本局比分'),false,'Polling/rerender never opens the form');
  await act(()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'unknown-match'})});assert.equal(headings().includes('录入本局比分'),false);
  await act(async()=>{for(const f of listeners.get('yulin:score-entry')??[])f({detail:'fixture-match'});await pause()});assert.ok(headings().includes('录入本局比分'),'a home score event opens the current own match');
- await click('稍后再录');await click('去录分');assert.ok(headings().includes('录入本局比分'));
+ await click('稍后再录');await click('前去录分');assert.ok(headings().includes('录入本局比分'));
  let inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs.length,2);assert.ok(inputs.every(n=>n.props.value===''&&n.props.inputMode==='numeric'));assert.equal(renderer.root.findAllByType('input').length,2,'First entry has only two score inputs, no reason input');assert.equal(inputs[0].props.autoFocus,true);
  await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}})});assert.ok(renderer.root.findAll(n=>n.props.role==='alert').some(n=>text(n).includes('实际比分')));assert.equal(renderer.root.findAll(n=>n.props.role==='status').length,0);
  await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[1].props.onChange({target:{value:'19'}})});
@@ -40,7 +40,7 @@ try{
  assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('已保存')));assert.equal(headings().includes('录入本局比分'),false);assert.equal(headings().includes('录入本局比分'),false,'A next live assignment must not immediately re-open score entry');
  await act(async()=>{doc.hidden=true;for(const f of documentListeners.get('visibilitychange')??[])f();doc.hidden=false;for(const f of documentListeners.get('visibilitychange')??[])f();await pause()});assert.equal(headings().includes('录入本局比分'),false,'Returning to the app does not open the form either');
  await act(async()=>{renderer.unmount();renderer=create(React.createElement(Preview,{teamSide:'b'}));await pause()});
- await click('去录分');assert.ok(headings().includes('录入本局比分'));inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs[0].props['aria-label'],'第1局乙队比分','My team must be first even on side B');assert.equal(inputs[0].props.autoFocus,true);
+ await click('前去录分');assert.ok(headings().includes('录入本局比分'));inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');assert.equal(inputs[0].props['aria-label'],'第1局乙队比分','My team must be first even on side B');assert.equal(inputs[0].props.autoFocus,true);
  await act(async()=>{inputs[0].props.onChange({target:{value:'21'}})});inputs=renderer.root.findAllByType('input').filter(n=>n.props.type==='number');await act(async()=>{inputs[1].props.onChange({target:{value:'19'}})});await act(async()=>{await renderer.root.findByType('form').props.onSubmit({preventDefault(){}});await pause()});assert.ok(renderer.root.findAll(n=>n.props.role==='status').some(n=>text(n).includes('19:21')),'My team display order must preserve the stored A/B score mapping');
  console.log('PASS score dialog: never opens by itself, opens from the bar or a home button, two-input form, no reason step, postpone/manual return, blank and cleared score validation, save dismissal, no immediate next-game popup, foreground return and correct side-B score mapping');
 }finally{if(renderer)await act(async()=>renderer.unmount());globalThis.document=prior.document;globalThis.window=prior.window;globalThis.IS_REACT_ACT_ENVIRONMENT=prior.act}

@@ -69,7 +69,7 @@ export async function digest(v: string) { return Array.from(new Uint8Array(await
 /** Testers manage recorded friends with administrators (docs/TESTER_MEMBER_MANAGEMENT.md). */
 const guestFriendActions = ['guestFriendMerge', 'guestFriendEdit', 'guestFriendHide'];
 export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && !(guestFriendActions.includes(action) && canManageMembers(a)) && a.role !== 'admin')
-    fail('403: 仅管理员可以执行此操作'); }
+    fail('403: 仅长老可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
@@ -167,7 +167,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             if(isGuest(s,p.playerId))fail('临时来宾不累计积分或修为');
             if (!isClubOwner(s, a))
-                fail('403: 只有群主可以调整积分或修为');
+                fail('403: 只有宗主可以调整积分或修为');
             if (!player(p.playerId).enabled)
                 fail('该球友已停用，不能调整积分或修为');
             break;
@@ -195,7 +195,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             if ((p.practiceBallCount ?? 0) > 0)
                 assertAdvancer(s, p.practiceBallBy, '请选择练球用球是谁的');
-            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有群主、管理员和测试员可以创建积分赛');
+            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有宗主、长老和试剑人可以创建积分赛');
             if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
@@ -353,7 +353,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!manager)
                 own(p.playerId);
             if (!player(p.playerId).enabled)
-                fail('成员已停用');
+                fail('道友已停用');
             if (!manager && e.status !== 'open')
                 fail('当前活动未开放报名');
             if (!manager && now >= e.end)
@@ -404,7 +404,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             else {
                 if (s.matches.some(m => m.status === 'playing' && m.eventId === e.id && [...m.a, ...m.b].includes(p.playerId)))
-                    fail('成员正在比赛，请先完成比赛');
+                    fail('道友正在比赛，请先完成比赛');
                 archiveDefaultAttendance(s, e, p.playerId, now);
                 r.status = 'cancelled';
                 r.cancelRequested = false;
@@ -435,17 +435,17 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (usesAutomaticAttendance(e))
                 fail('本活动按正式报名时间默认参加，无需更新出勤状态');
             if (reg(e.id, p.playerId).status !== 'confirmed')
-                fail('只有正式成员可以签到');
+                fail('只有正式道友可以签到');
             if (p.at < e.start - 3600000 || p.at > e.end)
                 fail('出勤时间应在活动时段内');
             const active = s.attendance.find(x => x.eventId === e.id && x.playerId === p.playerId && x.end === null);
             if (p.state === 'left') {
                 if (!active)
-                    fail('成员尚未签到');
+                    fail('道友尚未签到');
                 if (p.at <= active.start)
                     fail('签退必须晚于签到');
                 if (s.matches.some(m => m.status === 'playing' && [...m.a, ...m.b].includes(p.playerId)))
-                    fail('请先结束该成员正在进行的比赛');
+                    fail('请先结束该道友正在进行的比赛');
                 active.end = p.at;
                 active.state = 'left';
             }
@@ -646,7 +646,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!['playing', 'complete'].includes(m.status))
                 fail('只可修正已开赛对局的计分方式');
             const enabled=eventRankingEnabled(event(m.eventId));
-            if(p.monthly!==enabled)fail((enabled?'':'403: ')+'不能单独改变对局计分，请由群主或管理员在活动开打前设置积分赛');
+            if(p.monthly!==enabled)fail((enabled?'':'403: ')+'不能单独改变对局计分，请由宗主或长老在活动开打前设置积分赛');
             markRanked(m,event(m.eventId));
             replayRating(s, now);
             break;
@@ -750,7 +750,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             const payee = (s.settings.feePayees ?? []).find(x => x.id === p.payeeId) ?? fail('常用收款人不存在');
             if (a.role !== 'admin' && payee.createdBy !== a.id)
-                fail('403: 只有添加者或管理员可以删除常用收款人');
+                fail('403: 只有添加者或长老可以删除常用收款人');
             s.settings.feePayees = (s.settings.feePayees ?? []).filter(x => x.id !== payee.id);
             break;
         }
@@ -833,23 +833,23 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'simulationAccess': {
             const p = command.payload;
-            if (!isClubOwner(s, a)) fail('403: 只有群主可以调整测试员权限');
+            if (!isClubOwner(s, a)) fail('403: 只有宗主可以调整试剑人权限');
             const target = s.accounts.find(account => account.id === p.accountId) ?? fail('账号不存在');
-            if (target.id === clubOwnerId(s)) fail('群主已具备模拟权限，无需设置测试员');
-            if (target.role !== 'member') fail('测试员权限仅用于普通成员，管理员已具备模拟权限');
+            if (target.id === clubOwnerId(s)) fail('宗主已具备模拟权限，无需设置试剑人');
+            if (target.role !== 'member') fail('试剑人权限仅用于普通道友，长老已具备模拟权限');
             if (p.enabled) target.simulationTester = true; else delete target.simulationTester;
             break;
         }
         case 'role': {
             const p = command.payload;
             if (clubOwnerId(s) && !isClubOwner(s, a))
-                fail('403: 只有群主可以调整账号权限');
+                fail('403: 只有宗主可以调整账号权限');
             const acc = s.accounts.find(x => x.id === p.accountId) ?? fail('账号不存在');
             assertAccountMutable(s, a, acc.id);
             if (acc.id === clubOwnerId(s))
-                fail('403: 群主拥有固定最高权限，不能降级');
+                fail('403: 宗主拥有固定最高权限，不能降级');
             if (acc.role === 'admin' && p.role === 'member' && s.accounts.filter(x => x.role === 'admin').length === 1)
-                fail('至少保留一位管理员');
+                fail('至少保留一位长老');
             acc.role = p.role;
             break;
         }

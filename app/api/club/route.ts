@@ -53,18 +53,18 @@ export async function GET(req: Request) {
         const a = s.accounts.find(a => a.id === user.userId);
         if (!a) {
             if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
-                return response({ error: '请联系管理员创建登录账号' }, 403);
+                return response({ error: '请联系长老创建登录账号' }, 403);
             return response({ join: true, user: { name: user.displayName } });
         }
         const accountNotice=accountNoticeView(s,a,content);
         if(url.searchParams.has('noticeExport')){
             const all=url.searchParams.get('noticeExport')==='all';
-            if(all&&!isClubOwner(s,a))return response({error:'403: 仅群主可以导出全部确认记录'},403);
+            if(all&&!isClubOwner(s,a))return response({error:'403: 仅宗主可以导出全部确认记录'},403);
             return new Response(JSON.stringify({exportedAt:Date.now(),currentVersion:content.version,contentHash:content.contentHash,receipts:all?s.accountNoticeReceipts:accountNotice.receipts},null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename="activity-notice-receipts.json"','Cache-Control':'no-store'}});
         }
         if (url.searchParams.get('export') === '1') {
             if (a.role !== 'admin')
-                return response({ error: '403: 仅管理员可以导出' }, 403);
+                return response({ error: '403: 仅长老可以导出' }, 403);
             return new Response(JSON.stringify(privateEventState(s, a), null, 2), { headers: { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="club-export.json"', 'Cache-Control': 'no-store' } });
         }
         // Administrators see every login name; a tester those of the accounts they may manage, and their own.
@@ -122,12 +122,12 @@ export async function POST(req: Request) {
                 return response({ ok: true, duplicate: true });
             if (body.action === 'initialize' || body.action === 'join') {
                 if (!['127.0.0.1', 'localhost', '[::1]'].includes(new URL(req.url).hostname))
-                    fail('403: 请联系管理员创建账号，网站不开放自行注册');
+                    fail('403: 请联系长老创建账号，网站不开放自行注册');
                 const p = z.object({ name: z.string().trim().min(1).max(150), invite: z.string().min(8).max(100) }).parse(body.payload);
                 if (a)
                     return response({ ok: true });
                 if (body.action === 'initialize' && !['127.0.0.1', 'localhost', '[::1]'].includes(new URL(req.url).hostname))
-                    fail('403: 请联系现有管理员开通群组');
+                    fail('403: 请联系现有长老开通群组');
                 if (body.action === 'initialize' && s.settings.initialized)
                     fail('群组已初始化');
                 if (body.action === 'join' && (!s.settings.initialized || await digest(p.invite) !== s.settings.inviteHash))
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
                 const playerId = crypto.randomUUID();
                 a = { id: user.userId, email: user.email, role: body.action === 'initialize' ? 'admin' : 'member', playerId };
                 s.accounts.push(a);
-                s.players.push({ id: playerId, ownerId: a.id, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '新成员默认初值' });
+                s.players.push({ id: playerId, ownerId: a.id, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '新道友默认初值' });
                 if (body.action === 'initialize') {
                     s.settings.initialized = true;
                     s.settings.ownerAccountId = a.id;
@@ -180,7 +180,7 @@ export async function POST(req: Request) {
             catch (e) {
                 if (String(e).includes('UNIQUE constraint failed: commits') && attempt < 4) {
                     if (!rebaseLineup && !['acknowledgeActivityNotice', 'register', 'cancel', 'courtRegister', 'courtCancel', 'join', 'initialize', 'friend', 'friendSignup', 'profile', 'shuttleVote', 'pointsModeVote', 'feePaid', 'treasureRedeem'].includes(body.action))
-                        fail('409: 其他管理员刚刚保存了变更，请刷新重试');
+                        fail('409: 其他长老刚刚保存了变更，请刷新重试');
                     continue;
                 }
                 throw e;

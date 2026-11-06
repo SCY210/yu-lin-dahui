@@ -23,8 +23,8 @@ test('only the owner grants and revokes tester access without changing the membe
  await apply(s,owner,'simulationAccess',grant,Date.now());assert.equal(tester.role,'member');assert.equal(tester.simulationTester,true);assert.equal(canUseSimulation(tester),true);
  assert.equal(s.audits.at(-1)?.actor,'owner');assert.equal(s.audits.at(-1)?.action,'simulationAccess');
  await apply(s,owner,'simulationAccess',{...grant,enabled:false},Date.now());assert.equal(tester.role,'member');assert.equal(canUseSimulation(tester),false);
- await assert.rejects(()=>apply(s,owner,'simulationAccess',{...grant,accountId:'owner'},Date.now()),/群主/);
- await assert.rejects(()=>apply(s,owner,'simulationAccess',{...grant,accountId:'admin'},Date.now()),/普通成员/);
+ await assert.rejects(()=>apply(s,owner,'simulationAccess',{...grant,accountId:'owner'},Date.now()),/宗主/);
+ await assert.rejects(()=>apply(s,owner,'simulationAccess',{...grant,accountId:'admin'},Date.now()),/普通道友/);
 });
 test('a tester cannot change real roles, rules, points, ratings or their own tester permission',async()=>{
  const {s,owner,tester}=fixture();await apply(s,owner,'simulationAccess',grant,Date.now());

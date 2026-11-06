@@ -28,7 +28,7 @@ test('正式报名或已参与者为启用候选人：排除候补、未参加�
  const {s,e}=fixture();assert.deepEqual(awardCandidateIds(s,e.id,now),['formal-a-player','formal-b-player','attended-player']);
 });
 
-test('活动尚未打完，正式成员、创建者及管理员都不能提前投票',async()=>{
+test('活动尚未打完，正式道友、创建者及长老都不能提前投票',async()=>{
  for(const status of ['draft','open','locked','live','ended'] as const){const {s,e,account,vote}=fixture();e.status=status;e.start=now+3600000;e.end=now+3*3600000;const before=structuredClone(s);for(const who of ['formal-a','creator','admin']){assert.equal(canCastAwardVote(s,e,account(who),now),false);await assert.rejects(()=>vote(who,'formal-b'),/尚未打完/);assert.deepEqual(s,before)}}
 });
 
@@ -58,7 +58,7 @@ test('提前打完可标记结束后评选，未结束时不能因没有进行�
  const {s,e,vote}=fixture();e.start=now-3600000;e.end=now+3600000;e.status='live';await assert.rejects(()=>vote('formal-a','formal-b'),/尚未打完/);e.status='ended';await vote('formal-a','formal-b');assert.equal(s.awardVotes.length,1);
 });
 
-test('正式成员无需签到，结束后可投票，曾到场的取消者仍能投票',async()=>{
+test('正式道友无需签到，结束后可投票，曾到场的取消者仍能投票',async()=>{
  const {s,vote}=fixture();await vote('formal-a','attended');await vote('attended','formal-b');assert.equal(s.awardVotes.length,2);
 });
 
@@ -68,7 +68,7 @@ test('自动出勤模式的取消参与归档仍可投票，未来虚拟区间�
  await assert.rejects(()=>vote('future','formal-a'),/403/);await assert.rejects(()=>vote('formal-b','future'),/候选球友/);
 });
 
-test('管理员和本活动创建者没有参加不能投票，参加后与普通球友相同',async()=>{
+test('长老和本活动创建者没有参加不能投票，参加后与普通球友相同',async()=>{
  const {s,e,account,vote,join}=fixture();const before=structuredClone(s);
  for(const id of ['creator','admin']){assert.equal(canCastAwardVote(s,e,account(id),now),false);await assert.rejects(()=>vote(id,'formal-a'),/403/);}
  assert.deepEqual(s,before);
@@ -89,7 +89,7 @@ for(const id of ['outsider','waitlist','cancelled','foreign','disabled','future'
  const {s,vote}=fixture(),before=structuredClone(s);await assert.rejects(()=>vote('formal-b',id),/候选球友/);assert.deepEqual(s,before);
 });
 
-test('自己的账号不能给自己投票，参加活动的创建者和管理员也不能绕过',async()=>{
+test('自己的账号不能给自己投票，参加活动的创建者和长老也不能绕过',async()=>{
  const {s,e,vote}=fixture();for(const id of ['formal-a','creator','admin']){
   if(id!=='formal-a')s.registrations.push({...s.registrations[0],id:'reg-'+id,playerId:id+'-player'});
   const before=structuredClone(s);await assert.rejects(()=>vote(id,id),/其他球友/);assert.deepEqual(s,before);
@@ -111,7 +111,7 @@ test('同一账号在两次活动的同类投票独立，不能串用另一活�
  await assert.rejects(()=>vote('formal-b','foreign'),/候选球友/);
 });
 
-test('取消活动立即停止普通成员、创建者和管理员的投票，保留原票数',async()=>{
+test('取消活动立即停止普通道友、创建者和长老的投票，保留原票数',async()=>{
  const {s,e,account,vote}=fixture();await vote('formal-a','formal-b');e.status='cancelled';const before=structuredClone(s);
  for(const id of ['formal-a','creator','admin']){assert.equal(canCastAwardVote(s,e,account(id),now),false);await assert.rejects(()=>vote(id,'attended'),/已取消/);assert.deepEqual(s,before);}
 });
@@ -163,6 +163,6 @@ test('汇总正确处理零票、并列、新增选票及不同活动奖项，�
  const {s,e,vote,join}=fixture();join('creator');join('admin');assert.equal(awardSummary(s.awardVotes,e.id,'mvp').max,0);await vote('formal-a','formal-b');await vote('creator','attended');let summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,2);assert.deepEqual(new Set(summary.leaders),new Set(['formal-b-player','attended-player']));await vote('admin','attended');summary=awardSummary(s.awardVotes,e.id,'mvp');assert.equal(summary.total,3);assert.equal(summary.max,2);assert.deepEqual(summary.leaders,['attended-player']);assert.equal(awardSummary(s.awardVotes,e.id,'defense').total,0);
 });
 
-test('成员投影保留自己的选择，别人的票不暴露账号或编码账号的选票ID',async()=>{
+test('道友投影保留自己的选择，别人的票不暴露账号或编码账号的选票ID',async()=>{
  const {s,account,vote,join}=fixture();join('creator');await vote('creator','formal-b');await vote('formal-a','attended');const view=projectClubState(s,account('formal-a'),'2026-10',2026,now);const other=view.awardVotes.find(v=>v.playerId==='formal-b-player')!,mine=view.awardVotes.find(v=>v.playerId==='attended-player')!;assert.equal(other.voterId,'');assert.ok(!other.id.includes('creator'));assert.equal(mine.voterId,'formal-a');assert.equal(view.awardVotes.length,2);
 });

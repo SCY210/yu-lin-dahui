@@ -17,7 +17,7 @@ export function bonusNotices(s:Pick<State,'events'|'awardVotes'|'audits'>,a:Pick
 }
 
 const schemas={bonusSeen:z.object({ids:z.array(z.string().min(1).max(200)).min(1).max(50)})};
-/** "我是最棒哒！": remember the acknowledged notices on the member's own account. */
+/** "受之无愧！": remember the acknowledged notices on the member's own account. */
 export async function applyBonusSeen(s:State,a:Account,action:string,input:unknown){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
  const account=s.accounts.find(x=>x.id===a.id)??fail('账号不存在');

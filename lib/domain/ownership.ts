@@ -11,7 +11,7 @@ export function canModifyAccount(s:State,a:Pick<Account,'id'|'role'>,targetId:st
  return a.role==='admin'&&(targetId!==clubOwnerId(s)||isClubOwner(s,a));
 }
 export function assertAccountMutable(s:State,a:Account,targetId:string){
- if(targetId===clubOwnerId(s)&&!isClubOwner(s,a))fail('403: 群主账号受保护，只有群主本人可以修改');
+ if(targetId===clubOwnerId(s)&&!isClubOwner(s,a))fail('403: 宗主账号受保护，只有宗主本人可以修改');
 }
 export function assertPlayerMutable(s:State,a:Account,playerId:string){
  if(s.players.find(p=>p.id===playerId)?.guestEventId)fail('403: 临时来宾没有球员档案');

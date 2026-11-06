@@ -38,7 +38,7 @@ export async function POST(req:Request){
   }else{
    eventId=z.string().min(1).parse(f.get('eventId'));const e=s.events.find(e=>e.id===eventId);
    if(!e||e.deletedAt!==undefined||!canManageEvent(a,e)&&e.status==='draft')fail('活动不可访问');
-   if(!canManageEvent(a,e)&&!s.attendance.some(at=>at.eventId===eventId&&at.playerId===a.playerId))return Response.json({error:'活动创建者、管理员或实际参加者才可以上传活动照片'},{status:403});
+   if(!canManageEvent(a,e)&&!s.attendance.some(at=>at.eventId===eventId&&at.playerId===a.playerId))return Response.json({error:'活动创建者、长老或实际参加者才可以上传活动照片'},{status:403});
    const requested=String(f.get('matchId')??'');
    if(requested){const m=s.matches.find(m=>m.id===requested&&m.eventId===eventId);if(!m)fail('比赛不属于本次活动');matchId=m.id;playerIds=[...m.a,...m.b]}
    else{playerIds=[...new Set(z.array(z.string()).max(30).parse(JSON.parse(String(f.get('playerIds')??'[]'))))];if(playerIds.some(id=>!s.attendance.some(at=>at.eventId===eventId&&at.playerId===id)))fail('关联球友必须实际参加本次活动')}

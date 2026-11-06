@@ -3,7 +3,7 @@ import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@
 
 export default function InstallAppGuide({open,onOpenChange,ready,busy,error,install}:{open:boolean;onOpenChange:(open:boolean)=>void;ready:boolean;busy:boolean;error:string;install:()=>Promise<void>}){
  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="app-dialog install-app-guide">
-  <DialogHeader><DialogTitle>把羽林大会安装到手机</DialogTitle><DialogDescription>添加桌面图标，用独立窗口打开；继续使用现有账号。</DialogDescription></DialogHeader>
+  <DialogHeader><DialogTitle>随身洞府：把羽林大会安装到手机</DialogTitle><DialogDescription>在桌面开一座洞府，点图标就用独立窗口打开；继续使用现有账号。</DialogDescription></DialogHeader>
   {ready&&<button type="button" className="primary full" disabled={busy} onClick={()=>void install()}>{busy?'正在打开安装提示…':'安装羽林大会'}</button>}
   {error&&<p className="error" role="alert">{error}</p>}
   <p className="hint">先在页面右上角选好主题，再从此浏览器安装；安装时将提供当前主题的羽毛球图标。</p>

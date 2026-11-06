@@ -10,7 +10,7 @@ function fixture(){
  const s=emptyState(),owner:Account={id:'owner',playerId:'host',role:'admin',email:''};
  const member:Account={id:'member',playerId:'member-player',role:'member',email:''};
  s.accounts.push(owner,member);
- s.players=s.accounts.map(a=>({id:a.playerId,ownerId:a.id,name:a.id==='member'?'羽林球友':'虚构群主',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
+ s.players=s.accounts.map(a=>({id:a.playerId,ownerId:a.id,name:a.id==='member'?'羽林球友':'虚构宗主',enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  const e:Event={id:'event',creatorId:owner.id,title:'虚构接龙',start,end:end+2*hour,venue:'虚构球馆',address:'',status:'open',capacity:8,signupDeadline:start-2*hour,cancelDeadline:start-86400000,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'};
  s.events.push(e);
  s.bookings.push({id:'A',eventId:e.id,name:'一号场',start,end,pricing:'total',cents:1200},
@@ -50,7 +50,7 @@ test('申请取消不释放接龙，取消生效后可重新接龙',async()=>{
  await friend();assert.equal(s.registrations[0].status,'confirmed');assert.equal(s.registrations[0].bookingSignups!.length,1);
 });
 
-test('同名临时来宾不能绕过正式成员的接龙，也不会留下孤立档案',async()=>{
+test('同名临时来宾不能绕过正式道友的接龙，也不会留下孤立档案',async()=>{
  const {s,owner,member,court}=fixture();await court(member.playerId);
  const before=structuredClone(s);
  await assert.rejects(()=>apply(s,owner,'friendSignup',{mode:'new',name:' 羽 林 球友 ',gender:'male',bookingId:'B',arrival:start,departure:end,note:''},now),/已接龙该时段/);

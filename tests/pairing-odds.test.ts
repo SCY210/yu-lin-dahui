@@ -71,7 +71,7 @@ test('only the owner and administrators set and receive the odds',async()=>{
  assert.equal(projectClubState(s,member,'2026-10',2026,at).settings.pairingOdds,undefined,'members never receive them');
  assert.deepEqual(projectClubState(s,admin,'2026-10',2026,at).settings.pairingOdds,[odds]);
  assert.equal(projectClubState(s,admin,'2026-10',2026,e.end+1).settings.pairingOdds,undefined,'gone once the activity is over');
- await assert.rejects(apply(s,admin,'pairingOdds',{eventId:e.id,defaults:[],conditions:[{pair:[x,y],members:[x,a],one:50,two:50}]},at),/条件成员/);
+ await assert.rejects(apply(s,admin,'pairingOdds',{eventId:e.id,defaults:[],conditions:[{pair:[x,y],members:[x,a],one:50,two:50}]},at),/条件道友/);
  await assert.rejects(apply(s,admin,'pairingOdds',{...odds,defaults:[{players:['nobody'],targets:[y],percent:50}]},at),/球友不存在/);
  await assert.rejects(apply(s,admin,'pairingOdds',odds,e.end+1),/活动已结束/);
  await apply(s,admin,'pairingOdds',{eventId:e.id,defaults:[],conditions:[]},at);

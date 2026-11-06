@@ -33,8 +33,8 @@ test('every source adds up to the ranking total, owner grants included',async()=
   assert.ok(!lines.some(line=>line.label==='其他调整'),row.playerId+': every point has a known source');
  }
  const p2=quarterlyLeaderboard(s,'2026-Q4',now+2).find(r=>r.playerId==='p2')!,labels=pointsBreakdown(p2).map(line=>line.label);
- assert.deepEqual(labels,['胜局 4 × 3','负局 1 × 1','连胜加分','群主调整']);
- assert.equal(pointsBreakdown(p2).find(line=>line.label==='群主调整')!.points,17);
+ assert.deepEqual(labels,['胜局 4 × 3','负局 1 × 1','连胜加分','宗主调整']);
+ assert.equal(pointsBreakdown(p2).find(line=>line.label==='宗主调整')!.points,17);
  const p0=quarterlyLeaderboard(s,'2026-Q4',now+2).find(r=>r.playerId==='p0')!;
  assert.deepEqual(pointsBreakdown(p0).map(line=>[line.label,line.points]),[['胜局 1 × 3',3],['负局 4 × 1',-4],['强弱加成',1]],'one win against a pair rated higher at that moment carries an upset bonus');
 });

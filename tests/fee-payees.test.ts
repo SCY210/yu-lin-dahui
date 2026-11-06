@@ -31,7 +31,7 @@ test('常用收款人最多保留 20 位',async()=>{
  assert.equal(s.settings.feePayees!.length,20);assert.equal(s.settings.feePayees![0].phone,'600 000 121');
 });
 
-test('只有添加者或管理员可以删除常用收款人',async()=>{
+test('只有添加者或长老可以删除常用收款人',async()=>{
  const s=fixture();await set(s,organizer,'e1','p1','600 111 222');const id=s.settings.feePayees![0].id;
  await assert.rejects(()=>apply(s,other,'feePayeeRemove',{payeeId:id,reason:''},now),/403/);
  await apply(s,organizer,'feePayeeRemove',{payeeId:id,reason:''},now);assert.equal(s.settings.feePayees!.length,0);
@@ -45,7 +45,7 @@ test('页面数据给出常用收款人和是否由自己添加，不暴露添�
  assert.equal(projectClubState(s,other,'2026-10',2026,now).settings.feePayees[0].mine,false);
 });
 
-test('只有群主和管理员标为常用收款人，其他人收进折叠',async()=>{
+test('只有宗主和长老标为常用收款人，其他人收进折叠',async()=>{
  const s=fixture();s.settings.ownerAccountId=other.id;
  await set(s,organizer,'e1','p1','600 111 222');await set(s,organizer,'e1','p0','600 333 444');await set(s,organizer,'e2','p2','600 555 666');
  const leader=Object.fromEntries(projectClubState(s,organizer,'2026-10',2026,now).settings.feePayees.map(p=>[p.playerId,p.leader===true]));

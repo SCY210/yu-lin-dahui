@@ -54,7 +54,7 @@ test('忽略这次更新：只对这一次的预览有效，费用再变化或�
  await assert.rejects(()=>apply(s,owner,'feeUpdateIgnore',{eventId:'e',settlementId:'v2',fingerprint:settlementFingerprint(draft),reason:''},now),/409/,'only the current confirmed version');
 });
 
-test('群主和管理员都能撤回和忽略，不必是活动创建者',async()=>{
+test('宗主和长老都能撤回和忽略，不必是活动创建者',async()=>{
  for(const who of ['admin','owner'] as const){
   const s=fixture(),actor:Account={id:'carol',email:'',role:who==='admin'?'admin':'member',playerId:'p2'};
   s.accounts.push(actor);s.players.push({id:'p2',name:'carol',ownerId:'carol',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''});

@@ -18,13 +18,13 @@ test('完整词条按大小写无关匹配，不屏蔽更长词中的部分字�
 test('特殊字符是普通屏蔽词，不能注入正则表达式；无命中内容保留',()=>{
  const mask=blockedWordMasker(['a+b','.*','[x]','\\']);assert.equal(mask('a+b .* [x] \\ test'),'*** ** *** * test');assert.equal(mask('plain text'),'plain text');assert.equal(blockedWordMasker([])('原始内容'),'原始内容');
 });
-test('群主和其他管理员都能管理词库，成员及活动创建者不能伪造权限',async()=>{
+test('宗主和其他长老都能管理词库，道友及活动创建者不能伪造权限',async()=>{
  const s=fixture();await apply(s,s.accounts[0],'blockedWords',{words:['坏词','bad','BAD']},1);assert.deepEqual(s.settings.blockedWords,['坏词','bad']);await apply(s,s.accounts[1],'blockedWords',{words:['新词']},2);assert.deepEqual(s.settings.blockedWords,['新词']);const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[2],'blockedWords',{words:['伪造'],role:'admin'},3),/403/);assert.deepEqual(s,before);
 });
 test('无效或超限词库在修改前拒绝，不能覆盖当前有效词库',async()=>{
  const s=fixture();s.settings.blockedWords=['保留'];for(const words of [[''],['   '],['x\ny'],['x'.repeat(51)],Array.from({length:201},(_,i)=>'word'+i)]){const before=structuredClone(s);await assert.rejects(()=>apply(s,s.accounts[0],'blockedWords',{words},1));assert.deepEqual(s,before)}
 });
-test('服务端视图遮盖既有资料且不改原始数据，身份保持准确，成员看不到词库',()=>{
+test('服务端视图遮盖既有资料且不改原始数据，身份保持准确，道友看不到词库',()=>{
  const s=fixture();s.settings.blockedWords=['坏词','bad','member'];s.settings.name='坏词 群';
  s.photos.push({id:'photo',kind:'avatar',eventId:null,matchId:null,playerIds:['member-player'],ownerId:'member',caption:'BAD 坏词',created:1,key:'media/bad-path',type:'image/png',size:100});
  const before=structuredClone(s),view=projectClubState(s,s.accounts[2],'2026-10',2026,10);

@@ -32,7 +32,7 @@ test('代报朋友同样受截止限制；不能取消别人的报名',async()=>
  const {s,cancel}=fixture();await cancel(undefined,'friend',cutoff+1);assert.equal(s.registrations[2].status,'waitlist');assert.equal(s.registrations[2].cancelRequested,true);
  const before=structuredClone(s);await assert.rejects(()=>cancel(undefined,'waiting',cutoff-1),/403/);assert.deepEqual(s,before);
 });
-test('创建者和管理员可处理超过截止的取消申请，释放名额并递补',async()=>{
+test('创建者和长老可处理超过截止的取消申请，释放名额并递补',async()=>{
  for(const role of ['creator','admin'] as const){const f=fixture();await f.cancel(undefined,undefined,cutoff+1);await f.cancel(f[role],'self',cutoff+2);assert.equal(f.s.registrations[0].status,'cancelled');assert.equal(f.s.registrations[0].cancelRequested,false);assert.equal(f.s.registrations[1].status,'confirmed')}
 });
 test('创建和编辑时服务器强制固定取消截止，客户端不能伪造',async()=>{

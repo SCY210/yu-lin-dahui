@@ -28,7 +28,7 @@ export function pairingOddsView(s:State,a:Account,now:number){
 
 export function applyPairingOdds(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
- if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 仅管理员可以执行此操作');
+ if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 仅长老可以执行此操作');
  const p=command.payload,e=s.events.find(x=>x.id===p.eventId&&x.deletedAt===undefined)??fail('活动不存在或已删除');
  if(e.end<=now||['ended','cancelled'].includes(e.status))fail('活动已结束');
  const known=new Set(s.players.map(x=>x.id)),check=(list:string[])=>{if(list.some(x=>!known.has(x)))fail('球友不存在')};
@@ -36,7 +36,7 @@ export function applyPairingOdds(s:State,a:Account,action:string,input:unknown,n
  const defaults=p.defaults.map(d=>({players:unique(d.players),targets:unique(d.targets),percent:d.percent}));
  const conditions=p.conditions.map(c=>({pair:c.pair,members:unique(c.members),one:c.one,two:c.two}));
  for(const d of defaults){check(d.players);check(d.targets)}
- for(const c of conditions){check(c.pair);check(c.members);if(c.pair[0]===c.pair[1])fail('请选择两位不同的球友');if(c.members.some(x=>c.pair.includes(x)))fail('条件成员不能是选定的两人')}
+ for(const c of conditions){check(c.pair);check(c.members);if(c.pair[0]===c.pair[1])fail('请选择两位不同的球友');if(c.members.some(x=>c.pair.includes(x)))fail('条件道友不能是选定的两人')}
  // Entries of activities that are over no longer matter.
  const open=new Set(s.events.filter(x=>x.deletedAt===undefined&&x.end>now).map(x=>x.id));
  const rest=(s.settings.pairingOdds??[]).filter(o=>o.eventId!==e.id&&open.has(o.eventId));

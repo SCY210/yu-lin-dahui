@@ -18,7 +18,7 @@ const preview=3;
 export default function BondBoard({rows,pairs,gifts,players,meId,onProfile}:{rows:BondRow[];pairs?:BondPair[];gifts?:GiftRecord[];players:Player[];meId:string;onProfile:(id:string)=>void}){
  const [tab,setTab]=useState<'mine'|'all'|'gifts'>('mine'),[focus,setFocus]=useState(''),[query,setQuery]=useState('');
  const members=players.filter(p=>p.enabled!==false&&!p.guest&&!p.guestEventId);
- const byId=new Map(players.map(p=>[p.id,p])),name=(id:string)=>byId.get(id)?.name??'未知成员';
+ const byId=new Map(players.map(p=>[p.id,p])),name=(id:string)=>byId.get(id)?.name??'未知道友';
  const order=(x:Row,y:Row)=>y.score-x.score||collator.compare(name(x.playerId),name(y.playerId));
  const fill=(id:string,known:Map<string,Row>)=>members.filter(p=>p.id!==id).map(p=>known.get(p.id)??{playerId:p.id,score:0,games:0,gifts:0}).sort(order);
  const mine=fill(meId,new Map(rows.map(r=>[r.playerId,{playerId:r.playerId,score:r.score,games:r.games,gifts:r.giftsSent+r.giftsReceived}])));
@@ -43,7 +43,7 @@ export default function BondBoard({rows,pairs,gifts,players,meId,onProfile}:{row
    <p className="hint">你和每位球友的道缘，缘值从高到低。一起搭档打球、互赠礼物都会增加缘值。</p>
    <BondList rows={mine} byId={byId} onProfile={onProfile}/>
   </>:tab==='gifts'?<>
-   <p className="hint">球友之间互赠礼物的记录，最新在前。仅群主和管理员可见。</p>
+   <p className="hint">球友之间互赠礼物的记录，最新在前。仅宗主和长老可见。</p>
    <GiftList gifts={gifts??[]} name={name}/>
   </>:focused?<>
    <button type="button" className="ghost bond-board-back" onClick={()=>setFocus('')}><ChevronLeft size={17} aria-hidden="true"/>全部球友</button>
@@ -53,7 +53,7 @@ export default function BondBoard({rows,pairs,gifts,players,meId,onProfile}:{row
    </div>
    <BondList key={focused.id} rows={fill(focused.id,bonds.get(focused.id)??new Map())} byId={byId} onProfile={onProfile}/>
   </>:<>
-   <p className="hint">点一位球友，查看与群里每个人的道缘。仅群主和管理员可见。</p>
+   <p className="hint">点一位球友，查看与群里每个人的道缘。仅宗主和长老可见。</p>
    <label className="bond-board-search"><Search size={16} aria-hidden="true"/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索球友" aria-label="搜索球友的道缘"/></label>
    <Expandable total={roster.length} unit="位" open={!!needle}>{limit=><ul className="bond-board-members">{roster.slice(0,limit).map(p=>{const top=strongest(p.id);return <li key={p.id}>
     <button type="button" className="bond-board-member" onClick={()=>setFocus(p.id)} aria-label={'查看'+p.name+'的道缘'}>
@@ -76,7 +76,7 @@ function Expandable({total,unit,open,children}:{total:number;unit:string;open?:b
 function BondList({rows,byId,onProfile}:{rows:Row[];byId:Map<string,Player>;onProfile:(id:string)=>void}){
  return <Expandable total={rows.length} unit="位">{limit=><ol className="bond-board-list">{rows.slice(0,limit).map((r,i)=><li key={r.playerId}>
   <span className="bond-board-rank">{i+1}</span>
-  <button type="button" className="bond-board-player" onClick={()=>onProfile(r.playerId)}><Avatar p={byId.get(r.playerId)}/><span className="bond-board-who"><strong>{byId.get(r.playerId)?.name??'未知成员'}</strong><small>{r.score?'搭档 '+count(r.games)+' 局'+(r.gifts?' · 礼物 '+count(r.gifts)+' 羽币':''):'还没有一起搭档'}</small></span></button>
+  <button type="button" className="bond-board-player" onClick={()=>onProfile(r.playerId)}><Avatar p={byId.get(r.playerId)}/><span className="bond-board-who"><strong>{byId.get(r.playerId)?.name??'未知道友'}</strong><small>{r.score?'搭档 '+count(r.games)+' 局'+(r.gifts?' · 礼物 '+count(r.gifts)+' 羽币':''):'还没有一起搭档'}</small></span></button>
   <span className="bond-board-score"><BondStage index={bondTierIndex(r.score)}/><small>{count(r.score)}</small></span>
  </li>)}</ol>}</Expandable>;
 }

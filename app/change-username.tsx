@@ -25,11 +25,11 @@ export default function ChangeUsername({open,onOpenChange,onChanged,currentUsern
   }catch(e){setError(e instanceof Error?e.message:'账号修改失败，请重试')}finally{inFlight.current=false;setBusy(false)}
  }
  return <Dialog open={open} historyCloseBlocked={busy} onOpenChange={changeOpen}><DialogContent className="app-dialog change-username-dialog" showCloseButton={!busy} onEscapeKeyDown={ev=>{if(inFlight.current)ev.preventDefault()}} onInteractOutside={ev=>{if(inFlight.current)ev.preventDefault()}}>
-  <DialogHeader><DialogTitle>{accountId?'修改球友登录账号':'修改登录账号'}</DialogTitle><DialogDescription>{accountId?'群主代改不占用或重置球友自主修改账号的机会。该球友需使用新账号重新登录，密码不变。':isOwner?'群主可随时修改自己的登录账号。修改成功后请使用新账号和原密码重新登录。':'每个成员仅有一次自主修改登录账号的机会。修改成功后请使用新账号和原密码重新登录。'}</DialogDescription></DialogHeader>
+  <DialogHeader><DialogTitle>{accountId?'修改球友登录账号':'修改登录账号'}</DialogTitle><DialogDescription>{accountId?'宗主代改不占用或重置球友自主修改账号的机会。该球友需使用新账号重新登录，密码不变。':isOwner?'宗主可随时修改自己的登录账号。修改成功后请使用新账号和原密码重新登录。':'每个道友仅有一次自主修改登录账号的机会。修改成功后请使用新账号和原密码重新登录。'}</DialogDescription></DialogHeader>
   <form onSubmit={submit}><div className="form-fields">
    <div className="username-current"><span>{accountName?accountName+'的当前账号':'当前登录账号'}</span><strong>{currentUsername}</strong></div>
    <label>新登录账号<input type="text" required minLength={2} maxLength={32} pattern={usernamePattern} title={usernameRule} value={newUsername} onChange={ev=>setNewUsername(ev.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={busy}/><small>2–32位中文、英文字母或数字；英文不区分大小写，简体和繁体算同一个账号。登录账号与球友名字分别设置。</small></label>
-   {passwordEnabled&&<label>{accountId?'你的当前密码':'当前密码'}<input type="password" required minLength={1} maxLength={128} value={currentPassword} onChange={ev=>setCurrentPassword(ev.target.value)} autoComplete="current-password" disabled={busy}/>{accountId&&<small>验证群主本人的密码。</small>}</label>}
+   {passwordEnabled&&<label>{accountId?'你的当前密码':'当前密码'}<input type="password" required minLength={1} maxLength={128} value={currentPassword} onChange={ev=>setCurrentPassword(ev.target.value)} autoComplete="current-password" disabled={busy}/>{accountId&&<small>验证宗主本人的密码。</small>}</label>}
   </div>{error&&<p className="error" role="alert">{error}</p>}<div className="change-username-actions"><button type="button" className="secondary" onClick={()=>changeOpen(false)} disabled={busy}>取消</button><button type="submit" className="primary" disabled={busy}>{busy?'正在修改…':'确认修改账号'}</button></div></form>
  </DialogContent></Dialog>;
 }

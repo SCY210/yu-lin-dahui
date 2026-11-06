@@ -58,7 +58,7 @@ function OddsEditor({ctx,eventId,saved}:{ctx:Ctx;eventId:string;saved?:PairingOd
    <h4>条件组队</h4>
    {conditions.map((c,i)=><div className="po-rule" key={i}>
     <PlayerPicker label="选定两人" options={players} signed={signed} value={c.pair} max={2} hidden={c.members} onChange={v=>setCondition(i,{pair:v})}/>
-    <PlayerPicker label="条件成员" options={players} signed={signed} value={c.members} hidden={c.pair} onChange={v=>setCondition(i,{members:v})}/>
+    <PlayerPicker label="条件道友" options={players} signed={signed} value={c.members} hidden={c.pair} onChange={v=>setCondition(i,{members:v})}/>
     <Percent label="出现一位" value={c.one} onChange={v=>setCondition(i,{one:v})}/>
     <Percent label="出现两位" value={c.two} onChange={v=>setCondition(i,{two:v})}/>
     <button type="button" className="ghost po-remove" aria-label="删除这条条件组队" onClick={()=>setConditions(list=>list.filter((_,j)=>j!==i))}><Trash2 size={16} aria-hidden="true"/></button>
@@ -86,7 +86,7 @@ function PlayerPicker({label,options,signed,value,onChange,max,hidden=[]}:{label
  return <div className="po-picker">
   <span className="po-label">{label}</span>
   <div className="po-chips">
-   {value.map(id=><span className="po-chip" key={id}><Avatar p={byId.get(id)}/><span>{byId.get(id)?.name??'未知成员'}</span><button type="button" aria-label={'移除'+(byId.get(id)?.name??'')} onClick={()=>onChange(value.filter(x=>x!==id))}><X size={14} aria-hidden="true"/></button></span>)}
+   {value.map(id=><span className="po-chip" key={id}><Avatar p={byId.get(id)}/><span>{byId.get(id)?.name??'未知道友'}</span><button type="button" aria-label={'移除'+(byId.get(id)?.name??'')} onClick={()=>onChange(value.filter(x=>x!==id))}><X size={14} aria-hidden="true"/></button></span>)}
    {!full&&<button type="button" className="po-add" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={15} aria-hidden="true"/>选择</button>}
   </div>
   {open&&<div className="po-menu">

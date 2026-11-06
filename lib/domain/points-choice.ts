@@ -29,7 +29,7 @@ export async function applyPointsChoice(s: State, a: Account, action: string, in
         case 'pointsModeVote': {
             const p = command.payload;
             if (!canVotePointsMode(s, e, a, now))
-                fail('403: 仅正式接龙成员可在活动开始前参与开放的搭档投票，候补不能投票');
+                fail('403: 仅正式接龙道友可在活动开始前参与开放的搭档投票，候补不能投票');
             choice.votes = choice.votes.filter(v => v.voterId !== a.id);
             if (p.mode !== null)
                 choice.votes.push({ id: crypto.randomUUID(), voterId: a.id, playerId: a.playerId, mode: p.mode, at: now });

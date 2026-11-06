@@ -39,7 +39,7 @@ test('固定搭档整场不变，也能公平轮换上场；轮换搭档模式�
   if(pairing==='fixed'){assert.equal(e.pointsChoice!.teams!.length,6);assert.ok([...partners.values()].every(set=>set.size===1));const counts=s.players.map(p=>s.matches.filter(m=>[...m.a,...m.b].includes(p.id)).length);assert.ok(Math.max(...counts)-Math.min(...counts)<=1)}else assert.ok([...partners.values()].some(set=>set.size>1));
  }
 });
-test('预排按实际接龙参加时段，排除候补、取消、停用者；晚到成员从覆盖的轮次参加',async()=>{
+test('预排按实际接龙参加时段，排除候补、取消、停用者；晚到道友从覆盖的轮次参加',async()=>{
  const {s,plan}=fixture(14);s.registrations[0].arrival=start+30*minute;s.registrations[1].departure=start+60*minute;s.registrations[12].status='waitlist';s.registrations[13].status='cancelled';s.players[11].enabled=false;
  await plan();for(const r of s.rounds){const ids=s.matches.filter(m=>m.roundId===r.id).flatMap(m=>[...m.a,...m.b]);assert.ok(!ids.includes('p11')&&!ids.includes('p12')&&!ids.includes('p13'));if(r.start<start+30*minute)assert.ok(!ids.includes('p00'));if(r.start>=start+60*minute)assert.ok(!ids.includes('p01'))}
 });
@@ -49,7 +49,7 @@ test('场地中途缺失时不会保存半份赛程，也不会取消原有有�
 test('不足一轮的余时合并，全部轮次严格落在积分赛时段内',async()=>{
  const {s,e,plan}=fixture();await plan('rotate',{pointsMinutes:92,roundMinutes:30});assert.deepEqual(s.rounds.map(r=>r.duration),[30,30,32]);assert.equal(s.rounds.at(-1)!.start+s.rounds.at(-1)!.duration*minute,e.pointsPlan!.end);
 });
-test('积分赛不能越界、不能由普通成员管理，擂台仍用逐轮生成',async()=>{
+test('积分赛不能越界、不能由普通道友管理，擂台仍用逐轮生成',async()=>{
  const {s,e,plan,act}=fixture();let before=structuredClone(s);await assert.rejects(()=>plan('rotate',{pointsMinutes:130}),/活动时间内/);assert.deepEqual(s,before);
  await assert.rejects(()=>act('planPoints',{at:start,pointsMinutes:90,roundMinutes:15,seed:12,pairing:'rotate'},'actor1'),/403/);assert.deepEqual(s,before);
  e.playMode='arena';before=structuredClone(s);await assert.rejects(()=>plan(),/擂台/);assert.deepEqual(s,before);
@@ -80,7 +80,7 @@ test('固定搭档也适用于逐轮生成，禁止单轮换搭档破坏固定�
  first.status='complete';s.matches.forEach(m=>m.status='complete');await act('generate',{at:start+15*minute,duration:15,seed:11});assert.deepEqual(e.pointsChoice!.teams,teams);
  for(const m of s.matches.filter(m=>m.roundId!==first.id))for(const t of [m.a,m.b])assert.ok(teams.some(team=>team.every(id=>t.includes(id))));assert.ok(partners.size>0);
 });
-test('搭档方式投票：正式成员一账号一票，可改投撤回，最高票不自动确认',async()=>{
+test('搭档方式投票：正式道友一账号一票，可改投撤回，最高票不自动确认',async()=>{
  const {s,e,act}=fixture();await act('pointsModeVoting',{open:true});
  await act('pointsModeVote',{mode:'fixed'},'actor1');await act('pointsModeVote',{mode:'fixed'},'actor2');assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:2});assert.equal(e.pointsChoice!.selectedMode,undefined);
  await act('pointsModeVote',{mode:'rotate'},'actor1');assert.deepEqual(pointsChoiceCounts(s,e),{rotate:1,fixed:1});await act('pointsModeVote',{mode:null},'actor2');assert.equal(e.pointsChoice!.votes.length,1);
@@ -108,7 +108,7 @@ test('搭档投票拒绝候补；递补为正式可投票，退回候补后不�
  s.registrations[2].status='waitlist';assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:0});
 });
 
-test('未配置搭档投票时正式成员默认可投；显式关闭及确认后的关闭不被默认值覆盖',async()=>{
+test('未配置搭档投票时正式道友默认可投；显式关闭及确认后的关闭不被默认值覆盖',async()=>{
  const {s,e,act,account}=fixture();assert.equal(e.pointsChoice,undefined);assert.equal(canVotePointsMode(s,e,account('actor1'),now),true);
  await act('pointsModeVote',{mode:'fixed'},'actor1');assert.equal(e.pointsChoice!.votingOpen,true);assert.deepEqual(pointsChoiceCounts(s,e),{rotate:0,fixed:1});
  await act('pointsModeVoting',{open:false});const closed=structuredClone(s);await assert.rejects(()=>act('pointsModeVote',{mode:'rotate'},'actor2'),/403/);assert.deepEqual(s,closed);

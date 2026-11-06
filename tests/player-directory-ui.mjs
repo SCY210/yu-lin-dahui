@@ -62,7 +62,7 @@ try{
  assert.ok(shown.includes('Fictional Ben → Fictional Me')&&shown.includes('Fictional towel × 1 · 价值 12 羽币')&&shown.includes('Fictional thanks')&&shown.includes('5 羽币 · 已取消'),'admins read every gift, newest first');
  await act(()=>button('全群道缘').props.onClick());shown=text(ui.toJSON());
  const members=()=>ui.root.findAll(n=>n.props.className==='bond-board-member').map(b=>b.props['aria-label'].replace(/^查看|的道缘$/g,''));
- assert.ok(shown.includes('仅群主和管理员可见'));
+ assert.ok(shown.includes('仅宗主和长老可见'));
  assert.deepEqual(members(),['Fictional Ben','Fictional Cai','Fictional Me'],'one row per member, deepest 道缘 first, not one row per pair');
  assert.equal(members().length,3,'the first three members');
  const ben=ui.root.findAll(n=>n.props.className==='bond-board-member')[0];

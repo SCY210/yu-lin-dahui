@@ -55,21 +55,21 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  else if(['pointsLate','liveLineup','moveCourt','lock','score','matchScoring','void','handicap','challengeMatch'].includes(action))eventId=s.matches.find(m=>m.id===p.matchId)?.eventId;
  else if(['costOverride','deleteCost'].includes(action))eventId=s.costs.find(c=>c.id===p.costId)?.eventId;
  const event=s.events.find(e=>e.id===eventId)??fail('活动或关联记录不存在');
- if(action==='bookingCancel'&&!canCancelEventCourt({id:a.id,isOwner:isClubOwner(s,a)},event))fail('403: 只有活动发起人和群主可以取消场地');
+ if(action==='bookingCancel'&&!canCancelEventCourt({id:a.id,isOwner:isClubOwner(s,a)},event))fail('403: 只有活动发起人和宗主可以取消场地');
  if(event.deletedAt!==undefined&&rankedManagementActions.has(action))fail('活动已删除，请先恢复活动');
- if(action==='eventRanking'){if(!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');return true;}
- if(eventRankingEnabled(event)&&rankedManagementActions.has(action)&&!canEnableEventRanking(s,a,event))fail('403: 只有群主、管理员或本活动的测试员创建者可以开启积分赛');
+ if(action==='eventRanking'){if(!canEnableEventRanking(s,a,event))fail('403: 只有宗主、长老或本活动的试剑人创建者可以开启积分赛');return true;}
+ if(eventRankingEnabled(event)&&rankedManagementActions.has(action)&&!canEnableEventRanking(s,a,event))fail('403: 只有宗主、长老或本活动的试剑人创建者可以开启积分赛');
  if(event.tournament&&['pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','pointsModeVote','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','playSettings','handicap','challengeMatch'].includes(action))fail('赛事请使用对战表安排比赛');
  if(isPractice(event)&&['pointsParticipation','pointsStart','pointsLate','pointsPresence','pointsReplace','schedulingMode','liveLineup','liveSwap','liveNext','liveStart','livePause','livePreference','liveReady','pointsModeVoting','pointsModeSelect','planPoints','publishPoints','generate','swap','moveCourt','lock','publish','start','cancelRound','score','matchScoring','void','playSettings','handicap','challengeMatch'].includes(action))fail('练球活动不生成比赛或积分，请使用活动接龙和费用功能');
- if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或群主可以恢复已删除活动');
+ if((action==='restoreEvent'||event.deletedAt!==undefined&&action==='deleteEvent')&&!canRecoverEvent(s,a,event))fail('403: 只有活动创建者或宗主可以恢复已删除活动');
  if(action==='score'||action==='liveNext'){
-  if(!canRecordScore(s,a,event)&&!(action==='score'&&isMatchReferee(a,event,p.matchId)))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或管理员可以录入比分':'403: 只有本活动已接龙的球友、创建者或管理员可以开始组队');
+  if(!canRecordScore(s,a,event)&&!(action==='score'&&isMatchReferee(a,event,p.matchId)))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或长老可以录入比分':'403: 只有本活动已接龙的球友、创建者或长老可以开始组队');
  }else if(action==='liveSwap'){
-  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以交换上场人员');
+  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或长老可以交换上场人员');
  }else if(action==='pointsLate'){
   // Anyone confirmed for the activity may report a late player on any current match (the command also requires them
   // to be in their signup time now), not just the others in that match; only organisers may mark themselves.
-  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或管理员可以报告迟到');
+  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或长老可以报告迟到');
   if(!canManageEvent(a,event)&&a.playerId===p.playerId)fail('403: 不能给自己报告迟到，请让场上球友或组织者操作');
  }else if(action==='pointsParticipation'){
   const player=s.players.find(x=>x.id===p.playerId);

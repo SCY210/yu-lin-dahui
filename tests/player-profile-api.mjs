@@ -48,23 +48,23 @@ function player(s,id){const p=s.players.find(p=>p.id===id);assert.ok(p,'Expected
 async function createMember(label){const username='profile'+label+suffix,password=randomBytes(24).toString('base64url');const created=await auth({action:'createAccount',name:'虚构档案球友 '+label,username,password,requestId:randomUUID()},'admin');assert.equal(created.status,200);const logged=await auth({action:'login',username,password});assert.equal(logged.status,200);const cookie=cookiePair(logged),s=(await get({cookie})).data;assert.equal(s.me.role,'member');return {cookie,accountId:s.me.id,playerId:s.me.playerId,username}}
 
 try{
- await test('创建两个独立普通成员；未登录无法读取档案或上传照片',async()=>{
+ await test('创建两个独立普通道友；未登录无法读取档案或上传照片',async()=>{
   assert.equal((await get()).status,401);assert.equal((await get(null,'/api/photos/nonexistent')).status,401);
   assert.equal((await request('/api/photos',{method:'POST',headers:{Origin:origin}})).status,401);
   memberA=await createMember('a');memberB=await createMember('b');assert.notEqual(memberA.accountId,memberB.accountId);
   fixtures.memberA={accountId:memberA.accountId,playerId:memberA.playerId};fixtures.memberB={accountId:memberB.accountId,playerId:memberB.playerId};
  });
- await test('结构化装备资料持久保存，其他登录成员可查看完整档案',async()=>{
+ await test('结构化装备资料持久保存，其他登录道友可查看完整档案',async()=>{
   assert.equal((await update(memberA,memberA.playerId,gear)).status,200);
   const a=player((await get(memberA)).data,memberA.playerId),b=player((await get(memberB)).data,memberA.playerId);
   assert.deepEqual(a.profile,{...base,...gear,tension:'25–27 磅'});assert.deepEqual(b.profile,a.profile);assert.equal(b.name,a.name);
  });
- await test('其他成员不能修改档案；管理员可以编辑但不改变档案身份',async()=>{
+ await test('其他道友不能修改档案；长老可以编辑但不改变档案身份',async()=>{
   const before=player((await get(memberA)).data,memberA.playerId);
   assert.equal((await update(memberB,memberA.playerId,{...gear,racket:'不应保存'})).status,403);
   assert.deepEqual(player((await get(memberA)).data,memberA.playerId),before);
-  assert.equal((await update('admin',memberA.playerId,{...gear,style:'管理员编辑的虚构打法'})).status,200);
-  const after=player((await get(memberA)).data,memberA.playerId);assert.equal(after.profile.style,'管理员编辑的虚构打法');assert.equal(after.id,before.id);assert.equal(after.name,before.name);assert.equal(after.ownerId,memberA.accountId);
+  assert.equal((await update('admin',memberA.playerId,{...gear,style:'长老编辑的虚构打法'})).status,200);
+  const after=player((await get(memberA)).data,memberA.playerId);assert.equal(after.profile.style,'长老编辑的虚构打法');assert.equal(after.id,before.id);assert.equal(after.name,before.name);assert.equal(after.ownerId,memberA.accountId);
  });
  await test('旧客户端省略装备字段时保留；显式空字符串可以清空',async()=>{
   assert.equal((await update(memberA,memberA.playerId,{style:'旧客户端更新打法'})).status,200);
@@ -79,24 +79,24 @@ try{
   assert.equal((await update(memberA,memberA.playerId,{tensionMin:24,tensionMax:81})).status,400);
   assert.ok([400,404].includes((await update(memberA,'missing-'+suffix,gear)).status));
  });
- await test('代报朋友的档案可由所属成员编辑，其他成员不能编辑',async()=>{
+ await test('代报朋友的档案可由所属道友编辑，其他道友不能编辑',async()=>{
   const before=(await get(memberA)).data,existing=new Set(before.players.map(p=>p.id));assert.equal((await command(memberA,'friend',{name:'虚构代报球友 '+suffix})).status,200);
   const after=(await get(memberA)).data,p=after.players.find(p=>!existing.has(p.id)&&p.ownerId===memberA.accountId);assert.ok(p);friendId=p.id;fixtures.delegatedFriendId=friendId;
   assert.equal((await update(memberA,friendId,{...gear,hand:'left'})).status,200);assert.equal((await update(memberB,friendId,gear)).status,403);
   assert.equal(player((await get(memberB)).data,friendId).profile.hand,'left');
  });
- await test('头像上传兼容现有流程，其他成员可读取私有照片',async()=>{
+ await test('头像上传兼容现有流程，其他道友可读取私有照片',async()=>{
   const r=await upload(memberA,'avatar',{playerId:memberA.playerId});assert.equal(r.status,200);avatarId=r.data.id;fixtures.avatarId=avatarId;
   assert.equal(player((await get(memberB)).data,memberA.playerId).avatarId,avatarId);
   const photo=await get(memberB,'/api/photos/'+avatarId);assert.equal(photo.status,200);assert.equal(photo.headers.get('content-type'),'image/png');assert.ok(photo.bytes.equals(png),'Avatar bytes must match the uploaded PNG fixture');
  });
- await test('本人球拍照片真实上传及字节往返，其他成员可读取，访客被拒绝',async()=>{
+ await test('本人球拍照片真实上传及字节往返，其他道友可读取，访客被拒绝',async()=>{
   const r=await upload(memberA,'racket',{playerId:memberA.playerId});assert.equal(r.status,200);racketId=r.data.id;fixtures.racketId=racketId;
   const photo=await get(memberB,'/api/photos/'+racketId);assert.equal(photo.status,200);assert.equal(photo.headers.get('content-type'),'image/png');assert.equal(photo.headers.get('x-content-type-options'),'nosniff');assert.ok(photo.bytes.equals(png),'Racket image bytes must match the uploaded PNG fixture');
   assert.equal((await get(null,'/api/photos/'+racketId)).status,401);
   const s=(await get(memberB)).data,meta=s.photos.find(p=>p.id===racketId);assert.ok(meta);assert.equal(meta.kind,'racket');assert.deepEqual(meta.playerIds,[memberA.playerId]);assert.equal(meta.eventId,null);assert.equal(meta.matchId,null);assert.equal('key' in meta,false);assert.equal(meta.type,'image/png');assert.equal(meta.size,png.length);assert.equal(player(s,memberA.playerId).avatarId,avatarId);
  });
- await test('其他成员上传球拍照片被拒绝，管理员及代报所属成员可以上传',async()=>{
+ await test('其他道友上传球拍照片被拒绝，长老及代报所属道友可以上传',async()=>{
   const denied=await upload(memberB,'racket',{playerId:memberA.playerId});assert.equal(denied.status,403);
   const admin=await upload('admin','racket',{playerId:memberB.playerId});assert.equal(admin.status,200);fixtures.adminRacketId=admin.data.id;
   const delegated=await upload(memberA,'racket',{playerId:friendId});assert.equal(delegated.status,200);fixtures.delegatedRacketId=delegated.data.id;
@@ -131,6 +131,6 @@ finally{
  mkdirSync('.test-output',{recursive:true});const passed=results.filter(r=>r.status==='passed').length,failed=results.filter(r=>r.status==='failed').length;
  const report={at:new Date().toISOString(),origin,fictionalClientIP:fixtureIP,imageFixturePath,scope:'Two new fictional normal accounts plus delegated friend; existing local activity only; no database resets or hosted requests; no secret logging',passed,failed,transportRetries,fixtures,results};
  writeFileSync('.test-output/player-profile-api-results.json',JSON.stringify(report,null,2));
- writeFileSync('.test-output/PLAYER_PROFILE_API_RESULTS.md',`# 球友档案及球拍照片集成验收\n\n执行时间：${report.at}\n\n环境：${origin}；真实PNG来源：${imageFixturePath}。两个新建虚构普通账号及代报朋友；未重置数据库、访问线上服务或输出密码/令牌。\n\n通过 ${passed} 项，失败 ${failed} 项。\n\n${results.map(r=>`- ${r.status==='passed'?'通过':'失败'}：${r.name}${r.error?'；'+r.error:''}`).join('\n')}\n\n传输：node:http独立连接、20秒超时；真实multipart上传。匿名上传拒绝仅测试无请求体鉴权守卫。明确Worker重启503最多重试一次，本次 ${transportRetries.length} 次。\n\n虚构成员与照片ID：见player-profile-api-results.json的fixtures；无凭据。限流隔离IP：RFC5737 ${fixtureIP}，仅Loopback使用。\n`);
+ writeFileSync('.test-output/PLAYER_PROFILE_API_RESULTS.md',`# 球友档案及球拍照片集成验收\n\n执行时间：${report.at}\n\n环境：${origin}；真实PNG来源：${imageFixturePath}。两个新建虚构普通账号及代报朋友；未重置数据库、访问线上服务或输出密码/令牌。\n\n通过 ${passed} 项，失败 ${failed} 项。\n\n${results.map(r=>`- ${r.status==='passed'?'通过':'失败'}：${r.name}${r.error?'；'+r.error:''}`).join('\n')}\n\n传输：node:http独立连接、20秒超时；真实multipart上传。匿名上传拒绝仅测试无请求体鉴权守卫。明确Worker重启503最多重试一次，本次 ${transportRetries.length} 次。\n\n虚构道友与照片ID：见player-profile-api-results.json的fixtures；无凭据。限流隔离IP：RFC5737 ${fixtureIP}，仅Loopback使用。\n`);
  console.log(JSON.stringify({passed,failed,retries:transportRetries.length,imageFixturePath}));
 }

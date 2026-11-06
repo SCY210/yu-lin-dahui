@@ -48,7 +48,7 @@ try{
  const member=after.players.find(p=>p.id==='friend-1');assert.equal(member.name,'Aqing');assert.equal(member.ownerId,accountId);assert.equal(member.guestEventId,undefined);assert.equal(member.initialRating,1150);
  assert.deepEqual(after.registrations.map(r=>r.playerId),['friend-1','friend-1']);assert.deepEqual(after.matches[0].a,['friend-1','p1']);
  assert.ok(after.ratingChanges.some(c=>c.playerId==='friend-1'),'the past game is rated for the member');
- const audit=after.audits.find(a=>a.action==='createLoginAccount');assert.equal(audit.reason,'临时来宾转为正式成员');assert.deepEqual(audit.changes.mergedPlayerIds,['friend-0']);
+ const audit=after.audits.find(a=>a.action==='createLoginAccount');assert.equal(audit.reason,'临时来宾转为正式道友');assert.deepEqual(audit.changes.mergedPlayerIds,['friend-0']);
  assert.ok(database.db.prepare('SELECT id FROM password_credentials WHERE username=?').bind('aqing').first(),'the login exists');
  const again=await create(requestId);assert.equal(again.status,200);assert.equal((await again.json()).duplicate,true,'a retry creates nothing more');
  assert.equal((await api.load()).accounts.length,after.accounts.length);

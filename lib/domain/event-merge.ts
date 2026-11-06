@@ -20,14 +20,14 @@ export function upgradeActivitySignups(s:State,e:Event){
 
 /** Upcoming activities only. Originals stay in the recoverable archive. */
 export function mergeUpcomingActivities(s:State,a:Account,targetId:string,sourceIds:string[],now:number,reason:string){
- if(!isClubOwner(s,a)||a.role!=='admin')fail('403: 只有群主可以合并活动');
+ if(!isClubOwner(s,a)||a.role!=='admin')fail('403: 只有宗主可以合并活动');
  if(!sourceIds.length||sourceIds.length>10||new Set([targetId,...sourceIds]).size!==sourceIds.length+1)fail('请选择不同的活动');
  const work=structuredClone(s),target=work.events.find(e=>e.id===targetId&&e.deletedAt===undefined)??fail('保留的活动不存在');
  const sources=sourceIds.map(id=>work.events.find(e=>e.id===id&&e.deletedAt===undefined)??fail('待合并活动不存在'));
  if(sources.some(e=>eventFormat(e)!==eventFormat(target)))fail('不同类型的活动不能合并');
  const ids=new Set([targetId,...sourceIds]);
  for(const e of [target,...sources]){
-  if(e.creatorId!==clubOwnerId(work))fail('只能迁移群主创建的活动');
+  if(e.creatorId!==clubOwnerId(work))fail('只能迁移宗主创建的活动');
   if(e.start<=now||!['open','draft','locked'].includes(e.status))fail('只能合并尚未开始的活动');
   if(e.courtMode!==target.courtMode||e.ballMode!==target.ballMode)fail('费用模式不同，不能直接合并');
   if(e.venue!==target.venue||day(e.start)!==day(target.start))fail('只能合并同一天、同一球馆的活动');

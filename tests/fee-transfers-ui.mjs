@@ -13,7 +13,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT=true;let ui;
 const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');
 const mount=async(Component,props)=>{if(ui)await act(()=>ui.unmount());await act(()=>{ui=renderer.create(React.createElement(Component,props))})};
 const button=label=>ui.root.findAll(n=>n.type==='button'&&text(n.children).includes(label));
-const names={p0:'群主',p1:'爱丽丝',p2:'小波',p3:'卡萝'};
+const names={p0:'宗主',p1:'爱丽丝',p2:'小波',p3:'卡萝'};
 const settlement={id:'v1',eventId:'e',version:1,created:1,confirmed:true,bills:[{playerId:'p0',total:840},{playerId:'p3',total:840}],advances:[{playerId:'p1',cents:2400},{playerId:'p2',cents:1200}],transfers:[{from:'p0',to:'p1',cents:720},{from:'p0',to:'p2',cents:120},{from:'p3',to:'p2',cents:240}]};
 const e={id:'e',title:'虚构周四双打'},actions=[];
 const ctx=(me,payments=[])=>({data:{me:{playerId:me},payments},name:id=>names[id]??id,busy:false,action:async(...args)=>{actions.push(args)}});

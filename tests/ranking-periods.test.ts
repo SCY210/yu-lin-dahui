@@ -30,7 +30,7 @@ test('negative doubles points remain signed in all member response boards and co
  s.matches[1].status='cancelled';assert.equal(read().quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,1,'Voiding a loss removes exactly one deduction');
 });
 
-test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受影响且名次重新排列',async()=>{
+test('邀请的代报名朋友不入任何积分榜，正式道友战绩不受影响且名次重新排列',async()=>{
  const s=fixture(),actor=s.accounts[0];
  s.settings.rules={...s.settings.rules,win:10,loss:3,cap:0};
  s.players.push({...s.players[0],id:'legacy-proxy-friend',name:'邀请朋友',ownerId:actor.id}); // Existing historical proxy profile.
@@ -54,7 +54,7 @@ test('邀请的代报名朋友不入任何积分榜，正式成员战绩不受�
  assert.deepEqual(s,before);
 });
 
-test('朋友开通正式账号后能按原有比赛记录入榜，停用成员仍不入榜',()=>{
+test('朋友开通正式账号后能按原有比赛记录入榜，停用道友仍不入榜',()=>{
  const s=fixture(),guest={...s.players[0],id:'guest',name:'代报名朋友',ownerId:s.accounts[0].id};s.players.push(guest);
  s.matches.push(match('guest-history','2026-10-06T13:00:00Z',21,19,[[guest.id,'A'],['B','C']]));
  const history=structuredClone(s.matches);
@@ -156,12 +156,12 @@ test('季度胜率和净胜按整体场数加权，年度等于四个季度积�
  const r=quarterlyLeaderboard(s,'2026-Q1').find(r=>r.playerId==='A')!;assert.equal(r.rate,.25);assert.equal(r.margin,.5);
  assert.equal(annualLeaderboard(s,2026).find(r=>r.playerId==='A')!.points,[1,2,3,4].reduce((sum,q)=>sum+quarterlyLeaderboard(s,'2026-Q'+q).find(p=>p.playerId==='A')!.points,0));
 });
-test('季度保持并列、启用成员、空榜和排名说明的正确口径',()=>{
+test('季度保持并列、启用道友、空榜和排名说明的正确口径',()=>{
  const s=fixture();s.settings.rules={...defaultRules,win:0,loss:0,cap:0};s.matches.push(match('first','2026-05-01T12:00:00Z',21,15),match('second','2026-05-02T12:00:00Z',21,10,[['E','F'],['G','H']]));
  assert.deepEqual(quarterlyLeaderboard(s,'2026-Q2').map(r=>[r.playerId,r.rank]),[['E',1],['F',1],['A',3],['B',3],['C',5],['D',5],['G',7],['H',7]]);
  s.players[7].enabled=false;assert.equal(quarterlyLeaderboard(s,'2025-Q1').length,7);assert.ok(quarterlyLeaderboard(s,'2025-Q1').every(r=>r.rank===1&&r.games===0));assert.equal(getFeatureGuide('ranking').title,'季度积分与排名');
 });
-test('季度响应标识所选季度，普通成员看不到精确实力分',()=>{
+test('季度响应标识所选季度，普通道友看不到精确实力分',()=>{
  const s=fixture();s.matches.push(match('quarter-response','2026-05-01T12:00:00Z'));const account={id:'account',email:'',role:'member' as const,playerId:'A'};
  const data=projectClubState(s,account,'2026-06',2026);assert.equal(data.rankingQuarter,'2026-Q2');assert.equal(data.quarterlyLeaderboard.find(r=>r.playerId==='A')!.points,3);assert.ok(data.quarterlyLeaderboard.every(r=>r.rating===null));
 });

@@ -38,7 +38,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
         case 'courtRegister': {
             const p = command.payload;
             if (!player.enabled)
-                fail('成员已停用');
+                fail('道友已停用');
             if (!manager && e.status !== 'open')
                 fail('当前活动未开放报名');
             if (!manager && now >= b.end)
@@ -54,7 +54,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
             if (row?.status === 'confirmed' && bookingOccupancy(bookingRows(s,b.id).filter(x=>x.playerId!==player.id),p.arrival,p.departure).peak >= bookingCapacity(b,e))
                 fail('调整后的参加时段已满，请保留原时段或先取消后重新候补');
             if (s.matches.some(m => m.eventId === e.id && m.status === 'playing' && [...m.a, ...m.b].includes(player.id)))
-                fail('成员正在比赛，请先完成比赛');
+                fail('道友正在比赛，请先完成比赛');
             if (!r) {
                 r = { id: crypto.randomUUID(), eventId: e.id, playerId: player.id, sequence: Math.max(0, ...s.registrations.filter(x => x.eventId === e.id).map(x => x.sequence)) + 1, status: 'cancelled', arrival: p.arrival, departure: p.departure, note: '', cancelRequested: false, registeredAt: now, joinedAsWaitlist: false, courtExempt: { mode: 'none', reason: '' }, ballExempt: { mode: 'none', reason: '' }, bookingSignups: [] };
                 s.registrations.push(r);
@@ -103,7 +103,7 @@ export async function applyCourtSignup(s: State, a: Account, action: string, inp
             }
             else {
                 if (s.matches.some(m => m.status === 'playing' && m.eventId === e.id && [...m.a, ...m.b].includes(player.id)))
-                    fail('成员正在比赛，请先完成比赛');
+                    fail('道友正在比赛，请先完成比赛');
                 archiveBooking(s, e, r, b.id, now);
                 row.status = 'cancelled';
                 row.cancelRequested = false;

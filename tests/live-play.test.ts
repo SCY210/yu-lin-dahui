@@ -82,7 +82,7 @@ test('14人两场全员下场后等待球友持续轮换',async()=>{
  }
 });
 
-test('权限按存储身份验证，成员不能替别人设轮休或启动排场',async()=>{
+test('权限按存储身份验证，道友不能替别人设轮休或启动排场',async()=>{
  const {s,e,owner}=fixture(),member=s.accounts[1];const before=structuredClone(s);
  await assert.rejects(()=>apply(s,member,'liveStart',{eventId:e.id,isOwner:true},now),/403/);
  await assert.rejects(()=>apply(s,member,'livePreference',{eventId:e.id,playerId:owner.playerId,avoidConsecutive:true,role:'admin'},now),/403/);
