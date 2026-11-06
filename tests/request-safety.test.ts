@@ -38,5 +38,5 @@ test('未知或局部成功响应不能覆盖正在使用的完整页面快照',
  const s=emptyState(),account={id:'a',playerId:'p',email:'',role:'member' as const};s.accounts=[account];s.players=[{id:'p',ownerId:'a',name:'球友',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}];
  const valid=projectClubState(s,account,'2026-10',2026);assert.ok(isClubResponse(valid));
  for(const bad of [null,'<html>proxy error</html>',{}, {error:'temporary error'}, {...valid,events:undefined},{...valid,social:{}},{...valid,me:{id:'a'} }])assert.equal(isClubResponse(bad),false);
- assert.ok(isClubResponse({setup:true,user:{name:'长老'}}));assert.ok(isClubResponse({join:true,user:{name:'球友'}}));
+ assert.ok(isClubResponse({setup:true,user:{name:'副宗主'}}));assert.ok(isClubResponse({join:true,user:{name:'球友'}}));
 });

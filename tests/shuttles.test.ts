@@ -27,7 +27,7 @@ async function voting(){
  return {...f,a:f.e.shuttlePlan!.options[0].id,b:f.e.shuttlePlan!.options[1].id};
 }
 
-test('旧活动无用球字段仍可读取，创建者和长老可添加并明确选用球',async()=>{
+test('旧活动无用球字段仍可读取，创建者和副宗主可添加并明确选用球',async()=>{
  const {s,e,act}=fixture();assert.equal(e.shuttlePlan,undefined);
  await act('creator','shuttleOption',{name:' 测试型号 ',note:'速度77'});assert.equal(e.shuttlePlan!.options[0].name,'测试型号');assert.equal(e.shuttlePlan!.votingOpen,false);
  await act('admin','shuttleConfirm',{optionId:e.shuttlePlan!.options[0].id});assert.equal(e.shuttlePlan!.selectedId,e.shuttlePlan!.options[0].id);

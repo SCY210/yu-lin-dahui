@@ -25,7 +25,7 @@ const schemas={
 };
 export async function applyGuestFriends(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
- if(!canManageMembers(a))fail('403: 只有宗主、长老和试剑人可以管理临时来宾');
+ if(!canManageMembers(a))fail('403: 只有宗主、副宗主和长老可以管理临时来宾');
  const audit=(reason:string,changes:Record<string,unknown>)=>s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:command.payload.reason||reason,changes});
  if(command.action==='guestFriendMerge'){
   // One friend from now on: one nickname and one host, who owes their share in new activities and unconfirmed splits.

@@ -28,7 +28,7 @@ export function pairingOddsView(s:State,a:Account,now:number){
 
 export function applyPairingOdds(s:State,a:Account,action:string,input:unknown,now:number){
  const command=parseDomainCommand(schemas,action,input);if(!command)return false;
- if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 仅长老可以执行此操作');
+ if(a.role!=='admin'&&!isClubOwner(s,a))fail('403: 仅副宗主可以执行此操作');
  const p=command.payload,e=s.events.find(x=>x.id===p.eventId&&x.deletedAt===undefined)??fail('活动不存在或已删除');
  if(e.end<=now||['ended','cancelled'].includes(e.status))fail('活动已结束');
  const known=new Set(s.players.map(x=>x.id)),check=(list:string[])=>{if(list.some(x=>!known.has(x)))fail('球友不存在')};

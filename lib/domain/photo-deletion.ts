@@ -12,7 +12,7 @@ export function canDeletePhoto(s:State,a:Account,photo:Photo){
 
 export function removePhoto(s:State,a:Account,photoId:string,requestId:string,now:number){
  const photo=s.photos.find(p=>p.id===photoId)??fail('照片不存在或已删除');
- if(!canDeletePhoto(s,a,photo))fail('403: 只能删除自己上传或自己的档案照片，长老按权限管理');
+ if(!canDeletePhoto(s,a,photo))fail('403: 只能删除自己上传或自己的档案照片，副宗主按权限管理');
  s.photos=s.photos.filter(p=>p.id!==photoId);
  for(const player of s.players)if(player.avatarId===photoId)delete player.avatarId;
  // Keep the private object key in the existing admin audit trail so a retry can

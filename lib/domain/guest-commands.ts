@@ -25,13 +25,13 @@ export async function applyGuestLevel(s:State,a:Account,action:string,input:unkn
  const p=command.payload,player=s.players.find(x=>x.id===p.playerId)??fail('球友不存在');
  if(command.action==='guestGender'){
   if(!isGuest(s,player.id))fail('只有代报名的朋友可以在这里设置性别');
-  if(!canSetGuestLevel(s,a,player.id))fail('403: 只有拉朋友的人、活动创建者或长老可以修改朋友性别');
+  if(!canSetGuestLevel(s,a,player.id))fail('403: 只有拉朋友的人、活动创建者或副宗主可以修改朋友性别');
   const before=player.guestGender??null;player.guestGender=command.payload.gender;
   s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'修改朋友性别',changes:{playerId:player.id,before,after:command.payload.gender}});
   return true;
  }
  if(!isGuest(s,player.id))fail('只有代报名的朋友可以设置水平');
- if(!canSetGuestLevel(s,a,player.id))fail('403: 只有拉朋友的人、活动创建者或长老可以修改朋友水平');
+ if(!canSetGuestLevel(s,a,player.id))fail('403: 只有拉朋友的人、活动创建者或副宗主可以修改朋友水平');
  const before=guestLevelAt(player);player.guestLevels=[...(player.guestLevels??[]),{at:now,level:command.payload.level}];
  replayRating(s,now);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'修改朋友水平',changes:{playerId:player.id,before,after:command.payload.level}});

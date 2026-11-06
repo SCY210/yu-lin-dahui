@@ -23,11 +23,11 @@ async function member(label){const username='ownertest'+(label==='甲'?'a':'b')+
 const admin=await member('甲'),other=await member('乙');assert.equal((await command(owner,'role',{accountId:admin.id,role:'admin',reason:'虚构宗主授权'})).status,200);
 const baseline=await get(owner),ownerPlayer=baseline.players.find(p=>p.id===owner.playerId);
 const profile={playerId:owner.playerId,years:4,hand:'left',preference:'doubles',style:'越权资料',equipment:'越权备注',racket:'越权战拍',strings:'越权拍线',tensionMin:24,tensionMax:28};
-await test('初始化账号立即拥有唯一宗主最高权限，普通长老不能管理角色',async()=>{
+await test('初始化账号立即拥有唯一宗主最高权限，普通副宗主不能管理角色',async()=>{
  const ov=await get(owner),av=await get(admin);assert.equal(ov.me.isOwner,true);assert.equal(ov.permissions.canManageRoles,true);assert.equal(av.me.role,'admin');assert.equal(av.me.isOwner,false);assert.equal(av.permissions.canManageRoles,false);assert.equal(av.accounts.find(a=>a.id===owner.id).canModify,false);
  assert.equal((await command(admin,'role',{accountId:other.id,role:'admin',reason:'私自授权'})).status,403);assert.equal((await command(admin,'role',{accountId:owner.id,role:'member',reason:'降级宗主'})).status,403);
 });
-await test('普通长老不能修改宗主名字、资料、战拍、初始实力或停用宗主',async()=>{
+await test('普通副宗主不能修改宗主名字、资料、战拍、初始实力或停用宗主',async()=>{
  for(const [action,payload]of [['profile',{playerId:owner.playerId,name:'篡改宗主'}],['profileDetails',profile],['rating',{playerId:owner.playerId,value:1,enabled:false,reason:'越权停用'}]])assert.equal((await command(admin,action,payload)).status,403);
  const v=await get(owner);assert.deepEqual(v.players.find(p=>p.id===owner.playerId),ownerPlayer);assert.equal(v.me.role,'admin');
 });
@@ -38,7 +38,7 @@ await test('通过重置密码、账号绑定或球员绑定不能接管宗主�
  assert.equal((await get(owner)).me.isOwner,true);assert.equal((await auth(null,{action:'login',username:owner.username,password:owner.password})).status,200);
 });
 async function upload(actor,kind,playerId){const form=new FormData();form.set('rightsConfirmed','true');form.set('file',new Blob([readFileSync('tests/fixtures/shuttlecock.png')],{type:'image/png'}),'fictional.png');form.set('kind',kind);form.set('playerId',playerId);form.set('requestId',randomUUID());form.set('revision',String((await get(actor)).revision));return fetch(origin+'/api/photos',{method:'POST',headers:{...headers(actor),Origin:origin},body:form})}
-await test('头像与球拍上传接口阻止普通长老替换宗主照片，不留下资产或审计变化',async()=>{
+await test('头像与球拍上传接口阻止普通副宗主替换宗主照片，不留下资产或审计变化',async()=>{
  const before=await get(owner);for(const kind of ['avatar','racket'])assert.equal((await upload(admin,kind,owner.playerId)).status,403);const after=await get(owner);assert.deepEqual(after.photos,before.photos);assert.deepEqual(after.audits,before.audits);assert.equal(after.players.find(p=>p.id===owner.playerId).avatarId,before.players.find(p=>p.id===owner.playerId).avatarId);
 });
 await test('宗主本人仍可以修改资料与上传头像、球拍照片，改名后保护仍在',async()=>{
@@ -46,17 +46,17 @@ await test('宗主本人仍可以修改资料与上传头像、球拍照片，�
  assert.equal((await upload(owner,'avatar',owner.playerId)).status,200);assert.equal((await upload(owner,'racket',owner.playerId)).status,200);
  const v=await get(owner);assert.equal(v.me.isOwner,true);assert.equal(v.players.find(p=>p.id===owner.playerId).name,'虚构宗主新昵称');assert.equal((await command(admin,'profile',{playerId:owner.playerId,name:'再次篡改'})).status,403);
 });
-await test('宗主不能误降级自身；只有宗主可以升降其他长老',async()=>{
+await test('宗主不能误降级自身；只有宗主可以升降其他副宗主',async()=>{
  assert.equal((await command(owner,'role',{accountId:owner.id,role:'member',reason:'误操作'})).status,403);
  assert.equal((await command(owner,'role',{accountId:other.id,role:'admin',reason:'宗主分配'})).status,200);assert.equal((await command(owner,'role',{accountId:other.id,role:'member',reason:'宗主收回'})).status,200);
  assert.equal((await get(owner)).me.role,'admin');
 });
-await test('普通长老仍可帮助普通道友改资料或密码，无法把settings伪造成宗主转移',async()=>{
+await test('普通副宗主仍可帮助普通道友改资料或密码，无法把settings伪造成宗主转移',async()=>{
  assert.equal((await command(admin,'profileDetails',{...profile,playerId:other.playerId})).status,200);
  const next=password();assert.equal((await auth(admin,{action:'resetPassword',accountId:other.id,password:next,requestId:randomUUID()})).status,200);const login=await auth(null,{action:'login',username:other.username,password:next});assert.equal(login.status,200);other.cookie=cookie(login);
  const v=await get(admin);assert.equal((await command(admin,'settings',{name:v.settings.name,invite:'',rules:v.settings.rules,ownerAccountId:admin.id})).status,200);assert.equal((await get(owner)).me.isOwner,true);assert.equal((await get(admin)).me.isOwner,false);
 });
-await test('并发的宗主改名与其他长老改名仅允许本人保存，owner标识不变',async()=>{
+await test('并发的宗主改名与其他副宗主改名仅允许本人保存，owner标识不变',async()=>{
  const [allowed,blocked]=await Promise.all([command(owner,'profile',{name:'虚构宗主 · 本地验收'}),command(admin,'profile',{playerId:owner.playerId,name:'并发篡改'})]);assert.equal(allowed.status,200);assert.equal(blocked.status,403);const v=await get(owner);assert.equal(v.players.find(p=>p.id===owner.playerId).name,'虚构宗主 · 本地验收');assert.equal(v.me.isOwner,true);
 });
 mkdirSync('.test-output',{recursive:true});writeFileSync('.test-output/ownership-api-report.json',JSON.stringify({passed:results.length,results,scope:'isolated loopback fictional accounts; no production passwords modified'},null,2));console.log(JSON.stringify({passed:results.length}));

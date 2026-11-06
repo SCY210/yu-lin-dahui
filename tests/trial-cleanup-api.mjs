@@ -16,7 +16,7 @@ const {GET,POST}=await import('../.test-output/trial-cleanup-route.mjs');
 const targets=[['account:e29d64f3-868f-451e-8098-81c1cff46162','c93de032-a6b1-435d-9152-6368416c8ee6','试用球友01','trial01'],['account:0f36ebff-b6b3-4fba-924e-aa764ecd5dfa','4d0c1655-369e-4547-8efa-3c0b65e033ec','试用球友02','trial02'],['account:2012e6b1-6489-42a8-8499-c553e9c9059f','099e2b55-c020-4ca0-a616-08197476a578','试用球友03','trial03']];
 const insert=(sql,args)=>sqlite.prepare(sql).run(...args),count=table=>sqlite.prepare('SELECT COUNT(*) AS n FROM '+table).get().n;
 insert('INSERT INTO settings(id,payload) VALUES(?,?)',['club',JSON.stringify({name:'Fixture',initialized:true,ownerAccountId:'owner',inviteHash:'',rules:{win:3,loss:0,minimum:0,cap:12,target:21,ceiling:30,lead:2,k:32,algorithm:'doubles-elo-v1'}})]);
-for(const [id,playerId,name,username] of [['owner','owner-player','正式宗主',null],['admin','admin-player','正式长老',null],...targets]){
+for(const [id,playerId,name,username] of [['owner','owner-player','正式宗主',null],['admin','admin-player','正式副宗主',null],...targets]){
  const account={id,playerId,email:'',role:id==='owner'||id==='admin'?'admin':'member'},player={id:playerId,ownerId:id,name,rating:1000,initialRating:1000,ratedGames:0,enabled:true,ratingReason:''};
  insert('INSERT INTO accounts(id,email,role,player_id,payload) VALUES(?,?,?,?,?)',[id,'',account.role,playerId,JSON.stringify(account)]);insert('INSERT INTO players(id,owner_id,payload) VALUES(?,?,?)',[playerId,id,JSON.stringify(player)]);
  if(username)insert('INSERT INTO password_credentials(id,username,salt,hash,created) VALUES(?,?,?,?,?)',[id,username,'a'.repeat(64),'b'.repeat(128),1]);

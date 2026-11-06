@@ -27,11 +27,11 @@ export function enableRoleRankedEvents(s:State,now:number){
   changed.push({eventId:e.id,ranked:e.ranked});
  }
  s.settings.rankedEventsVersion='admins-v1';
- s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:ranked-events',action:'enableRoleRankedEvents',reason:'积分赛由长老或宗主开启；尚未开打的道友活动改为普通活动，历史赛果保留',changes:{events:changed}});
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:ranked-events',action:'enableRoleRankedEvents',reason:'积分赛由副宗主或宗主开启；尚未开打的道友活动改为普通活动，历史赛果保留',changes:{events:changed}});
  return true;
 }
 export function changeEventRanking(s:State,a:Account,e:Event,ranked:boolean,expected:boolean,now:number){
- if(!canEnableEventRanking(s,a,e))fail('403: 只有宗主、长老或本活动的试剑人创建者可以开启或关闭积分赛');
+ if(!canEnableEventRanking(s,a,e))fail('403: 只有宗主、副宗主或本活动的长老创建者可以开启或关闭积分赛');
  if(eventRankingEnabled(e)!==expected)fail('409: 活动计分方式已更新，请刷新');
  if(isPractice(e)&&ranked)fail('练球活动不能开启积分赛');
  if(e.deletedAt!==undefined||e.end<=now||['ended','cancelled'].includes(e.status)||eventHasStartedMatches(s,e))fail('活动已开打或结束，不能变更计分方式');

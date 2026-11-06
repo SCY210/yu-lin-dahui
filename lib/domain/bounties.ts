@@ -91,7 +91,7 @@ const rewardInput=z.object({coins:z.number().int().min(0).max(1000),points:z.num
 export const bountySettingsInput=z.object({rewards:z.object(Object.fromEntries(bountyKinds.map(k=>[k,rewardInput])) as Record<BountyKind,typeof rewardInput>).strict(),penalty:z.number().int().min(0).max(100)}).strict();
 /** The owner and administrators set the rewards and the penalty; answers already given keep theirs. */
 export function updateBountySettings(s:State,a:Account,input:unknown,now:number){
- if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有宗主和长老可以调整悬赏令');
+ if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有宗主和副宗主可以调整悬赏令');
  const c=bountySettingsInput.parse(input),before=bountySettings(s);
  s.settings.bounty=c;
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'bountySettings',reason:'调整悬赏令奖励与惩罚',changes:{before,after:c}});
