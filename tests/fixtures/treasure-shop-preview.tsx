@@ -15,7 +15,7 @@ function initialState(){
  for(const [i,role]of ['admin','member','admin'].entries()){
   const id=['fixture-owner','fixture-member','fixture-admin'][i],playerId='fixture-player-'+i;
   s.accounts.push({id,playerId,role:role as Account['role'],email:''});
-  s.players.push({id:playerId,name:['虚构宗主甲','虚构球友乙','虚构长老丙'][i],ownerId:id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''});
+  s.players.push({id:playerId,name:['虚构宗主甲','虚构球友乙','虚构副宗主丙'][i],ownerId:id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''});
  }
  const owner=s.accounts[0];
  for(const player of s.players)treasureGrant(s,owner,{playerId:player.id,amount:120,reason:'虚构测试发放',requestId:crypto.randomUUID()},now);

@@ -36,12 +36,12 @@ test('宗主可以改自己的名字、档案和初始实力，省略playerId时
  await apply(s,owner,'profileDetails',profile,at);assert.equal(s.players[0].profile?.racket,'测试战拍');await apply(s,owner,'rating',{playerId:owner.playerId,value:1200,enabled:true,reason:'本人调整'},at);assert.equal(s.players[0].initialRating,1200);
  assert.equal(isClubOwner(s,owner),true);
 });
-test('只有宗主可以升降长老，宗主本人也不能把自己降级',async()=>{
+test('只有宗主可以升降副宗主，宗主本人也不能把自己降级',async()=>{
  const s=fixture();await assert.rejects(()=>apply(s,admin,'role',{accountId:member.id,role:'admin',reason:'自行提权'},at),/宗主/);
  await assert.rejects(()=>apply(s,owner,'role',{accountId:owner.id,role:'member',reason:'误操作'},at),/最高权限/);assert.equal(s.accounts[0].role,'admin');
  await apply(s,owner,'role',{accountId:member.id,role:'admin',reason:'宗主授权'},at);assert.equal(s.accounts[2].role,'admin');await apply(s,owner,'role',{accountId:admin.id,role:'member',reason:'宗主降级'},at);assert.equal(s.accounts[1].role,'member');
 });
-test('普通长老仍可维护道友资料，道友只能修改自己，settings输入不能替换宗主',async()=>{
+test('普通副宗主仍可维护道友资料，道友只能修改自己，settings输入不能替换宗主',async()=>{
  const s=fixture();await apply(s,admin,'profile',{playerId:member.playerId,name:'道友新名'},at);assert.equal(s.players[2].name,'道友新名');
  await apply(s,member,'profileDetails',{...profile,playerId:member.playerId},at);await assert.rejects(()=>apply(s,member,'profileDetails',{...profile,playerId:admin.playerId},at),/403/);
  await apply(s,admin,'settings',{name:s.settings.name,invite:'',rules:s.settings.rules,ownerAccountId:admin.id},at);assert.equal(s.settings.ownerAccountId,owner.id);
@@ -52,7 +52,7 @@ test('投影为界面标注最高权限、保护名单与可用操作，不暴�
  assert.equal(av.accounts.find(a=>a.id===owner.id)!.canModify,false);assert.equal(ov.accounts.find(a=>a.id===owner.id)!.canModify,true);assert.equal(av.players.find(p=>p.id===owner.playerId)!.protectedOwner,true);
  assert.deepEqual(mv.accounts,[]);assert.equal('ownerAccountId' in mv.settings,false);assert.ok(mv.players.every(p=>p.rating===null));assert.equal(s.accounts.length,3);
 });
-test('宗主记录缺失时不能退回普通长老分配角色，原始球员仍不能被接管',async()=>{
+test('宗主记录缺失时不能退回普通副宗主分配角色，原始球员仍不能被接管',async()=>{
  const s=emptyState();s.accounts=[{...admin},{...member}];s.players=[{id:'17799d9d-ca2d-4da1-aedb-bd1459030557',ownerId:'unknown',name:'原宗主',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}];
  await assert.rejects(()=>apply(s,admin,'role',{accountId:member.id,role:'admin',reason:'接管'},at),/宗主/);
  assert.throws(()=>assertPlayerMutable(s,admin,s.players[0].id),/403/);

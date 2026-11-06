@@ -72,7 +72,7 @@ export function treasureOrder(s:State,a:Account,input:unknown,now:number){
 }
 /** The owner and administrators set the attendance-streak reward. Runs already awarded keep their amount. */
 export function treasureStreakReward(s:State,a:Account,input:unknown,now:number){
- if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有宗主和长老可以调整连续到场奖励');
+ if(!isClubOwner(s,a)&&a.role!=='admin')fail('403: 只有宗主和副宗主可以调整连续到场奖励');
  const c=treasureStreakRewardInput.parse(input),before=attendanceStreakCoins(s);
  s.settings.attendanceStreakCoins=c.coins;
  audit(s,a,'treasureStreakReward',`连续 ${attendanceStreakLength} 次积分赛到场奖励：${before} → ${c.coins} 羽币`,now,{before,coins:c.coins});

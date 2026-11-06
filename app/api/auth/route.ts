@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         }
         const initial = await load(), actor = initial.accounts.find(a => a.id === user.userId);
         if (!actor)
-            return denied('请联系长老开通账号');
+            return denied('请联系宗主、副宗主或长老开通账号');
         if (action === 'bind') {
             if (user.method !== 'chatgpt')
                 return denied('请先使用原账号完成身份确认');
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
         }
         // Administrators and testers manage member accounts; a tester only ordinary members (docs/TESTER_MEMBER_MANAGEMENT.md).
         if (!canManageMembers(actor))
-            return denied('只有长老和试剑人可以创建账号或重置密码');
+            return denied('只有副宗主和长老可以创建账号或重置密码');
         if (action === 'resetPassword') {
             const p = z.object({ accountId: z.string().min(1), password, requestId: z.string().uuid() }).parse(input), key = actor.id + ':resetPassword:' + p.requestId;
             let cred: ReturnType<typeof makePassword> | undefined;
@@ -209,7 +209,7 @@ export async function POST(req: Request) {
                     return denied('目标账号尚未开通密码登录', 404);
                 cred ??= makePassword(p.password);
                 const previous = structuredClone(s);
-                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'resetAccountPassword', reason: s.accounts.find(a => a.id === user.userId)?.role === 'admin' ? '长老重置登录密码' : '试剑人重置登录密码', changes: { accountId: p.accountId } });
+                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'resetAccountPassword', reason: s.accounts.find(a => a.id === user.userId)?.role === 'admin' ? '副宗主重置登录密码' : '长老重置登录密码', changes: { accountId: p.accountId } });
                 try {
                     await save(s, key, previous, [raw().prepare('UPDATE password_credentials SET salt=?,hash=? WHERE id=?').bind(cred.salt, cred.hash, p.accountId), raw().prepare('DELETE FROM auth_sessions WHERE user_id=?').bind(p.accountId)]);
                     return result({ ok: true }, req);
@@ -279,9 +279,9 @@ export async function POST(req: Request) {
                             player.ownerId = accountId;
                     }
                     else
-                        s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '长老创建球友账号' });
+                        s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '副宗主创建球友账号' });
                 }
-                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'createLoginAccount', reason: existing ? '为原账号开通登录' : converted ? '临时来宾转为正式道友' : player ? '为已有球友档案创建登录' : '长老创建普通道友账号', changes: { accountId, playerId: converted?.playerId ?? playerId, username: p.username, ...(converted ? { formerGuests: converted.before, mergedPlayerIds: converted.merged, hiddenDuplicateIds: converted.left, startLevel: converted.level } : {}) } });
+                s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'createLoginAccount', reason: existing ? '为原账号开通登录' : converted ? '临时来宾转为正式道友' : player ? '为已有球友档案创建登录' : '副宗主创建普通道友账号', changes: { accountId, playerId: converted?.playerId ?? playerId, username: p.username, ...(converted ? { formerGuests: converted.before, mergedPlayerIds: converted.merged, hiddenDuplicateIds: converted.left, startLevel: converted.level } : {}) } });
                 try {
                     // The store deletes removed rows before writing changed ones, but the friend's merged records are still
                     // referenced by the old signups until those are rewritten: delete them last, in the same batch.

@@ -87,7 +87,7 @@ try{
  await test('短伪PNG/JPEG/WebP、SVG和超过边长/像素限制图片拒绝且不扣bytes',async()=>{
   resetUpload(A);const before=counter(uploadBudget(A))?.count??0;for(const [bytes,type]of [[Buffer.from([137,80,78,71]),'image/png'],[Buffer.from([255,216,255]),'image/jpeg'],[Buffer.from('RIFFxxxxWEBP'),'image/webp'],[Buffer.from('<svg onload="alert(1)"/>'),'image/svg+xml'],[png(12001,1),'image/png'],[png(10000,6000),'image/png'],[png().subarray(0,40),'image/png']])assert.equal((await upload(A,bytes,type)).status,400);assert.equal(counter(uploadBudget(A))?.count??0,before);
  });
- await test('普通道友及其他长老不能改别人的/宗主头像，越权不扣bytes',async()=>{
+ await test('普通道友及其他副宗主不能改别人的/宗主头像，越权不扣bytes',async()=>{
   resetUpload(A);resetUpload(B);const first=counter(uploadBudget(A))?.count??0,second=counter(uploadBudget(B))?.count??0;assert.equal((await upload(A,png(),'image/png',{playerId:C.playerId})).status,403);assert.equal((await upload(B,png(),'image/png',{playerId:owner.playerId})).status,403);assert.equal(counter(uploadBudget(A))?.count??0,first);assert.equal(counter(uploadBudget(B))?.count??0,second);
  });
  await test('真实PNG、baseline/progressive/motion JPEG及各类WebP通过',async()=>{
@@ -102,7 +102,7 @@ try{
  await test('上传committed重复和同时重复requestId都不重复扣bytes',async()=>{
   resetUpload(A);const key=uploadBudget(A),image=png();reset(key);const first=randomUUID();assert.equal((await upload(A,image,'image/png',{requestId:first})).status,200);assert.equal((await upload(A,image,'image/png',{requestId:first})).data.duplicate,true);assert.equal(counter(key).count,image.length);const race=randomUUID(),responses=await Promise.all([upload(A,image,'image/png',{requestId:race}),upload(A,image,'image/png',{requestId:race})]);assert.ok(responses.some(r=>r.status===200));assert.ok(responses.every(r=>[200,409].includes(r.status)));assert.equal(counter(key).count,image.length*2);
  });
- await test('长老每日250MiB边界按真实角色判断',async()=>{
+ await test('副宗主每日250MiB边界按真实角色判断',async()=>{
   resetUpload(B);const image=png(),max=250*1024*1024,key=uploadBudget(B);bucket(key,max-image.length);assert.equal((await upload(B,image)).status,200);limited(await upload(B,image));assert.equal(counter(key).count,max);
  });
  await test('清理使用expires索引，私有数据及历史身份保持',async()=>{

@@ -51,7 +51,7 @@ test('社群命令直接调用也校验活动创建者',async()=>{
  const s=fixture();await assert.rejects(()=>applySocial(s,member,'playSettings',{eventId:'foreign',playMode:'balanced',identityMode:'off',arenaCourtId:'',handicap:false},start),/403/);
  await applySocial(s,member,'playSettings',{eventId:'own',playMode:'koc',identityMode:'cp',arenaCourtId:'',handicap:true},start);assert.equal(s.events[0].playMode,'koc');
 });
-test('普通创建者完整管理报名、出勤、排场、比赛结果和费用，无需长老角色',async()=>{
+test('普通创建者完整管理报名、出勤、排场、比赛结果和费用，无需副宗主角色',async()=>{
  const s=fixture();s.events=s.events.slice(0,1);s.rounds=[];s.matches=[];s.attendance=[];
  for(const playerId of ['self','friend','other','fourth']){
   await apply(s,member,'register',{...acceptedActivityNotice,eventId:'own',playerId,arrival:start,departure:end,note:''},start+60000);
@@ -73,20 +73,20 @@ test('普通道友可以修改自己档案，但不可改名字、他人档案�
  await apply(s,member,'profileDetails',{...details,name:'越权改名'},start);assert.equal(s.players[0].profile?.hand,'left');assert.equal(s.players[0].name,'self');
  for(const playerId of ['self','other','friend'])await assert.rejects(()=>apply(s,member,'profile',{playerId,name:'改名'},start),/403/);
  for(const playerId of ['other','friend'])await assert.rejects(()=>apply(s,member,'profileDetails',{...details,playerId},start),/403/);
- await apply(s,admin,'profile',{playerId:'self',name:'长老修改'},start);assert.equal(s.players[0].name,'长老修改');
- await apply(s,admin,'profile',{name:'旧客户端长老本人'},start);assert.equal(s.players.at(-1)!.name,'旧客户端长老本人');
+ await apply(s,admin,'profile',{playerId:'self',name:'副宗主修改'},start);assert.equal(s.players[0].name,'副宗主修改');
+ await apply(s,admin,'profile',{name:'旧客户端副宗主本人'},start);assert.equal(s.players.at(-1)!.name,'旧客户端副宗主本人');
 });
 test('活动创建者没有账号权限、全局实力与历史规则管理权',async()=>{
  const s=fixture();for(const action of ['settings','rating','role','demo','historyRules','historyPreview'])await assert.rejects(()=>apply(s,member,action,{},start),/403/);
 });
-test('长老仍可管理他人或未记录创建者的活动',async()=>{
+test('副宗主仍可管理他人或未记录创建者的活动',async()=>{
  const s=fixture();delete s.events[1].creatorId;
  await apply(s,admin,'eventStatus',{eventId:'foreign',status:'ended'},start);assert.equal(s.events[1].status,'ended');
- await apply(s,admin,'bookingBearer',{bookingId:'foreign-court',bearer:'subsidy',reason:'长老确认'},start);assert.equal(s.bookings[1].bearer,'subsidy');
+ await apply(s,admin,'bookingBearer',{bookingId:'foreign-court',bearer:'subsidy',reason:'副宗主确认'},start);assert.equal(s.bookings[1].bearer,'subsidy');
 });
-test('长老也不能载入虚构验收数据，空群组既有资料与审计保持不变',async()=>{
+test('副宗主也不能载入虚构验收数据，空群组既有资料与审计保持不变',async()=>{
  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId=admin.id;
- s.accounts.push({...admin});s.players.push({id:admin.playerId,ownerId:admin.id,name:'已有长老',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'已有资料'});
+ s.accounts.push({...admin});s.players.push({id:admin.playerId,ownerId:admin.id,name:'已有副宗主',initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:'已有资料'});
  s.audits.push({id:'existing-audit',at:start-1,actor:admin.id,action:'profile',reason:'已有操作记录'});
  const before=structuredClone(s);
  await assert.rejects(()=>apply(s,admin,'demo',{},start),/未知操作/);

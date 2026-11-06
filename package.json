@@ -16,6 +16,7 @@
     "test": "node scripts/test.mjs",
     "typecheck": "tsc --noEmit",
     "check:repo": "node scripts/check-repository.mjs",
+    "check:chinese-text": "node scripts/check-chinese-text.mjs --commits origin/main..HEAD",
     "lint:report": "eslint .",
     "lint:prune": "node scripts/lint-debt.mjs --prune",
     "verify": "node scripts/verify.mjs",

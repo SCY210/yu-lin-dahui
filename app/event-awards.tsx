@@ -36,7 +36,7 @@ export default function EventAwards({e,ctx,now}:any){
   {!mine&&choice&&canVote&&<div className="award-confirm" role="group" aria-label="确认 MVP 选票"><p>确认把 MVP 投给 <strong>{person(choice).name}</strong>？<small>投出后不能改投或撤回。</small></p><div className="actions"><button type="button" className="primary" disabled={locked} onClick={()=>void vote(choice)}>{pending?'正在投出…':'确认投出'}</button><button type="button" className="ghost" disabled={locked} onClick={()=>setChoice('')}>再想想</button></div></div>}
   {mine&&<div className="award-my-vote"><Lock size={15} aria-hidden="true"/><span>MVP 已投给 <strong>{person(mine.playerId).name}</strong> · 选票已锁定</span></div>}
   <p className="award-notice" role="status" aria-live="polite">{notice}</p>
-  {canViewNamedVotes&&<details className="award-named"><summary>投票明细 · {named.length} 票（仅长老和宗主可见）</summary>{named.length?named.map(v=><p key={v.id}><strong>{person(v.voterPlayerId!).name}</strong> → {person(v.playerId).name}</p>):<p className="muted">还没有人投票。</p>}</details>}
+  {canViewNamedVotes&&<details className="award-named"><summary>投票明细 · {named.length} 票（仅副宗主和宗主可见）</summary>{named.length?named.map(v=><p key={v.id}><strong>{person(v.voterPlayerId!).name}</strong> → {person(v.playerId).name}</p>):<p className="muted">还没有人投票。</p>}</details>}
   <p className="hint">每个账号一票，不能投给自己；投出后不能改投或撤回。</p>
  </section>;
 }

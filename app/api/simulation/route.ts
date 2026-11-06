@@ -15,7 +15,7 @@ const accessSql="(json_extract(payload,'$.role')='admin' OR json_type(payload,'$
 async function simulationUser(){
  const user=await getAppUser();if(!user)throw new RequestError('请先登录',401);
  const row=await raw().prepare(`SELECT id FROM accounts WHERE id=? AND ${accessSql}`).bind(user.userId).first<{id:string}>();
- if(!row)throw new RequestError('只有宗主、长老和试剑人可以访问模拟活动',403);return user.userId;
+ if(!row)throw new RequestError('只有宗主、副宗主和长老可以访问模拟活动',403);return user.userId;
 }
 type Kind=z.infer<typeof kindSchema>;
 const keyOf=(kind:Kind)=>kind==='competition'?competitionSimulationKey:simulationKey;

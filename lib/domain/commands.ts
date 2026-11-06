@@ -69,7 +69,7 @@ export async function digest(v: string) { return Array.from(new Uint8Array(await
 /** Testers manage recorded friends with administrators (docs/TESTER_MEMBER_MANAGEMENT.md). */
 const guestFriendActions = ['guestFriendMerge', 'guestFriendEdit', 'guestFriendHide'];
 export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && !(guestFriendActions.includes(action) && canManageMembers(a)) && a.role !== 'admin')
-    fail('403: 仅长老可以执行此操作'); }
+    fail('403: 仅副宗主可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
     profile: z.object({ name: text, playerId: pid.optional() }), friend: z.object({ name: text }),
@@ -195,7 +195,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             }
             if ((p.practiceBallCount ?? 0) > 0)
                 assertAdvancer(s, p.practiceBallBy, '请选择练球用球是谁的');
-            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有宗主、长老和试剑人可以创建积分赛');
+            if(p.ranked===true&&!canEnableEventRanking(s,a))fail('403: 只有宗主、副宗主和长老可以创建积分赛');
             if(p.ranked===true&&p.matchFormat==='practice')fail('练球活动不能开启积分赛');
             if(p.tournament&&p.matchFormat==='practice')fail('比赛只能选择单打或双打');
             if(p.matchFormat==='practice'&&!p.note.trim())fail('请填写本次具体练习内容');
@@ -646,7 +646,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (!['playing', 'complete'].includes(m.status))
                 fail('只可修正已开赛对局的计分方式');
             const enabled=eventRankingEnabled(event(m.eventId));
-            if(p.monthly!==enabled)fail((enabled?'':'403: ')+'不能单独改变对局计分，请由宗主或长老在活动开打前设置积分赛');
+            if(p.monthly!==enabled)fail((enabled?'':'403: ')+'不能单独改变对局计分，请由宗主或副宗主在活动开打前设置积分赛');
             markRanked(m,event(m.eventId));
             replayRating(s, now);
             break;
@@ -750,7 +750,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const p = command.payload;
             const payee = (s.settings.feePayees ?? []).find(x => x.id === p.payeeId) ?? fail('常用收款人不存在');
             if (a.role !== 'admin' && payee.createdBy !== a.id)
-                fail('403: 只有添加者或长老可以删除常用收款人');
+                fail('403: 只有添加者或副宗主可以删除常用收款人');
             s.settings.feePayees = (s.settings.feePayees ?? []).filter(x => x.id !== payee.id);
             break;
         }
@@ -833,10 +833,10 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'simulationAccess': {
             const p = command.payload;
-            if (!isClubOwner(s, a)) fail('403: 只有宗主可以调整试剑人权限');
+            if (!isClubOwner(s, a)) fail('403: 只有宗主可以调整长老权限');
             const target = s.accounts.find(account => account.id === p.accountId) ?? fail('账号不存在');
-            if (target.id === clubOwnerId(s)) fail('宗主已具备模拟权限，无需设置试剑人');
-            if (target.role !== 'member') fail('试剑人权限仅用于普通道友，长老已具备模拟权限');
+            if (target.id === clubOwnerId(s)) fail('宗主已具备模拟权限，无需设置长老');
+            if (target.role !== 'member') fail('长老权限仅用于普通道友，副宗主已具备模拟权限');
             if (p.enabled) target.simulationTester = true; else delete target.simulationTester;
             break;
         }
@@ -849,7 +849,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (acc.id === clubOwnerId(s))
                 fail('403: 宗主拥有固定最高权限，不能降级');
             if (acc.role === 'admin' && p.role === 'member' && s.accounts.filter(x => x.role === 'admin').length === 1)
-                fail('至少保留一位长老');
+                fail('至少保留一位副宗主');
             acc.role = p.role;
             break;
         }

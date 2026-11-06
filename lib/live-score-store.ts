@@ -28,7 +28,7 @@ export async function applyLiveScore(account:Pick<Account,'id'|'role'|'playerId'
   const event=eventRow?JSON.parse(eventRow.payload) as Event:null;
   if(!event?.tournament||event.deletedAt!==undefined||!event.tournament.fixtures.some(f=>f.matchId===match.id))throw new LiveScoreError('这场比赛不属于比赛对战表',404);
   if(!event.tournament.fixtures.find(f=>f.matchId===match.id)?.referee)throw new LiveScoreError('请先为这场比赛指定裁判',409);
-  if(!canRefereeMatch(account,event,match.id))throw new LiveScoreError('只有指定裁判、比赛创建者、宗主和长老可以记分',403);
+  if(!canRefereeMatch(account,event,match.id))throw new LiveScoreError('只有指定裁判、比赛创建者、宗主和副宗主可以记分',403);
   if(['cancelled','draft'].includes(eventStatusAt(event,now)))throw new LiveScoreError('比赛未开放或已取消',409);
   const prior=liveRow.results[0]?JSON.parse(liveRow.results[0].payload) as LiveScore:null;
   if(!prior&&match.status!=='playing')throw new LiveScoreError('请先在对战表中安排开赛',409);

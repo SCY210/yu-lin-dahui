@@ -46,7 +46,7 @@ for(const action of ['deleteEvent','restoreEvent'])test('普通道友不能'+act
  const s=fixture();s.events[0].deletedAt=0;const before=structuredClone(s);
  await assert.rejects(()=>apply(s,outsider,action,{eventId:'own',creatorId:outsider.id,reason:'越权'},at),/403/);assert.deepEqual(s,before);
 });
-test('长老可删除与恢复旧活动，重复请求不会覆盖删除时间或产生重复审计',async()=>{
+test('副宗主可删除与恢复旧活动，重复请求不会覆盖删除时间或产生重复审计',async()=>{
  const s=fixture();delete s.events[0].creatorId;
  await apply(s,admin,'deleteEvent',{eventId:'own',reason:'清理旧活动'},0);const once=structuredClone(s);
  await apply(s,admin,'deleteEvent',{eventId:'own',reason:'重复'},1);assert.deepEqual(s,once);
@@ -58,12 +58,12 @@ test('进行中的比赛阻止删除，不会修改任何状态；比赛结束�
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:'删除'},at),/正在进行/);assert.deepEqual(s,before);
  s.matches[0].status='complete';await apply(s,owner,'deleteEvent',{eventId:'own',reason:'结束后删除'},at);assert.equal(s.events[0].deletedAt,at);
 });
-test('删除活动后禁止开赛、报名、取消报名、投票和嵌套记录修改，包括长老',async()=>{
+test('删除活动后禁止开赛、报名、取消报名、投票和嵌套记录修改，包括副宗主',async()=>{
  const s=fixture();s.events[0].deletedAt=0;
  const requests:[string,unknown][]=[['register',{...acceptedActivityNotice,eventId:'own',playerId:'a',arrival:at,departure:at+3600000,note:''}],['cancel',{eventId:'own',playerId:'a',reason:'取消'}],['eventStatus',{eventId:'own',status:'open'}],['start',{roundId:'own-round',eventId:'other',at,monthly:true,elo:true}],['bookingBearer',{bookingId:'own-court',eventId:'other',bearer:'subsidy',reason:'修改'}],['awardVote',{eventId:'own',playerId:'a',category:'mvp'}]];
  for(const account of [owner,admin])for(const [action,payload] of requests){const before=structuredClone(s);await assert.rejects(()=>apply(s,account,action,payload,at),/已删除/);assert.deepEqual(s,before);}
 });
-test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者及长老开放，历史榜单和档案战绩保留',async()=>{
+test('删除从各页面隐藏活动关联记录，恢复列表仅对创建者及副宗主开放，历史榜单和档案战绩保留',async()=>{
  const s=fixture(),before=projectClubState(s,owner,'2026-10',2026,at+3600000);
  await apply(s,owner,'deleteEvent',{eventId:'own',reason:'误建'},at+3600000);
  const v=projectClubState(s,owner,'2026-10',2026,at+3600000),other=projectClubState(s,outsider,'2026-10',2026,at+3600000),av=projectClubState(s,admin,'2026-10',2026,at+3600000);
@@ -88,7 +88,7 @@ test('不存在的活动与无效删除原因被拒绝，不修改原状态',asy
  await assert.rejects(()=>apply(s,owner,'deleteEvent',{eventId:'own',reason:'x'.repeat(501)},at));assert.deepEqual(s,before);
 });
 
-test('其他长老也看不到删除列表、关联导出与审计，不能直接恢复；创建者和宗主可恢复',async()=>{
+test('其他副宗主也看不到删除列表、关联导出与审计，不能直接恢复；创建者和宗主可恢复',async()=>{
  const s=fixture(),otherAdmin={...outsider,role:'admin' as const};s.accounts[1]=otherAdmin;
  await apply(s,owner,'deleteEvent',{eventId:'own',reason:'移除私有活动'},at+3600000);
  s.audits.push({id:'creation',actor:owner.id,at,action:'event',reason:'created',changes:{title:s.events[0].title}},

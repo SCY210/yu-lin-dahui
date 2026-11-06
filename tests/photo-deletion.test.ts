@@ -19,13 +19,13 @@ function persistence(initial:State){
  return {store,state:()=>structuredClone(current),objects,saves:()=>saves,failSave:(value=true)=>failSave=value,failObject:(value=true)=>failObject=value};
 }
 
-test('上传者与长老可删除活动照片，关联人物和活动创建者无额外删除权限',()=>{
+test('上传者与副宗主可删除活动照片，关联人物和活动创建者无额外删除权限',()=>{
  const {s,photo,a}=fixture();assert.equal(canDeletePhoto(s,a('uploader'),photo),true);assert.equal(canDeletePhoto(s,a('admin'),photo),true);assert.equal(canDeletePhoto(s,a('subject'),photo),false);assert.equal(canDeletePhoto(s,a('other'),photo),false);
 });
-test('本人可删除长老上传的战拍照片和头像；其他道友不能删除',()=>{
+test('本人可删除副宗主上传的战拍照片和头像；其他道友不能删除',()=>{
  const {s,photo,a}=fixture();for(const kind of ['racket','avatar'] as const){photo.kind=kind;photo.ownerId='admin';assert.equal(canDeletePhoto(s,a('subject'),photo),true);assert.equal(canDeletePhoto(s,a('other'),photo),false)}
 });
-test('宗主档案照片受保护，其他长老或上传者也不能删除',()=>{
+test('宗主档案照片受保护，其他副宗主或上传者也不能删除',()=>{
  const {s,photo,a}=fixture();photo.playerIds=['owner-player'];for(const kind of ['racket','avatar'] as const){photo.kind=kind;photo.ownerId='admin';assert.equal(canDeletePhoto(s,a('admin'),photo),false);assert.equal(canDeletePhoto(s,a('owner'),photo),true)}
  photo.kind='photo';s.players[0].avatarId=photo.id;assert.equal(canDeletePhoto(s,a('admin'),photo),false);
 });
