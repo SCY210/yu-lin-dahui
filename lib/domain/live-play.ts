@@ -69,7 +69,7 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
-  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0);
+  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0);
  };
  const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
  let best=first,bestCost=cost(first);
@@ -98,7 +98,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
  const courts=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>at)
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  const handled=new Set<string>();
- const history=matchHistory(s,e.id,true),ratings=new Map(s.players.map(p=>[p.id,p.rating]));
+ const women=new Set(s.players.filter(p=>(p.profile?.gender??p.guestGender)==='female').map(p=>p.id));
+ const history=matchHistory(s,e.id,true,id=>women.has(id)),ratings=new Map(s.players.map(p=>[p.id,p.rating]));
  const rating=(id:string)=>ratings.get(id)??1000;
  const counts=new Map<string,number>(),lastTurns=new Map<string,number>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null)for(const id of [...m.a,...m.b]){
@@ -167,7 +168,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     .sort((a,b)=>Number(a.some(id=>justFinished.has(id)))-Number(b.some(id=>justFinished.has(id)))||Math.max(...a.map(last))-Math.max(...b.map(last))||order(a[0],b[0]));
    if(candidates.length>=2){
     let chosen=candidates.slice(0,2);
-    const cost=(ts:string[][])=>balanceCost([Math.abs(ts[0].reduce((n,id)=>n+rating(id),0)-ts[1].reduce((n,id)=>n+rating(id),0))/2],history.variety(ts[0],ts[1],0),genderMismatches(s,ts[0],ts[1],rating),history.rematches(ts[0],ts[1]),history.cohorts(ts.flat()));
+    const cost=(ts:string[][])=>balanceCost([Math.abs(ts[0].reduce((n,id)=>n+rating(id),0)-ts[1].reduce((n,id)=>n+rating(id),0))/2],history.variety(ts[0],ts[1],0),genderMismatches(s,ts[0],ts[1],rating),history.rematches(ts[0],ts[1]),history.cohorts(ts.flat()),0,0,0,0,history.liveMixedRepeats(ts[0],ts[1]));
     let bestCost=cost(chosen);
     for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
      if(chosen.includes(candidate)||chosen[i].some((id,j)=>!sameTurn(id,candidate[j])))continue;
@@ -214,7 +215,11 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     if(!best)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
-   if(odds){const four=[...chosen.a,...chosen.b];chosen=pair(s,e,four,history,rating,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))))}
+   if(odds){
+    const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))));
+    // A temporary partner draw must not put the same man back in this role for a third consecutive appearance.
+    if(drawn.cost.liveMixedRepeats<=chosen.cost.liveMixedRepeats)chosen=drawn;
+   }
    teams={a:chosen.a,b:chosen.b};
   }
   if(!teams)continue;
