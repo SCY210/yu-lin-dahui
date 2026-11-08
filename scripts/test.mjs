@@ -29,7 +29,7 @@ if (!unitOnly) {
     'winning-streak-api-ui', 'ranking-breakdown-ui', 'avatar-fire-ui',
     'score-conflict-api', 'score-conflict-ui',
     'compact-match-ui', 'points-participation-api', 'points-participation-ui', 'points-auto-start-api',
-    'owner-rating-ui', 'event-ranking-ui',
+    'owner-rating-ui', 'realm-history-api', 'realm-history-ui', 'event-ranking-ui',
     'account-notice-api', 'activity-notice-api',
     'bonus-popup-ui', 'bond-ui', 'gift-art-ui', 'team-bond-ui', 'player-directory-ui', 'pairing-odds-ui', 'concurrent-lineup-api', 'club-lineup-sync-ui', 'round-lineup-sync-ui',
     'published-swap-api', 'published-swap-ui',

@@ -73,6 +73,8 @@ export function isRatedMatch(m:Match,now=Date.now()){
 /** team: the player's own side average before the game (equal to `before` in singles); reset: the score restarted at
  * this game after a long break. */
 export type RatedGame={matchId:string;eventId:string;gameIndex:number;playerId:string;side:'a'|'b';won:boolean;before:number;after:number;delta:number;k:number;expected:number;opponent:number;team:number;start:number;end:number;margin:number;settled:boolean;reset:boolean};
+/** Optional, read-only replay trace. Normal rating calculations do not collect a history payload. */
+export type RealmChange={kind:'game'|'adjustment'|'reset';playerId:string;at:number;before:number;after:number;delta:number;game?:RatedGame;adjustmentIndex?:number};
 type Row={score:number;games:number;wins:number;losses:number;held:number;last:number|null};
 type Rated={score:number;games:number};
 /** One game, all changes computed from the scores before it. Each player's expectation compares
@@ -87,8 +89,9 @@ export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesEx
  * A player whose previous rated game ended `inactivityMonths` before a match starts (or before `now`) restarts
  * at the start score with placement and the novice K again; otherwise the score never resets.
  * adjustments: the owner's 修为 grants, applied at their time (realm settles at once; they never count as games). */
-export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick<State,'events'|'accounts'>>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[]){
+export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick<State,'events'|'accounts'>>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[],onChange?:(change:RealmChange)=>void){
  const fresh=():Row=>({score:realmPolicy.start,games:0,wins:0,losses:0,held:rawRealmIndex(realmPolicy.start),last:null});
+ const reset=(playerId:string,row:Row)=>{const before=row.score,at=inactivityDeadline(row.last!);Object.assign(row,fresh());onChange?.({kind:'reset',playerId,at,before,after:row.score,delta:row.score-before})};
  // Friends brought by members keep their fixed level: members are rated against it, the friend never changes.
  const guests=guestRatings(s);
  const rows=new Map<string,Row>(s.players.map(p=>[p.id,guests.has(p.id)?{...fresh(),score:guests.get(p.id)!(now),held:rawRealmIndex(guests.get(p.id)!(now))}:fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
@@ -98,7 +101,7 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick
  const last=new Map<string,number>();ordered.forEach((m,i)=>last.set(m.eventId,i));
  const participants=new Map<string,Set<string>>();
  let nextAdjustment=0;
- const adjust=(until:number)=>{for(;nextAdjustment<adjustments.length&&adjustments[nextAdjustment].at<until;nextAdjustment++){const g=adjustments[nextAdjustment],row=rows.get(g.playerId);if(!row)continue;if(row.last!==null&&inactiveAt(row.last,g.at))Object.assign(row,fresh());row.score+=g.delta;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}};
+ const adjust=(until:number)=>{for(;nextAdjustment<adjustments.length&&adjustments[nextAdjustment].at<until;nextAdjustment++){const g=adjustments[nextAdjustment],row=rows.get(g.playerId);if(!row)continue;if(row.last!==null&&inactiveAt(row.last,g.at))reset(g.playerId,row);const before=row.score;row.score+=g.delta;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score);onChange?.({kind:'adjustment',playerId:g.playerId,at:g.at,before,after:row.score,delta:g.delta,adjustmentIndex:nextAdjustment})}};
  ordered.forEach((m,i)=>{
   adjust(m.end!);
   // A no-show only rates the absent players: one loss each against the other team, from the scores before it.
@@ -106,21 +109,21 @@ export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick
   const ids=participants.get(m.eventId)??new Set<string>();for(const id of counted)ids.add(id);participants.set(m.eventId,ids);
   for(const id of [...m.a,...m.b]){const level=guests.get(id);if(level)rows.get(id)!.score=level(m.start??m.end!)}
   const restarted=new Set<string>();
-  for(const id of counted){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){Object.assign(row,fresh());restarted.add(id)}}
+  for(const id of counted){const row=rows.get(id)!;if(row.last!==null&&inactiveAt(row.last,m.start??m.end!)){reset(id,row);restarted.add(id)}}
   const beforeMatch=absent.length?new Map([...m.a,...m.b].map(id=>[id,{...rows.get(id)!}])):rows;
   const facts=absent.length?(['a','b'] as const).filter(team=>m[team].some(id=>absent.includes(id))).map(team=>({index:0,a:0,b:0,winner:team==='a'?'b' as const:'a' as const})):gameFacts(m);
   for(const g of facts){
    const side=(ids:string[])=>ids.map(id=>beforeMatch.get(id)!),changes=gameChanges(side(m.a),side(m.b),g.winner,doubles),average=(ids:string[])=>ids.reduce((n,id)=>n+beforeMatch.get(id)!.score,0)/ids.length,teamAverage={a:average(m.a),b:average(m.b)};
    const updates=(['a','b'] as const).flatMap(team=>m[team].map((id,i)=>({id,i})).filter(({id})=>!guests.has(id)&&(!absent.length||(absent.includes(id)&&g.winner!==team))).map(({id,i})=>{const row=rows.get(id)!,c=changes[team][i];
     return {row,game:{matchId:m.id,eventId:m.eventId,gameIndex:g.index,playerId:id,side:team,won:g.winner===team,before:row.score,after:row.score+c.delta,delta:c.delta,k:c.k,expected:c.expected,opponent:c.opponent,team:teamAverage[team],start:m.start??m.end!,end:m.end!,margin:team==='a'?g.a-g.b:g.b-g.a,settled:settled(m),reset:restarted.delete(id)}}}));
-   for(const {row,game} of updates){row.score=game.after;row.games++;if(game.won)row.wins++;else row.losses++;games.push(game)}
+   for(const {row,game} of updates){row.score=game.after;row.games++;if(game.won)row.wins++;else row.losses++;games.push(game);onChange?.({kind:'game',playerId:game.playerId,at:game.end,before:game.before,after:game.after,delta:game.delta,game})}
   }
   for(const id of counted)rows.get(id)!.last=m.end!;
   if(last.get(m.eventId)===i)for(const id of participants.get(m.eventId)!){const row=rows.get(id)!;row.held=row.games<realmPolicy.placementGames?rawRealmIndex(row.score):settleRealmIndex(row.held,row.score)}
  });
  adjust(now===undefined?Infinity:now+1);
  for(const [id,level] of guests)rows.get(id)!.score=level(now);
- if(now!==undefined)for(const row of rows.values())if(row.last!==null&&inactiveAt(row.last,now))Object.assign(row,fresh());
+ if(now!==undefined)for(const [id,row] of rows)if(row.last!==null&&inactiveAt(row.last,now))reset(id,row);
  return {rows,games};
 }
 export type RealmSnapshot=ReturnType<typeof realmProgress>&{ratedGames:number;wins:number;losses:number;placement:boolean;pendingGames:number;pendingChange:number};

@@ -2,6 +2,7 @@
 import Deferred from './deferred';
 import Disclosure from './disclosure';
 import RealmProgress from './realm-progress';
+import RealmHistoryButton from './realm-history-button';
 import RealmBadge, {PlacementBadge} from './realm-badge';
 import {Avatar} from './avatar';
 import {lazy,type ComponentProps} from 'react';
@@ -63,6 +64,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
         <RealmProgress value={state.realmScore}/>
+        <RealmHistoryButton playerId={p.id} accountId={ctx.data.me.id} name={p.name}/>
         {profile.motto&&<p className="pp-motto-preview">{profile.motto}</p>}
       </div>
       {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
