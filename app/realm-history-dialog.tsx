@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import type {RealmHistoryEntry,RealmHistoryView} from '../lib/realm-history';
 import {fmt} from './form-fields';
+import RealmStages from './realm-stages';
 import './realm-history.css';
 
 const signed=(n:number)=>(n>0?'+':'')+n;
@@ -11,6 +12,7 @@ const valid=(value:unknown):value is RealmHistoryView=>!!value&&typeof value==='
 
 export default function RealmHistoryDialog({playerId,accountId,name,onClose}:{playerId:string;accountId:string;name?:string;onClose:()=>void}){
  const [data,setData]=useState<RealmHistoryView|null>(null),[busy,setBusy]=useState(true),[error,setError]=useState(''),[live,setLive]=useState(false),[limit,setLimit]=useState(20);
+ const [section,setSection]=useState<'history'|'stages'>('history');
  const active=useRef<AbortController|null>(null);
  const load=useCallback(async()=>{
   active.current?.abort();const controller=new AbortController();active.current=controller;
@@ -25,7 +27,9 @@ export default function RealmHistoryDialog({playerId,accountId,name,onClose}:{pl
  },[playerId,accountId]);
  useEffect(()=>{let cancelled=false;queueMicrotask(()=>{if(!cancelled)void load()});return ()=>{cancelled=true;active.current?.abort()}},[load]);
  const current=data?.accountId===accountId&&data.playerId===playerId?data:null,rows=current?(live?current.live:current.settled):[];
- return <Dialog open onOpenChange={open=>{if(!open)onClose()}}><DialogContent className="app-dialog realm-history-dialog"><DialogHeader className="text-left"><DialogTitle>{name?name+'的修为明细':'修为明细'}</DialogTitle><DialogDescription>修为是长期分；比赛按小局计算，活动结束后结算，宗主手动调整立即生效。</DialogDescription></DialogHeader>
+ return <Dialog open onOpenChange={open=>{if(!open)onClose()}}><DialogContent className="app-dialog realm-history-dialog"><DialogHeader className="text-left"><DialogTitle>{name?name+'的修为详情':'修为详情'}</DialogTitle><DialogDescription>修为是长期分；比赛按小局计算，活动结束后结算，宗主手动调整立即生效。</DialogDescription></DialogHeader>
+  <div className="realm-detail-tabs" role="group" aria-label="修为详情内容"><button type="button" aria-pressed={section==='history'} onClick={()=>setSection('history')}>修为明细</button><button type="button" aria-pressed={section==='stages'} onClick={()=>setSection('stages')}>全部境界与阶段</button></div>
+  <div className="realm-detail-body">{section==='stages'?<RealmStages/>:<>
   <button type="button" className="ghost" disabled={busy} onClick={()=>{setBusy(true);setError('');void load()}}>刷新明细</button>
   {busy&&<p role="status">正在读取修为明细…</p>}{error&&<p role="alert">{error}</p>}
   {current&&<><dl className="realm-history-summary"><div><dt>起始修为</dt><dd>{current.initial}</dd></div><div><dt>已结算修为</dt><dd>{current.score}</dd></div><div><dt>待结算净变化</dt><dd>{signed(current.pendingChange)}</dd></div></dl>
@@ -36,5 +40,5 @@ export default function RealmHistoryDialog({playerId,accountId,name,onClose}:{pl
    </details>)}{!rows.length&&<p className="hint">暂无修为变动记录。</p>}</div>
    {rows.length>limit&&<button type="button" className="secondary" onClick={()=>setLimit(limit+20)}>显示更早明细</button>}</>}
   </>}
- </DialogContent></Dialog>;
+ </>}</div></DialogContent></Dialog>;
 }

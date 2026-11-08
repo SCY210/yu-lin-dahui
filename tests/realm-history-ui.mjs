@@ -20,13 +20,24 @@ const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(tex
 const button=label=>ui.root.findAllByType('button').find(b=>text(b.children)===label);
 try{
  await act(async()=>{ui=renderer.create(React.createElement(Card,{stats:{realmScore:{placement:true,score:1000,ratedGames:0,placementGames:10}},playerId:'A',accountId:'A'}))});
- assert.ok(button('修为明细'));assert.equal(requests.length,0,'collapsed rating never requests history');await act(()=>ui.unmount());ui=null;
+ const trigger=ui.root.findByProps({className:'realm-history-trigger'});assert.equal(trigger.props['aria-label'],'查看修为详情');assert.match(text(trigger),/定级中/);
+ assert.ok(!button('修为明细'),'no separate detail button beside the badge');assert.equal(requests.length,0,'collapsed rating never requests history');
+ replies.push({body:data});let stopped=false;
+ await act(async()=>trigger.props.onClick({stopPropagation(){stopped=true}}));
+ assert.ok(stopped);assert.ok(button('全部境界与阶段'));assert.equal(requests.length,1,'clicking the actual badge opens the existing detail dialog');
+ await act(()=>ui.unmount());ui=null;requests.length=0;
  replies.push({body:data});let closed=false;
  await act(async()=>{ui=renderer.create(React.createElement(History,{playerId:'A',accountId:'A',onClose:()=>closed=true}))});
  assert.equal(requests.length,1);assert.equal(requests[0].options.cache,'no-store');
  assert.equal(ui.root.findAllByType('summary').length,2);assert.match(text(ui.toJSON()),/1016 → 1116/);assert.match(text(ui.toJSON()),/\+100/);assert.match(text(ui.toJSON()),/调整原因/);assert.match(text(ui.toJSON()),/预期胜率 50%，K = 32/);
  await act(()=>button('含待结算').props.onClick());assert.match(text(ui.toJSON()),/暂计修为 1100/);assert.match(text(ui.toJSON()),/待结算/);
  assert.equal(requests.length,1,'switching the already loaded timeline does not replay or refetch history');
+ await act(()=>button('全部境界与阶段').props.onClick());
+ const catalog=ui.root.findByProps({'aria-label':'全部修为境界与阶段'});
+ assert.equal(catalog.findAllByType('li').length,6);assert.equal(catalog.findAllByType('dt').length,19);
+ for(const realm of ['炼气','筑基','金丹','元婴','化神','炼虚'])assert.ok(text(catalog).includes(realm));
+ assert.match(text(catalog),/圆满1600 及以上/);assert.equal(requests.length,1,'stage catalogue needs no extra request');
+ await act(()=>button('修为明细').props.onClick());
  replies.push({body:{...data,settled:Array.from({length:25},(_,i)=>({...game,id:'g'+i}))}});
  await act(async()=>button('刷新明细').props.onClick());await act(()=>button('已结算').props.onClick());
  assert.equal(ui.root.findAllByType('summary').length,20);await act(()=>button('显示更早明细').props.onClick());assert.equal(ui.root.findAllByType('summary').length,25);

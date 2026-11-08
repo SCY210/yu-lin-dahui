@@ -28,14 +28,19 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
  const mine=transfers.filter(t=>t.from===me||t.to===me),others=transfers.filter(t=>t.from!==me&&t.to!==me);
  const collectorPhone=settlement.collector&&e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'';
  const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to} id={t===target?payRowId(e.id):undefined}>
-  <span className="fee-transfer-people"><strong>{t.from===me?'我':name(t.from)}</strong><ArrowRight size={14} aria-label="转给"/><strong>{t.to===me?'我':name(t.to)}</strong></span>
-  <b>{euro(t.cents)}</b>
-  <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>
-  {can&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>mark(t,!paid)}>{paid?'撤销':t.to===me?'确认已收到':'标记已转'}</button>}
+  <div className="fee-transfer-people">
+   <div className="fee-transfer-person" data-side="from"><span>付款人</span><strong>{name(t.from)}{t.from===me&&<small className="fee-transfer-self">我</small>}</strong></div>
+   <ArrowRight className="fee-transfer-direction" size={20} aria-label="转给"/>
+   <div className="fee-transfer-person" data-side="to"><span>收款人</span><strong>{name(t.to)}{t.to===me&&<small className="fee-transfer-self">我</small>}</strong></div>
+  </div>
+  <div className="fee-transfer-footer"><div className="fee-transfer-amount"><span>应转金额</span><b>{euro(t.cents)}</b></div><div className="fee-transfer-actions">
+   <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>
+   {can&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>mark(t,!paid)}>{paid?'撤销':t.to===me?'确认已收到':'标记已转'}</button>}
+  </div></div>
  </div>};
  const copy=async()=>{try{await navigator.clipboard.writeText(`${e.title} · 转账结算 第${settlement.version}版\n${transfers.map(t=>`${name(t.from)} → ${name(t.to)}：${euro(t.cents)}`).join('\n')}`);toast.success('已复制转账明细')}catch{toast.error('复制失败')}};
  return <section className="fee-transfers">
-  <div className="row"><h3>转账结算</h3><button type="button" className="ghost" onClick={()=>void copy()}><Copy size={16} aria-hidden="true"/> 复制转账明细</button></div>
+  <div className="fee-transfer-heading"><h3>转账结算</h3><button type="button" className="ghost" onClick={()=>void copy()}><Copy size={16} aria-hidden="true"/> 复制转账明细</button></div>
   <p className="hint">{settlement.collector?`大家把分摊转给收款人 ${name(settlement.collector)}${collectorPhone?'（'+collectorPhone+'）':''}，${name(settlement.collector)} 再把垫付的钱转给约场、出球的人。`:'约场、出球的人已经垫付，按下面的转账结清，转账笔数已尽量少。'}垫付人自己的分摊已从垫付里扣除。</p>
   {(settlement.advances?.length??0)>0&&<p className="fee-advances">已垫付：{settlement.advances!.map(a=><span key={a.playerId}>{a.playerId===me?'我':name(a.playerId)} {euro(a.paid??a.cents)}</span>)}</p>}
   {(()=>{const extra=(settlement.advances??[]).reduce((n,a)=>n+a.cents-(a.paid??a.cents),0);return extra?<p className="hint">大家的分摊按人取整到分，合计{extra>0?'多收':'少收'} {euro(Math.abs(extra))}，已按垫付金额{extra>0?'摊给':'由'}垫付人{extra>0?'':'分担'}。</p>:null})()}

@@ -1,5 +1,11 @@
-.realm-history-button{font-size:12px;min-height:36px;padding:5px 8px}
+.realm-history-trigger{display:inline-flex;align-items:center;max-width:100%;min-width:0;min-height:44px;padding:0;border:0;border-radius:12px;background:none;color:inherit;font:inherit;text-align:inherit;cursor:pointer;vertical-align:middle}
+.realm-history-trigger:focus-visible{outline:3px solid var(--primary);outline-offset:4px}
+.realm-history-trigger:hover{filter:brightness(1.04)}
 .realm-history-dialog{max-width:560px}
+.realm-detail-tabs{display:flex;gap:6px;padding:4px;background:color-mix(in srgb,var(--foreground) 5%,var(--card));border-radius:12px}
+.realm-detail-tabs>button{flex:1;min-height:44px;padding:8px;border:0;border-radius:9px;background:none;color:var(--muted-foreground);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.realm-detail-tabs>button[aria-pressed=true]{background:var(--card);color:var(--foreground);box-shadow:0 1px 4px #0002}
+.realm-detail-body{min-width:0;max-height:65dvh;overflow:auto}
 .realm-history-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
 .realm-history-summary>div{padding:10px;border-radius:10px;background:#f7f4fc;min-width:0}
 .realm-history-summary dt{font-size:11px;color:#79688b}.realm-history-summary dd{margin:4px 0 0;font-size:19px;font-weight:650}
@@ -8,3 +14,11 @@
 .realm-history-entry summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer}
 .realm-history-entry summary>span{min-width:0;overflow-wrap:anywhere}.realm-history-entry summary>strong{text-align:right;flex-shrink:0}
 .realm-history-entry small{display:block;font-size:11px;color:#897894;font-weight:400}.realm-history-entry p{font-size:12px;color:#79688b;overflow-wrap:anywhere}
+.realm-stage-catalog>ul{list-style:none;display:grid;gap:12px;margin:12px 0;padding:0}
+.realm-stage-catalog li{padding:14px;border:1px solid var(--border);border-radius:12px}
+.realm-stage-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.realm-stage-heading>span:last-child{font-size:12px;color:var(--muted-foreground)}
+.realm-stage-catalog dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 0}
+.realm-stage-catalog dl>div{min-width:0}.realm-stage-catalog dt{font-size:12px;color:var(--muted-foreground)}
+.realm-stage-catalog dd{margin:4px 0 0;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:380px){.realm-stage-catalog dl{grid-template-columns:repeat(2,minmax(0,1fr))}.realm-stage-catalog li{padding:10px}}
