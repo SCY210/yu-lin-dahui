@@ -1,13 +1,29 @@
-.fee-transfers{display:grid;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);min-width:0}
+.fee-transfers{display:grid;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);min-width:0}
 .fee-transfers h3{margin:0}
+.fee-transfer-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px}
 .fee-advances{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;font-size:13px}
-.fee-transfer-list{display:grid;gap:6px;min-width:0}
-.fee-transfer{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px 10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;min-width:0}
-.fee-transfer.is-paid{opacity:.75}
-.fee-transfer-people{display:flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
-.fee-transfer>button{padding:4px 8px;min-height:36px;white-space:nowrap}
+.fee-transfer-list{display:grid;gap:12px;min-width:0}
+.fee-transfer{display:grid;gap:14px;padding:16px;border:1px solid var(--border);border-radius:14px;min-width:0;background:var(--card)}
+.fee-transfer.is-paid{border-color:color-mix(in srgb,#1f7a3d 25%,var(--border))}
+.fee-transfer-people{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:14px;min-width:0}
+.fee-transfer-person{display:grid;gap:5px;min-width:0}
+.fee-transfer-person>span,.fee-transfer-amount>span{font-size:12px;color:var(--muted-foreground)}
+.fee-transfer-person>strong{font-size:16px;line-height:1.55;overflow-wrap:anywhere;word-break:normal}
+.fee-transfer-direction{color:var(--muted-foreground);flex-shrink:0}
+.fee-transfer-self{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;background:color-mix(in srgb,var(--primary) 10%,var(--card));color:var(--primary);font-size:11px;font-weight:500;vertical-align:middle}
+.fee-transfer-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:12px;border-top:1px solid var(--border)}
+.fee-transfer-amount{display:grid;gap:2px}.fee-transfer-amount>b{font-size:22px;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fee-transfer-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto}
+.fee-transfer-actions>button{padding:8px 12px;min-height:44px;white-space:nowrap}
 .fee-transfer-others summary{cursor:pointer;font-size:13px;color:var(--muted-foreground)}
 .fee-transfer-others .fee-transfer-list{margin-top:6px}
 .fee-transfer-tabs{display:flex;gap:4px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--foreground) 6%,var(--card))}
 .fee-transfer-tabs button{flex:1;min-height:40px;border:0;border-radius:8px;background:none;color:var(--muted-foreground);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .fee-transfer-tabs button.is-selected{background:var(--card);color:var(--foreground);box-shadow:0 1px 3px #0002}
+@media(max-width:480px){
+ .fee-transfer-people{grid-template-columns:minmax(0,1fr);gap:10px}
+ .fee-transfer-person{grid-template-columns:48px minmax(0,1fr);align-items:baseline;gap:10px}
+ .fee-transfer-direction{display:none}
+ .fee-transfer{padding:14px}
+ .fee-transfer-actions>button{padding:8px 10px}
+}

@@ -60,11 +60,10 @@ export default function PlayerProfile({p, stats, ctx}:any) {
         <p className="pp-eyebrow"><span className="pp-perspective">{isOwn ? '我的档案' : p.name+'的档案'}</span></p>
         <h2>{p.name}</h2>
         <div className="pp-badges">
-          {state.provisional || state.realmScore?.placement ? <PlacementBadge className="pp-tier" games={state.realmScore?.ratedGames} total={state.realmScore?.placementGames} /> : state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.realmScore?.stage} /> : <span className="pp-tier">暂无境界</span>}
+          <RealmHistoryButton playerId={p.id} accountId={ctx.data.me.id} name={p.name}>{state.provisional || state.realmScore?.placement ? <PlacementBadge className="pp-tier" games={state.realmScore?.ratedGames} total={state.realmScore?.placementGames} /> : state.tier ? <RealmBadge className="pp-tier" realm={state.tier} stage={state.realmScore?.stage} /> : <span className="pp-tier">暂无境界</span>}</RealmHistoryButton>
           <span className="pp-state">{state.form || '样本不足'}{state.formValue != null ? ` · ${state.formValue}/100` : ''}</span>
         </div>
         <RealmProgress value={state.realmScore}/>
-        <RealmHistoryButton playerId={p.id} accountId={ctx.data.me.id} name={p.name}/>
         {profile.motto&&<p className="pp-motto-preview">{profile.motto}</p>}
       </div>
       {canEdit && <div className="pp-header-actions"><Deferred><AvatarEditor ctx={ctx} playerId={p.id} className="pp-edit"/></Deferred>
