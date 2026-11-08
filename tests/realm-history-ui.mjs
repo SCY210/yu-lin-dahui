@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+import {mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import React from 'react';
+import renderer,{act} from 'react-test-renderer';
+mkdirSync('.test-output',{recursive:true});
+await build({stdin:{contents:"export {default as History} from './app/realm-history-dialog'; export {default as Card} from './app/my-realm-card';",resolveDir:process.cwd(),sourcefile:'realm-ui-entry.ts'},bundle:true,platform:'node',format:'esm',outfile:'.test-output/realm-history-ui.mjs',loader:{'.css':'empty'},alias:{'@':resolve('.')},external:['react','react/*','lucide-react'],plugins:[{name:'test-dialog',setup(builder){
+ builder.onResolve({filter:/components\/ui\/dialog$/},()=>({path:'dialog',namespace:'test-dialog'}));
+ builder.onLoad({filter:/.*/,namespace:'test-dialog'},()=>({loader:'js',contents:`import {createElement} from 'react';export const Dialog=({children,onOpenChange})=>createElement('div',{'data-dialog':true,onOpenChange},children);export const DialogContent=({children,...props})=>createElement('section',props,children);export const DialogHeader=({children})=>createElement('header',null,children);export const DialogTitle=({children})=>createElement('h2',null,children);export const DialogDescription=({children})=>createElement('p',null,children);`}));
+}}]});
+const {History,Card}=await import(pathToFileURL(resolve('.test-output/realm-history-ui.mjs')).href);
+const oldFetch=globalThis.fetch,oldAct=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const at=Date.now(),game={id:'g',kind:'game',at,before:1000,after:1016,delta:16,title:'测试活动',pending:false,gameIndex:0,won:true,k:32,expected:.5,team:1000,opponent:1000};
+const data={accountId:'A',playerId:'A',at,initial:1000,score:1116,liveScore:1100,pendingChange:-16,fixed:false,settled:[{id:'a',kind:'adjustment',at,before:1016,after:1116,delta:100,title:'宗主手动调整修为',reason:'调整原因',pending:false},game],live:[{...game,id:'p',before:1116,after:1100,delta:-16,pending:true,won:false},game]};
+const replies=[],requests=[];let ui;
+globalThis.fetch=async(url,options)=>{requests.push({url,options});const next=replies.shift();assert.ok(next);return new Response(JSON.stringify(next.body),{status:next.status??200})};
+const text=n=>typeof n==='string'?n:(Array.isArray(n)?n:n?.children??[]).map(text).join('');
+const button=label=>ui.root.findAllByType('button').find(b=>text(b.children)===label);
+try{
+ await act(async()=>{ui=renderer.create(React.createElement(Card,{stats:{realmScore:{placement:true,score:1000,ratedGames:0,placementGames:10}},playerId:'A',accountId:'A'}))});
+ assert.ok(button('修为明细'));assert.equal(requests.length,0,'collapsed rating never requests history');await act(()=>ui.unmount());ui=null;
+ replies.push({body:data});let closed=false;
+ await act(async()=>{ui=renderer.create(React.createElement(History,{playerId:'A',accountId:'A',onClose:()=>closed=true}))});
+ assert.equal(requests.length,1);assert.equal(requests[0].options.cache,'no-store');
+ assert.equal(ui.root.findAllByType('summary').length,2);assert.match(text(ui.toJSON()),/1016 → 1116/);assert.match(text(ui.toJSON()),/\+100/);assert.match(text(ui.toJSON()),/调整原因/);assert.match(text(ui.toJSON()),/预期胜率 50%，K = 32/);
+ await act(()=>button('含待结算').props.onClick());assert.match(text(ui.toJSON()),/暂计修为 1100/);assert.match(text(ui.toJSON()),/待结算/);
+ assert.equal(requests.length,1,'switching the already loaded timeline does not replay or refetch history');
+ replies.push({body:{...data,settled:Array.from({length:25},(_,i)=>({...game,id:'g'+i}))}});
+ await act(async()=>button('刷新明细').props.onClick());await act(()=>button('已结算').props.onClick());
+ assert.equal(ui.root.findAllByType('summary').length,20);await act(()=>button('显示更早明细').props.onClick());assert.equal(ui.root.findAllByType('summary').length,25);
+ replies.push({status:403,body:{error:'仅群组道友可以查看修为明细'}});await act(async()=>button('刷新明细').props.onClick());assert.equal(ui.root.findAllByType('summary').length,0);assert.match(text(ui.root.findByProps({role:'alert'}).children),/仅群组道友/);
+ ui.root.findByProps({'data-dialog':true}).props.onOpenChange(false);assert.ok(closed);
+ await act(()=>ui.unmount());ui=null;
+ let finish,signal;globalThis.fetch=(url,options)=>{signal=options.signal;return new Promise(resolve=>finish=resolve)};
+ await act(async()=>{ui=renderer.create(React.createElement(History,{playerId:'A',accountId:'A',onClose(){}}))});
+ await act(()=>ui.unmount());ui=null;assert.ok(signal.aborted);await act(async()=>finish(new Response(JSON.stringify(data))));
+ console.log('PASS realm history UI: lazy entry, before/after and reasons, Elo inputs, settled/pending views, local pagination, permission errors, closing and request cancellation');
+}finally{if(ui)await act(()=>ui.unmount());globalThis.fetch=oldFetch;globalThis.IS_REACT_ACT_ENVIRONMENT=oldAct}

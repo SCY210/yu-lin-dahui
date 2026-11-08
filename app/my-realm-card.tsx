@@ -2,11 +2,13 @@
 
 import RealmBadge, {PlacementBadge} from './realm-badge';
 import RealmProgress from './realm-progress';
+import RealmHistoryButton from './realm-history-button';
 
 type RealmScore = Parameters<typeof RealmProgress>[0]['value'];
 
-export default function MyRealmCard({stats}: {
+export default function MyRealmCard({stats,playerId,accountId}: {
   stats?: {tier?: string | null; provisional?: boolean; realmScore?: RealmScore};
+  playerId?:string;accountId?:string;
 }) {
   const realmScore = stats?.realmScore;
   const placement = !!(realmScore?.placement ?? stats?.provisional);
@@ -21,5 +23,6 @@ export default function MyRealmCard({stats}: {
     </div> : <strong>暂无境界</strong>}
     <small>{placement ? '定级期间暂不显示境界，修为照常加减' : '境界由修为决定，赢强队多加、输弱队多扣'}</small>
     <RealmProgress compact value={realmScore}/>
+    {playerId&&accountId&&<RealmHistoryButton playerId={playerId} accountId={accountId}/>}
   </section>;
 }

@@ -1,0 +1,10 @@
+.realm-history-button{font-size:12px;min-height:36px;padding:5px 8px}
+.realm-history-dialog{max-width:560px}
+.realm-history-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.realm-history-summary>div{padding:10px;border-radius:10px;background:#f7f4fc;min-width:0}
+.realm-history-summary dt{font-size:11px;color:#79688b}.realm-history-summary dd{margin:4px 0 0;font-size:19px;font-weight:650}
+.realm-history-list{min-width:0;max-height:48vh;overflow:auto}
+.realm-history-entry{border-bottom:1px solid #ece7f2;padding:10px 0;font-size:13px}
+.realm-history-entry summary{display:flex;justify-content:space-between;gap:12px;cursor:pointer}
+.realm-history-entry summary>span{min-width:0;overflow-wrap:anywhere}.realm-history-entry summary>strong{text-align:right;flex-shrink:0}
+.realm-history-entry small{display:block;font-size:11px;color:#897894;font-weight:400}.realm-history-entry p{font-size:12px;color:#79688b;overflow-wrap:anywhere}
