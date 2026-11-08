@@ -4,7 +4,7 @@ import {cancelPendingScheduling} from './scheduling';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
-import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
+import {registrationSpans,venueParticipation} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority} from './match-balance';
 import {doublesTypeMismatch,genderMismatches} from './gender-balance';
@@ -16,8 +16,10 @@ import {markRanked} from './all-ranked';
 import {eventPairingOdds,oddsRandom,oddsSplits} from './pairing-odds';
 import {eventFormat,courtPlayers,isPractice} from './match-format';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
+import {pointsWindow} from './points-window';
 
 const id=z.string().min(1).max(100);
+const minute=60000;
 const schemas={
  liveStart:z.object({eventId:id}),livePause:z.object({eventId:id,paused:z.boolean()}),
  livePreference:z.object({eventId:id,playerId:id,avoidConsecutive:z.boolean()}),
@@ -70,7 +72,8 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
-  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female));
+  const cost=balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female));
+  return {...cost,liveUnevenMixedPartners:history.liveUnevenMixedPartners(a,b)};
  };
  const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
  let best=first,bestCost=cost(first);
@@ -80,11 +83,23 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
 }
 
+function expectedLiveDuration(s:State,e:Event,now:number){
+ const planned=(pointsWindow(e).roundMinutes??15)*minute;
+ const rounds=new Set(s.rounds.filter(r=>r.eventId===e.id&&r.live).map(r=>r.id));
+ const recent=s.matches.flatMap(m=>{
+  if(!rounds.has(m.roundId)||m.status!=='complete'||m.noShow?.length||m.start===null||m.end===null||m.end>now)return [];
+  const duration=m.end-m.start;
+  // A much later score entry is not a reliable estimate of time on court.
+  return duration>0&&duration<=2*planned?[{end:m.end,duration}]:[];
+ }).sort((a,b)=>b.end-a.end).slice(0,3);
+ return Math.max(planned+5*minute,...recent.map(m=>m.duration));
+}
+
 /** Courts that have not had a game yet start on their own (activity start, a court slot opening, an arrival). A court
  * that has finished a game waits until someone presses 开始组队 (liveNext, `next`). Everyone leaves the court after
  * each game and the next four come from a queue (docs/LIVE_PLAY.md): waiting players before the just-finished ones,
  * longest wait first, then fewer games; then the existing pairing algorithm splits them into teams. Attendance/court
- * times constrain availability internally; no duration is guessed. Returns the started matches. */
+ * times constrain availability internally, including an estimate for players who leave early. */
 export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string;allowSame?:boolean}){
  const started:Match[]=[];
  const config=e.livePlay;
@@ -101,8 +116,14 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
  const handled=new Set<string>();
  const women=new Set(s.players.filter(p=>(p.profile?.gender??p.guestGender)==='female').map(p=>p.id));
  const female=(id:string)=>women.has(id);
- const history=matchHistory(s,e.id,true,female),ratings=new Map(s.players.map(p=>[p.id,p.rating]));
+ const ratings=new Map(s.players.map(p=>[p.id,p.rating]));
  const rating=(id:string)=>ratings.get(id)??1000;
+ const history=matchHistory(s,e.id,true,female,rating);
+ // Honor early departures and gaps. The scheduled end and explicit overtime retain their existing behavior.
+ const availableThrough=Math.max(at+1,Math.min(e.end,now+expectedLiveDuration(s,e,now)));
+ const presentSet=new Set(present);
+ const availability=new Map(s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&presentSet.has(r.playerId))
+  .map(r=>[r.playerId,venueParticipation(s,e,r)]));
  const counts=new Map<string,number>(),lastTurns=new Map<string,number>();
  for(const m of s.matches)if(m.eventId===e.id&&m.start!==null)for(const id of [...m.a,...m.b]){
   lastTurns.set(id,Math.max(lastTurns.get(id)??0,m.start));
@@ -154,7 +175,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   const sameTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=1&&owed(b)>=owed(a)-.5;
   // The order is a preference, not an eligibility lock. When short, any available player can fill the court,
   // including the ones who have just finished.
-  const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
+  const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&availability.get(id)?.some(span=>span.venue===venue&&span.start<=at&&span.end>=availableThrough)).sort(order);
   // Swaps for strength, variety or broken blocks keep the queue: nobody left on the bench may have waited more than one
   // game longer than a waiting player chosen, and someone already passed over once since their last game is not passed
   // over again. Pairwise swaps within one game could otherwise chain, across games too, and skip one player again and
@@ -224,7 +245,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
    if(odds){
     const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,female,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))));
-    // The draw respects protection, balance, doubles category and rotation.
+    // The draw respects protection, balance, doubles category and both rotation rules.
     if(compareLiveDoublesPriority(drawn.cost,chosen.cost)<=0)chosen=drawn;
    }
    teams={a:chosen.a,b:chosen.b};

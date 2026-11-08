@@ -46,6 +46,31 @@ test('两种分法都在 40 分以内，第三次个人上场优先轮换混双�
  assert.equal(genderMismatches(f.s,m.a,m.b,id=>f.s.players.find(p=>p.id===id)!.rating),0);
 });
 
+test('两种同类阵容的分差都接近时，轮换一直和低修为女生搭档的男生',()=>{
+ const f=fixture([[1250,'male'],[1070,'female'],[1210,'male'],[1080,'female']]),[a,b,c,d]=f.ids;
+ past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);
+ const m=next(f);
+ assert.ok(m);
+ const teams=[m.a,m.b];
+ assert.ok(teams.every(t=>t.filter(female(f.s.players)).length===1));
+ assert.ok(teams.some(t=>t.includes(a)&&t.includes(d)));
+});
+
+test('更换女生也会累积高低修为搭档记录，性别保护、分差和同类对阵仍优先',()=>{
+ const f=fixture(closeSplits),[a,b,c,d]=f.ids;
+ f.s.players.push({...f.s.players[1],id:'away',rating:1180});
+ past(f,[a,'away'],['absent-x','absent-y'],now-180000);
+ const rating=(id:string)=>f.s.players.find(p=>p.id===id)?.rating??1000;
+ const history=matchHistory(f.s,f.e.id,true,female(f.s.players),rating);
+ assert.equal(history.liveUnevenMixedPartners([a,b],[c,d]),1);
+ assert.equal(history.liveUnevenMixedPartners([c,b],[a,d]),0);
+ const m=next(f);assert.ok(m);assert.equal(mixedMan(f,m),c);
+ const repeated={...balanceCost([20],0),liveUnevenMixedPartners:3};
+ assert.ok(compareLiveDoublesBalance(repeated,balanceCost([10],0,1))<0);
+ assert.ok(compareLiveDoublesBalance(repeated,balanceCost([45],0))<0);
+ assert.ok(compareLiveDoublesBalance(repeated,{...balanceCost([10],0),liveTypeMismatch:1})<0);
+});
+
 test('轮换会把分差从 0 扩大到 400 时仍选均衡分法',()=>{
  const f=fixture(),[a,b,c,d]=f.ids;
  past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);

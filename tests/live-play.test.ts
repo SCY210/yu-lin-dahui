@@ -24,6 +24,44 @@ const active=(s:ReturnType<typeof emptyState>)=>s.matches.filter(m=>m.status==='
 const nextGame=(s:ReturnType<typeof emptyState>,courtId:string,at:number)=>apply(s,s.accounts[1],'liveNext',{eventId:s.events[0].id,courtId,allowSame:true},at).catch(()=>{});
 const score=async(s:ReturnType<typeof emptyState>,matchId:string,at=now+60000)=>{const court=s.matches.find(m=>m.id===matchId)!.courtId,result=await apply(s,s.accounts[1],'score',{matchId,a:21,b:19,reason:'本局结束'},at);await nextGame(s,court,at);return result};
 
+test('预计会超过接龙离场时间时跳过该球友，恰好结束仍可上场',async()=>{
+ const {s,e,owner}=fixture(5);
+ s.registrations[0].departure=now+20*60000-1;
+ s.registrations[1].departure=now+20*60000;
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const [m]=active(s);
+ assert.deepEqual(new Set([...m.a,...m.b]),new Set(['p01','p02','p03','p04']));
+});
+
+test('实时排场可以跨同馆连续接龙，遇到接龙空档则等待',async()=>{
+ const {s,e,owner}=fixture(5),change=now+12*60000;
+ const [court]=s.bookings;
+ s.bookings.push({...court,id:'other',name:'场地1',start:change});
+ for(const [i,gap] of [[0,0],[1,60000]]){
+  const r=s.registrations[i],signup={status:'confirmed' as const,sequence:i,note:'',cancelRequested:false,registeredAt:e.start,joinedAsWaitlist:false};
+  r.bookingSignups=[
+   {...signup,bookingId:court.id,arrival:e.start,departure:change},
+   {...signup,bookingId:'other',arrival:change+gap,departure:e.end},
+  ];
+ }
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const [m]=active(s);
+ assert.deepEqual(new Set([...m.a,...m.b]),new Set(['p00','p02','p03','p04']));
+});
+
+test('本场近期用时较长时，提高预计用时并等待符合时段的替补',async()=>{
+ const {s,e,owner}=fixture(5);
+ s.registrations[0].departure=now+47*60000;
+ s.registrations[4].arrival=now+25*60000;
+ await apply(s,owner,'liveStart',{eventId:e.id},now);
+ const [m]=active(s);
+ await apply(s,owner,'score',{matchId:m.id,a:21,b:19},now+24*60000);
+ await assert.rejects(()=>apply(s,owner,'liveNext',{eventId:e.id,courtId:m.courtId},now+24*60000),/人数不足/);
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:m.courtId},now+25*60000);
+ const [next]=active(s);
+ assert.deepEqual(new Set([...next.a,...next.b]),new Set(['p01','p02','p03','p04']));
+});
+
 test('各场独立推进，录分后自动开下一局且不重复安排正在打的人',async()=>{
  const {s,e,owner}=fixture(12,2);await apply(s,owner,'liveStart',{eventId:e.id},now);
  const original=active(s);assert.equal(original.length,2);assert.equal(e.status,'open');

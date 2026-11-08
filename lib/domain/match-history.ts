@@ -1,4 +1,5 @@
 import type {Match,State} from './types';
+import {genderGapPoints} from './gender-balance';
 
 /** Canonical identities ignore side labels and the order of partners. */
 const teamKey=(ids:string[])=>JSON.stringify([...ids].sort());
@@ -7,10 +8,18 @@ const pairKey=(a:string,b:string)=>teamKey([a,b]);
 const maxLiveMixedRun=2;
 
 /** Index once per scheduling operation, rather than scanning matches per candidate. */
-export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false,female?:(id:string)=>boolean){
+export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false,female?:(id:string)=>boolean,rating?:(id:string)=>number){
  const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),lastPartner=new Map<string,string>(),lastGame=new Map<string,number>();let games=0;
  const starts=new Map(s.rounds.map(r=>[r.id,r.start]));
  const mixedRuns=new Map<string,number>();
+ const unevenMixedUses=new Map<string,number>();
+ const unevenMixedMan=(team:string[])=>{
+  if(!female||!rating||team.length!==2)return undefined;
+  const [a,b]=team,firstFemale=female(a);
+  if(firstFemale===female(b))return undefined;
+  const [man,woman]=firstFemale?[b,a]:[a,b];
+  return rating(man)-rating(woman)>=genderGapPoints?man:undefined;
+ };
  // Track the role, not a particular partner or opponent. Resting never resets an individual's run.
  const mixedMan=(a:string[],b:string[])=>{
   if(!female||a.length!==2||b.length!==2)return undefined;
@@ -24,6 +33,7 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   if(female){const man=mixedMan(m.a,m.b);for(const id of [...m.a,...m.b])mixedRuns.set(id,id===man?(mixedRuns.get(id)??0)+1:0)}
   for(const team of [m.a,m.b])if(team.length===2){
    const key=teamKey(team);partners.set(key,(partners.get(key)??0)+1);
+   const man=unevenMixedMan(team);if(man!==undefined)unevenMixedUses.set(man,(unevenMixedUses.get(man)??0)+1);
    lastPartner.set(team[0],team[1]);lastPartner.set(team[1],team[0]);
   }
   for(const a of m.a)for(const b of m.b){const key=pairKey(a,b);opponents.set(key,(opponents.get(key)??0)+1)}
@@ -41,6 +51,11 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   add,
   /** Allow two consecutive mixed-v-men appearances; prefer another man for the third when other rules permit. */
   liveMixedRepeats:(a:string[],b:string[])=>{const man=mixedMan(a,b);return man===undefined?0:Math.max(0,(mixedRuns.get(man)??0)+1-maxLiveMixedRun)},
+  /** Count prior uses across different partners too, with an additional cost for repeating the exact pair. */
+  liveUnevenMixedPartners:(a:string[],b:string[])=>[a,b].reduce((cost,team)=>{
+   const man=unevenMixedMan(team);
+   return man===undefined?cost:cost+(unevenMixedUses.get(man)??0)+(partners.get(teamKey(team))??0);
+  },0),
   rematches:(a:string[],b:string[])=>matches.get(matchupKey(a,b))??0,
   cohorts:(ids:string[])=>groups.get(teamKey(ids))??0,
   /** 1 when three or more of these players come straight from one game together: a block that would only swap partners
