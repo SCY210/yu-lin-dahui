@@ -28,10 +28,10 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
  const mine=transfers.filter(t=>t.from===me||t.to===me),others=transfers.filter(t=>t.from!==me&&t.to!==me);
  const collectorPhone=settlement.collector&&e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'';
  const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to} id={t===target?payRowId(e.id):undefined}>
-  <div className="fee-transfer-people">
-   <div className="fee-transfer-person" data-side="from"><span>付款人</span><strong>{name(t.from)}{t.from===me&&<small className="fee-transfer-self">我</small>}</strong></div>
+  <div className={'fee-transfer-people'+(t.from===me?' from-me':t.to===me?' to-me':'')}>
+   <strong className={'fee-transfer-person'+(t.from===me?' is-self':'')} data-side="from" title={name(t.from)}>{t.from===me?'我':name(t.from)}</strong>
    <ArrowRight className="fee-transfer-direction" size={20} aria-label="转给"/>
-   <div className="fee-transfer-person" data-side="to"><span>收款人</span><strong>{name(t.to)}{t.to===me&&<small className="fee-transfer-self">我</small>}</strong></div>
+   <strong className={'fee-transfer-person'+(t.to===me?' is-self':'')} data-side="to" title={name(t.to)}>{t.to===me?'我':name(t.to)}</strong>
   </div>
   <div className="fee-transfer-footer"><div className="fee-transfer-amount"><span>应转金额</span><b>{euro(t.cents)}</b></div><div className="fee-transfer-actions">
    <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>
