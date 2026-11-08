@@ -12,6 +12,12 @@ export const mixedManGapPoints=50;
  * give their gender when they are signed up (`guestGender`). */
 export function isFemale(s:Pick<State,'players'>,id:string){const p=s.players.find(p=>p.id===id);return (p?.profile?.gender??p?.guestGender)==='female'}
 
+/** In doubles, two teams with the same number of women have the same category. */
+export function doublesTypeMismatch(a:string[],b:string[],female:(id:string)=>boolean){
+ if(a.length!==2||b.length!==2)return 0;
+ return Number(a.filter(female).length!==b.filter(female).length);
+}
+
 /** Doubles line-ups to avoid, counted per woman so the optimiser can prefer splits with none:
  * - a pair of men facing a pair of women, unless both women are at least `womenPairGapPoints` above both men;
  * - a pair of men facing a team with a woman whose rating is at least `genderGapPoints` below both of them;

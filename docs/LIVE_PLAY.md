@@ -1,52 +1,72 @@
-# Live court rotation
+# 实时排场
 
-Each court advances independently after a valid single-game score. A finished court waits for the Start grouping button (`liveNext`), available to signed-up players, the organiser and administrators. Other courts keep playing. Scores and lineup commands use the existing optimistic, idempotent D1 transactions.
+每片场独立推进，录入合法单局比分后等待「开始组队」（`liveNext`）。正式接龙的球友、活动组织者和管理员可以点击，其他场地继续比赛。比分和阵容操作沿用现有的乐观并发检查、幂等处理和 D1 原子事务。
 
-## Everyone leaves the court, then a queue
+## 全员下场后按队列上场
 
-After each game all four players leave the court; winners do not stay on. The next players come from a queue:
+每局结束后四人都下场，胜方不留场。下一局按以下顺序选人：
 
-1. Waiting players come before the court's just-finished players.
-2. Whoever has waited longest since their previous game goes first. Someone who has not played yet has waited since they arrived, not since the activity started.
-3. Among players who came off the same game, those owed more games go first, then signup order. Games owed are a player's share of every live game started while they were present (players per court divided by everyone present then, from each round's `eligible` list) minus the games they played. Late arrivals and early leavers are compared fairly this way: raw games played let a late arrival jump the queue all evening.
+1. 场下等待的人优先于这片场刚下场的人。
+2. 自上一局以来等得最久的人优先。没打过的人从实际到场时算起，而不是统一从活动开始算起。
+3. 同一局下场的人先比较欠的局数，再比较接龙顺序。每次实时开局时，在场的每人分得「每场人数 ÷ 当时在场人数」的应得局数，再减去实际打过的局数；当时在场名单来自轮次的 `eligible`。这使迟到、早退者也能公平比较，避免仅按总局数让迟到者整晚插队。
 
-The selected four use the existing strength, gender and match-history pairing algorithm. To improve strength or variety, or to avoid a rematch, the pairing may swap a selected player for one whose wait differs by at most one game and who is not owed fewer games. Every swap, block breaking included, must keep the queue: nobody left on the bench may have waited more than one game longer than a waiting player chosen. A bench player passed over this way is recorded on the new game's round (`livePassed`) and is not passed over again before they play. Without that record, swaps of one game each could chain across games and skip one player three or four times in a row.
+选出的人沿用修为、性别保护和历史搭档比较规则。为了平衡、多样性、避免重赛或轮换混双对男双的男生角色，可以在现有 `sameTurn` 约束内互换球友。所有互换，包括拆散重复四人组，都必须保持队列公平：留在场下的人不能比被选中的等待者多等超过一局。这样被跳过的人记在新轮次的 `livePassed` 中，在上场前不能再次被跳过；否则每次只差一局的互换也会连续让同一个人再等三四次。
 
-Simulations (`planned` and `live` through the real commands, minute by minute, 2-4 courts, 9-28 players, games of 9-21 minutes, some arriving 30 or 75 minutes late, some leaving an hour early and one court ending 90 minutes early) found both problems. Late arrivals averaged 1.3-1.7 games more than their share (up to 4.3); now 0.1-0.6. On one court with thirteen waiting, one player was skipped three times and waited 81 minutes; the longest wait is now 56 minutes, and the largest gap from anyone's fair share fell from 2.3-3.4 to about 1.4 games.
+通过真实命令按分钟运行的既有模拟覆盖 2—4 片场、9—28 人、每局 9—21 分钟、部分球友迟到 30 或 75 分钟、部分提前一小时离开、某片场提前 90 分钟结束。过去迟到者平均比应得局数多打 1.3—1.7 局，最多 4.3 局；修复队列后为 0.1—0.6 局。一片场、13 名等待者的场景曾有人被连续跳过三次、等待 81 分钟；修复后最长等待 56 分钟，与应得局数的最大差距由 2.3—3.4 局降至约 1.4 局。这些是既有队列修复的结果，不是角色轮换更新的新增测量。
 
-**Breaking up blocks.** Winner retention used to keep the same people from simply swapping partners. Without it, the four players of one game could leave together, queue together and come back together. A game may therefore not take three or more players from one earlier game while others can play. Instead, two of them play with two others, just-finished players included; those who would not get ahead in games come first, then the best balance. In fixed-partner mode two teams that just played each other are not paired again; another team comes in. Complete pairs are never split.
+## 避免重复四人组与重复搭档
 
-Rotating live doubles include partner repetition in the strength comparison, rather than only as a final tie-breaker. Each immediately repeated pair costs 24 Elo-equivalent points; historical pair uses contribute 4 each, capped at 16 for frequency. The combined live partnership penalty is capped at 40. Thus a modest strength difference can permit new partners, while a large mismatch cannot be justified by unlimited repetition penalties. Gender safeguards still rank first. Fixed partners and singles do not opt into this additional cost. Planned rounds (preplanned schedules, round-by-round generation and added rounds) use the same partner cost. History is indexed once and each candidate uses only map lookups.
+全员下场后，同一局的人可能一起排队、一起再次上场，只交换搭档。有其他球友可上时，一局不能从之前同一局带回三人或以上；应尽量让其中两人与其他两人搭配，必要时可用刚下场的人。先选不会让局数超前的人，再比较平衡。固定搭档模式下，刚交手的两队有其他整队可替换时不再相遇，固定搭档从不拆开。
 
-There is no win limit and no automatic break caused by consecutive wins. The queue is a preference, not an eligibility lock. When substitutes are scarce, the just-finished players remain candidates. Four available players can keep playing without an override flag; five- and six-player groups can rotate without waiting for nonexistent substitutes. Players currently playing elsewhere are always excluded.
+实时双打先比较性别保护，再比较两队平均修为分差超出 40 分的部分。两种分法的分差都在 40 分以内，或超出部分相等时，优先混双对混双、男双对男双、女双对女双，随后比较连续角色和历史搭档。立即重复的每对搭档增加 24 分等效代价，历史搭档次数每次增加 4 分，这一部分最多 16 分，合计最多 40 分。固定搭档整队参与比较，单打和预排沿用各自原有的比较顺序。历史只建一次索引，候选阵容通过映射查询。
 
-**History and simulations.** Until October 2026 doubles winners stayed on. With no win limit, a strong pair could play 10-15 games in a row while others waited. After losing, they sat out until everyone had caught up, and games played drifted 6-14 apart. A later variant kept winners on with a mandatory break after two wins. Simulated activities (1-4 courts, 6-28 players, the stronger team more likely to win, four hours) compare the current rotation with that variant:
+## 轮换混双对男双的男生角色
 
-- Games played differ by at most 1-3 across players, against 3-7. One three-court setup with fourteen players drifted 21 games apart under the two-win variant.
-- The longest rest is shorter in every setup, for example 66 instead of 96 minutes on one court with ten players.
-- The longest run of back-to-back games is 2-4 when six or more players are waiting. With only one or two waiting, runs stay long under any rule, because only that many players can be swapped out per game; the two-win variant limited them by leaving courts or players idle. The do-not-play-consecutively preference remains for players who want a break.
-- Team strength differences and the share of reunited foursomes are about the same.
+混双对男双仍是可用阵容。对阵类别相同的候选按连续角色重复情况排序，减少同一男生反复承担混双对男双角色。
 
-Availability still respects signup/booking windows, disabled or stopped participants, absence holds and explicit voluntary breaks. The fix does not bypass these independent controls or split fixed partners. If fewer than four genuinely available players (or fewer than two complete fixed teams) remain, the court waits. Singles retain their existing explicit same-player option.
+- 按每个人最近的有效上场记录计数。同一男生连续两次作为混双一方对男双后，候选第三次上场开始产生重复代价；此前连续次数越多，代价越大。
+- 计数跟随男生本人，换女生、换对手、交换两边、换场地和中间轮休都不清零。该男生实际打过其他角色的一局后清零，例如男双或混双对混双。
+- 比较顺序是原有性别保护、分差超出 40 分的部分、同类对阵、角色重复代价、历史搭档和对手多样性。轮换只在现有队列及公平互换允许的候选中进行，固定搭档仍整队移动。临时搭档概率也遵守前四项优先级。
+- 只有本活动的有效已开打对局才计数，草稿、取消、未开打及缺席判负均忽略；有正常结果的判负对局仍按有效对局计算。朋友按 `guestGender` 识别性别，其他性别缺省规则与现有性别保护一致。
+- 当分差都在容差内或超出部分相等时，先比较是否同类对阵，再用轮换降低同一男生承担混双对男双角色的连续次数。
 
-## Compatibility with existing activities
+这项代价只由实时排场传入，预排、逐轮生成和补排保持原来的比较机制。不改历史阵容、比分、修为或数据库结构。`matchHistory` 在一次历史遍历中维护每个人的连续角色记录，候选分队只检查当前四人，不为每个候选重扫历史；本次没有新增时钟驱动条件或轮询工作。
 
-The retired automatic breaks, `reason: 'win-limit'` and `reason: 'two-wins'`, may remain in persisted JSON. Server selection and manual-lineup eligibility ignore them immediately. Normal responses omit them so old tabs do not display the obsolete forced-break status. Scoring clears old entries as part of its normal transaction. No reset, record deletion or separate production-data migration is needed. The same compatibility behavior applies to saved simulation documents.
+`tests/live-mixed-rotation.test.ts` 覆盖分差接近时轮换、悬殊时优先平衡、换搭档与轮休后的记录、性别保护和公平队列优先、固定搭档、临时概率及预排的原有行为。
 
-New scores never create automatic breaks. Only the do-not-play-consecutively preference creates a voluntary break; the ready-again action can end it, and manual swaps cannot put that player on court. All off-court players remain visible with avatars and profile links, without rest labels. No migration of historical scores is performed.
+## 人少时的兜底与主动休息
 
-## Current lineup corrections and refresh
+没有连胜上限，也没有因连胜而自动休息。队列是优先级，不是资格锁。替补少时，刚下场的人仍是候选；只有四人也能继续打，不需要额外覆盖标记。五六人可以正常轮转，不必等待不存在的替补。在其他场地比赛的人始终排除。
 
-Creators, administrators and accounts with a confirmed signup may exchange partners, a court player with a waiting player, or players on separate courts before scoring through the two-player swap controls. Waitlisted, cancelled, disabled and unrelated accounts cannot use these controls. A proxy guest's signup grants no authority to the registrant. The legacy full-lineup replacement command remains organiser-only. Fixed partners remain protected. Current-lineup snapshots, permissions, duplicate players, other active games, attendance and voluntary breaks are checked on the server. Stale requests return 409 and failed transactions roll back. Corrections preserve match IDs, start times and completed results.
+直到 2026 年 10 月，双打胜方曾留场。不限连胜时强队能连续打 10—15 局，其他人等待；败后又要等别人追上，局数可差 6—14 局。后来的版本曾让胜方连赢两局后强制休息。四小时、1—4 场、6—28 人的既有模拟显示，相比两连胜版本：
 
-## Manual play after the scheduled end
+- 全员下场的局数差通常为 1—3 局，旧版为 3—7 局；某个三场 14 人场景旧版曾差 21 局。
+- 最长等待在所有设置中都缩短，例如一场十人从 96 分钟降至 66 分钟。
+- 六人以上等待时，最长连续上场通常为 2—4 局。只有一两人等待时，任何规则都只能换下这么多人；旧两连胜版本靠空场或闲置球友才能缩短连续上场。「不连续上场」偏好仍供愿意休息的人使用。
+- 双方修为差及同样四人再聚的比例大致相同。
 
-An organiser may start live play or switch an expired activity to live mode after its scheduled end. Signed-up accounts may then request the next game, and confirmed accounts may swap an unscored current lineup. The final scheduled court and signup phase supplies the available players; earlier departures, voluntary breaks, absence holds, fixed partners and other active games still apply. Drafts, cancellation, deletion, a manual closure before the scheduled end and the before-start gate remain protected.
+可上场资格仍遵守接龙与预约时段、停用或停止参加、未到与缺席限制、主动休息。真正可用的人不足四人或固定搭档不足两整队时才等待。单打保留明确选择原班人马继续的选项。
 
-Overtime games store their actual start and completion timestamps. Activity dates, booking intervals, registration times and fee allocation durations remain unchanged. The usual end-time projection and voting rules remain clock-based. Expired activities never restart through background maintenance: overtime games require an explicit action. Conditional reads retain the existing activity-end boundary, so clients see the transition without a new polling policy or database migration.
+## 既有活动的兼容
 
-Rounds no longer record retained players. `liveWinStreaks` counts each player's live wins in a row, whatever their partners or courts; older rounds' retained-player markers are ignored. Existing games and scores are unchanged. Visible activity pages retain three-second refreshes with hidden/offline suppression. This change introduces no new clock-driven state transition or SQL migration.
+已废弃的自动休息 `reason: 'win-limit'`、`reason: 'two-wins'` 可能仍在保存的 JSON 中。服务端选人和手动阵容资格立即忽略它们，正常响应不再返回这些条目，避免旧页面显示过时状态；录分事务会清除旧条目。无需重置、删除比赛或迁移生产数据。保存的模拟文档采用相同兼容方式。
 
-## Simulation and validation
+新录分从不创建自动休息，只有「不连续上场」偏好创建主动休息。准备上场操作可以结束它，手动换人不能把主动休息者放回场上。所有场下球友仍显示头像和资料链接，不显示已废弃的自动休息标签。不迁移既有比分。
 
-Simulation uses the same domain commands and view in its isolated document. Tests cover the queue, block breaking and even games on three courts, 4/5/6-player groups, fixed-team rotation, staggered courts, return from rest, ignored two-win and imported legacy win-limit rows, manual substitution, cross-idle-court fallback, voluntary rest, busy-player exclusion, scoped response compatibility, persistence, rollback, idempotence and concurrent next-game requests. Simulation tests also verify that real club state remains unchanged.
+## 当前阵容调整与刷新
+
+活动创建者、管理员和正式接龙账号可在录分前通过两人交换操作调整搭档、场上与等待者，或两片场之间的人。候补、取消、停用及无关账号不能操作；朋友的接龙不给代报名人额外权限。旧版整份阵容替换仍限组织者，固定搭档继续受保护。服务端检查显示时的阵容快照、权限、重复人员、其他正在进行的比赛、到场和主动休息。过时请求返回 409，事务失败整体回滚。修改保留比赛 ID、开始时间和已完成结果。
+
+可见活动页每三秒刷新，隐藏或离线时暂停。比分和下一局请求继续使用现有事务及并发保护。
+
+## 活动结束后的手动加时
+
+组织者可在预约结束后启动实时排场或切换到实时方式，之后正式接龙账号可请求下一局、调整尚未录分的当前阵容。使用最后一个接龙及场地时段确定候选；提前离开、主动休息、未到、固定搭档和其他比赛占用继续生效。草稿、取消、删除、预约结束前主动关闭及开始时间限制仍受保护。
+
+加时保存实际开始与结束时间，不改活动日期、预约、接龙或费用分摊时长。预计结束及投票规则继续依时钟生效。过期活动不会被后台维护重启，加时必须由明确操作触发。条件读取继续使用已有的活动结束边界，不新增轮询策略或数据库迁移。
+
+轮次不再记录留场人员。`liveWinStreaks` 按每个人计算连续实时胜场，不论搭档和场地；旧留场标记忽略，已保存的比赛和比分不改。
+
+## 验证
+
+管理员模拟在隔离文档中使用与生产相同的领域命令和视图。测试覆盖队列、拆散重复四人组、三场局数均衡、四五六人活动、固定队伍、错峰结束、休息后回归、忽略旧自动休息、手动换人、跨空场候选、主动休息、忙碌球友排除、响应兼容、持久化、回滚、幂等及并发下一局。模拟测试还验证真实俱乐部状态没有被改变。

@@ -1,16 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {balanceCost,compareBalance,LIVE_PARTNER_PENALTY_LIMIT} from '../lib/domain/match-balance';
+import {balanceCost,compareLiveDoublesBalance,LIVE_PARTNER_PENALTY_LIMIT} from '../lib/domain/match-balance';
 import {matchHistory} from '../lib/domain/match-history';
 import {fillLiveCourts} from '../lib/domain/live-play';
 import {createSimulation} from '../lib/admin-simulation';
 
-test('partner repetition can outweigh a modest gap but cannot buy an arbitrarily uneven game',()=>{
- const repeated=balanceCost([10],900,0,0,0,40),changed=balanceCost([60],100,0,0,0,4);
- assert.ok(compareBalance(changed,repeated)<0);
- assert.ok(compareBalance(balanceCost([300],0,0,0,0,0),repeated)>0);
+test('实时双打在 40 分容差内轮换搭档，超出容差时先比较分差',()=>{
+ const repeated=balanceCost([10],900,0,0,0,40),changed=balanceCost([40],100,0,0,0,4);
+ assert.ok(compareLiveDoublesBalance(changed,repeated)<0);
+ assert.ok(compareLiveDoublesBalance(balanceCost([60],100,0,0,0,4),repeated)>0);
  assert.equal(balanceCost([0],0,0,0,0,100000).partnerPenalty,LIVE_PARTNER_PENALTY_LIMIT);
- assert.ok(compareBalance(balanceCost([8],0,1),balanceCost([150],100,0,0,0,40))>0,'existing gender safeguards retain priority');
+ assert.ok(compareLiveDoublesBalance(balanceCost([8],0,1),balanceCost([150],100,0,0,0,40))>0,'existing gender safeguards retain priority');
  assert.equal(balanceCost([8],710).partnerPenalty,0,'planned/fixed/singles callers do not opt into the live rotating preference');
 });
 
@@ -37,14 +37,14 @@ function fixture(ratings:number[]){
  for(let i=0;i<4;i++)s.matches.push({id:'history-'+i,eventId:e.id,roundId:'past-'+i,courtId:'past-court',a:ids.slice(0,2),b:['absent-'+i+'a','absent-'+i+'b'],status:'complete',start:now-10000+i,end:now-9000+i,scoreA:21,scoreB:19,monthly:true,elo:true,locked:false,enteredBy:s.accounts[0].id,games:[{a:21,b:19}]});
  return {s,e,now,ids};
 }
-test('the real live selector changes a repeated pair against new opponents without ejecting anyone',()=>{
- // Fictional team-average gaps are 10, 70 and 60. The old selector always chose the 10-point repeat.
- const {s,e,now,ids}=fixture([1080,950,1010,1000]);
+test('同一批上场球友有容差内的替代分法时，实时排场轮换重复搭档',()=>{
+ // The balanced repeat has a gap of 0. The two alternatives have gaps of 40 and 30.
+ const {s,e,now,ids}=fixture([1040,970,1010,1000]);
  const [m]=fillLiveCourts(s,e,now,{courtId:s.bookings[0].id});assert.ok(m);
  assert.deepEqual(new Set([...m.a,...m.b]),new Set(ids));
  assert.ok(![m.a,m.b].some(team=>ids.slice(0,2).every(id=>team.includes(id))));
  const mean=(team:string[])=>team.reduce((n,id)=>n+s.players.find(p=>p.id===id)!.rating,0)/2;
- assert.equal(Math.abs(mean(m.a)-mean(m.b)),60);
+ assert.ok(Math.abs(mean(m.a)-mean(m.b))<=40);
 });
 test('the real selector keeps skill balance for large gaps and never splits configured fixed partners',()=>{
  const balanced=fixture([1000,1000,1600,400]);

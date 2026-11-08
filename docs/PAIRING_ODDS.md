@@ -1,18 +1,20 @@
-# Pairing odds
+# 临时搭档概率
 
-The owner and administrators can set, for one activity that has not ended, the chance that given members play as partners rather than opponents when they share a court (`lib/domain/pairing-odds.ts`). The panel is in group management (`app/pairing-odds-panel.tsx`) and carries no explanation on screen. Saving with no rule left clears the activity.
+群主和管理员可为尚未结束的活动设置指定成员同场时成为搭档而非对手的概率（`lib/domain/pairing-odds.ts`）。设置面板在群组管理中（`app/pairing-odds-panel.tsx`），界面不额外展示机制说明。保存时删除全部规则即可清除此活动的设置。
 
-- **Default rules.** One or more members, one or more other members, and a partner chance from 0 to 100% (50% by default). Whenever one of the first and one of the second share a court, they are partners with that chance and opponents otherwise.
-- **Conditional rules.** Two chosen members, one or more condition members, and two chances. When the two chosen members share a court and one of the other two players is a condition member, they are partners with the first chance; when both other players are condition members, with the second.
+- 默认规则：选择一组成员、一组其他成员及 0—100% 的搭档概率，默认 50%。两组中的成员同场时按该概率成为搭档，否则为对手。
+- 条件规则：指定两名成员、条件成员名单和两个概率。同场的另外两人中有一名条件成员时使用第一个概率，两人都是条件成员时使用第二个。
 
-A conditional rule takes precedence over the default rules for the same two members. Rules are drawn in that order, each keeping only the team splits where its two members are partners (or opponents); a rule that no split can satisfy any more is skipped.
+同一对成员的条件规则优先于默认规则。按这个顺序抽签，每条规则只保留符合本次搭档或对手结果的分法；若没有任何剩余分法能满足当前规则，则跳过这一条。
 
-The odds only decide partners and opponents. Fair turns, rests, venue limits and balance still choose who plays and who shares a court, exactly as without odds; among the splits the draw allows, the usual balance cost picks one. They apply to rotating doubles in every scheduling mode: rounds generated one at a time, planned schedules, gap rounds and live courts. Fixed partners and singles have no partners to choose, so the odds do not apply there.
+概率只决定搭档和对手，轮次公平、休息、球馆限制和平衡仍按未设概率时的方式决定谁上场及谁在同一片场；在抽签允许的分法中再用正常代价比较。适用于逐轮生成、预排、补排和实时轮换双打，固定搭档和单打不使用。
 
-The administrator simulation schedules exactly as production: on every write it takes the current odds of the next real activity that has any (`syncPairingOdds` in `lib/admin-simulation.ts`), on the sandbox players copied from the same members; members outside the sandbox drop out of the rules. The simulation view never includes the rules, since member testers open it too.
+实时双打的临时概率遵守[性别保护、分差、同类对阵和角色轮换](LIVE_PLAY.md#轮换混双对男双的男生角色)的比较顺序。每一项相同才比较下一项，分差按超出 40 分的部分比较。抽签结果优先级低于排场已经找到的分队时，采用原分队。
 
-Draws use a random stream of their own, mixed from the round's seed (from the time and court on live courts), so the lineup search is unchanged when there are no odds.
+管理员模拟与生产使用相同排场逻辑。每次写入会通过 `syncPairingOdds`（`lib/admin-simulation.ts`）同步下一场实际活动中最先找到的概率设置，只保留模拟名单中的成员。测试员也可打开模拟，所以模拟视图不包含规则本身。
 
-Storage and visibility: the rules live in `settings.pairingOdds`, one entry per activity. Only the owner and administrators receive them in the club view, and only for activities that have not ended; members never receive them, and saving drops entries of activities that are over. Saving adds an administrator audit row with the activity only.
+抽签使用独立随机流，按轮次种子混合；实时场地使用时间和场地信息。没有概率设置时，原有阵容搜索不会因抽签而改变。
 
-Validation: `tests/pairing-odds.test.ts` checks the chances over many seeds, the precedence of conditional rules, that lineups and court sharing stay the same, live courts, and who may set and see the rules. `tests/pairing-odds-ui.mjs` covers the panel.
+规则保存在 `settings.pairingOdds` 中，每个活动一条。只有群主和管理员可在俱乐部视图中看到尚未结束活动的规则，成员视图不返回；保存时清除已结束活动的条目。保存只增加包含活动标识的管理员审计记录，不记录规则细节。
+
+`tests/pairing-odds.test.ts` 验证概率、条件优先、上场名单、设置权限和实时双打分差容差。`tests/pairing-odds-ui.mjs` 覆盖面板。`tests/live-mixed-rotation.test.ts` 覆盖分差接近时角色轮换优先于临时概率。

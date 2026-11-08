@@ -4,15 +4,24 @@ import type {Match,State} from './types';
 const teamKey=(ids:string[])=>JSON.stringify([...ids].sort());
 export const matchupKey=(a:string[],b:string[])=>JSON.stringify([teamKey(a),teamKey(b)].sort());
 const pairKey=(a:string,b:string)=>teamKey([a,b]);
+const maxLiveMixedRun=2;
 
 /** Index once per scheduling operation, rather than scanning matches per candidate. */
-export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false){
+export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false,female?:(id:string)=>boolean){
  const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),lastPartner=new Map<string,string>(),lastGame=new Map<string,number>();let games=0;
  const starts=new Map(s.rounds.map(r=>[r.id,r.start]));
+ const mixedRuns=new Map<string,number>();
+ // Track the role, not a particular partner or opponent. Resting never resets an individual's run.
+ const mixedMan=(a:string[],b:string[])=>{
+  if(!female||a.length!==2||b.length!==2)return undefined;
+  const ids=[...a,...b],women=ids.filter(female);if(women.length!==1)return undefined;
+  return (a.includes(women[0])?a:b).find(id=>!female(id));
+ };
  const add=(m:Pick<Match,'a'|'b'>)=>{
   const key=matchupKey(m.a,m.b);matches.set(key,(matches.get(key)??0)+1);
   const group=teamKey([...m.a,...m.b]);groups.set(group,(groups.get(group)??0)+1);
   games++;for(const id of [...m.a,...m.b])lastGame.set(id,games);
+  if(female){const man=mixedMan(m.a,m.b);for(const id of [...m.a,...m.b])mixedRuns.set(id,id===man?(mixedRuns.get(id)??0)+1:0)}
   for(const team of [m.a,m.b])if(team.length===2){
    const key=teamKey(team);partners.set(key,(partners.get(key)??0)+1);
    lastPartner.set(team[0],team[1]);lastPartner.set(team[1],team[0]);
@@ -30,6 +39,8 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
  };
  return {
   add,
+  /** Allow two consecutive mixed-v-men appearances; prefer another man for the third when other rules permit. */
+  liveMixedRepeats:(a:string[],b:string[])=>{const man=mixedMan(a,b);return man===undefined?0:Math.max(0,(mixedRuns.get(man)??0)+1-maxLiveMixedRun)},
   rematches:(a:string[],b:string[])=>matches.get(matchupKey(a,b))??0,
   cohorts:(ids:string[])=>groups.get(teamKey(ids))??0,
   /** 1 when three or more of these players come straight from one game together: a block that would only swap partners

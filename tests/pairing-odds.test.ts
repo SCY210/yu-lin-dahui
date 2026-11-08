@@ -78,15 +78,15 @@ test('only the owner and administrators set and receive the odds',async()=>{
  assert.equal(s.settings.pairingOdds,undefined,'clearing every rule removes the entry');
 });
 
-test('live courts use the odds too',async()=>{
+test('实时搭档概率在 40 分容差内生效，不能扩大明显分差',async()=>{
  const now=Date.parse('2026-10-10T15:00:00Z');
- for(const percent of [0,100]){
+ for(const ratingStep of [20,200])for(const percent of [0,100]){
   const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
   const e:Event={id:'event',creatorId:'owner',title:'虚构实时活动',start:now-3600000,end:now+3*3600000,venue:'球馆',address:'',capacity:4,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
   s.events.push(e);
   for(let i=0;i<4;i++){
    const id='p'+i,accountId=i?'member'+i:'owner';
-   s.players.push({id,name:'Fictional '+i,ownerId:accountId,initialRating:1000+i*200,rating:1000+i*200,ratedGames:0,enabled:true,ratingReason:''});
+   s.players.push({id,name:'Fictional '+i,ownerId:accountId,initialRating:1000+i*ratingStep,rating:1000+i*ratingStep,ratedGames:0,enabled:true,ratingReason:''});
    s.accounts.push({id:accountId,email:'',role:i?'member':'admin',playerId:id});
    s.registrations.push({id:'reg'+i,eventId:e.id,playerId:id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
   }
@@ -95,6 +95,6 @@ test('live courts use the odds too',async()=>{
   await apply(s,s.accounts[0],'pairingOdds',{eventId:e.id,defaults:[{players:['p0'],targets:['p1'],percent}],conditions:[]},now);
   await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);
   const m=s.matches.find(m=>m.status==='playing')!;
-  assert.equal(partners(m,'p0','p1'),percent===100,percent+'%');
+  assert.equal(partners(m,'p0','p1'),percent===100&&ratingStep===20,`修为梯度 ${ratingStep}，搭档概率 ${percent}%`);
  }
 });
