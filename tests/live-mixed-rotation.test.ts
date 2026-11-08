@@ -132,6 +132,25 @@ test('固定搭档有同轮次替代整队时轮换，不拆开任何搭档',()=
  assert.ok([m.a,m.b].every(team=>teams.some(t=>t.every(id=>team.includes(id)))));
 });
 
+for(const [category,counts] of [['男双',[0,1,0]],['混双',[1,0,1]],['女双',[2,1,2]]] as const){
+ test(`分差接近且轮次相同时优先${category}对${category}`,()=>{
+  const specs:Spec[]=counts.flatMap((women,team)=>Array.from({length:2},(_,i):Spec=>[1000+team*10,i<women?'female':'male']));
+  const f=fixture(specs),[a,b,c,d,x,y]=f.ids;
+  f.e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:[[a,b],[c,d],[x,y]]};
+  const m=next(f);assert.ok(m);
+  assert.deepEqual(new Set([...m.a,...m.b]),new Set([a,b,x,y]));
+  assert.ok([m.a,m.b].some(team=>team.includes(a)&&team.includes(b)));
+ });
+}
+
+test('同类对阵分差明显更大时优先修为相近的混双对男双',()=>{
+ const f=fixture([[1000,'male'],[1000,'male'],[1010,'male'],[1010,'female'],[1200,'male'],[1200,'male']]);
+ const [a,b,c,d,x,y]=f.ids;
+ f.e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:[[a,b],[c,d],[x,y]]};
+ const m=next(f);assert.ok(m);
+ assert.deepEqual(new Set([...m.a,...m.b]),new Set([a,b,c,d]));
+});
+
 test('朋友按报名性别参与角色记录，混双对混双的一局会结束连续记录',()=>{
  const f=fixture([[1800,'male'],[1000,'female'],[1400,'male'],[1400,'male'],[1200,'female']]),[a,b,c,d,w]=f.ids;
  const guest=f.s.players[1];delete guest.profile;guest.guestGender='female';guest.guestEventId=f.e.id;
