@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {fillLiveCourts} from '../lib/domain/live-play';
 import {matchHistory} from '../lib/domain/match-history';
-import {balanceCost,compareBalance} from '../lib/domain/match-balance';
+import {balanceCost,compareLiveDoublesBalance} from '../lib/domain/match-balance';
 import {genderMismatches} from '../lib/domain/gender-balance';
 import {propose} from '../lib/domain/grouping';
 import {createSimulation} from './helpers/scheduling-fixture';
@@ -10,6 +10,7 @@ import type {Match,Player} from '../lib/domain/types';
 
 const now=Date.parse('2030-10-10T16:00:00Z');
 type Spec=[number,'male'|'female'];
+const closeSplits:Spec[]=[[1450,'male'],[1200,'female'],[1430,'male'],[1220,'male']];
 function fixture(specs:Spec[]=[[1800,'male'],[1000,'female'],[1400,'male'],[1400,'male']],courts=1){
  const {state:s}=createSimulation(now),e=s.events[0];
  s.players=s.players.slice(0,specs.length);s.accounts=s.accounts.slice(0,specs.length);s.registrations=s.registrations.slice(0,specs.length);s.bookings=s.bookings.slice(0,courts);
@@ -37,16 +38,23 @@ test('实时排场保留首次的修为平衡，允许混双对男双及连续�
  }
 });
 
-test('第三次个人上场优先轮换混双男生，不靠更换女生或对手清零',()=>{
- const f=fixture(),[a,b,c,d]=f.ids;
+test('两种分法都在 40 分以内，第三次个人上场优先轮换混双男生',()=>{
+ const f=fixture(closeSplits),[a,b,c,d]=f.ids;
  past(f,[a,b],[c,d],now-120000);past(f,[b,a],[d,c]);
- const m=next(f);assert.ok(m);assert.notEqual(mixedMan(f,m),a);
+ const m=next(f);assert.ok(m);assert.equal(mixedMan(f,m),c);
  assert.deepEqual(new Set([...m.a,...m.b]),new Set(f.ids));
- assert.equal(genderMismatches(f.s,m.a,m.b,id=>f.s.players.find(p=>p.id===id)!.rating),1,'原来的女生保护代价没有增加');
+ assert.equal(genderMismatches(f.s,m.a,m.b,id=>f.s.players.find(p=>p.id===id)!.rating),0);
 });
 
-test('连续十二局轮换角色，同一男生不会连续三次作为混双一方',()=>{
- const f=fixture();let last:string|undefined,run=0;
+test('轮换会把分差从 0 扩大到 400 时仍选均衡分法',()=>{
+ const f=fixture(),[a,b,c,d]=f.ids;
+ past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);
+ const m=next(f);assert.ok(m);assert.equal(mixedMan(f,m),a);
+ assert.deepEqual(new Set([...m.a,...m.b]),new Set(f.ids));
+});
+
+test('有分差接近的替代分法时，连续十二局轮换混双男生',()=>{
+ const f=fixture(closeSplits);let last:string|undefined,run=0;
  for(let i=0;i<12;i++){
   const m=next(f,now+i*60000);assert.ok(m);
   const man=mixedMan(f,m);assert.ok(man);run=man===last?run+1:1;last=man;
@@ -93,12 +101,12 @@ test('角色轮换不压过原来的女生保护，无法安全替换时仍正�
  const m=next(f);assert.ok(m);assert.equal(mixedMan(f,m),a);
  assert.equal(genderMismatches(f.s,m.a,m.b,id=>f.s.players.find(p=>p.id===id)!.rating),0);
  const repeated=balanceCost([0],0,0,0,0,0,0,0,0,1);
- assert.ok(compareBalance(repeated,balanceCost([0],0,1))<0);
- assert.ok(compareBalance(balanceCost([Infinity],0),repeated)>0);
+ assert.ok(compareLiveDoublesBalance(repeated,balanceCost([0],0,1))<0);
+ assert.ok(compareLiveDoublesBalance(balanceCost([Infinity],0),repeated)>0);
 });
 
 test('同轮次候选可改善轮换，但不会越过已等待多局且不可再跳过的球友',()=>{
- const f=fixture([[1800,'male'],[1000,'female'],[1400,'male'],[1400,'male'],[1400,'female']]),[a,b,c,d,w]=f.ids;
+ const f=fixture([...closeSplits,[1400,'female']]),[a,b,c,d,w]=f.ids;
  past(f,[a,b],['absent-x','absent-y'],now-180000);past(f,[a,b],['absent-x','absent-y'],now-120000);
  // The fifth player just finished on another court, while the four selected players have waited for three games.
  for(let i=0;i<3;i++){const m=past(f,[w,'absent-x'],['absent-y','absent-z'],now-60000+i*1000);m.courtId='another-court'}
@@ -116,7 +124,7 @@ test('固定搭档不足其他整队时不拆队、不空场',()=>{
 });
 
 test('固定搭档有同轮次替代整队时轮换，不拆开任何搭档',()=>{
- const f=fixture([[1800,'male'],[1000,'female'],[1400,'male'],[1400,'male'],[1300,'male'],[1300,'male']]);
+ const f=fixture([[1450,'male'],[1200,'female'],[1310,'male'],[1340,'male'],[1300,'male'],[1300,'male']]);
  const [a,b,c,d,x,y]=f.ids,teams=[[a,b],[c,d],[x,y]];
  f.e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams};
  for(const at of [now-120000,now-60000])for(const team of teams){const m=past(f,team,['absent-x','absent-y'],at);m.courtId='another-court'}
@@ -134,8 +142,8 @@ test('朋友按报名性别参与角色记录，混双对混双的一局会结�
  assert.equal(history.liveMixedRepeats([a,b],[c,d]),0);
 });
 
-test('临时搭档概率不能让同一男生第三次重复混双对男双角色',()=>{
- const f=fixture(),[a,b,c,d]=f.ids;
+test('分差接近时临时搭档概率不能取消已找到的角色轮换',()=>{
+ const f=fixture(closeSplits),[a,b,c,d]=f.ids;
  f.s.settings.pairingOdds=[{eventId:f.e.id,defaults:[{players:[a],targets:[b],percent:100}],conditions:[]}];
  past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);
  const m=next(f);assert.ok(m);assert.notEqual(mixedMan(f,m),a);

@@ -6,7 +6,7 @@ import {parseDomainCommand} from './command-contract';
 import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
-import {balanceCost,compareBalance} from './match-balance';
+import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority} from './match-balance';
 import {genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
 import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions';
@@ -66,6 +66,7 @@ function configuration(e:Event):LivePlay{
 /** splits: the team splits allowed by hidden pairing odds (lib/domain/pairing-odds.ts); all three when omitted. */
 function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number,splits?:string[][][]){
  const size=eventFormat(e)==='singles'?1:2;
+ const compare=size===2?compareLiveDoublesBalance:compareBalance;
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
@@ -74,7 +75,7 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
  let best=first,bestCost=cost(first);
  for(const candidate of others){
-  const next=cost(candidate);if(compareBalance(next,bestCost)<0){best=candidate;bestCost=next}
+  const next=cost(candidate);if(compare(next,bestCost)<0){best=candidate;bestCost=next}
  }
  return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
 }
@@ -111,6 +112,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
  // everyone present then, from the round's eligible list), minus the games they played. Late arrivals and early
  // leavers are compared by this, not by raw games played, which would let a late arrival jump the queue all evening.
  const share=new Map<string,number>(),size=courtPlayers(e);
+ const compare=size===4?compareLiveDoublesBalance:compareBalance;
  for(const r of s.rounds)if(r.eventId===e.id&&r.live&&r.eligible.length)for(const id of r.eligible)share.set(id,(share.get(id)??0)+size/r.eligible.length);
  const owed=(id:string)=>(share.get(id)??0)-appearances(id);
  // Someone who has not played yet has waited since they arrived, not since the activity started.
@@ -173,7 +175,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
      if(chosen.includes(candidate)||chosen[i].some((id,j)=>!sameTurn(id,candidate[j])))continue;
      const next=[...chosen];next[i]=candidate;const nextCost=cost(next);
-     if(compareBalance(nextCost,bestCost)<0){chosen=next;bestCost=nextCost}
+     if(compare(nextCost,bestCost)<0){chosen=next;bestCost=nextCost}
     }
     // Two teams that came off one game together would only play each other again: bring in another team, first one
     // that would not get ahead in games, then the best balance.
@@ -184,7 +186,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
       if(chosen.includes(candidate)||from(candidate)===from(chosen[0]))continue;
       const option=[...chosen];option[i]=candidate;
       const ahead=Math.max(0,Math.round(Math.min(...chosen[i].map(owed))-Math.min(...candidate.map(owed)))),optionCost=cost(option);
-      if(!best||ahead<bestAhead||(ahead===bestAhead&&compareBalance(optionCost,bestOptionCost!)<0)){best=option;bestAhead=ahead;bestOptionCost=optionCost}
+      if(!best||ahead<bestAhead||(ahead===bestAhead&&compare(optionCost,bestOptionCost!)<0)){best=option;bestAhead=ahead;bestOptionCost=optionCost}
      }
      if(best)chosen=best;
     }
@@ -195,7 +197,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
    for(let pass=0;pass<2;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
     const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!sameTurn(replaced,candidate))continue;
     ids[i]=candidate;if(!fairCut(ids))continue;const next=pair(s,e,ids,history,rating);
-    if(compareBalance(next.cost,chosen.cost)<0)chosen=next;
+    if(compare(next.cost,chosen.cost)<0)chosen=next;
    }
    // Everyone leaves after each game, so a whole game could come back on court as one block and the same people
    // would only swap partners. Break up three or four from one earlier game by bringing in others (just-finished
@@ -210,15 +212,15 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
      if(ids.includes(candidate)||lastGame.get(candidate)===block)continue;
      const option=[...ids];option[i]=candidate;
      const split=pair(s,e,option,history,rating),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
-     if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compareBalance(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
+     if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
     }
     if(!best)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
    if(odds){
     const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))));
-    // A temporary partner draw must not put the same man back in this role for a third consecutive appearance.
-    if(drawn.cost.liveMixedRepeats<=chosen.cost.liveMixedRepeats)chosen=drawn;
+    // The draw may choose among splits that respect the same protection, balance and rotation priorities.
+    if(compareLiveDoublesPriority(drawn.cost,chosen.cost)<=0)chosen=drawn;
    }
    teams={a:chosen.a,b:chosen.b};
   }

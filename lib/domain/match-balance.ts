@@ -3,8 +3,7 @@
  * 80-point cost, as does reusing the same group of players: modest strength
  * differences must not force the same game or four-player cohort forever.
  * Ranking points never enter this calculation. Declared gender supplies `genderMismatches`, which outranks every
- * other preference. Live play then rotates the mixed-v-men role after two consecutive individual appearances;
- * other scheduling modes leave `liveMixedRepeats` at zero and keep their existing balance order.
+ * other preference. Live doubles compares the strength gap outside this band before rotating the mixed-v-men role.
  */
 export const BALANCE_TOLERANCE = 40;
 /** Live rotating doubles may trade a small strength difference for new partners, never an unlimited one. */
@@ -23,5 +22,16 @@ export function balanceCost(gaps:number[],variety:number,mismatches=0,rematches=
 }
 export function compareBalance(a:BalanceCost,b:BalanceCost) {
  const adjusted=(c:BalanceCost)=>c.worstExcess+c.partnerPenalty+(c.rematches>0?80:0)+(c.cohorts>0?80:0)+c.courtWaits*COURT_WAIT_COST+c.blocks*BLOCK_COST+c.recentPartners*RECENT_PARTNER_COST;
- return (a.mismatches===b.mismatches?0:a.mismatches-b.mismatches) || a.liveMixedRepeats-b.liveMixedRepeats || adjusted(a)-adjusted(b) || a.totalExcess-b.totalExcess || a.cohorts-b.cohorts || a.rematches-b.rematches || a.variety-b.variety;
+ return (a.mismatches===b.mismatches?0:a.mismatches-b.mismatches) || adjusted(a)-adjusted(b) || a.totalExcess-b.totalExcess || a.cohorts-b.cohorts || a.rematches-b.rematches || a.variety-b.variety;
+}
+
+/** The priorities a live doubles partner draw must also respect. */
+export function compareLiveDoublesPriority(a:BalanceCost,b:BalanceCost) {
+ return (a.mismatches===b.mismatches?0:a.mismatches-b.mismatches)
+  || (a.worstExcess===b.worstExcess?0:a.worstExcess-b.worstExcess)
+  || a.liveMixedRepeats-b.liveMixedRepeats;
+}
+
+export function compareLiveDoublesBalance(a:BalanceCost,b:BalanceCost) {
+ return compareLiveDoublesPriority(a,b) || compareBalance(a,b);
 }
