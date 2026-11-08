@@ -23,8 +23,10 @@ try{
  const all=text(ui.toJSON());assert.match(all,/已垫付：爱丽丝 €24\.00小波 €12\.00/);assert.match(all,/其他人的转账 · 1 笔 · 已转 0 笔/);
  assert.equal(button('撤销').length,1,'the marked transfer can be undone');
  const firstTransfer=ui.root.findAll(n=>n.props.className==='fee-transfer is-paid')[0];
- assert.match(text(firstTransfer.findByProps({'data-side':'from'})),/付款人宗主我/);
- assert.match(text(firstTransfer.findByProps({'data-side':'to'})),/收款人爱丽丝/);
+ assert.equal(text(firstTransfer.findByProps({'data-side':'from'})),'我');
+ assert.equal(text(firstTransfer.findByProps({'data-side':'to'})),'爱丽丝');
+ const direction=firstTransfer.find(n=>n.type==='svg'&&n.props['aria-label']==='转给');
+ assert.ok(direction.props.className.includes('fee-transfer-direction'));
  assert.match(text(firstTransfer.findByProps({className:'fee-transfer-amount'})),/应转金额€7\.20/);
  assert.equal(firstTransfer.findByProps({className:'fee-transfer-footer'}).findAllByType('button').length,1,'amount, status and action have their own footer');
  await act(()=>button('标记已转')[0].props.onClick());
@@ -79,7 +81,7 @@ try{
  names.p0='昵称比较长的付款道友';names.p1='Alexandra García López';
  await mount(FeeTransfers,{e,settlement,ctx:ctx('p0'),manager:false});
  const longRow=ui.root.findAll(n=>n.props.className==='fee-transfer')[0];
- assert.ok(text(longRow.findByProps({'data-side':'from'})).includes(names.p0));assert.ok(text(longRow.findByProps({'data-side':'to'})).includes(names.p1));
- assert.equal(longRow.findByProps({className:'fee-transfer-people'}).findAllByType('button').length,0,'buttons do not squeeze the two names');
+ assert.equal(text(longRow.findByProps({'data-side':'from'})),'我');assert.equal(longRow.findByProps({'data-side':'from'}).props.title,names.p0);assert.ok(text(longRow.findByProps({'data-side':'to'})).includes(names.p1));
+ assert.equal(longRow.find(n=>n.props.className?.includes('fee-transfer-people')).findAllByType('button').length,0,'buttons do not squeeze the two names');
  console.log('PASS fee transfers UI: advances, own and folded transfers, open/done tabs for long lists, payer/receiver marking, collector phone, home open transfers, court parts in creation and settings');
 }finally{if(ui)await act(()=>ui.unmount());delete globalThis.IS_REACT_ACT_ENVIRONMENT}
