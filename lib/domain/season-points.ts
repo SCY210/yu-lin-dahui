@@ -18,7 +18,7 @@ export function scoreSeasonGames(games:RatedGame[],scope:(game:RatedGame)=>strin
   const key=JSON.stringify([game.playerId,scope(game)]),wins=game.won?(streaks.get(key)??0)+1:0;
   streaks.set(key,wins);
   const factor=rewardFactor(game);
-  return {game,consecutiveWins:wins,rewardFactor:factor,upsetPoints:upsetBonus(game)*factor,streakPoints:game.won?winningStreakBonus(wins)*factor:0,points:gamePoints(game,wins)*(game.won?factor:1)};
+  return {game,consecutiveWins:wins,rewardFactor:factor,upsetPoints:upsetBonus(game)*factor,streakPoints:game.won?winningStreakBonus(wins)*factor:0,points:gamePoints(game,wins)*factor};
  });
 }
 
