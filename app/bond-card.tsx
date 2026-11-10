@@ -5,7 +5,7 @@ import {choice,number,text,type Field} from './ui';
 import './bond.css';
 
 const count=(n:number)=>new Intl.NumberFormat('zh-CN').format(n);
-type Product={kind?:'physical'|'digital'|'gift';id:string;name:string;price:number;stock:number;active:boolean};
+type Product={kind?:'physical'|'digital'|'gift'|'horn';id:string;name:string;price:number;stock:number;active:boolean};
 type Values=Record<string,unknown>;
 type BondContext={busy:boolean;open:(title:string,action:string,values:Values,fields:Field[],convert:(v:Values)=>unknown,description:string)=>void;data:{bonds?:{rows:BondRow[]};treasureShop?:{products:Product[]}}};
 const giftNote={...text('message','留言（可不填，最多60字）'),optional:true};
@@ -18,7 +18,7 @@ export default function BondCard({p,ctx}:{p:{id:string;name:string;enabled?:bool
  const row:BondRow=ctx.data.bonds?.rows?.find(r=>r.playerId===p.id)??{playerId:p.id,score:0,games:0,wins:0,giftsSent:0,giftsReceived:0};
  const index=bondTierIndex(row.score),tier=bondTiers[index],next=bondTiers[index+1];
  const progress=next?Math.min(1,(row.score-tier.min)/(next.min-tier.min)):1;
- const products:Product[]=(ctx.data.treasureShop?.products??[]).filter(x=>x.active&&x.stock>0);
+ const products:Product[]=(ctx.data.treasureShop?.products??[]).filter(x=>x.active&&x.stock>0&&x.kind!=='horn');
  const canGift=p.enabled!==false&&!p.guestEventId&&!p.guestFriendId;
  const giveItem=()=>ctx.open('送礼物给 '+p.name,'treasureRedeem',{productId:products[0]?.id??'',quantity:1,message:''},
   [choice('productId','礼品',products.map(x=>[x.id,`${x.name} · ${count(x.price)} 羽币 · +${count(productGiftPoints(x))} 缘值/件`])),{...number('quantity','数量'),min:1,max:99,step:1},giftNote],
