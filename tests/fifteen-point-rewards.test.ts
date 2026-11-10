@@ -5,6 +5,9 @@ import {realmLedger} from '../lib/domain/realm-rating';
 import {activateAutomaticCoins,reconcileAutomaticCoins,pendingAutomaticCorrection} from '../lib/domain/automatic-coins';
 import {treasureBalance,treasureProduct,treasureRedeem,treasureOrder,treasureGrant} from '../lib/domain/treasure-shop';
 import {sumCoinAmounts} from '../lib/domain/treasure-ledger';
+import {fifteenPointHalfFrom,seasonGamePointsFactor} from '../lib/domain/game-points';
+import {rankingQuarter} from '../lib/ranking-quarter';
+import {month} from '../lib/domain/types';
 import {pointsBreakdown} from '../lib/client/ranking-breakdown';
 import {coinEpoch as at,coinFixture,coinEvent,coinMatch,coinSignup} from './helpers/automatic-coins-fixture';
 
@@ -40,7 +43,7 @@ test('15 分制强弱加成减半，21 分制与单双打连胜仍按原规则�
  const singles=singlesQuarterlyLeaderboard(single.s,'2035-Q1',single.now);assert.equal(singles.find(r=>r.playerId==='p0')!.points,1.5);assert.equal(singles.find(r=>r.playerId==='p2')!.points,-0.5);
 });
 
-test('历史奖励可回算为半额，保留旧流水，已花奖励只形成待校正额且不扣独立发币',()=>{
+test('生效后的活动改为 15 分制时奖励校正为半额，保留旧流水，已花奖励只形成待校正额且不扣独立发币',()=>{
  const {s,e,now}=fixture();delete e.gamePoints;coinMatch(s,e,'historical');reconcileAutomaticCoins(s,now);
  const oldLedger=structuredClone(s.treasureLedger),before=treasureBalance(s,'p0');
  const p=treasureProduct(s,s.accounts[0],{name:'测试礼品',description:'',price:before,stock:1,kind:'physical',active:true},now);
@@ -50,6 +53,17 @@ test('历史奖励可回算为半额，保留旧流水，已花奖励只形成�
  const desired=s.treasureRewardClaims.filter(r=>r.playerId==='p0').reduce((sum,r)=>sum+r.amount,0);assert.equal(pendingAutomaticCorrection(s,'p0'),before-desired);
  treasureGrant(s,s.accounts[0],{playerId:'p0',amount:10,reason:'独立发币',requestId:crypto.randomUUID()},now+2);
  const once=structuredClone(s);assert.equal(reconcileAutomaticCoins(s,now+3),false);assert.deepEqual(s,once);assert.equal(treasureBalance(s,'p0'),10);
+});
+
+test('生效时间之前结束的 15 分制活动不回算，积分与羽币保持原额',()=>{
+ assert.equal(seasonGamePointsFactor({gamePoints:15,end:fifteenPointHalfFrom-1}),1);assert.equal(seasonGamePointsFactor({gamePoints:15,end:fifteenPointHalfFrom}),0.5);
+ assert.equal(seasonGamePointsFactor({gamePoints:15,end:fifteenPointHalfFrom,tournament:{}}),1);assert.equal(seasonGamePointsFactor({gamePoints:15,end:fifteenPointHalfFrom,ranked:false}),1);
+ const s=coinFixture(),old=coinEvent(s,'old',fifteenPointHalfFrom-1,{gamePoints:15}),fresh=coinEvent(s,'fresh',fifteenPointHalfFrom+86400000,{gamePoints:15});
+ for(const e of [old,fresh]){for(const p of s.players)coinSignup(s,e,p.id);coinMatch(s,e,e.id+'-m',{games:[{a:15,b:12}],scoreA:15,scoreB:12})}
+ activateAutomaticCoins(s,old.start-86400000);const now=fresh.end+1;reconcileAutomaticCoins(s,now);
+ assert.deepEqual(wins(s).map(r=>[r.eventId,r.amount]),[['old',3],['fresh',2]],'old keeps the full win, the later one is halved (with its streak bonus)');
+ const board=quarterlyLeaderboard(s,rankingQuarter(month(old.start)),now);assert.equal(board.find(r=>r.playerId==='p0')!.points,5);
+ const loser=board.find(r=>r.playerId==='p2')!;assert.equal(loser.points,-1.5);assert.equal(loser.halfRewardLosses,1);assert.deepEqual(pointsBreakdown(loser),[{label:'负局 1 × 1',points:-1},{label:'15 分制负局 1 × 0.5',points:-0.5}]);
 });
 
 test('半个羽币可保留、兑换及退款，非法小数和不安全精度仍被拒绝',()=>{

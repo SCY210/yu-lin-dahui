@@ -23,3 +23,17 @@
 @media(min-width:701px) and (max-width:950px){.ts-products{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 .ts-gift-field{display:grid;gap:8px;font-size:14px;min-width:0}.ts-gift-field :is(select,.app-select-trigger),.ts-gift-field textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box;border:1px solid var(--ts-border);border-radius:8px;padding:10px;background:var(--ts-card);color:var(--ts-ink);font:inherit;min-height:44px}.ts-gift-field textarea{resize:vertical;min-height:72px}.ts-gift-affinity{margin:0;font-size:13px;line-height:1.7;overflow-wrap:anywhere;color:var(--ts-primary)}.ts-filters{flex-wrap:wrap}
+/* 传音喇叭: duration options, character count, preview and the on-air list. */
+.ts-horn-specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
+.ts-horn-specs button{display:grid;gap:2px;padding:10px 8px;border:1px solid var(--ts-border);border-radius:10px;background:var(--ts-card);color:inherit;font:inherit;text-align:center;cursor:pointer}
+.ts-horn-specs button span{font-size:12px;color:var(--ts-muted)}
+.ts-horn-specs button[aria-checked=true]{border-color:#c2410c;background:color-mix(in srgb,#fb923c 16%,var(--ts-card));box-shadow:0 0 0 1px #c2410c inset}
+.ts-horn-count{margin:0;font-size:12px;color:var(--ts-muted)}
+.ts-horn-preview{display:flex;gap:6px;align-items:flex-start;margin:0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,#fb923c 12%,var(--ts-card));font-size:13px;overflow-wrap:anywhere}
+.ts-horn-preview svg{flex-shrink:0;margin-top:2px;color:#c2410c}
+.ts-horns{display:grid;gap:8px;margin:18px 0 0}
+.ts-horns h2{display:flex;align-items:center;gap:6px;margin:0;font-size:16px}
+.ts-horn-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--ts-border);border-radius:10px;background:var(--ts-card)}
+.ts-horn-row>div{display:grid;gap:2px;min-width:0}
+.ts-horn-row strong{font-size:14px;overflow-wrap:anywhere}
+.ts-horn-row small{font-size:12px;color:var(--ts-muted)}
