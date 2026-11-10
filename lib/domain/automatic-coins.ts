@@ -5,7 +5,7 @@ import {clubOwnerId} from './ownership';
 import {gameFacts} from './game-facts';
 import {realmLedger,type RealmLedger} from './realm-rating';
 import {scoreSeasonGames,seasonGameScope} from './season-points';
-import {positiveRewardFactor} from './game-points';
+import {seasonGamePointsFactor} from './game-points';
 import {appendTreasureLedger,automaticRewardPool,sumCoinAmounts} from './treasure-ledger';
 import {eventRankingEnabled} from './event-ranking';
 import {bountyOutcome} from './bounties';
@@ -83,7 +83,7 @@ function rewardEntitlements(s:State,now:number,ledger?:RealmLedger){
  // earlier games establish (or break) a streak but receive no retroactive coins.
  // The canonical scope keeps quarters and singles/doubles streaks independent.
  const matches=new Map(s.matches.map(match=>[match.id,match]));
- const scored=scoreSeasonGames(rated.games,g=>seasonGameScope(g,matches.get(g.matchId)!),g=>positiveRewardFactor(events.get(g.eventId)));
+ const scored=scoreSeasonGames(rated.games,g=>seasonGameScope(g,matches.get(g.matchId)!),g=>seasonGamePointsFactor(events.get(g.eventId)));
  for(const {game:g,points} of scored){
   if(!g.won||!events.has(g.eventId)||!members.has(g.playerId))continue;
   const amount=Math.max(0,points);if(!amount)continue;

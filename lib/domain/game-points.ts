@@ -9,8 +9,8 @@ export const eventGamePoints=(e:{gamePoints?:GamePoints}|undefined):GamePoints=>
 /** Half rewards apply to fifteen-point activities ending at or after this moment (owner's instruction, 2026-11-10).
  * Activities that ended earlier keep their original points and coins; nothing is recalculated for them. */
 export const fifteenPointHalfFrom=Date.parse('2026-11-10T11:00:00+01:00');
-/** Fifteen-point ranked activities earn half positive rewards; deductions and Elo are unchanged. */
-export const positiveRewardFactor=(e:{gamePoints?:GamePoints;tournament?:unknown;ranked?:boolean;end?:number}|undefined):1|0.5=>e?.gamePoints===15&&!e.tournament&&e.ranked!==false&&(e.end===undefined||e.end>=fifteenPointHalfFrom)?0.5:1;
+/** Fifteen-point ranked activities halve game points for wins and losses; Elo is unchanged. */
+export const seasonGamePointsFactor=(e:{gamePoints?:GamePoints;tournament?:unknown;ranked?:boolean;end?:number}|undefined):1|0.5=>e?.gamePoints===15&&!e.tournament&&e.ranked!==false&&(e.end===undefined||e.end>=fifteenPointHalfFrom)?0.5:1;
 /** The season's rules, with the target and cap of a 15-point activity. */
 export function eventScoreRules(rules:Rules,e:{gamePoints?:GamePoints}|undefined):Rules{
  return eventGamePoints(e)===15?{...rules,target:15,ceiling:21}:rules;
