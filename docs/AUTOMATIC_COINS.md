@@ -1,36 +1,48 @@
-# Automatic activity coins
+# 活动自动羽币
 
-Formal members earn one coin per positive winning-game ranking point and five participation coins once per activity across all courts. Ordinary activities can earn participation coins without winning-game points. Losses, owner point adjustments, notification points and MVP/voting bonuses never generate negative coin rewards or mint automatic coins.
+正式球友每获得一个胜局的正向排行积分，奖励一羽币；每场活动另有一次 5 羽币参与奖励，跨场地不重复。普通活动可以只获得参与奖励。负局扣分不扣羽币；宗主调分、通知积分和 MVP 投票积分不作为胜局自动羽币的来源。
 
-Winning-game points include upset and consecutive-win bonuses from the canonical ranking calculation. Consecutive wins are scoped to the season and singles/doubles format. Complete earlier game history establishes or breaks a streak before the reward activation boundary is applied, but earlier activities still receive no retroactive coins. Changing an earlier result can therefore correct the winning-game reward of a later eligible activity.
+胜局积分包含强弱加成和连胜加分，使用与排行榜相同的标准回放顺序。连胜按自然季度和单双打分别累计，先用完整历史确定连胜，再筛选自动奖励启用边界；边界前的小局只影响后续连胜，不补发旧活动的羽币。修改早期比分也会校正后续活动的连胜羽币。
 
-The durable policy activates once using the production Worker version timestamp. Events already ended at activation are excluded permanently, including later date changes. Rewards wait for the scheduled activity end. Existing genuine play and archived attendance determine participation; temporary guests, waitlist-only and absent players do not earn wallets or attendance rewards. A later disabled account does not erase earned history.
+## 15 分制积分赛
 
-Unique source claims and the existing optimistic D1 commit transaction make replay, polling and concurrent settlements idempotent. Score edits, voids, cancellation, reopening or time extension reconcile entitlements in the same transaction as the business mutation. A completed archived activity keeps earned sources; archiving does not award newly invented sources.
+15 分制的胜局基础积分、强弱加成及连胜加分均减半，对应羽币按减半后的积分一比一发放。例如普通胜局奖励 1.5 积分及 1.5 羽币，第二个连续胜局奖励 2 积分及 2 羽币。保留 0.5，不向下取整，也不对羽币再除一次二。负局扣分仍为 1，羽币不扣；21 分制、局数、连胜次数和修为计算不变。
 
-Only unspent automatic coins can be reclaimed. Independent grants and refunds are protected. A spent overpayment becomes pending correction, offset only by future automatic earnings; spendable wallet balances remain nonnegative and fulfilled orders are never reversed. Durable per-wallet ledger sequence makes funding replay independent of equal timestamps or database row-return order. Claims, correction debt and provenance stay server-controlled.
+已有 15 分制比赛也按新规则回算，自动奖励启用之前原本没有发币的活动仍不补发。参与、连续到场和悬赏羽币维持各自规则，不因胜局积分减半而变化。积分明细区分普通胜局与 15 分制胜局，强弱和连胜加分也使用实际半额。
 
-The private production Worker checks for due rewards every five elapsed hours. An hourly Cron Trigger reads only the persisted cursor until five hours have elapsed, without scanning activities, settling rewards or advancing the cursor. This preserves the interval across midnight, unlike an hour-of-day step that resets each day. The first check after changing the schedule may align to the next hourly tick. Eligible checks inspect policy and activity/result timestamp metadata; full state reconciliation runs only for new due boundaries. The separate scheduler cursor cannot overwrite club settings and advances only after successful settlement. Normal authenticated reads and writes still reconcile immediately, so active users need not wait for the next background check. No public HTTP endpoint can trigger or supply arbitrary reward amounts.
+账本、余额、自动校正及待校正额允许精确的半个羽币，其他小数和不安全精度仍拒绝。商品价格、兑换数量及手动发币的整数输入约束保持不变；半个羽币可保留在余额中，正常参与兑换和退款。
 
-`CF_VERSION_METADATA` supplies the initial activation timestamp; subsequent deployments do not move the persisted policy. `treasureRewardClaims` and the extended ledger payload are introduced by migration0015. Preserve the private release channel, original theme/permission files and migration-first deployment workflow. Never run a production release from the shared or review checkout.
+## 启用、资格与结算
 
-Validate domain rules, actual SQLite rollback/races, wallet provenance, UI privacy and the scheduled waiting/idle/due/failure paths. Confirm production bindings, the hourly wakeup and the five-hour interval gate. The first deployment must initialize the policy without awarding old activities. Do not test by minting coins for real members.
+自动奖励策略只启用一次，生产环境使用 Worker 版本时间戳。启用时已经结束的活动永久排除，即使后来修改日期也不补发。奖励始终等待预约结束时间，提前标记结束不会提前发币。实际完成比赛和已归档参加记录可以证明参与；临时来宾、只有候补资格或缺席者不获得钱包或到场奖励。账号后来停用不会删除已经获得的奖励。
 
-Provider references: [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) and [version metadata](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/).
+唯一来源记录与既有 D1 乐观事务保证重复读取、轮询及并发结算不会重复奖励。改分、作废、取消、重新开放或延长活动时间时，在业务事务中一起核对权益。已归档活动保留原有已获得来源，不能借归档创造新的来源。
 
-## Attendance streak
+只有尚未花掉的自动奖励可以回收，独立发币和退款受保护。已经花掉的超额奖励形成待校正额，只由之后的自动奖励抵扣；可用余额不会变为负数，也不撤销已完成的兑换。每个钱包的流水顺序号使资金来源回放不受相同时间戳或数据库返回顺序影响。权益来源、待校正额及资金来源始终由服务端控制。
 
-Members also earn coins for coming to points matches in a row (`attendanceStreakClaims` in `lib/domain/automatic-coins.ts`):
+## 后台检查与部署
 
-- Every 4 points matches in a row that a member attended on time earn the streak reward on the 4th, and the count starts again. So the 4th, 8th, 12th and so on in an unbroken run each earn it.
-- A points match is a ranked activity that is not a tournament and was not cancelled, left as a draft or deleted. Singles and doubles count together, in the order they started. Ordinary activities, practice and tournaments neither count nor break a run.
-- Attending uses the same rule as participation coins (a confirmed signup with genuine play or attendance; not waitlist only, not a no-show). Missing a points match, including one the member did not sign up for, starts the count again. So does being reported late; a mistaken late mark that an organiser clears does not.
-- The whole history establishes or breaks a run, but only activities inside the reward rollout earn, and only after their scheduled end, like the other automatic rewards.
-- The reward is 20 coins by default (`defaultAttendanceStreakCoins`). The owner and administrators can change it, or set 0 to stop new rewards, from the treasure shop's reward rules (`treasureStreakReward`, audited). An awarded run keeps the amount it was awarded with; the change only affects runs completed later.
-- Like every automatic source, a later correction (for example a late report added afterwards) reconciles the entitlement in the same transaction.
+私有生产 Worker 每隔五个实际经过的小时检查应发奖励。每小时 Cron Trigger 仅读取持久化游标；未满五小时时不扫描活动、不结算、不推进游标。这样跨午夜也保持间隔。调整调度后的首次检查可能对齐到下一次整点。到期后先检查策略及活动、比分时间元数据，只有新的到期边界才加载全状态结算。调度游标独立保存，不覆盖群组设置，成功后才推进。
 
-Tests: `tests/attendance-streak-coins.test.ts` and `tests/treasure-shop-ui.mjs`.
+正常的授权读取和写入仍立即核对奖励，活跃用户不必等待后台检查。没有公共 HTTP 接口可随意触发结算或指定任意奖励金额。
 
-## Bounties
+`CF_VERSION_METADATA` 提供初次启用时间，之后发布不会移动已保存的策略。`treasureRewardClaims` 和扩展账本载荷由迁移 0015 引入。保留私有发布渠道、原有主题及权限文件和先迁移后发布的流程；共享或审查检出目录不运行生产发布。
 
-A completed bounty pays the coins frozen when it was accepted, as another automatic source (`bounty`), after the activity's scheduled end and only for activities inside the reward rollout. See [Bounties](BOUNTIES.md).
+## 连续到场
+
+- 每连续 4 场积分赛准时参加，在第 4 场获得连续到场羽币，之后重新累计；持续参加时第 4、8、12 场等分别奖励。
+- 积分赛须启用排行、不是赛事，且未取消、未停留在草稿或删除。单打和双打一起按活动开始时间排序；普通活动、练球和赛事既不计入也不中断。
+- 参与资格与参与羽币相同：正式接龙且有真实比赛或参加记录，不含只有候补资格或缺席。漏一场或被标记迟到时重新累计；撤销误标可恢复原连续记录。
+- 完整历史决定连续次数，但只有自动奖励启用范围内、已经到预约结束时间的活动发币。
+- 默认奖励 20 羽币，宗主和管理员可调整或设为 0 关闭，并写入审计。已经发放的连续到场奖励保持原金额，只影响以后完成的连续记录。
+- 之后纠正记录时，与其他自动来源一样在同一事务中核对权益。
+
+## 悬赏
+
+完成悬赏后，按接下时冻结的羽币奖励在活动预约结束后发放，作为 `bounty` 来源；只有自动奖励启用范围内的活动可获得。见[悬赏令](BOUNTIES.md)。
+
+## 验证
+
+领域、真实 SQLite 事务和接口测试覆盖回滚、并发、钱包资金来源、界面隐私及后台等待、空闲、到期和失败。15 分制回归还验证半额积分、强弱及连胜、混合分制、旧奖励校正、半币兑换退款和非法小数。生产验证只检查绑定与调度，不给真实成员发测试羽币。
+
+提供方参考：[Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/)、[版本元数据](https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/)。

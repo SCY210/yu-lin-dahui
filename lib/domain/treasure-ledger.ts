@@ -1,6 +1,17 @@
 import {fail,type State,type TreasureLedger} from './types';
 
-function safeSum(values:number[]){const result=values.reduce((sum,value)=>sum+value,0);if(!Number.isSafeInteger(result))fail('羽币账本异常，请联系宗主');return result}
+/** Half coins are exact binary values. Keep integer balances compatible, rejecting other fractions and lost precision. */
+export function sumCoinAmounts(values:number[],message='羽币账本异常，请联系宗主'){
+ const valid=(value:number)=>Number.isSafeInteger(value)||Number.isSafeInteger(value*2);
+ return values.reduce((sum,value)=>{
+  if(!valid(value))fail(message);
+  if(Number.isInteger(sum)&&Number.isInteger(value)){const next=sum+value;if(!Number.isSafeInteger(next))fail(message);return next}
+  const units=sum*2+value*2;
+  if(!Number.isSafeInteger(sum*2)||!Number.isSafeInteger(value*2)||!Number.isSafeInteger(units))fail(message);
+  return units/2;
+ },0);
+}
+const safeSum=sumCoinAmounts;
 export function treasureBalance(s:State,playerId:string){const balance=safeSum(s.treasureLedger.filter(row=>row.playerId===playerId).map(row=>row.delta));if(balance<0)fail('羽币账本异常，请联系宗主');return balance}
 
 /** All pre-feature movements are a protected opening balance. Every new movement

@@ -12,12 +12,13 @@ export function gamePoints(g:Pick<RatedGame,'won'|'team'|'opponent'>,consecutive
 const replayOrder=(a:RatedGame,b:RatedGame)=>a.end-b.end||a.matchId.localeCompare(b.matchId)||a.gameIndex-b.gameIndex;
 /** Replay the same canonical order as Elo without changing its values. Scope is
  * quarter + format, independent of the selected monthly/quarterly/annual view. */
-export function scoreSeasonGames(games:RatedGame[],scope:(game:RatedGame)=>string){
+export function scoreSeasonGames(games:RatedGame[],scope:(game:RatedGame)=>string,rewardFactor:(game:RatedGame)=>1|0.5=()=>1){
  const streaks=new Map<string,number>();
  return [...games].sort(replayOrder).map(game=>{
   const key=JSON.stringify([game.playerId,scope(game)]),wins=game.won?(streaks.get(key)??0)+1:0;
   streaks.set(key,wins);
-  return {game,consecutiveWins:wins,streakPoints:game.won?winningStreakBonus(wins):0,points:gamePoints(game,wins)};
+  const factor=rewardFactor(game);
+  return {game,consecutiveWins:wins,rewardFactor:factor,upsetPoints:upsetBonus(game)*factor,streakPoints:game.won?winningStreakBonus(wins)*factor:0,points:gamePoints(game,wins)*(game.won?factor:1)};
  });
 }
 

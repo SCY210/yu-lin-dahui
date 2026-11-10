@@ -6,8 +6,8 @@
 
 各行数据来自每个排行榜行本来就带的字段（`lib/domain/ranking.ts` 里的 `aggregateLeaderboard`）。悬赏积分按成功和失败分成两个字段（`bountyWonPoints`、`bountyLostPoints`），每行多两个数字，不增加请求；原来的净值字段 `bountyPoints` 保留。`lib/client/ranking-breakdown.ts` 里的 `pointsBreakdown` 按下面的顺序生成各行：
 
-- 胜局数乘以每局胜分，负局数乘以每局负分（`seasonPointsPolicy`）。
-- 强弱加成、连胜加分。
+- 普通胜局数乘以每局胜分；15 分制积分赛胜局另列「15 分制胜局 N × 1.5」（`halfRewardWins`），负局数仍乘以原来的每局负分（`seasonPointsPolicy`）。
+- 强弱加成、连胜加分；15 分制对应小局的这两项正向加分也已减半，保留 0.5。
 - MVP 加分。
 - 悬赏成功（完成的悬赏令加的积分）和悬赏失败（接下但没完成扣的积分），分两行显示，不互相抵消。作废的悬赏不奖不罚，不出现在明细里（见[悬赏令](BOUNTIES.md)）。
 - 通知积分、迟到扣分。
