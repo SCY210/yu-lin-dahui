@@ -1,0 +1,19 @@
+/* 传音喇叭: a slim strip above the top bar whose texts scroll right to left. */
+.horn-banner{--horn:#c2410c;display:flex;align-items:center;gap:8px;width:100%;margin:0 0 10px;padding:5px 6px 5px 8px;border:1px solid color-mix(in srgb,var(--horn) 40%,transparent);border-radius:10px;background:linear-gradient(90deg,color-mix(in srgb,#fb923c 20%,var(--card)),var(--card));color:var(--foreground);font:inherit;text-align:left;overflow:hidden;cursor:pointer}
+.horn-banner:focus-visible{outline:2px solid var(--horn);outline-offset:2px}
+.horn-seal{display:grid;place-items:center;flex-shrink:0;width:26px;height:26px;border-radius:8px;background:var(--horn);color:#fff7ed}
+.horn-window{flex:1;min-width:0;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 14px,#000 calc(100% - 14px),transparent)}
+.horn-track{display:flex;width:max-content;animation:horn-scroll linear infinite}
+.horn-banner:hover .horn-track,.horn-banner:focus-visible .horn-track{animation-play-state:paused}
+.horn-list{display:flex;gap:48px;padding:0 48px 0 0}
+.horn-item{padding:2px 0;font-size:14px;font-weight:600;white-space:nowrap}
+.horn-who{color:var(--horn);font-weight:800}
+@keyframes horn-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+/* Reduced motion: no scrolling; texts wrap and the duplicate copy is dropped. */
+@media (prefers-reduced-motion:reduce){
+ .horn-window{mask-image:none}
+ .horn-track{width:auto;animation:none}
+ .horn-list{flex-direction:column;gap:2px;padding:0}
+ .horn-list[aria-hidden]{display:none}
+ .horn-item{white-space:normal}
+}
