@@ -55,7 +55,7 @@ function RewardRules({policy,pendingCorrection,streak,onEditStreak}:{policy:Club
   <Disclosure label="羽币奖励规则" className="ts-reward-rules">
    <p className="ts-reward-timing">{policy?'活动结束后自动结算，羽币明细可查看每笔记录。':'自动奖励尚未启用，启用前结束的活动不补发。'}</p>
    <dl className="ts-reward-rates"><div><dt>赢球得分</dt><dd>1 积分 <span>奖励</span> 1 羽币</dd></div><div><dt>参加活动</dt><dd>每场活动 <strong>5 羽币</strong></dd></div><div><dt>连续到场</dt><dd>{streak.coins?<>连续 {streak.length} 场积分赛 <strong>{count(streak.coins)} 羽币</strong></>:'已关闭'}</dd></div><div><dt>输球扣分</dt><dd>羽币不扣</dd></div></dl>
-   <p>胜局积分包含逆袭和连胜奖励，每获得 1 积分奖励 1 羽币；宗主调分、投票和通知等奖励不自动发币。15 分制积分赛的胜局积分已减半，羽币按减半后的积分发放，支持 0.5 羽币；已有奖励按同一规则校正。兑换只消耗羽币，不影响排行积分或修为。</p>
+   <p>胜局积分包含逆袭和连胜奖励，每获得 1 积分奖励 1 羽币；宗主调分、投票和通知等奖励不自动发币。2026 年 11 月 10 日起结束的 15 分制积分赛，胜局积分减半，羽币按减半后的积分发放，支持 0.5 羽币；更早结束的活动不变。兑换只消耗羽币，不影响排行积分或修为。</p>
    <p>参与奖励每场活动只发一次，多场地、多时段不重复发放；仅候补、未实际参加的取消报名、缺席和临时来宾不计入。整场取消的活动不发奖励。</p>
    <p>连续到场奖励：俱乐部举办的积分赛（单打、双打合并计算）每连续 {streak.length} 场都按时到场，在第 {streak.length} 场结束后发放，之后重新计数。缺席其中任何一场，或在某一场被报告迟到，都从 0 重新计；被误标迟到、撤销后不影响。普通活动、练球和赛事不计入。</p>
    {onEditStreak&&<p className="ts-streak-edit"><button type="button" className="secondary" onClick={onEditStreak}>调整连续到场奖励</button><span>只影响之后满 {streak.length} 场的奖励，已发出的不变。</span></p>}
