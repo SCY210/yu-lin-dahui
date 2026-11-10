@@ -77,6 +77,14 @@ try{
  await saveChange(next=>{const future=api.coinEvent(next,'debt-offset-first',clock+100);api.coinSignup(next,future,'p0')});clock+=101;await api.loadClubState();stored=await api.load();assert.equal(api.treasureBalance(stored,'p0'),20);assert.equal(api.pendingAutomaticCorrection(stored,'p0'),3);
  await saveChange(next=>{const future=api.coinEvent(next,'debt-offset-second',clock+100);api.coinSignup(next,future,'p0')});clock+=101;await api.loadClubState();stored=await api.load();assert.equal(api.treasureBalance(stored,'p0'),22);assert.equal(api.pendingAutomaticCorrection(stored,'p0'),0);
  await saveChange(next=>{next.events.find(event=>event.id==='debt-offset-first').status='cancelled'});await api.loadClubState();stored=await api.load();assert.equal(api.treasureBalance(stored,'p0'),20,'Revoking an earlier debt offset cannot consume later independent manual funds');assert.equal(api.pendingAutomaticCorrection(stored,'p0'),3);
+ // Half rewards survive real JSON/SQLite persistence and racing reads without duplicate payments.
+ const beforeShort=api.treasureBalance(await api.load(),'p4'),shortEnd=clock+7200000;
+ await saveChange(next=>{const short=api.coinEvent(next,'fifteen-point',shortEnd,{gamePoints:15,matchFormat:'singles'});for(const p of next.players)api.coinSignup(next,short,p.id);api.coinMatch(next,short,'short-single',{a:['p4'],b:['p6'],scoreA:15,scoreB:12,games:[{a:15,b:12}]})});
+ clock=shortEnd+1;await Promise.all(Array.from({length:3},()=>api.loadClubState()));stored=await api.load();
+ assert.equal(stored.treasureRewardClaims.find(r=>r.playerId==='p4'&&r.matchId==='short-single').amount,1.5);
+ assert.equal(api.treasureBalance(stored,'p4'),beforeShort+6.5);
+ const halfView=await (await get('member4')).json();assert.equal(halfView.treasureShop.balance,beforeShort+6.5);assert.ok(halfView.treasureShop.ledger.some(r=>r.delta===6.5));
+ const halfOnce=structuredClone(await api.load());await api.loadClubState();assert.deepEqual(await api.load(),halfOnce);
  // A genuinely missing rollout policy initializes exactly once under racing first reads.
  const firstVisitDb=sqliteD1();fixture.env.DB=firstVisitDb.db;
  try{

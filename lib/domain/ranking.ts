@@ -8,7 +8,8 @@ import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger}
 import {gameFacts} from './game-facts';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
 import {quarterMonths} from '../ranking-quarter';
-import {scoreSeasonGames,seasonGameScope,upsetBonus} from './season-points';
+import {scoreSeasonGames,seasonGameScope} from './season-points';
+import {positiveRewardFactor} from './game-points';
 /** Website rounds are 2v2. Singles means exactly one different player on each side. */
 export function isSinglesMatch(m:Pick<Match,'a'|'b'>){return m.a.length===1&&m.b.length===1&&m.a[0]!==m.b[0]}
 /** Website rounds are 2v2: exactly two different players on each side. */
@@ -44,6 +45,7 @@ export {seasonPointsPolicy,upsetBonus,gamePoints} from './season-points';
  * `leaderboard` (one month) only backs the owner's history-rules preview; members see quarterly and annual boards. */
 export function leaderboard(s:State,season:string,now=Date.now(),ledger?:RealmLedger){return aggregateLeaderboard(s,[season],now,'all',ledger)}
 function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:RankingFormat='all',ledger=realmLedger(s,now)){
+ const events=new Map(s.events.map(e=>[e.id,e]));
  const practice=new Set(s.events.filter(e=>!eventRankingEnabled(e)).map(e=>e.id));
  const singles=format==='singles',accept=(m:Match)=>!practice.has(m.eventId)&&(format==='all'||(singles?isSinglesMatch(m):isDoublesMatch(m))),chosen=new Set(periods),grants=singles?[]:pointGrants(s),bonus=new Map<string,number>(),matches=new Map(s.matches.map(m=>[m.id,m]));
  for(const g of grants)if(chosen.has(g.period))bonus.set(g.playerId,(bonus.get(g.playerId)??0)+g.points);
@@ -66,11 +68,11 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
   const all=played.get(p.id)??[];
   const scored=scoreSeasonGames((ledger.byPlayer.get(p.id)??[]).filter(g=>accept(matches.get(g.matchId)!)),g=>{
    return seasonGameScope(g,matches.get(g.matchId)!);
-  }).filter(row=>chosen.has(month(row.game.start)));
+  },g=>positiveRewardFactor(events.get(g.eventId))).filter(row=>chosen.has(month(row.game.start)));
   const rated=scored.map(row=>row.game);
-  const games=rated.length,wins=rated.filter(g=>g.won).length,net=rated.reduce((n,g)=>n+g.margin,0),score=scored.reduce((n,row)=>n+row.points,0),upsets=rated.reduce((n,g)=>n+upsetBonus(g),0),streakPoints=scored.reduce((n,row)=>n+row.streakPoints,0),pending=scored.filter(row=>!row.game.settled);
+  const games=rated.length,wins=rated.filter(g=>g.won).length,halfRewardWins=scored.filter(row=>row.game.won&&row.rewardFactor===0.5).length,net=rated.reduce((n,g)=>n+g.margin,0),score=scored.reduce((n,row)=>n+row.points,0),upsets=scored.reduce((n,row)=>n+row.upsetPoints,0),streakPoints=scored.reduce((n,row)=>n+row.streakPoints,0),pending=scored.filter(row=>!row.game.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0)+(bounty.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,bountyPoints:bounty.get(p.id)??0,bountyWonPoints:bountyWon.get(p.id)??0,bountyLostPoints:bountyLost.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,...(halfRewardWins?{halfRewardWins}:{}),losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0)+(bounty.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,bountyPoints:bounty.get(p.id)??0,bountyWonPoints:bountyWon.get(p.id)??0,bountyLostPoints:bountyLost.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0||row.mvpPoints!==0||row.bountyPoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }

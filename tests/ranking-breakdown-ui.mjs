@@ -117,5 +117,10 @@ try{
  await update({data:{...boardData,me:{}}});
  assert.equal(ui.root.findAllByProps({className:'rv-my-ranking'}).length,0,'an account without a linked player has no personal rank');
  assert.equal(locate(),undefined);
- console.log('PASS personal ranking: signed-in identity, zero/provisional/tied ranks, every board selection, loading and absence, focus target, reduced-motion scrolling');
+ const halfRow={...rows[0],wins:1,losses:0,halfRewardWins:1,upsetPoints:.5,streakPoints:.5,mvpPoints:0,attendancePoints:0,manualPoints:0,pendingGames:0,pendingPoints:0,points:2.5};
+ await update({period:'2026-10',rankingFormat:'all',data:{...data,quarterlyLeaderboard:[halfRow]}});
+ await act(()=>toggle('Fictional Ann').props.onClick());
+ const halfPanel=ui.root.findByProps({className:'rv-breakdown'});
+ assert.match(text(halfPanel),/15 分制胜局 1 × 1\.5\+1\.5/);assert.match(text(halfPanel),/强弱加成\+0\.5/);assert.match(text(halfPanel),/连胜加分\+0\.5/);assert.match(text(halfPanel),/合计2\.5 分/);assert.doesNotMatch(text(halfPanel),/其他调整/);
+ console.log('PASS personal ranking: signed-in identity, zero/provisional/tied ranks, every board selection, half-point breakdown, loading and absence, focus target, reduced-motion scrolling');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=prior;if(priorWindow)Object.defineProperty(globalThis,'window',priorWindow);else delete globalThis.window}

@@ -7,6 +7,7 @@ export * from './feature-guide-topics';
 
 const singlesGuide='双打榜只统计双打计分小局。单打榜只统计每方各 1 人的单打小局，赛季积分和同分规则相同，只列出所选周期打过单打的正式球友；宗主手动积分调整只计入双打榜。单打与双打共用同一个修为。创建活动时选择单打或双打，活动名称自动生成；单打每场2人，双打每场4人，由宗主或副宗主开启积分赛后，录入比分才计入对应榜单；普通活动不计积分或修为。';
 const signed=(n:number)=>(n>0?'+':n<0?'−':'±')+Math.abs(n);
+const shortGamePointsGuide='15 分制积分赛的胜局基础积分、强弱加成和连胜加分均减半，保留 0.5：普通胜局为 1.5 分，负局仍扣 1 分。21 分制、比赛局数与修为计算不变；历史 15 分制比赛也按此规则回算。';
 const upsets=[...seasonPointsPolicy.upsets].sort((x,y)=>x.gap-y.gap),upsetGaps=upsets.map(u=>u.gap).join(' / '),upsetBonuses=upsets.map(u=>u.bonus).join(' / ');
 export const streakPointsGuide=`第 ${seasonPointsPolicy.streak.start} 个连续胜局另加 ${winningStreakBonus(2)} 分，第 3 个另加 ${winningStreakBonus(3)} 分，第 4 个及之后每局另加 ${seasonPointsPolicy.streak.cap} 分；每局连胜加分最多 ${seasonPointsPolicy.streak.cap} 分，可与强弱加成叠加。单打、双打分别按完赛时间、比赛编号、小局顺序累计；输掉计分小局或开始新的马德里自然季度时重置。友谊赛、让分局、取消和未完成记录不参与连胜；缺席判负中断缺席者的连胜。当前季度任一类型达到2连胜，头像出现修仙标志：2–3 连胜「灵气护体」祥云环绕，4–5 连胜「剑意凌空」飞剑绕身，6 连胜以上「八卦天阵」雷光加身，头像下方印章分别写“连胜 / 连斩 / 连霸”；头像只显示最近一局所在项目（单打或双打）的实时状态，连胜或连败一断就不再显示；连败 2 局起头像出现天象：2–3 连败「乌云罩顶」，4–5 连败「风雨交加」，6 连败以上「天劫加身」，只是装饰，不额外扣分；没有符合条件的连胜时熄灭。修正或作废比分后从记录重新计算，历史排名也按现行规则更新。`;
 /** 赛季积分 per rated game, generated from seasonPointsPolicy. */
@@ -35,6 +36,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         {title:'积分与名次', items:[
           `季度积分 = 本季度每个计分小局的赛季积分之和 + 宗主手动积分调整。每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分；赢下赛前队伍平均修为比自己高 ${upsetGaps} 分以上的对手，另加 ${upsetBonuses} 分。`,
           streakPointsGuide,
+          shortGamePointsGuide,
           '赛季积分只用于本季度和年度排名，每季度从 0 开始累计，允许负积分；不计连胜、爆冷加成和手动调整时，输局数超过胜局数 3 倍就会是负数；比赛积分不改变修为和境界。修为是长期实力，不随季度重置，只有宗主单独填写的修为调整会直接改变它。',
           '先比积分，再比计分小局胜率，再比局均净胜分，均按从高到低排列。',
           '胜率 = 胜局 ÷ 计分小局数；局均净胜 = 各计分小局本方得分与对方得分之差的合计 ÷ 计分小局数。三局两胜按实际打完的每一局分别计算。',
@@ -58,6 +60,7 @@ export function getFeatureGuide(topic:GuideTopic, rules:Rules=defaultRules):Feat
         {title:'积分怎么来', paragraphs:[
           `年度积分 = 1 月至 12 月每个计分小局的赛季积分之和 + 计入本年各月的手动积分调整：每局赢 ${seasonPointsPolicy.win} 分、输扣 ${-seasonPointsPolicy.loss} 分，赢修为高 ${upsetGaps} 分以上的对手另加 ${upsetBonuses} 分。没有月度或全年小局上限，也不再使用各月的每胜 / 每负分值；历史月份按现行规则重新计算。`,
           streakPointsGuide,
+          shortGamePointsGuide,
           '年度胜局、负局和计分小局数为这些计入修为的小局合计；实际比赛数还包括友谊赛和让分局。手动积分调整计入指定月份并汇总到年度榜，不增加胜场；宗主也可以另填修为调整，保存后立即改变修为、境界和双打分组实力，但不计入比赛局数。',
         ]},
         {title:'年度并列与年份归属', paragraphs:[
