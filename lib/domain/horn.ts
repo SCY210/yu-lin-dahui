@@ -3,7 +3,7 @@ import {isClubOwner} from './ownership';
 import {fail,type Account,type HornSpec,type State,type TreasureOrder} from './types';
 
 /** 传音喇叭 (docs/HORN_BROADCAST.md): a shop product whose purchase shows the buyer's own text in the
- * scrolling banner at the very top of every page until its bought duration ends. */
+ * scrolling banner at the top of every page until its bought duration ends. */
 export const hornMaxHours=24*30,hornMaxSpecs=8,hornTextMax=50;
 const hour=3600000;
 

@@ -4,7 +4,7 @@ import './horn-banner.css';
 
 export type HornBroadcast={id:string;playerId:string;hornText:string;start:number;end:number};
 
-/** The 传音喇叭 strip at the very top of every page (docs/HORN_BROADCAST.md): each bought text scrolls right to
+/** The 传音喇叭 strip at the top of every page, just under the top bar and above the bounty news (docs/HORN_BROADCAST.md): each bought text scrolls right to
  * left with the buyer's name until its duration ends. Tapping it opens the shop, where members see every broadcast
  * and can buy their own. With reduced motion the texts stand still and wrap. */
 export default function HornBanner({horns,name,onOpen}:{horns?:HornBroadcast[];name:(id:string)=>string;onOpen:()=>void}){
