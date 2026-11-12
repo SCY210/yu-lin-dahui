@@ -25,6 +25,9 @@ function initialState(){
  treasureProduct(s,owner,{name:'虚构礼品 · 库存保留款',description:'此商品未上架，仅宗主可见。',price:80,stock:3,kind:'physical',active:false},now);
  treasureProduct(s,owner,{name:'虚构礼物 · 同心玉佩',description:'即时送达的道缘礼物。',price:10,stock:50,kind:'gift',active:true},now);
  for(const a of s.accounts)treasureRedeem(s,a,{productId:s.treasureProducts[0].id,quantity:1,expectedPrice:20,requestId:crypto.randomUUID()},now+60000);
+ const horn=treasureProduct(s,owner,{name:'虚构传音喇叭',description:'',price:1,stock:9,kind:'horn',active:true,hornSpecs:[{hours:1,price:10},{hours:24,price:30}]},now);
+ // A horn the owner gave the member waits unused in the member's 储物戒.
+ treasureRedeem(s,owner,{productId:horn.id,quantity:1,expectedPrice:10,hornHours:1,giftTo:'fixture-player-1',message:'虚构留言',requestId:crypto.randomUUID()},now+60000);
  return s;
 }
 const actorFor=(s:ReturnType<typeof initialState>,mode:Mode)=>s.accounts[mode==='owner'?0:mode==='member'?1:2];

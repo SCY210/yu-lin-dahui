@@ -5,7 +5,7 @@ import {parseDomainCommand} from './command-contract';
 import {attendanceStreakCoins,attendanceStreakLength,pendingAutomaticCorrection} from './automatic-coins';
 import {treasureBalance,appendTreasureLedger} from './treasure-ledger';
 import {giftMessageInput,giftParties,productGiftPoints} from './bonds';
-import {hornDuration,hornEnd,hornSpecsInput,hornStartingPrice,hornTextInput,sortHornSpecs,treasureHornRemove,treasureHornRemoveInput} from './horn';
+import {hornDuration,hornEnd,hornSpecsInput,hornStartingPrice,hornTextInput,sortHornSpecs,treasureHornRemove,treasureHornRemoveInput,treasureHornUse,treasureHornUseInput} from './horn';
 export {treasureBalance} from './treasure-ledger';
 import {fail,type Account,type State,type TreasureLedger,type TreasureOrder,type TreasureProduct} from './types';
 
@@ -17,7 +17,7 @@ export const treasureRedeemInput=z.object({productId:identifier,quantity:z.numbe
 export const treasureOrderInput=z.object({id:identifier,status:z.enum(['fulfilled','cancelled'])}).strict();
 /** Coins for attending attendanceStreakLength points matches in a row; 0 turns the reward off. */
 export const treasureStreakRewardInput=z.object({coins:z.number().int().min(0).max(1000)}).strict();
-const schemas={treasureProduct:treasureProductInput,treasureGrant:treasureGrantInput,treasureRedeem:treasureRedeemInput,treasureOrder:treasureOrderInput,treasureStreakReward:treasureStreakRewardInput,treasureHornRemove:treasureHornRemoveInput};
+const schemas={treasureProduct:treasureProductInput,treasureGrant:treasureGrantInput,treasureRedeem:treasureRedeemInput,treasureOrder:treasureOrderInput,treasureStreakReward:treasureStreakRewardInput,treasureHornRemove:treasureHornRemoveInput,treasureHornUse:treasureHornUseInput};
 const actions=new Set(Object.keys(schemas));
 export function isTreasureAction(action:string){return actions.has(action)}
 function owner(s:State,a:Account){if(!isClubOwner(s,a))fail('403: 只有宗主可以管理羽林宝阁')}
@@ -50,7 +50,7 @@ export function treasureRedeem(s:State,a:Account,input:unknown,now:number){
  if(s.treasureLedger.some(r=>r.actor===a.id&&r.requestId===c.requestId))fail('此请求编号已经用于其他操作');
  const gift=c.giftTo?giftParties(s,a,c.giftTo):undefined,note=c.message?{message:c.message}:{};
  const p=s.treasureProducts.find(p=>p.id===c.productId);if(!p?.active)fail('商品已下架或不存在');
- if(p.kind==='horn')return redeemHorn(s,a,p,c,now);
+ if(p.kind==='horn')return redeemHorn(s,a,p,c,now,gift);
  if(c.hornHours!==undefined||c.hornText!==undefined)fail('只有传音喇叭可以填写喇叭内容');
  if(p.price!==c.expectedPrice)fail('409: 商品价格已更新，请刷新后重新确认');if(p.stock<c.quantity)fail('库存不足，请调整兑换数量');
  if(p.kind==='gift'&&!gift)fail('请选择接收礼物的球友');
@@ -65,19 +65,26 @@ export function treasureRedeem(s:State,a:Account,input:unknown,now:number){
  p.stock-=c.quantity;p.updated=now;p.version=version;s.treasureOrders.push(order);
  audit(s,a,'treasureRedeem','兑换宝阁商品',now,{playerId:a.playerId,orderId:order.id});return order;
 }
-/** A 传音喇叭 goes on the banner at once, for the bought duration; it is never a gift and never more than one. */
-function redeemHorn(s:State,a:Account,p:TreasureProduct,c:z.infer<typeof treasureRedeemInput>,now:number){
- if(c.giftTo||c.message!==undefined||c.expectedAffinity!==undefined)fail('传音喇叭不能送给球友');
+/** A 传音喇叭 bought for oneself goes on the banner at once, for the bought duration. Given to another member, it waits
+ * unused in their 储物戒 until they write their own text (`treasureHornUse`). Never more than one at a time. */
+function redeemHorn(s:State,a:Account,p:TreasureProduct,c:z.infer<typeof treasureRedeemInput>,now:number,gift?:ReturnType<typeof giftParties>){
+ if(!gift&&(c.message!==undefined||c.expectedAffinity!==undefined))fail('只有赠送时可以填写留言');
  if(c.quantity!==1)fail('传音喇叭每次只能兑换 1 个');
- if(c.hornHours===undefined||c.hornText===undefined)fail('请选择喇叭保留时长并填写喇叭内容');
+ if(c.hornHours===undefined)fail('请选择喇叭保留时长');
+ if(gift&&c.hornText!==undefined)fail('送出的传音喇叭由对方自己填写内容');
+ if(!gift&&c.hornText===undefined)fail('请选择喇叭保留时长并填写喇叭内容');
  const spec=p.hornSpecs?.find(spec=>spec.hours===c.hornHours);if(!spec)fail('409: 喇叭规格已更新，请刷新后重新选择');
  if(spec.price!==c.expectedPrice)fail('409: 喇叭价格已更新，请刷新后重新确认');if(p.stock<1)fail('库存不足，请调整兑换数量');
+ const giftAffinity=productGiftPoints({kind:'horn',price:spec.price});
+ if(gift&&c.expectedAffinity!==undefined&&c.expectedAffinity!==giftAffinity)fail('409: 礼物缘值已更新，请刷新后重新确认');
  const total=spec.price;if(treasureBalance(s,a.playerId)<total)fail('羽币余额不足');
- const version=nextProductVersion(p.version),label=hornDuration(spec.hours);
- const order:TreasureOrder={id:crypto.randomUUID(),playerId:a.playerId,accountId:a.id,productId:p.id,productName:p.name,kind:'horn',price:spec.price,quantity:1,total,status:'fulfilled',created:now,updated:now,requestId:c.requestId,hornText:c.hornText,hornHours:spec.hours,hornEnd:hornEnd(now,spec.hours)};
- addLedger(s,{playerId:a.playerId,delta:-total,kind:'redeem',reason:`传音喇叭：${p.name} · ${label}`,actor:a.id,at:now,requestId:c.requestId,orderId:order.id});
+ const version=nextProductVersion(p.version),label=hornDuration(spec.hours),note=c.message?{message:c.message}:{};
+ const order:TreasureOrder={id:crypto.randomUUID(),playerId:a.playerId,accountId:a.id,productId:p.id,productName:p.name,kind:'horn',price:spec.price,quantity:1,total,status:'fulfilled',created:now,updated:now,requestId:c.requestId,hornHours:spec.hours,
+  ...(gift?{giftTo:gift.to.id,giftAffinity,...note}:{hornText:c.hornText,hornEnd:hornEnd(now,spec.hours)})};
+ addLedger(s,{playerId:a.playerId,delta:-total,kind:'redeem',reason:gift?`赠送 ${gift.to.name}：${p.name} · ${label}`:`传音喇叭：${p.name} · ${label}`,actor:a.id,at:now,requestId:c.requestId,orderId:order.id,...(gift?{giftTo:gift.to.id,giftValue:total,giftAffinity,...note}:{})});
+ if(gift)addLedger(s,{playerId:gift.to.id,delta:0,kind:'gift_received',reason:`${gift.from.name} 送你：${p.name} · ${label}`,actor:a.id,at:now,requestId:'gift:'+c.requestId,orderId:order.id,giftFrom:gift.from.id,giftValue:total,giftAffinity,giftItem:`${p.name} · ${label}`,...note});
  p.stock-=1;p.updated=now;p.version=version;s.treasureOrders.push(order);
- audit(s,a,'treasureRedeem','兑换传音喇叭',now,{playerId:a.playerId,orderId:order.id,hours:spec.hours});return order;
+ audit(s,a,'treasureRedeem',gift?'赠送传音喇叭':'兑换传音喇叭',now,{playerId:a.playerId,orderId:order.id,hours:spec.hours,...(gift?{giftTo:gift.to.id}:{})});return order;
 }
 export function treasureOrder(s:State,a:Account,input:unknown,now:number){
  owner(s,a);const c=treasureOrderInput.parse(input),o=s.treasureOrders.find(o=>o.id===c.id);if(!o)fail('兑换记录不存在');
@@ -99,7 +106,15 @@ export function treasureStreakReward(s:State,a:Account,input:unknown,now:number)
 }
 export function applyTreasure(s:State,a:Account,action:string,input:unknown,now:number){
  const parsed=parseDomainCommand(schemas,action,input);if(!parsed)return false;
- switch(parsed.action){case 'treasureProduct':treasureProduct(s,a,parsed.payload,now);break;case 'treasureGrant':treasureGrant(s,a,parsed.payload,now);break;case 'treasureRedeem':treasureRedeem(s,a,parsed.payload,now);break;case 'treasureOrder':treasureOrder(s,a,parsed.payload,now);break;case 'treasureStreakReward':treasureStreakReward(s,a,parsed.payload,now);break;case 'treasureHornRemove':treasureHornRemove(s,a,parsed.payload,now);break}return true;
+ switch(parsed.action){case 'treasureProduct':treasureProduct(s,a,parsed.payload,now);break;case 'treasureGrant':treasureGrant(s,a,parsed.payload,now);break;case 'treasureRedeem':treasureRedeem(s,a,parsed.payload,now);break;case 'treasureOrder':treasureOrder(s,a,parsed.payload,now);break;case 'treasureStreakReward':treasureStreakReward(s,a,parsed.payload,now);break;case 'treasureHornRemove':treasureHornRemove(s,a,parsed.payload,now);break;case 'treasureHornUse':treasureHornUse(s,a,parsed.payload,now);break}return true;
+}
+/** 储物戒: what this member holds from the shop, newest first: gifts other members gave them and what they redeemed for
+ * themselves (not what they gave away). Refunded orders are gone. No account identifiers leave this projection. */
+export function storageRing(s:Pick<State,'treasureOrders'>,playerId:string){
+ return s.treasureOrders.filter(o=>o.status!=='cancelled'&&(o.giftTo?o.giftTo===playerId:o.playerId===playerId))
+  .sort((x,y)=>y.created-x.created||y.id.localeCompare(x.id)).slice(0,300)
+  .map(o=>({id:o.id,productName:o.productName,kind:o.kind,quantity:o.quantity,status:o.status as 'pending'|'fulfilled',at:o.created,...(o.giftTo?{fromPlayerId:o.playerId}:{}),...(o.giftTo&&o.message?{message:o.message}:{}),
+   ...(o.kind==='horn'?{hornHours:o.hornHours,...(o.hornText!==undefined?{hornText:o.hornText}:{}),...(o.hornEnd!==undefined?{hornEnd:o.hornEnd}:{}),...(o.hornRemovedAt!==undefined?{hornRemovedAt:o.hornRemovedAt}:{})}:{})}));
 }
 /** Only the owner sees all fulfilment records. No account identifiers leave the shop projection. */
 export function treasureShopView(s:State,a:Account){
@@ -107,7 +122,8 @@ export function treasureShopView(s:State,a:Account){
  const giftRecipients=s.players.filter(p=>p.enabled&&p.id!==a.playerId&&members.has(p.id)&&!p.guestEventId).map(p=>({id:p.id,name:p.name}));
  const ledger=s.treasureLedger.filter(r=>r.playerId===a.playerId).map(r=>({id:r.id,playerId:r.playerId,delta:r.delta,balance:r.balance,kind:r.kind,reason:r.reason,at:r.at,orderId:r.orderId}));
  const orders=s.treasureOrders.filter(o=>isOwner||o.playerId===a.playerId).map(o=>({id:o.id,playerId:o.playerId,productId:o.productId,productName:o.productName,kind:o.kind,price:o.price,quantity:o.quantity,total:o.total,status:o.status,created:o.created,updated:o.updated,...(o.giftTo?{giftTo:o.giftTo}:{}),...(o.message?{message:o.message}:{}),...(o.kind==='horn'?{hornText:o.hornText,hornHours:o.hornHours,hornEnd:o.hornEnd,...(o.hornRemovedAt!==undefined?{hornRemovedAt:o.hornRemovedAt}:{})}:{})}));
+ const ring=storageRing(s,a.playerId);
  const policy=s.settings.automaticCoins,rewardPolicy=policy?{version:policy.version,activatedAt:policy.activatedAt}:null;
  const streakReward={coins:attendanceStreakCoins(s),length:attendanceStreakLength,canEdit:isClubOwner(s,a)||a.role==='admin'};
- return {giftRecipients,products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId),rewardPolicy,streakReward,ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId)})):[]};
+ return {giftRecipients,ring,products:s.treasureProducts.filter(p=>isOwner||p.active),balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId),rewardPolicy,streakReward,ledger,orders,wallets:isOwner?s.accounts.filter(a=>s.players.some(p=>p.id===a.playerId&&p.enabled&&!isGuest(s,p.id))).map(a=>({playerId:a.playerId,balance:treasureBalance(s,a.playerId),pendingCorrection:pendingAutomaticCorrection(s,a.playerId)})):[]};
 }
