@@ -1,0 +1,37 @@
+/* Full-screen gift celebration (app/gift-celebration.tsx). Transform and opacity only; never takes taps. */
+.gift-fx{position:fixed;inset:0;z-index:2147483000;pointer-events:none;overflow:hidden;contain:strict;animation:gift-fx-life 4.6s ease-out forwards}
+.gift-fx[data-motion=paused],.gift-fx[data-motion=paused] *{animation-play-state:paused!important}
+.gift-fx-veil{position:absolute;inset:0;background:radial-gradient(circle at 50% 44%,#4a2a0880 0,#1a0f05cc 55%,#0b0603e6 100%)}
+.gift-fx-rays{position:absolute;left:50%;top:44%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;border-radius:50%;
+ background:repeating-conic-gradient(from 0deg,#ffe7a333 0deg 5deg,transparent 5deg 15deg);
+ -webkit-mask:radial-gradient(circle,#000 0,#000 18%,transparent 62%);mask:radial-gradient(circle,#000 0,#000 18%,transparent 62%);
+ animation:gift-fx-rays 4.6s linear both}
+.gift-fx-flash{position:absolute;left:50%;top:44%;width:120vmin;height:120vmin;margin:-60vmin 0 0 -60vmin;border-radius:50%;background:radial-gradient(circle,#fffbe8 0,#ffd97acc 18%,#ffb84a55 40%,transparent 70%);animation:gift-fx-flash 1.4s ease-out both}
+.gift-fx-center{position:absolute;left:50%;top:44%;width:min(46vmin,260px);height:min(46vmin,260px);transform:translate(-50%,-50%)}
+.gift-fx-halo{position:absolute;inset:-30%;border-radius:50%;background:radial-gradient(circle,#ffe6a0aa 0,#f2b84866 35%,transparent 68%);animation:gift-fx-halo 2.4s ease-in-out .3s infinite alternate both}
+.gift-fx-ring{position:absolute;inset:-6%;border-radius:50%;border:2px solid #ffe2a0cc;box-shadow:0 0 24px #ffcf6a99,inset 0 0 18px #ffcf6a66;animation:gift-fx-ring 3.2s ease-out .2s both}
+.gift-fx-ring-outer{inset:-22%;border-style:dashed;border-color:#ffe9b899;animation:gift-fx-ring-outer 4.4s linear .1s both}
+.gift-fx-art{position:absolute;inset:0;filter:drop-shadow(0 0 18px #ffd56a) drop-shadow(0 0 42px #ff9f3a88);animation:gift-fx-art 1.6s cubic-bezier(.16,1.3,.3,1) .15s both}
+.gift-fx-art .gift-art{width:100%;height:100%}
+.gift-fx-art .gift-art-wash{opacity:.18}
+.gift-fx-title{position:absolute;left:16px;right:16px;top:calc(44% + min(23vmin,130px) + 28px);display:grid;justify-items:center;gap:8px;text-align:center;animation:gift-fx-title 1.2s ease-out .9s both}
+.gift-fx-title strong{font:700 clamp(30px,8vmin,54px)/1.15 'KaiTi','STKaiti','Songti SC',serif;letter-spacing:.3em;margin-right:-.3em;background:linear-gradient(180deg,#fff7d6,#f5c55a 55%,#c9862a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px #ffb84a99)}
+.gift-fx-title span{max-width:30em;text-wrap:balance;font-size:clamp(14px,3.6vmin,18px);color:#fff1cf;text-shadow:0 1px 8px #000;overflow-wrap:anywhere}
+.gift-fx-burst{position:absolute;width:0;height:0}
+.gift-fx-burst i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:#ffe39a;box-shadow:0 0 10px 2px #ffc44d;opacity:0;animation:gift-fx-spark 1.3s cubic-bezier(.12,.8,.3,1) var(--delay) both}
+.gift-fx-burst-1 i{background:#ffd1e3;box-shadow:0 0 10px 2px #ff7aa8}
+.gift-fx-burst-2 i{background:#d6fff0;box-shadow:0 0 10px 2px #5fd3a8}
+.gift-fx-rain i{position:absolute;top:-6vh;width:10px;height:14px;border-radius:70% 0 70% 0;background:linear-gradient(135deg,#fff3c4,#e8a93a);opacity:0;animation:gift-fx-fall var(--fall) linear var(--delay) both}
+.gift-fx-rain .gift-fx-petal-1{background:linear-gradient(135deg,#ffe1ec,#f07aa4);width:12px;height:12px}
+.gift-fx-rain .gift-fx-petal-2{width:6px;height:6px;border-radius:50%;background:#fff6d8;box-shadow:0 0 8px 2px #ffd36a}
+@keyframes gift-fx-life{0%{opacity:0}6%{opacity:1}78%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes gift-fx-rays{from{transform:rotate(0) scale(.6);opacity:0}15%{opacity:1}to{transform:rotate(80deg) scale(1.05);opacity:.7}}
+@keyframes gift-fx-flash{0%{transform:scale(.1);opacity:0}18%{opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes gift-fx-halo{from{transform:scale(.9);opacity:.7}to{transform:scale(1.12);opacity:1}}
+@keyframes gift-fx-ring{0%{transform:scale(.2);opacity:0}25%{opacity:1}100%{transform:scale(1.25);opacity:.35}}
+@keyframes gift-fx-ring-outer{from{transform:rotate(0) scale(.6);opacity:0}20%{opacity:.9}to{transform:rotate(200deg) scale(1.15);opacity:.4}}
+@keyframes gift-fx-art{0%{transform:scale(0) rotate(-25deg) translateY(30vh);opacity:0}55%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes gift-fx-title{from{transform:translateY(14px) scale(.92);opacity:0;letter-spacing:.6em}to{transform:none;opacity:1}}
+@keyframes gift-fx-spark{0%{transform:translate(0,0) scale(1.4);opacity:0}8%{opacity:1}70%{opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + 26px)) scale(.3);opacity:0}}
+@keyframes gift-fx-fall{0%{transform:translate(0,0) rotate(0);opacity:0}10%{opacity:1}85%{opacity:.9}100%{transform:translate(var(--drift),112vh) rotate(var(--spin));opacity:0}}
+@media(prefers-reduced-motion:reduce){.gift-fx{display:none}}

@@ -16,6 +16,7 @@ export const hornTextInput=z.string().transform(text=>text.normalize('NFC').trim
  .refine(text=>[...text].length<=hornTextMax,`喇叭内容最多 ${hornTextMax} 个字`)
  .refine(text=>!/[\p{Cc}\p{Zl}\p{Zp}]/u.test(text),'喇叭内容不能换行或包含控制字符');
 export const treasureHornRemoveInput=z.object({orderId:z.string().min(1).max(100)}).strict();
+export const treasureHornUseInput=z.object({orderId:z.string().min(1).max(100),hornText:hornTextInput}).strict();
 
 /** Shortest first, so the cheapest option leads and the card can show its starting price. */
 export function sortHornSpecs(specs:readonly HornSpec[]){return [...specs].sort((a,b)=>a.hours-b.hours)}
@@ -25,16 +26,32 @@ export function hornEnd(start:number,hours:number){return start+hours*hour}
 
 /** Broadcasts on air now: bought, not taken down and not yet expired. Oldest first, so the banner order is stable. */
 export function activeHorns(orders:readonly TreasureOrder[],now:number){
- return orders.filter(o=>o.kind==='horn'&&o.status==='fulfilled'&&o.hornText&&o.hornEnd!==undefined&&o.created<=now&&now<o.hornEnd&&o.hornRemovedAt===undefined)
-  .sort((a,b)=>a.created-b.created||a.id.localeCompare(b.id));
+ return orders.filter(o=>o.kind==='horn'&&o.status==='fulfilled'&&o.hornText&&o.hornEnd!==undefined&&hornStart(o)<=now&&now<o.hornEnd&&o.hornRemovedAt===undefined)
+  .sort((a,b)=>hornStart(a)-hornStart(b)||a.id.localeCompare(b.id));
 }
+/** A gifted horn waits in the receiver's 储物戒 until they use it; it goes on air from then, in their name. */
+export function hornStart(o:Pick<TreasureOrder,'created'|'hornStart'>){return o.hornStart??o.created}
+export function hornSpeaker(o:Pick<TreasureOrder,'playerId'|'giftTo'>){return o.giftTo??o.playerId}
 /** What every member sees in the top banner. No account identifiers leave this projection. */
 export function hornBroadcasts(s:Pick<State,'treasureOrders'>,now:number){
- return activeHorns(s.treasureOrders,now).map(o=>({id:o.id,playerId:o.playerId,hornText:o.hornText!,start:o.created,end:o.hornEnd!}));
+ return activeHorns(s.treasureOrders,now).map(o=>({id:o.id,playerId:hornSpeaker(o),hornText:o.hornText!,start:hornStart(o),end:o.hornEnd!}));
 }
 /** The banner changes without a write when a broadcast ends: the conditional read must expire then. */
 export function nextHornEnd(s:Pick<State,'treasureOrders'>,now:number){
  let next=Infinity;for(const o of activeHorns(s.treasureOrders,now))next=Math.min(next,o.hornEnd!);return next;
+}
+
+/** The receiver of a gifted 传音喇叭 writes their own text and puts it on air for the bought duration, starting now.
+ * Repeating the same request returns the broadcast; a horn already used cannot be rewritten. */
+export function treasureHornUse(s:State,a:Account,input:unknown,now:number){
+ const c=treasureHornUseInput.parse(input),o=s.treasureOrders.find(o=>o.id===c.orderId);
+ if(!o||o.kind!=='horn'||o.giftTo!==a.playerId||o.status!=='fulfilled')fail('储物戒里没有这个传音喇叭');
+ const me=s.players.find(p=>p.id===a.playerId);if(!me?.enabled)fail('只有已启用的正式球友可以传音');
+ if(o.hornText!==undefined){if(o.hornText===c.hornText&&o.hornStart!==undefined)return o;fail('这个传音喇叭已经用过了')}
+ if(!o.hornHours)fail('喇叭规格缺失，请联系宗主');
+ o.hornText=c.hornText;o.hornStart=now;o.hornEnd=hornEnd(now,o.hornHours);o.updated=now;
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'treasureHornUse',reason:'使用储物戒里的传音喇叭',changes:{playerId:a.playerId,orderId:o.id}});
+ return o;
 }
 
 /** The owner and administrators can take an unsuitable broadcast off the banner early. Coins are not refunded

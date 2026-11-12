@@ -46,7 +46,7 @@ test('a repeated request is one purchase; stale prices, unknown options and bad 
  const once=structuredClone(s);treasureRedeem(s,member,input,2);assert.deepEqual(s,once);
  const refused:[Record<string,unknown>,RegExp][]=[
   [{expectedPrice:10},/409/],[{hornHours:6},/409/],[{hornText:'  '},/喇叭内容/],[{hornText:'x'.repeat(51)},/50/],[{hornText:'第一行\n第二行'},/换行/],
-  [{quantity:2},/1 个/],[{giftTo:'a'},/不能送给/],[{hornHours:undefined},/保留时长/],
+  [{quantity:2},/1 个/],[{giftTo:'a'},/对方自己填写/],[{giftTo:'c',hornText:undefined},/不能送给自己/],[{hornHours:undefined},/保留时长/],[{message:'hi'},/只有赠送/],
  ];
  for(const [over,message] of refused){assert.throws(()=>treasureRedeem(s,member,{productId:p.id,...buy(over)},3),message);assert.deepEqual(s,once)}
  assert.equal(treasureBalance(s,'c'),70);

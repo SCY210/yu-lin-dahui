@@ -1,0 +1,22 @@
+/* 储物戒 on the 羽林宝阁 page (app/storage-ring.tsx). */
+.ts-ring{margin:4px 0 22px;padding:16px;border:1px solid color-mix(in srgb,#b88a3c 40%,var(--ts-border,#e3e6f0));border-radius:16px;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,#e9c46a 14%,transparent),transparent 60%),var(--ts-card,#fff);min-width:0}
+.ts-ring-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ts-ring-head h2{display:flex;align-items:center;gap:8px;margin:0;font-size:18px}
+.ts-ring-head h2 svg{color:#b88a3c}
+.ts-ring-head>span{font-size:12px;color:var(--ts-muted,#687089)}
+.ts-ring-empty{margin:10px 0 0;font-size:13px;color:var(--ts-muted,#687089)}
+.ts-ring-items{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ts-ring-item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--ts-border,#e3e6f0);border-radius:12px;background:var(--ts-card,#fff);min-width:0}
+.ts-ring-ready{border-color:#c2410c;box-shadow:0 0 0 1px color-mix(in srgb,#c2410c 30%,transparent) inset;background:color-mix(in srgb,#fb923c 9%,var(--ts-card,#fff))}
+.ts-ring-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,#e9c46a 18%,var(--ts-card,#fff));color:#9a6b25}
+.ts-ring-icon .gift-art{width:44px;height:44px}
+.ts-ring-ready .ts-ring-icon{color:#c2410c}
+.ts-ring-main{display:grid;gap:2px;min-width:0}
+.ts-ring-main strong{font-size:14px;overflow-wrap:anywhere}
+.ts-ring-main small{font-size:12px;color:var(--ts-muted,#687089);overflow-wrap:anywhere}
+.ts-ring-main q{font-size:13px;overflow-wrap:anywhere}
+.ts-ring-status{font-size:12px;color:var(--ts-muted,#687089);text-align:right;max-width:9em}
+.ts-ring-use{min-height:36px;padding:0 14px}
+.ts-ring-more{margin-top:10px;width:100%}
+.wuxia-theme .ts-ring,.wuxia-theme .ts-ring-item{border-radius:4px}
+@media(max-width:700px){.ts-ring-items{grid-template-columns:minmax(0,1fr)}.ts-ring{padding:14px 12px}}

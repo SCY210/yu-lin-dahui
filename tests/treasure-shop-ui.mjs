@@ -29,7 +29,7 @@ try{
  await mount({mode:'member'});
  assert.ok(text(renderer.toJSON()).includes('羽林宝阁'));assert.ok(!text(renderer.toJSON()).includes('库存保留款'),'Inactive products hidden from members');
  assert.equal(button('添加商品'),undefined);assert.equal(button('调整羽币'),undefined);assert.ok(!renderer.root.findAllByType('summary').some(n=>text(n).includes('宗主管理')));
- let products=renderer.root.findAllByType('article').filter(n=>n.props.className?.includes('ts-product'));assert.equal(products.length,4);
+ let products=renderer.root.findAllByType('article').filter(n=>n.props.className?.includes('ts-product'));assert.equal(products.length,5);
  assert.ok(!buttons().some(b=>b.props['aria-label']?.startsWith('增加')),'Exhibition does not render quantity controls before opening a product');
  await viewProduct('虚构礼品 · 羽毛球挂件');const increment=buttons().find(b=>b.props['aria-label']?.startsWith('增加'));await act(()=>increment.props.onClick());
  await click('兑换 · 40 羽币');let form=forms.at(-1);assert.equal(form.action,'treasureRedeem');assert.equal(form.values.quantity,2);assert.equal(form.values.expectedPrice,20);assert.ok(form.description.includes('40 羽币'));assert.ok(form.description.includes('剩余 60 羽币'));
@@ -52,5 +52,20 @@ try{
  const receiver=renderer.root.findByProps({'aria-label':'礼物接收人'});assert.ok(!receiver.findAllByType('option').some(o=>o.props.value==='fixture-player-1'));
  await act(()=>receiver.props.onChange({target:{value:'fixture-player-2'}}));await act(()=>renderer.root.findByProps({'aria-label':'赠礼留言'}).props.onChange({target:{value:'好搭档'}}));assert.ok(text(renderer.toJSON()).includes('道缘 +10'));
  await click('赠送 · 10 羽币');form=forms.at(-1);assert.equal(form.title,'确认赠送');assert.ok(form.description.includes('虚构副宗主丙'));assert.ok(form.description.includes('即时送达'));assert.ok(form.description.includes('好搭档'));await submit();assert.equal(calls.at(-1).payload.giftTo,'fixture-player-2');assert.equal(calls.at(-1).payload.message,'好搭档');await expand('我的兑换');assert.ok(text(renderer.toJSON()).includes('已完成'));
- console.log('PASS treasure shop UI: streak reward rules and owner/admin setting, quantity/total confirmation and expected price, strict payloads, insufficient balance, owner-only management, required reason, pending refund, busy state and failed write recovery');
+ // 储物戒: the gifted horn waits for the member; using it writes their own text.
+ await mount({mode:'member'});const ring=renderer.root.findByProps({'aria-labelledby':'ts-ring-title'});
+ assert.ok(text(ring).includes('储物戒')&&text(ring).includes('1 件待使用')&&text(ring).includes('虚构宗主甲 所赠')&&text(ring).includes('虚构留言'));
+ assert.ok(text(ring).includes('虚构礼品 · 羽毛球挂件 × 1')&&text(ring).includes('自己兑换')&&text(ring).includes('待宗主发放'),'own redemptions are held too');
+ await click('使用');assert.ok(button('请填写喇叭内容').props.disabled);
+ await act(()=>renderer.root.findByProps({'aria-label':'喇叭内容'}).props.onChange({target:{value:'虚构传音'}}));
+ await click('开始传音 1 小时');form=forms.at(-1);assert.equal(form.action,'treasureHornUse');assert.ok(form.description.includes('虚构传音'));
+ await submit();assert.deepEqual(calls.at(-1),{action:'treasureHornUse',payload:{orderId:form.values.orderId,hornText:'虚构传音'}});
+ assert.equal(button('使用'),undefined,'a used horn cannot be used again');assert.ok(text(renderer.toJSON()).includes('“虚构传音”'));
+ // Horns can be given away from the shop: no text, the receiver writes it.
+ await mount({mode:'member'});await click('传音喇叭');await viewProduct('虚构传音喇叭');
+ await act(()=>renderer.root.findByProps({'aria-label':'礼物接收人'}).props.onChange({target:{value:'fixture-player-2'}}));
+ assert.equal(renderer.root.findAllByProps({'aria-label':'喇叭内容'}).length,0,'the giver writes no banner text');
+ await click('赠送 1 小时 · 10 羽币');form=forms.at(-1);assert.equal(form.title,'确认赠送');assert.ok(form.description.includes('储物戒'));
+ await submit();assert.deepEqual(calls.at(-1).payload,{productId:form.values.productId,quantity:1,expectedPrice:10,hornHours:1,giftTo:'fixture-player-2',message:'',expectedAffinity:10});
+ console.log('PASS treasure shop UI: storage ring and gifted horns, streak reward rules and owner/admin setting, quantity/total confirmation and expected price, strict payloads, insufficient balance, owner-only management, required reason, pending refund, busy state and failed write recovery');
 }finally{if(renderer)await act(()=>renderer.unmount());globalThis.IS_REACT_ACT_ENVIRONMENT=previous}
