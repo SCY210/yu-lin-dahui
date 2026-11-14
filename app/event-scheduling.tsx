@@ -19,7 +19,7 @@ import {isPractice,eventFormat,courtPlayers} from '../lib/domain/match-format';
 import {pointsWindow} from '../lib/domain/points-window';
 import {liveSchedulingFits,pendingSchedulingIds,recommendedSchedulingMode,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
 import EventLivePlay from './event-live-play';
-import EventPointsPlan from './event-points-plan';
+import EventPointsPlan,{EventLockedPairs} from './event-points-plan';
 import MatchCard from './match-card';
 import {useMatchFocus} from './match-focus';
 import GroupPlayer from './group-player';
@@ -63,6 +63,7 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  const fit=advice&&liveSchedulingFits(playerCount,courtCount,courtPlayers(e))?{players:playerCount,courts:courtCount}:undefined;
  return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><PointsAttendance e={e} ctx={ctx}/>{advice&&<SchedulingAdvice advice={advice} mode={mode} fit={fit} busy={ctx.busy} change={change}/>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <AppSelect aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</AppSelect></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
   {filter}
+  <EventLockedPairs e={e} ctx={ctx} now={now}/>
   {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now} focusRoundId={jump.roundId}/>}
   {cancelled.length>0&&<Disclosure key={playerId} label={'已撤销轮次 · '+cancelled.length}>{cancelled.slice().sort(compareRounds).map(r=><section key={r.id}><h3>{hm(r.start)} · 已撤销</h3><div className="courts-grid">{ctx.data.matches.filter(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)).map(m=><MatchCard key={m.id} m={m} ctx={{...ctx,readOnly:true}}/>)}</div></section>)}</Disclosure>}
  </div>;

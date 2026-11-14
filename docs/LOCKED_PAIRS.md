@@ -4,8 +4,8 @@
 
 ## 谁能操作
 
-- 宗主、副宗主和活动创建者（与其他排场管理相同），在活动结束前可以锁定或取消锁定。
-- 所有球友都能在「搭档方式与投票」里看到当前的锁组。
+- 宗主、副宗主和活动创建者（与其他排场管理相同），在活动开始前和比赛进行中都可以随时锁定或取消锁定，直到活动结束。
+- 操作入口是比赛页对局上方单独的「锁组」面板（预排、逐轮和实时排场都有），比赛中不用翻到页面底部。所有球友都能在这里看到当前的锁组。
 - 只有正式接龙且未停用的球友可以锁组；每人同时只能在一个锁组里，要换搭档需先取消原来的锁组。
 - 单打、练球活动和赛事不使用锁组。
 
@@ -30,5 +30,5 @@
 - 规则：`lib/domain/locked-pairs.ts`（`lockedPartners`、`pickFour`、`keepsLocks`、`lockSplits`）。
 - 命令：`lib/domain/locked-pair-commands.ts`（`pairLock`、`pairUnlock`），权限走 `authorizeEventAction`。
 - 排场：`lib/domain/grouping.ts`（预排）、`lib/domain/live-play.ts`（实时排场）、`lib/domain/fixed-partners.ts`（固定搭档）。
-- 界面：`app/event-points-plan.tsx` 的「锁组」区域。
+- 界面：`app/event-points-plan.tsx` 的 `EventLockedPairs`，由 `app/event-scheduling.tsx` 放在对局上方。
 - 测试：`tests/locked-pairs.test.ts`。
