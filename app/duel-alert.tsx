@@ -10,44 +10,48 @@ const seenKey=(id:string)=>'yulin-duel-seen:'+id;
  * below still shows each one once per visit. */
 function seenBefore(id:string){try{return localStorage.getItem(seenKey(id))==='1'}catch{return false}}
 function remember(id:string){try{localStorage.setItem(seenKey(id),'1')}catch{/* per-visit state still applies */}}
-const n=(i:number)=>({'--i':i}) as CSSProperties;
 /** How long the full-screen announcement plays before it gives way (or closes itself). */
-const spectacleMs=4600;
+const spectacleMs=5000;
+const splashes=[[22,38,9],[178,46,7],[30,168,6],[170,160,10],[46,22,4],[160,186,5],[12,104,5],[190,110,4]];
 
-/** Crossed swords inside a turning ring of runes: the duel's emblem, full-screen and in the four's popup. */
-function Swords({className}:{className:string}){
+/** Ink-wash mountains on rice paper: the backdrop of the scroll, full-screen and in the four's popup. */
+function Mountains({className}:{className:string}){
+ return <svg className={className} viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <path className="dz-hill dz-hill-far" d="M0 120 L0 70 Q40 40 80 62 T170 48 Q210 30 250 56 T340 44 Q380 36 400 58 L400 120Z"/>
+  <path className="dz-hill dz-hill-near" d="M0 120 L0 92 Q60 64 110 86 T220 78 Q270 60 320 84 T400 80 L400 120Z"/>
+ </svg>;
+}
+/** The great 战, written stroke by stroke in ink, then splashed: the heart of the scroll. */
+function Zhan({className}:{className:string}){
  return <svg className={className} viewBox="0 0 200 200" aria-hidden="true" focusable="false">
-  <defs>
-   <linearGradient id="duel-blade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fffdf4"/><stop offset=".55" stopColor="#c9d4e6"/><stop offset="1" stopColor="#7f8ba3"/></linearGradient>
-   <linearGradient id="duel-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fff1b0"/><stop offset=".5" stopColor="#e2a93b"/><stop offset="1" stopColor="#9a5b12"/></linearGradient>
-  </defs>
-  <g className="duel-ring"><circle cx="100" cy="100" r="88" fill="none" stroke="url(#duel-gold)" strokeWidth="1.5" strokeDasharray="2 6"/><circle cx="100" cy="100" r="78" fill="none" stroke="url(#duel-gold)" strokeWidth=".8"/>
-   {['天','机','战','帖','斗','法','论','道'].map((c,i)=><text key={c} x="100" y="20" textAnchor="middle" transform={`rotate(${i*45} 100 100)`}>{c}</text>)}</g>
-  {[-1,1].map(side=><g key={side} className={'duel-sword duel-sword-'+(side<0?'left':'right')}><g transform={`rotate(${side*42} 100 100)`}>
-   <polygon points="96,30 100,18 104,30 104,118 96,118" fill="url(#duel-blade)"/><line x1="100" y1="24" x2="100" y2="116" stroke="#ffffff" strokeOpacity=".7" strokeWidth=".8"/>
-   <rect x="84" y="118" width="32" height="6" rx="3" fill="url(#duel-gold)"/><rect x="97" y="124" width="6" height="26" rx="2" fill="#5b2c12"/><circle cx="100" cy="153" r="5" fill="url(#duel-gold)"/>
-  </g></g>)}
+  <g className="dz-splash">{splashes.map(([x,y,r],i)=><circle key={i} cx={x} cy={y} r={r} style={{'--i':i} as CSSProperties}/>)}</g>
+  <text className="dz-zhan" x="100" y="160" textAnchor="middle">战</text>
  </svg>;
 }
 
-/** The full-screen announcement when a 天机战帖 game starts (docs/DUELS.md): swords clash in a turning ring of runes,
- * lightning and embers, then the two teams. Tap to close; it also closes itself. The resting style of each element is
- * its final frame, so with reduced motion it shows still. */
+/** The full-screen announcement when a 天机战帖 game starts (docs/DUELS.md): a sword-light cuts the screen, a challenge
+ * scroll unrolls over ink mountains, a great 战 is written in ink, the two teams bleed in and a vermilion seal stamps
+ * down. Ink, rice paper and vermilion, apart from the bounty scenes' night and gold. Tap to close; it also closes
+ * itself. The resting style of each element is its final frame, so with reduced motion it shows still. */
 function Spectacle({start,onDone}:{start:DuelStart&{names:Map<string,string>};onDone:()=>void}){
  const [leaving,setLeaving]=useState(false);
- useEffect(()=>{const fade=setTimeout(()=>setLeaving(true),spectacleMs-500),done=setTimeout(onDone,spectacleMs);return()=>{clearTimeout(fade);clearTimeout(done)}},[onDone]);
+ useEffect(()=>{const fade=setTimeout(()=>setLeaving(true),spectacleMs-600),done=setTimeout(onDone,spectacleMs);return()=>{clearTimeout(fade);clearTimeout(done)}},[onDone]);
  const {duel,court}=start,team=(ids:readonly string[])=>ids.map(id=>start.names.get(id)??'道友').join(' / ');
  return <div className={'duel-spectacle'+(leaving?' is-leaving':'')} role="dialog" aria-modal="true" aria-label={'天机战帖开战：'+team(duel.a)+' 对 '+team(duel.b)} onClick={onDone}>
-  <div className="ds-sky"/>
-  <div className="ds-embers" aria-hidden="true">{Array.from({length:18},(_,i)=><span key={i} style={n(i)}/>)}</div>
-  <svg className="ds-bolts" viewBox="0 0 400 400" aria-hidden="true" focusable="false"><polyline points="40,20 120,140 90,160 190,300"/><polyline points="360,30 270,150 300,170 210,310"/><polyline points="200,0 190,90 215,105 196,190"/></svg>
-  <div className="ds-flash" aria-hidden="true"/>
-  <Swords className="ds-swords"/>
-  <div className="ds-text">
-   <p className="ds-kicker">天机阁传音 · {start.title}</p>
-   <h2 className="ds-title">天机战帖</h2>
-   <p className="ds-teams"><span>{team(duel.a)}</span><b>对</b><span>{team(duel.b)}</span></p>
-   <p className="ds-meta">{court} 斗法开场 · 每人 {duel.stake} 积分</p>
+  <div className="dz-paper"/>
+  <Mountains className="dz-mountains"/>
+  <div className="dz-slash" aria-hidden="true"/>
+  <div className="dz-scroll">
+   <i className="dz-rod" aria-hidden="true"/>
+   <div className="dz-sheet">
+    <p className="dz-kicker">天机阁 · {start.title}</p>
+    <Zhan className="dz-brush"/>
+    <h2 className="dz-title">天机战帖</h2>
+    <p className="dz-teams"><span>{team(duel.a)}</span><b>对</b><span>{team(duel.b)}</span></p>
+    <p className="dz-meta">{court} · 每人 {duel.stake} 积分 · 斗法开场</p>
+    <span className="dz-seal" aria-hidden="true"><b>天</b><b>机</b></span>
+   </div>
+   <i className="dz-rod" aria-hidden="true"/>
   </div>
  </div>;
 }
@@ -67,7 +71,7 @@ export default function DuelAlert({data,blocked,onOpenMatch}:{data:Data;blocked:
  if(step==='show')return <Spectacle key={current.duel.id} start={current} onDone={()=>current.player?setPhase({id:current.duel.id,step:'call'}):finish()}/>;
  const mine=current.duel.a.includes(data.me.playerId)?current.duel.b:current.duel.a,team=(ids:readonly string[])=>ids.map(id=>names.get(id)??'道友').join(' / ');
  return <Dialog open onOpenChange={open=>{if(!open)finish()}}><DialogContent className="app-dialog duel-call">
-  <DialogHeader><div className="duel-call-scene"><Swords className="duel-call-swords"/><span className="duel-call-seal">战</span></div>
+  <DialogHeader><div className="duel-call-scene"><Mountains className="duel-call-hills"/><Zhan className="duel-call-brush"/><span className="dz-seal duel-call-seal" aria-hidden="true"><b>天</b><b>机</b></span></div>
    <DialogTitle>天机战帖 · 斗法开场</DialogTitle>
    <DialogDescription>{team(mine)} 已在 {current.court} 候战，道友速速登场！</DialogDescription></DialogHeader>
   <p className="duel-call-teams">{team(current.duel.a)} <b>对</b> {team(current.duel.b)} · 每人 {current.duel.stake} 积分</p>
