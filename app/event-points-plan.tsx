@@ -47,7 +47,7 @@ function LockedPairs({e,ctx,editable}:{e:Event;ctx:LockContext;editable:boolean}
  function lock(){send('pairLock',{eventId:e.id,playerIds:[first,second]});setFirst('');setSecond('')}
  return <div className="locked-pairs" aria-label="锁组">
   <h4>锁组</h4>
-  <p className="hint">锁组的两人都在场时，总是一起上场、同一边搭档，一人在场上或轮休时另一人等他；只来一人时照常轮换。手动换人不受限制。{e.playMode==='arena'?'擂台玩法暂不使用锁组。':''}</p>
+  <p className="hint">锁组两人同一局上场时总在同一边搭档。排场先保证每人上场次数差不多：两人轮次相近时一起上；只轮到其中一人时，他先和别人打，轮次对上后再一起上。手动换人不受限制。{e.playMode==='arena'?'擂台玩法暂不使用锁组。':''}</p>
   {pairs.length>0?<ul className="locked-pair-list">{pairs.map(([a,b])=><li key={a+':'+b}><span><Lock size={16} aria-hidden="true"/>{name(a)} + {name(b)}</span>{editable&&<button type="button" className="ghost" disabled={busy} onClick={()=>send('pairUnlock',{eventId:e.id,playerId:a})}>取消锁定</button>}</li>)}</ul>:<p className="hint">还没有锁组。</p>}
   {editable&&(choices.length>=2?<div className="locked-pair-form">
    <AppSelect aria-label="锁组第一位球友" value={first} disabled={busy} onChange={ev=>setFirst(ev.target.value)}><option value="">选择球友</option>{choices.filter(id=>id!==second).map(id=><option key={id} value={id}>{name(id)}</option>)}</AppSelect>

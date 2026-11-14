@@ -1,4 +1,4 @@
-import {keepsLocks,lockedPartners,pickFour} from './locked-pairs';
+import {keepsLocks,lockCounts,lockedPartners,pickFour} from './locked-pairs';
 import {matchingStopped} from './matching-participation';
 import {awaitingArrival} from './points-attendance';
 import {arenaStatus} from './social';
@@ -44,10 +44,14 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  if(previousRound)for(const m of s.matches)if(m.roundId===previousRound.id&&m.status!=='cancelled')for(const id of [...m.a,...m.b])previousCourt.set(id,courtKey(m.courtId));
  const tired=tiredPlayers(s,e.id),debts=new Map(eligible.map(id=>[id,debt(id)]));
  eligible.sort((a,b)=>{const x=debts.get(a)!,y=debts.get(b)!;return Number(tired.has(a))-Number(tired.has(b))||y.deficit-x.deficit||y.wait-x.wait||x.streak-y.streak||a.localeCompare(b)});const picked=new Set<string>(),usedCourts:typeof courts=[];let selected:string[]=[];
- // 锁组 (lib/domain/locked-pairs.ts): two locked players who are both available play together, as one team.
- const partner=e.playMode==='arena'?new Map<string,string>():lockedPartners(e,eligible);
- for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&canUse(court.id,id));const chosen=pickFour(pool,partner);if(!chosen)continue;chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
+ // 锁组 (lib/domain/locked-pairs.ts): fair turns first; two locked players who are both due play together, as one team.
+ // When only one of them plays this round, the other does not play on another court in the same round.
+ const partner=e.playMode==='arena'?new Map<string,string>():lockedPartners(e,eligible),released=new Set<string>();
+ const swappable=(out:string,incoming:string)=>sameTurn(debts.get(incoming)!,debts.get(out)!,tired.has(incoming),tired.has(out));
+ for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&!released.has(id)&&canUse(court.id,id));const chosen=pickFour(pool,partner,swappable);if(!chosen)continue;for(const id of chosen){const other=partner.get(id);if(other!==undefined&&!chosen.includes(other))released.add(other)}chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
  courts=usedCourts;if(!courts.length)fail('本时段同球馆正式球友不足4人，无法安排双打');let fixed=0;let arenaLosers:string[]=[];if(e.playMode==='arena'&&arenaCourt){const arena=arenaStatus(s,e.id);const holders=arena.holders.filter(id=>eligible.includes(id)&&canUse(arenaCourt.id,id));if(holders.length===2){const latest=s.matches.find(m=>m.id===arena.matchId)!;const losers=[...latest.a,...latest.b].filter(id=>!holders.includes(id));arenaLosers=losers;const challengers=eligible.filter(id=>!holders.includes(id)&&!losers.includes(id)&&canUse(arenaCourt.id,id)).slice(0,2);if(challengers.length<2)fail('擂台需要两名新的接擂球友；请等待更多正式球友参加或切回公平轮转');const pinned=[...holders,...challengers];const used=new Set(pinned);selected=[...pinned];for(const court of courts.slice(1)){const pool=eligible.filter(id=>!used.has(id)&&canUse(court.id,id)).slice(0,4);pool.forEach(id=>used.add(id));selected.push(...pool)}fixed=2}}
+ // Each locked pair keeps how many of its players were chosen, so the search below neither splits nor completes it.
+ const required=lockCounts(selected,partner);
  const rating=(id:string)=>s.players.find(p=>p.id===id)!.rating;const history=matchHistory(s,e.id);
  const cohortValues=new Map(eligible.map(id=>[id,s.registrations.find(r=>r.eventId===e.id&&r.playerId===id)?.bookingSignups?.find(x=>x.status==='confirmed'&&x.arrival<=at&&x.departure>=at+duration*60000)?.bookingId]));
  const cohort=(id:string)=>cohortValues.get(id);
@@ -63,7 +67,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
    key+=(left<right?left+'/'+right:right+'/'+left)+';';
   }
   const cached=costCache.get(key);if(cached)return cached;
-  if(partner.size&&!keepsLocks(list,partner)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
+  if(partner.size&&!keepsLocks(list,partner,required)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
   let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0,courtWaits=0,blocks=0,recent=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
@@ -126,7 +130,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  if(odds){
   const draw=oddsRandom(seed);
   for(let offset=fixed?4:0;offset<best.length;offset+=4){
-   if(best.slice(offset,offset+4).some(id=>partner.has(id)))continue;
+   const four=best.slice(offset,offset+4);if(four.some(id=>four.includes(partner.get(id)!)))continue;
    const options=oddsSplits(odds,best.slice(offset,offset+4),draw).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
    best=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x);
   }
