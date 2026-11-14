@@ -2,6 +2,7 @@ import {notificationPointEntries} from './notification-points';
 import {attendancePointAdjustments} from './points-attendance';
 import {mvpPointAdjustments} from './activity-voting';
 import {bountyPointAdjustments} from './bounties';
+import {funBetPointAdjustments} from './fun-bets';
 import {eventRankingEnabled} from './event-ranking';
 import {pointGrants,ratingAdjustments} from './point-grants';
 import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
@@ -56,6 +57,9 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
  const bountyWon=new Map<string,number>(),bountyLost=new Map<string,number>();
  for(const g of bountyPointAdjustments(s,now,id=>ledger.byPlayer.get(id)??[]))if(chosen.has(g.period)&&(format==='all'||g.format===format)){const side=g.delta>0?bountyWon:bountyLost;side.set(g.playerId,(side.get(g.playerId)??0)+g.delta)}
  const bounty=new Map<string,number>();for(const id of new Set([...bountyWon.keys(),...bountyLost.keys()]))bounty.set(id,(bountyWon.get(id)??0)+(bountyLost.get(id)??0));
+ // 趣味赛 (lib/domain/fun-bets.ts): stakes won and lost apart, like bounties, for the breakdown. Doubles only.
+ const funWon=new Map<string,number>(),funLost=new Map<string,number>();
+ for(const g of funBetPointAdjustments(s,now))if(chosen.has(g.period)&&(format==='all'||g.format===format)){const side=g.delta>0?funWon:funLost;side.set(g.playerId,(side.get(g.playerId)??0)+g.delta)}
  const members=new Set(s.accounts.map(account=>account.playerId));
  // One pass over the matches, grouped by player in match order (a filter per player was players × matches).
  const played=new Map<string,{match:Match;games:number}[]>();
@@ -72,7 +76,7 @@ function aggregateLeaderboard(s:State,periods:string[],now=Date.now(),format:Ran
   const rated=scored.map(row=>row.game);
   const games=rated.length,wins=rated.filter(g=>g.won).length,halfRewardWins=scored.filter(row=>row.game.won&&row.rewardFactor===0.5).length,halfRewardLosses=scored.filter(row=>!row.game.won&&row.rewardFactor===0.5).length,net=rated.reduce((n,g)=>n+g.margin,0),score=scored.reduce((n,row)=>n+row.points,0),upsets=scored.reduce((n,row)=>n+row.upsetPoints,0),streakPoints=scored.reduce((n,row)=>n+row.streakPoints,0),pending=scored.filter(row=>!row.game.settled);
   const realm=ledger.snapshot.get(p.id)!;
-  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,...(halfRewardWins?{halfRewardWins}:{}),...(halfRewardLosses?{halfRewardLosses}:{}),losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0)+(bounty.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,bountyPoints:bounty.get(p.id)??0,bountyWonPoints:bountyWon.get(p.id)??0,bountyLostPoints:bountyLost.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
+  return {playerId:p.id,name:p.name,rating:p.rating,realm:realm.realm,realmScore:realm,provisional:realm.placement,total:all.reduce((n,row)=>n+row.games,0),totalMatches:all.length,games,wins,...(halfRewardWins?{halfRewardWins}:{}),...(halfRewardLosses?{halfRewardLosses}:{}),losses:games-wins,notificationPoints:notification.get(p.id)??0,points:score+(notification.get(p.id)??0)+(bonus.get(p.id)??0)+(attendance.get(p.id)??0)+(mvp.get(p.id)??0)+(bounty.get(p.id)??0)+(funWon.get(p.id)??0)+(funLost.get(p.id)??0),attendancePoints:attendance.get(p.id)??0,mvpPoints:mvp.get(p.id)??0,bountyPoints:bounty.get(p.id)??0,bountyWonPoints:bountyWon.get(p.id)??0,bountyLostPoints:bountyLost.get(p.id)??0,funBetWonPoints:funWon.get(p.id)??0,funBetLostPoints:funLost.get(p.id)??0,matchPoints:score,upsetPoints:upsets,streakPoints,manualPoints:bonus.get(p.id)??0,pendingPoints:pending.reduce((n,row)=>n+row.points,0),pendingGames:pending.length,rate:games?wins/games:0,margin:games?net/games:0,qualified:true,rank:0};
  }).filter(row=>!singles||row.totalMatches>0||row.games>0||row.attendancePoints!==0||row.mvpPoints!==0||row.bountyPoints!==0).sort((a,b)=>b.points-a.points||b.rate-a.rate||b.margin-a.margin||a.playerId.localeCompare(b.playerId));
  rows.forEach((row,i)=>{const prev=rows[i-1];row.rank=prev&&prev.points===row.points&&prev.rate===row.rate&&prev.margin===row.margin?prev.rank:i+1});return rows;
 }

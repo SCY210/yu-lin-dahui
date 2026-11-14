@@ -1,0 +1,12 @@
+/* 趣味赛 on the 玩法 tab (app/fun-bets.tsx). */
+.fun-bets h3{display:flex;align-items:center;gap:6px;margin:0;font-size:15px}
+.fun-bet-list{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.fun-bet-list>li{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);font-size:14px}
+.fun-bet-list>li.fun-bet-open{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fun-bet-list>li.fun-bet-open>button{flex:none;min-height:36px;padding:4px 12px;font-size:13px}
+.fun-bet-status{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.fun-bet-status small{color:var(--muted-foreground)}
+.fun-bet .actions{display:flex;flex-wrap:wrap;gap:6px}
+.fun-bet .actions button{min-height:36px;padding:4px 12px;font-size:13px}
+.fun-bet.is-locked{border-color:var(--primary)}
+.fun-bet.is-expired,.fun-bet.is-declined,.fun-bet.is-withdrawn,.fun-bet.is-void{opacity:.7}
