@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {ScrollText,CheckCircle2,XCircle} from 'lucide-react';
 import {bountyGoal,bountyTitles,type BountyKind} from '../lib/domain/bounties';
-import {myBounty,pendingBountyOffers,type ViewBounty} from '../lib/client/bounties';
+import {myBounty,pendingBountyOffers,reissueCandidates,type ViewBounty} from '../lib/client/bounties';
 import './bounty.css';
 
 type Offer={eventId:string;playerId:string;kind:BountyKind;coins:number;points:number;penalty:number;gamePoints?:15};
@@ -51,6 +51,16 @@ function useBountyClock(now?:number){
 export function EventBounty({e,data,busy,respond,now:fixed}:{e:Parameters<typeof myBounty>[0]&{id:string};data:Parameters<typeof pendingBountyOffers>[0];busy?:boolean;respond:(offer:Offer,accept:boolean)=>void;now?:number}){
  const now=useBountyClock(fixed),offer=pendingBountyOffers(data,now).find(o=>o.eventId===e.id),accepted=myBounty(e,data.me.playerId);
  return <BountyCard offer={offer} accepted={accepted} busy={busy} onRespond={respond}/>;
+}
+/** For the owner and administrators: members who drew an offer and lost it unanswered, each with 补发 (bountyReissue,
+ * docs/BOUNTIES.md). Nothing shows when there is nobody to reissue. */
+export function BountyReissue({e,data,name,busy,reissue,now:fixed}:{e:Parameters<typeof reissueCandidates>[1];data:Parameters<typeof reissueCandidates>[0];name:(id:string)=>string;busy?:boolean;reissue:(playerId:string,title:string)=>void;now?:number}){
+ const now=useBountyClock(fixed),list=reissueCandidates(data,e,now);
+ if(!list.length)return null;
+ return <section className="card bounty-reissue" aria-label="补发悬赏令"><h3><ScrollText size={17} aria-hidden="true"/>悬赏令补发</h3>
+  <p className="hint">这些道友抽到了悬赏令，但在回应前第一局已开打或活动已结束，悬赏令随之失效。补发后由本人决定接下或婉拒，可在活动结束后 7 天内补发。</p>
+  <ul>{list.map(x=><li key={x.playerId}><span>{name(x.playerId)} · {bountyTitles[x.kind]}</span><button type="button" className="secondary" disabled={busy} onClick={()=>reissue(x.playerId,bountyTitles[x.kind])}>补发</button></li>)}</ul>
+ </section>;
 }
 /** Home: offers to answer, then accepted bounties of activities running or ended in the last day. */
 export function HomeBounties({data,busy,respond,onOpen,now:fixed}:{data:Parameters<typeof pendingBountyOffers>[0]&{events:{id:string;title:string;start:number;end:number}[]};busy?:boolean;respond:(offer:Offer,accept:boolean)=>void;onOpen:(eventId:string)=>void;now?:number}){

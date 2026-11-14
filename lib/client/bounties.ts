@@ -1,4 +1,4 @@
-import {bountyOffer,type BountyOutcome,type BountyRecord,type BountySettings} from '../domain/bounties';
+import {bountyOffer,bountyReissueCandidates,type BountyOutcome,type BountyRecord,type BountySettings} from '../domain/bounties';
 import type {Event,Match,Registration} from '../domain/types';
 
 /** The club view's bounty data (lib/club-view.ts): own records with their result, and the current settings. */
@@ -10,6 +10,11 @@ type BountyData={events:(Event&{bounties?:ViewBounty[];bountyUpsetEligible?:bool
 export function pendingBountyOffers(data:BountyData,now:number){
  const s={registrations:data.registrations,matches:data.matches,players:data.players,accounts:data.accounts??[],settings:data.settings} as unknown as Parameters<typeof bountyOffer>[0];
  return data.events.map(e=>bountyOffer(s,e,data.me.playerId,now,()=>e.bountyUpsetEligible===true)).filter(o=>!!o).sort((a,b)=>data.events.find(e=>e.id===a.eventId)!.start-data.events.find(e=>e.id===b.eventId)!.start);
+}
+/** For the owner and administrators: members of this activity whose offer can be reissued (docs/BOUNTIES.md). */
+export function reissueCandidates(data:BountyData,e:BountyData['events'][number],now:number){
+ const s={events:data.events,registrations:data.registrations,matches:data.matches,players:data.players,accounts:data.accounts??[],settings:data.settings} as unknown as Parameters<typeof bountyReissueCandidates>[0];
+ return bountyReissueCandidates(s,e,now);
 }
 /** This member's accepted bounty for an activity, if any. */
 export function myBounty(e:{bounties?:ViewBounty[]},playerId:string){return e.bounties?.find(b=>b.playerId===playerId&&b.status==='accepted')}
