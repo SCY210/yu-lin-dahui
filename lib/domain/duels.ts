@@ -20,7 +20,7 @@ export const duelGame=(d:Pick<Duel,'a'|'b'>,m:Pick<Match,'a'|'b'>)=>(same(d.a,m.
 const accepted=(d:Duel)=>players(d).every(id=>d.accepted.includes(id));
 /** The duel's game: the first one between its teams in the activity (drafts and published games included, so a plan that
  * already has it does not place it again). */
-function firstGame(d:Duel,e:Pick<Event,'id'>,matches:readonly Match[]){
+export function duelGameOf(d:Duel,e:Pick<Event,'id'>,matches:readonly Match[]){
  return matches.filter(m=>m.eventId===e.id&&m.status!=='cancelled'&&duelGame(d,m)).sort((x,y)=>(x.start??Infinity)-(y.start??Infinity))[0];
 }
 /** The side that won a scored game: more games won, or the higher score of a one-game match (as lib/domain/social.ts). */
@@ -31,14 +31,14 @@ export function duelState(d:Duel,e:Pick<Event,'id'|'start'|'end'>,matches:readon
  if(d.withdrawn)return 'withdrawn';
  if(d.declinedBy)return 'declined';
  if(!accepted(d))return now<e.start?'pending':'expired';
- const m=firstGame(d,e,matches);
+ const m=duelGameOf(d,e,matches);
  if(m?.status==='complete'&&(m.scoreA!==null||m.games?.length)){const side=winner(m);return (side==='a')===same(d.a,m.a)?'won-a':'won-b'}
  if(m&&(m.status==='forfeit'||m.noShow?.length))return 'void';
  return now>=e.end&&!m?.start?'void':'locked';
 }
 /** Accepted duels whose game is not on the schedule yet: the ones the schedule should still bring together. */
 export function pendingDuels(s:Pick<State,'matches'>,e:Event):Duel[]{
- return (e.duels??[]).filter(d=>!d.withdrawn&&!d.declinedBy&&accepted(d)&&!firstGame(d,e,s.matches));
+ return (e.duels??[]).filter(d=>!d.withdrawn&&!d.declinedBy&&accepted(d)&&!duelGameOf(d,e,s.matches));
 }
 /** Pending duels the schedule may arrange: not in an arena (the court keeps its holders), not with fixed partners (the
  * confirmed teams play), and agreeing with every 锁组 of their players. */
@@ -63,7 +63,7 @@ export function duelFour(order:readonly string[],four:readonly string[],duels:re
 export function duelPointAdjustments(s:Pick<State,'events'|'matches'>,now:number){
  return s.events.flatMap(e=>(e.duels??[]).flatMap(d=>{
   const state=duelState(d,e,s.matches,now);if(state!=='won-a'&&state!=='won-b')return [];
-  const m=firstGame(d,e,s.matches)!,period=month(m.start??e.start),[won,lost]=state==='won-a'?[d.a,d.b]:[d.b,d.a];
+  const m=duelGameOf(d,e,s.matches)!,period=month(m.start??e.start),[won,lost]=state==='won-a'?[d.a,d.b]:[d.b,d.a];
   return [...won.map(playerId=>({playerId,eventId:e.id,period,format:'doubles' as const,delta:d.stake})),...lost.map(playerId=>({playerId,eventId:e.id,period,format:'doubles' as const,delta:-d.stake}))];
  }));
 }

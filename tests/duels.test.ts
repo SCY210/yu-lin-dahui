@@ -7,6 +7,7 @@ import {fillLiveCourts} from '../lib/domain/live-play';
 import {quarterlyLeaderboard} from '../lib/domain/ranking';
 import {remindersForChange} from '../lib/reminder-contract';
 import {pointsBreakdown} from '../lib/client/ranking-breakdown';
+import {duelAlertMinutes,startedDuels} from '../lib/client/duels';
 import {emptyState,type Account,type Event,type Match,type Player,type State} from '../lib/domain/types';
 import {coinEpoch as at,coinEvent,coinFixture,coinMatch,coinSignup} from './helpers/automatic-coins-fixture';
 
@@ -129,4 +130,20 @@ test('the queue decides: a duel is formed only from players as due as the ones t
  assert.equal(duelFour(order,order.slice(0,4),[duel],()=>false),undefined,'not when the others are not as due');
  assert.equal(duelFour(order.filter(id=>id!=='G'),order.slice(0,4),[duel],()=>true),undefined,'not when one of the four is unavailable');
  assert.equal(duelFour(order,['C','D','E','F'],[duel],()=>true),undefined,'not when none of them is due');
+});
+
+test('a started duel game is announced for 15 minutes to everyone signed up, and the four are called by a reminder',async()=>{
+ const {s,e,d}=await accepted();
+ const prior=structuredClone(s);
+ const m=coinMatch(s,e,'duel-game',{a:['p0','p1'],b:['p2','p3'],status:'playing',start:e.start+5*minute,end:null,scoreA:null,scoreB:null,games:[]});
+ const view=(playerId:string)=>({events:s.events,matches:s.matches,registrations:s.registrations,bookings:s.bookings,me:{playerId}});
+ const now=m.start!+minute;
+ assert.deepEqual(startedDuels(view('p0'),now).map(x=>[x.duel.id,x.player,x.court]),[[d.id,true,'Court']]);
+ assert.deepEqual(startedDuels(view('p5'),now).map(x=>x.player),[false],'others signed up watch the announcement');
+ s.registrations.find(r=>r.playerId==='p6')!.status='waitlist';assert.deepEqual(startedDuels(view('p6'),now),[],'not someone who is not playing tonight');
+ assert.deepEqual(startedDuels(view('p0'),m.start!+duelAlertMinutes*minute),[],'no longer after 15 minutes');
+ const called=remindersForChange(s,prior,'owner','start',now).filter(n=>n.title==='天机战帖开战');
+ assert.deepEqual(called.flatMap(n=>n.accountIds).sort(),['member1','member2','member3','owner']);assert.equal(called[0].roundId,m.roundId);assert.match(called[0].body,/Court斗法开场/);
+ assert.deepEqual(remindersForChange(s,s,'owner','again',now).filter(n=>n.title==='天机战帖开战'),[],'once');
+ m.status='complete';m.scoreA=21;m.scoreB=10;m.games=[{a:21,b:10}];m.end=now;assert.deepEqual(startedDuels(view('p0'),now),[],'not once scored');
 });

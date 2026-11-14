@@ -2,7 +2,7 @@
 import {Swords} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
 import type {Event,Match} from '../lib/domain/types';
-import {duelEvent,duelMaxStake,duelState,type Duel,type DuelState} from '../lib/domain/duels';
+import {duelEvent,duelGameOf,duelMaxStake,duelState,type Duel,type DuelState} from '../lib/domain/duels';
 import {eventRankingEnabled} from '../lib/domain/event-ranking';
 import {eventFormat} from '../lib/domain/match-format';
 import {useActivityClock} from '../lib/client/use-activity-clock';
@@ -40,9 +40,11 @@ export default function Duels({e,ctx}:{e:Event;ctx:Ctx}){
  function row(d:Duel){
   const state=duelState(d,e,matches,now),four=[...d.a,...d.b],waiting=four.filter(id=>!d.accepted.includes(id));
   const [won,lost]=state==='won-a'?[d.a,d.b]:[d.b,d.a],can=state==='pending'&&four.includes(me);
+  // Once it holds, the game itself says where it is: on the schedule, or being played.
+  const game=state==='locked'?duelGameOf(d,e,matches):undefined,label=game?.status==='playing'?'斗法进行中':game?'已排进赛程':stateLabels[state];
   return <li key={d.id} className={'duel is-'+state}>
    <div>{team(d.a)} <b>对</b> {team(d.b)} · 每人 {d.stake} 积分</div>
-   <div className="duel-status"><span className="badge">{stateLabels[state]}</span>
+   <div className="duel-status"><span className="badge">{label}</span>
     {state==='pending'&&<small>已应战 {d.accepted.length}/4{waiting.length?' · 待回应：'+waiting.map(name).join('、'):''}</small>}
     {state==='declined'&&d.declinedBy&&<small>{name(d.declinedBy)} 拒绝</small>}
     {(state==='won-a'||state==='won-b')&&<small>{team(won)} 各 +{d.stake}，{team(lost)} 各 -{d.stake}</small>}
