@@ -48,7 +48,7 @@ export function EventLockedPairs({e,ctx,now}:{e:Event;ctx:LockContext;now:number
  const choices=[...new Set(data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId))].filter(id=>!locked.has(id));
  if(!pairs.length&&!editable)return null;
  function lock(){send('pairLock',{eventId:e.id,playerIds:[first,second]});setFirst('');setSecond('')}
- return <Disclosure className="card locked-pairs" defaultOpen={pairs.length>0||editable} label={'锁组'+(pairs.length?' · '+pairs.length+' 组':'')}>
+ return <Disclosure className="locked-pairs" label={'锁组'+(pairs.length?' · '+pairs.length+' 组':'')}>
   <p className="hint">锁组两人同一局上场时总在同一边搭档。排场先保证每人上场次数差不多：两人轮次相近时一起上；只轮到其中一人时，他先和别人打，轮次对上后再一起上。手动换人不受限制。{e.playMode==='arena'?'擂台玩法暂不使用锁组。':''}</p>
   {pairs.length>0?<ul className="locked-pair-list">{pairs.map(([a,b])=><li key={a+':'+b}><span><Lock size={16} aria-hidden="true"/>{name(a)} + {name(b)}</span>{editable&&<button type="button" className="ghost" disabled={busy} onClick={()=>send('pairUnlock',{eventId:e.id,playerId:a})}>取消锁定</button>}</li>)}</ul>:<p className="hint">还没有锁组。</p>}
   {editable&&(choices.length>=2?<div className="locked-pair-form">
