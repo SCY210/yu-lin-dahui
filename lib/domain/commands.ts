@@ -53,6 +53,7 @@ import { applyShuttles } from './shuttles';
 import { applyFeePayments, feeContact, unpaidBills } from './fee-payments';
 import { applyPointsPlan, defaultPointsMinutes } from './points-plan';
 import { applyPointsChoice } from './points-choice';
+import { applyLockedPairs } from './locked-pair-commands';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
 import { decorateMatch } from './play';
 import {canEnterUnstartedScore,scoreEntryStart} from './score-entry';
@@ -109,6 +110,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if(applyTreasure(s,a,action,input,now)) return null;
     if(applyBond(s,a,action,input)) return null;
     if(applyPairingOdds(s,a,action,input,now)) return null;
+    if(applyLockedPairs(s,a,action,input,now)) return null;
     if(applyBounty(s,a,action,input,now)) return null;
     if(applyParticipation(s,a,action,input,now)) return null;
     if(await applyPointsSession(s,a,action,input,now,apply)) return null;

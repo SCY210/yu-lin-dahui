@@ -6,6 +6,7 @@ import {parseDomainCommand} from './command-contract';
 import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
+import {lockSplits,lockedPartners,pickFour} from './locked-pairs';
 import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority} from './match-balance';
 import {doublesTypeMismatch,genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
@@ -99,6 +100,9 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
  const courts=s.bookings.filter(b=>b.eventId===e.id&&b.start<=at&&b.end>at)
   .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
  const handled=new Set<string>();
+ // 锁组 (lib/domain/locked-pairs.ts): two locked players who are both here play together, as one team; while one of
+ // them is on court or resting, the other waits for them.
+ const locks=eventFormat(e)==='doubles'?lockedPartners(e,present):new Map<string,string>();
  const women=new Set(s.players.filter(p=>(p.profile?.gender??p.guestGender)==='female').map(p=>p.id));
  const female=(id:string)=>women.has(id);
  const history=matchHistory(s,e.id,true,female),ratings=new Map(s.players.map(p=>[p.id,p.rating]));
@@ -154,7 +158,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
   const sameTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=1&&owed(b)>=owed(a)-.5;
   // The order is a preference, not an eligibility lock. When short, any available player can fill the court,
   // including the ones who have just finished.
-  const pool=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
+  const ready=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
+  const pool=locks.size?ready.filter(id=>!locks.has(id)||ready.includes(locks.get(id)!)):ready;
   // Swaps for strength, variety or broken blocks keep the queue: nobody left on the bench may have waited more than one
   // game longer than a waiting player chosen, and someone already passed over once since their last game is not passed
   // over again. Pairwise swaps within one game could otherwise chain, across games too, and skip one player again and
@@ -197,11 +202,13 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     }
     teams={a:chosen[0],b:chosen[1]};
    }
-  }else if(pool.length>=courtPlayers(e)){
-   let chosen=pair(s,e,pool.slice(0,courtPlayers(e)),history,rating,female);
+  }else if(pool.length>=courtPlayers(e)&&(!locks.size||pickFour(pool,locks))){
+   const first=locks.size?pickFour(pool,locks)!:pool.slice(0,courtPlayers(e));
+   let chosen=pair(s,e,first,history,rating,female,lockSplits(first,locks));
+   // A locked player is only swapped together with their partner, so single swaps leave them alone.
    for(let pass=0;pass<2;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
-    const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||!sameTurn(replaced,candidate))continue;
-    ids[i]=candidate;if(!fairCut(ids))continue;const next=pair(s,e,ids,history,rating,female);
+    const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||locks.has(replaced)||locks.has(candidate)||!sameTurn(replaced,candidate))continue;
+    ids[i]=candidate;if(!fairCut(ids))continue;const next=pair(s,e,ids,history,rating,female,lockSplits(ids,locks));
     if(compare(next.cost,chosen.cost)<0)chosen=next;
    }
    // Everyone leaves after each game, so a whole game could come back on court as one block and the same people
@@ -214,15 +221,15 @@ export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string
     // Prefer options that keep the queue fair, then those that do not put anyone ahead in games, then balance.
     let best:ReturnType<typeof pair>|undefined,bestAhead=Infinity,bestUnfair=true;
     for(let i=0;i<ids.length;i++)if(lastGame.get(ids[i])===block)for(const candidate of pool.slice(0,16)){
-     if(ids.includes(candidate)||lastGame.get(candidate)===block)continue;
+     if(ids.includes(candidate)||lastGame.get(candidate)===block||locks.has(ids[i])||locks.has(candidate))continue;
      const option=[...ids];option[i]=candidate;
-     const split=pair(s,e,option,history,rating,female),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
+     const split=pair(s,e,option,history,rating,female,lockSplits(option,locks)),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
      if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
     }
     if(!best)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
-   if(odds){
+   if(odds&&![...chosen.a,...chosen.b].some(id=>locks.has(id))){
     const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,female,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))));
     // The draw respects protection, balance, doubles category and rotation.
     if(compareLiveDoublesPriority(drawn.cost,chosen.cost)<=0)chosen=drawn;

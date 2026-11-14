@@ -5,12 +5,16 @@ import {matchHistory} from './match-history';
 import {venueParticipation,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
 import {eventFormat} from './match-format';
+import {lockedPartners} from './locked-pairs';
 
 export function fixedPartnerTeams(s:State,e:Event){
  const regs=s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed'&&r.arrival<e.end&&r.departure>e.start&&s.players.some(p=>p.id===r.playerId&&p.enabled));
  const rating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000;
  const pool=[...new Set(regs.map(r=>r.playerId))].sort((a,b)=>rating(b)-rating(a)||a.localeCompare(b));
  const mean=pool.reduce((sum,id)=>sum+rating(id),0)/(pool.length||1),teams:string[][]=[];
+ // 锁组 (lib/domain/locked-pairs.ts): locked players who both take part are one fixed team.
+ const partner=lockedPartners(e,pool);
+ for(const [a,b] of e.lockedPairs??[])if(partner.get(a)===b){teams.push([a,b]);pool.splice(pool.indexOf(a),1);pool.splice(pool.indexOf(b),1)}
  const windows=(id:string)=>venueParticipation(s,e,regs.find(r=>r.playerId===id)!);
  const overlap=(a:string,b:string)=>{let longest=0;for(const u of windows(a))for(const v of windows(b)){if(u.venue!==v.venue)continue;longest=Math.max(longest,Math.max(0,Math.min(u.end,v.end)-Math.max(u.start,v.start)))}return longest};
  const signature=(id:string)=>JSON.stringify(windows(id));

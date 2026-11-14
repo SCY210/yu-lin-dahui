@@ -14,7 +14,7 @@ const swappedRound=(changes:unknown)=>{const c=changes as {roundId?:unknown;inpu
  * overtime rounds keep their lineups. Planning every remaining round can take about a second on four courts, which
  * Workers Paid allows (docs/PERFORMANCE_BUDGET.md); it runs once per phase change, never on an unchanged poll. If one
  * round cannot be planned, nothing changes. Returns the IDs of the rounds planned again. */
-export function replanAfterExpiry(s:State,e:Event,now:number):string[]{
+export function replanAfterExpiry(s:State,e:Event,now:number,reason='跳过的预排不再补打，按实际对局重排之后尚未开打的轮次'):string[]{
  if(e.playMode==='arena'||e.livePlay?.enabled||e.tournament)return [];
  const swapped=new Set(s.audits.filter(a=>a.action==='swap').map(a=>swappedRound(a.changes)));
  const byRound=new Map<string,Match[]>();
@@ -49,6 +49,6 @@ export function replanAfterExpiry(s:State,e:Event,now:number):string[]{
   }
   for(const x of old)if(!used.has(x))x.status='cancelled';
  }
- s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-courts',action:'pointsReplan',reason:'跳过的预排不再补打，按实际对局重排之后尚未开打的轮次',changes:{eventId:e.id,roundIds:[...again]}});
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-courts',action:'pointsReplan',reason,changes:{eventId:e.id,roundIds:[...again]}});
  return [...again];
 }
