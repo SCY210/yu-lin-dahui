@@ -68,11 +68,12 @@ export function remindersForChange(next:State,previous:State,actor:string,key:st
  }
  // A competition puts matches straight on a court (often the system, after a result): tell the players where to go.
  for(const m of next.matches){if(m.status!=='playing'||previous.matches.some(x=>x.id===m.id))continue;const e=next.events.find(e=>e.id===m.eventId);if(!e?.tournament||e.deletedAt!==undefined||e.status==='cancelled')continue;const court=next.bookings.find(b=>b.id===m.courtId)?.name??'场地',names=(ids:string[])=>ids.map(id=>next.players.find(p=>p.id===id)?.name??'球友').join(' / ');add(e,'matches',m.id,'轮到你上场了 · '+court,`${names(m.a)} 对 ${names(m.b)}`,next.accounts.filter(a=>[...m.a,...m.b].includes(a.playerId)&&a.id!==actor).map(a=>a.id),'rounds',{roundId:m.roundId});}
- // A 趣味赛 proposal (lib/domain/fun-bets.ts): the other three players are asked to answer.
- for(const e of next.events)for(const bet of e.funBets??[]){
-  if(before.get(e.id)?.funBets?.some(x=>x.id===bet.id))continue;
-  const from=next.players.find(p=>p.id===bet.by)?.name??'道友',ids=[...bet.a,...bet.b].filter(id=>id!==bet.by);
-  add(e,'matches','fun:'+bet.id,'趣味赛邀约',`${from} 以 ${bet.stake} 积分为注，邀道友一局斗法，敢应战否？`,next.accounts.filter(a=>ids.includes(a.playerId)).map(a=>a.id),'social');
+ // 天机战帖 (lib/domain/duels.ts): the three named in a new challenge are asked; once all four accept, all four hear it holds.
+ for(const e of next.events)for(const d of e.duels??[]){
+  const old=before.get(e.id)?.duels?.find(x=>x.id===d.id),four=[...d.a,...d.b],name=(id:string)=>next.players.find(p=>p.id===id)?.name??'道友';
+  const to=(ids:string[])=>next.accounts.filter(a=>ids.includes(a.playerId)).map(a=>a.id);
+  if(!old)add(e,'matches','duel:'+d.id,'天机战帖',`${name(d.a[0])} / ${name(d.a[1])} 约战 ${name(d.b[0])} / ${name(d.b[1])}，每人以 ${d.stake} 积分为注，道友敢应战否？`,to(four.filter(id=>id!==d.by)),'social');
+  else if(!d.withdrawn&&!d.declinedBy&&four.every(id=>d.accepted.includes(id))&&!four.every(id=>old.accepted.includes(id)))add(e,'matches','duel-on:'+d.id,'天机战帖已成',`${name(d.a[0])} / ${name(d.a[1])} 对 ${name(d.b[0])} / ${name(d.b[1])}，四位已应战，开赛后排场会安排这一局。`,to(four),'social');
  }
  // A reissued bounty offer (bountyReissue): its member hears of it again, the same way as the first offer.
  for(const e of next.events)for(const r of e.bountyReissued??[]){
