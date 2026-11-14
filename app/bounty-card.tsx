@@ -58,7 +58,7 @@ export function BountyReissue({e,data,name,busy,reissue,now:fixed}:{e:Parameters
  const now=useBountyClock(fixed),list=reissueCandidates(data,e,now);
  if(!list.length)return null;
  return <section className="card bounty-reissue" aria-label="补发悬赏令"><h3><ScrollText size={17} aria-hidden="true"/>悬赏令补发</h3>
-  <p className="hint">这些道友抽到了悬赏令，但在回应前第一局已开打或活动已结束，悬赏令随之失效。补发后由本人决定接下或婉拒，可在活动结束后 7 天内补发。</p>
+  <p className="hint">这些道友抽到了悬赏令，但在回应前第一局已开打，悬赏令随之失效。补发后由本人决定接下或婉拒。只能在活动进行中补发。</p>
   <ul>{list.map(x=><li key={x.playerId}><span>{name(x.playerId)} · {bountyTitles[x.kind]}</span><button type="button" className="secondary" disabled={busy} onClick={()=>reissue(x.playerId,bountyTitles[x.kind])}>补发</button></li>)}</ul>
  </section>;
 }

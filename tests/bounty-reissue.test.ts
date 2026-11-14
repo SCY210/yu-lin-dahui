@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {bountyOffer,bountyOfferAt,bountyOutcome,bountyReissueCandidates,bountyReissueDays,drawnBounty} from '../lib/domain/bounties';
+import {bountyOffer,bountyOfferAt,bountyOutcome,bountyReissueCandidates,drawnBounty} from '../lib/domain/bounties';
 import {projectClubState} from '../lib/club-view';
 import {remindersForChange} from '../lib/reminder-contract';
 import type {State} from '../lib/domain/types';
@@ -45,13 +45,13 @@ test('an offer lost when the first game started can be reissued by the owner or 
  assert.equal(bountyOffer(s,e,'p1',e.end+day),null,'answered once');
 });
 
-test('nothing to reissue before the start, for a member who never drew one or still can answer, or a week after the end',async()=>{
+test('nothing to reissue before the start, for a member who never drew one or still can answer, or once the activity has ended',async()=>{
  const {s,e,owner}=setup();
  assert.deepEqual(bountyReissueCandidates(s,e,e.start-minute),[],'not before the activity starts');
  const unplayed=s.players.map(p=>p.id).filter(id=>!['p0','p1','p2','p3'].includes(id));
  for(const id of unplayed)assert.ok(!bountyReissueCandidates(s,e,e.start+20*minute).some(x=>x.playerId===id),id+' has not played yet, so a drawn offer is still open');
- assert.ok(bountyReissueCandidates(s,e,e.end+bountyReissueDays*day-minute).some(x=>x.playerId==='p1'));
- assert.deepEqual(bountyReissueCandidates(s,e,e.end+bountyReissueDays*day),[]);
- await assert.rejects(()=>apply(s,owner,'bountyReissue',{eventId:e.id,playerId:'p1'},e.end+bountyReissueDays*day),/没有可补发的悬赏令/);
+ assert.ok(bountyReissueCandidates(s,e,e.end-minute).some(x=>x.playerId==='p1'),'while the activity runs');
+ assert.deepEqual(bountyReissueCandidates(s,e,e.end),[],'not once it has ended');
+ await assert.rejects(()=>apply(s,owner,'bountyReissue',{eventId:e.id,playerId:'p1'},e.end),/没有可补发的悬赏令/);
  for(const id of ['p0','p2','p3'])if(!drawnBounty(e.id,id))await assert.rejects(()=>apply(s,owner,'bountyReissue',{eventId:e.id,playerId:id},e.start+20*minute),/没有可补发的悬赏令/);
 });
