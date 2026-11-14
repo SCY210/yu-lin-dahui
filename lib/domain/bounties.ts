@@ -60,15 +60,20 @@ export const bountyOfferAt=(e:Pick<Event,'start'>)=>e.start-bountyOfferMinutes*6
 export function bountyEvent(e:Event){return e.deletedAt===undefined&&eventRankingEnabled(e)&&!e.tournament&&!['draft','cancelled'].includes(e.status)}
 
 type OfferState=Pick<State,'registrations'|'matches'|'players'|'accounts'|'settings'>;
+/** Whether the owner or an administrator reissued this member's offer (bountyReissue). */
+export const bountyReissued=(e:Pick<Event,'bountyReissued'>,playerId:string)=>!!e.bountyReissued?.some(r=>r.playerId===playerId);
 /** The offer this member can still answer: from 30 minutes before the start until their first game of the activity
- * starts, so nobody accepts after seeing how they play. A confirmed, non-guest member; one answer per activity. */
+ * starts, so nobody accepts after seeing how they play. A confirmed, non-guest member; one answer per activity.
+ * A reissued offer (bountyReissue) stays open past the first game and the end until it is answered: the owner or an
+ * administrator chose to give it back, and it settles on the games as usual (docs/BOUNTIES.md). */
 export function bountyOffer(s:OfferState,e:Event,playerId:string,now:number,upsetEligible:()=>boolean=()=>false){
- if(!bountyEvent(e)||now<bountyOfferAt(e)||now>=e.end)return null;
+ const again=bountyReissued(e,playerId);
+ if(!bountyEvent(e)||now<bountyOfferAt(e)||(now>=e.end&&!again))return null;
  if(e.bounties?.some(b=>b.playerId===playerId))return null;
  if(!s.registrations.some(r=>r.eventId===e.id&&r.playerId===playerId&&r.status==='confirmed')||isGuest(s as State,playerId))return null;
- if(s.matches.some(m=>m.eventId===e.id&&m.start!==null&&m.start<=now&&[...m.a,...m.b].includes(playerId)))return null;
+ if(!again&&s.matches.some(m=>m.eventId===e.id&&m.start!==null&&m.start<=now&&[...m.a,...m.b].includes(playerId)))return null;
  const kind=drawnBounty(e.id,playerId);if(!kind)return null;
- if(kind==='upset'&&!upsetEligible())return null;
+ if(kind==='upset'&&!again&&!upsetEligible())return null;
  const {rewards,penalty}=bountySettings(s);
  return {eventId:e.id,playerId,kind,...rewards[kind],penalty,...(eventGamePoints(e)===15?{gamePoints:15 as const}:{})};
 }
@@ -159,9 +164,30 @@ export function bountyHonors(s:Pick<State,'events'|'matches'>,now:number,gamesOf
   .sort((a,b)=>b.at-a.at||a.eventId.localeCompare(b.eventId)||a.playerId.localeCompare(b.playerId));
 }
 
+/** Members who drew an offer and lost it unanswered because their first game started (before live play waited for
+ * 开始组队, the clock could start it for them). Only while the activity runs: an activity that has ended is left as it is. */
+export function bountyReissueCandidates(s:OfferState&Pick<State,'events'>,e:Event,now:number){
+ if(!bountyEvent(e)||now<e.start||now>=e.end)return [];
+ return s.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').map(r=>r.playerId).filter((id,i,all)=>all.indexOf(id)===i)
+  .filter(id=>!isGuest(s as State,id)&&!!drawnBounty(e.id,id)&&!e.bounties?.some(b=>b.playerId===id)&&!bountyReissued(e,id)&&!bountyOffer(s,e,id,now))
+  .filter(id=>s.matches.some(m=>m.eventId===e.id&&m.start!==null&&m.start<=now&&[...m.a,...m.b].includes(id)))
+  .map(id=>({playerId:id,kind:drawnBounty(e.id,id)!}));
+}
+export const bountyReissueInput=z.object({eventId:z.string().min(1).max(100),playerId:z.string().min(1).max(100),reason:z.string().trim().max(200).optional()}).strict();
+/** The owner or an administrator gives a member back an offer they lost; the member then accepts or declines it. */
+export function reissueBounty(s:State,a:Account,input:unknown,now:number){
+ const c=bountyReissueInput.parse(input);
+ if(a.role!=='admin')fail('403: 只有宗主或副宗主可以补发悬赏令');
+ const e=s.events.find(e=>e.id===c.eventId)??fail('活动不存在');
+ if(!bountyReissueCandidates(s,e,now).some(x=>x.playerId===c.playerId))fail('这位道友没有可补发的悬赏令：没有抽到、已经回应、已补发过，或活动不在进行中');
+ (e.bountyReissued??=[]).push({playerId:c.playerId,at:now,by:a.id,...(c.reason?{reason:c.reason}:{})});
+ s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action:'bountyReissue',reason:c.reason||'补发悬赏令',changes:{eventId:e.id,playerId:c.playerId,kind:drawnBounty(e.id,c.playerId)}});
+}
+
 /** Command entry: true when the action was a bounty command. */
 export function applyBounty(s:State,a:Account,action:string,input:unknown,now:number){
  if(action==='bountyRespond'){respondBounty(s,a,input,now);return true}
+ if(action==='bountyReissue'){reissueBounty(s,a,input,now);return true}
  if(action==='bountySettings'){updateBountySettings(s,a,input,now);return true}
  return false;
 }

@@ -3,6 +3,7 @@ import {z} from 'zod';
 import type {State,Event,Registration,Settlement,Bill} from './domain/types';
 import {feeContact,unpaidBills} from './domain/fee-payments';
 import {newlyOpenedSignups} from './push-contract';
+import {bountyTitles,drawnBounty} from './domain/bounties';
 export const reminderKinds=['signup','registration','changes','matches','fees','awards','upcoming','bounty'] as const;
 export type ReminderKind=typeof reminderKinds[number];
 export const reminderLabels:Record<ReminderKind,string>={signup:'新活动开放',registration:'我的报名与候补',changes:'活动变更与取消',matches:'比赛上场',fees:'费用确认',awards:'赛后评选',upcoming:'临近开场',bounty:'悬赏令'};
@@ -67,6 +68,12 @@ export function remindersForChange(next:State,previous:State,actor:string,key:st
  }
  // A competition puts matches straight on a court (often the system, after a result): tell the players where to go.
  for(const m of next.matches){if(m.status!=='playing'||previous.matches.some(x=>x.id===m.id))continue;const e=next.events.find(e=>e.id===m.eventId);if(!e?.tournament||e.deletedAt!==undefined||e.status==='cancelled')continue;const court=next.bookings.find(b=>b.id===m.courtId)?.name??'场地',names=(ids:string[])=>ids.map(id=>next.players.find(p=>p.id===id)?.name??'球友').join(' / ');add(e,'matches',m.id,'轮到你上场了 · '+court,`${names(m.a)} 对 ${names(m.b)}`,next.accounts.filter(a=>[...m.a,...m.b].includes(a.playerId)&&a.id!==actor).map(a=>a.id),'rounds',{roundId:m.roundId});}
+ // A reissued bounty offer (bountyReissue): its member hears of it again, the same way as the first offer.
+ for(const e of next.events)for(const r of e.bountyReissued??[]){
+  if(before.get(e.id)?.bountyReissued?.some(x=>x.playerId===r.playerId))continue;
+  const kind=drawnBounty(e.id,r.playerId),account=next.accounts.find(a=>a.playerId===r.playerId);
+  if(kind&&account)add(e,'bounty','reissue:'+r.playerId,'悬赏令',`天机阁为道友补发${bountyTitles[kind]}，可敢接下？`,[account.id],'overview',{playerId:r.playerId});
+ }
  for(const bill of next.settlements){if(!bill.confirmed||previous.settlements.some(b=>b.id===bill.id&&b.confirmed))continue;result.push(...feeReminders(next,bill,now));}
  return result;
 }

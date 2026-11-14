@@ -23,3 +23,9 @@
 .bounty-offer h2{color:var(--bounty-title,inherit)}
 .bounty-offer-actions{display:grid;gap:8px}
 .bounty-offer-actions button{min-height:48px}
+
+/* The owner's and administrators' list of offers to reissue (app/bounty-card.tsx). */
+.bounty-reissue h3{display:flex;align-items:center;gap:6px;margin:0;font-size:15px}
+.bounty-reissue ul{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.bounty-reissue li{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
+.bounty-reissue li>button{min-height:36px;padding:4px 12px;font-size:13px}
