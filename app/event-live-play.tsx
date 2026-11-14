@@ -55,7 +55,7 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
   const last=eventMatches.filter(m=>same(m)&&m.start!==null&&['complete','forfeit','cancelled'].includes(m.status)).sort((x,y)=>(y.end??y.start!)-(x.end??x.start!))[0];
   const previous=new Set(last?[...last.a,...last.b]:[]);
   const available=present.filter(id=>!playingIds.has(id)&&!liveResting(e,id,b.venue??e.venue));
-  return {can:scorer,enough:available.length>=courtPlayers(e),onlySame:eventFormat(e)==='singles'&&!!last&&available.length>=courtPlayers(e)&&available.every(id=>previous.has(id))};
+  return {can:scorer,first:!last,enough:available.length>=courtPlayers(e),onlySame:eventFormat(e)==='singles'&&!!last&&available.length>=courtPlayers(e)&&available.every(id=>previous.has(id))};
  };
  const swap=(id:string)=>{
   if(!currentSelected||currentSelected.playerId===id||(!onCourt(id)&&!onCourt(currentSelected.playerId))){setSelected(currentSelected?.playerId===id?null:{playerId:id,lineup});return}
@@ -75,15 +75,15 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
      {!config.paused&&<button type="button" className="ghost" disabled={busy} onClick={()=>send('liveStart',{eventId:e.id})}><RefreshCw size={16}/>安排空闲场地</button>}
     </>}
    </div>}
-   {!config?.enabled&&now<e.end&&<p className="hint">到活动开始时间自动排场。已有正在打的比赛会继续，人数不足时等待可上场球友。</p>}
-   {!hasStarted&&active&&<p className="hint">到活动开始时间自动排场。已开始的对局仍可正常录入结果。</p>}
+   {!config?.enabled&&now<e.end&&<p className="hint">到活动开始时间自动开启实时排场，但不会自动开局：每片场由球友点“开始组队”开打第一局。点上面的按钮可一次排满所有空场。已有正在打的比赛会继续。</p>}
+   {!hasStarted&&active&&<p className="hint">到活动开始时间开启实时排场，每片场点“开始组队”开打。已开始的对局仍可正常录入结果。</p>}
    {active&&now>=e.end&&<p className="hint">已过预约结束时间，仍可手动组队；沿用最后时段的接龙名单，预约和费用时长保持不变。</p>}
   </details>
   {selected&&!currentSelected&&<p className="connection-note" role="status">上场人员已更新，请重新选择要交换的两位球友。</p>}
   {playerId&&!current.some(m=>matchIncludesPlayer(m,playerId))&&!history.length&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
   <Disclosure className={'round-disclosure live-current'+(active?' is-playing':'')} defaultOpen label={active?'当前对局 · '+current.length+' 场待录分':'活动已结束'+(current.length?' · '+current.length+' 场未录分':'')}>
    <p className="hint">{courts.length} 片场地 · {current.length} 场进行中{waitingCourts.length?' · '+waitingCourts.length+' 片等待下一局':''}</p>
-   <div className="courts-grid live-current-courts">{[...courts.map(b=>({key:courtKey(b),booking:b as Court|undefined,match:current.find(m=>courtKey(matchCourt(m))===courtKey(b))})),...current.filter(m=>!courts.some(b=>courtKey(b)===courtKey(matchCourt(m)))).map(m=>({key:m.id,booking:undefined,match:m as Match|undefined}))].map(({key,booking:b,match:m})=>m?(matchIncludesPlayer(m,playerId)&&<MatchCard key={key} m={m} ctx={ctx} interactive={changeable} selected={currentSelected?.playerId??''} onSelect={swap}/>):b&&waitingCourts.includes(b)&&(()=>{const next=nextGame(b);return <section className="card live-court-waiting" key={key}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':'等待下一局'}</strong><p className="hint">{!config?.enabled?'到活动开始时间自动显示对局。':eventFormat(e)==='doubles'?'四人都下场，等得最久的先上；没有替补也可由原班人马继续打。':'场下球友优先；仅剩原班人马时可选择继续。'}</p>{next.can&&<div className="actions"><button type="button" className="primary" disabled={busy||!next.enough} onClick={()=>send('liveNext',{eventId:e.id,courtId:b.id,...(next.onlySame?{allowSame:true}:{})})}>{next.onlySame?'继续原班人马':'开始组队'}</button></div>}{next.can&&!next.enough&&<p className="hint">可上场的人数不足 {courtPlayers(e)} 人。</p>}</section>})())}</div>
+   <div className="courts-grid live-current-courts">{[...courts.map(b=>({key:courtKey(b),booking:b as Court|undefined,match:current.find(m=>courtKey(matchCourt(m))===courtKey(b))})),...current.filter(m=>!courts.some(b=>courtKey(b)===courtKey(matchCourt(m)))).map(m=>({key:m.id,booking:undefined,match:m as Match|undefined}))].map(({key,booking:b,match:m})=>m?(matchIncludesPlayer(m,playerId)&&<MatchCard key={key} m={m} ctx={ctx} interactive={changeable} selected={currentSelected?.playerId??''} onSelect={swap}/>):b&&waitingCourts.includes(b)&&(()=>{const next=nextGame(b);return <section className="card live-court-waiting" key={key}><h3>{b.name}</h3><strong>{config?.paused?'已暂停排场':next.first?'等待开局':'等待下一局'}</strong><p className="hint">{!config?.enabled?'活动开始后，在这片场点“开始组队”开打第一局。':next.first?'第一局也由人点“开始组队”开打，不会自动开始。':eventFormat(e)==='doubles'?'四人都下场，等得最久的先上；没有替补也可由原班人马继续打。':'场下球友优先；仅剩原班人马时可选择继续。'}</p>{next.can&&<div className="actions"><button type="button" className="primary" disabled={busy||!next.enough} onClick={()=>send('liveNext',{eventId:e.id,courtId:b.id,...(next.onlySame?{allowSame:true}:{})})}>{next.onlySame?'继续原班人马':'开始组队'}</button></div>}{next.can&&!next.enough&&<p className="hint">可上场的人数不足 {courtPlayers(e)} 人。</p>}</section>})())}</div>
    <details className="round-lineup-help"><summary>实时对局{changeable?' · 换人说明':' · 说明'}</summary><p className="hint">{changeable?'点击两位球友旁的交换图标换人：可交换同场搭档、与场下球友交换，或与另一片场地的球友交换。录入比分前随时可换，只调整当前对局，下一局仍按轮换安排。':fixed?'固定搭档不能单局交换道友。':'录入比分即结束本局，再点“开始组队”安排下一局。'}</p></details>
    {!playerId&&<div className="rest"><strong>场下球友 · {bench.length} 人</strong><div className="actions">{bench.map(id=><GroupPlayer key={id} id={id} ctx={ctx} interactive={changeable&&swappableBench.includes(id)} selected={currentSelected?.playerId??''} onSelect={swap}/>)}</div></div>}
   </Disclosure>

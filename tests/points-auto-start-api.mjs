@@ -12,8 +12,10 @@ try{
  const previous=await api.load(),s=api.createSimulation(Date.now()).state;s.events[0].start=Date.now()+3600000;await api.save(s,'clock-fixture',previous);
  await api.loadClubState();const warmed=await api.load();warmed.events[0].start=Date.now()-60000;await api.save(warmed,'clock-due',await api.load());
  const before=await api.load();const reads=await Promise.all([api.loadClubState(),api.loadClubState()]);const saved=await api.load();
- assert.equal(saved.revision,before.revision+1,'exactly one committed server transition');assert.equal(saved.rounds.length,2);assert.equal(saved.matches.length,2);assert.ok(saved.matches.every(m=>m.status==='playing'));assert.equal(saved.audits.filter(a=>a.action==='pointsAutoStart').length,1);assert.equal(new Set(saved.matches.map(m=>m.id)).size,2);
- assert.ok(reads.every(s=>s.revision===saved.revision&&s.matches.length===2),'racing read retries against committed revision');
+ assert.equal(saved.revision,before.revision+1,'exactly one committed server transition');
+ // Live play turns on at the start without a game; every court waits for 开始组队 (docs/LIVE_PLAY.md).
+ assert.equal(saved.events[0].livePlay.enabled,true);assert.equal(saved.matches.length,0);assert.equal(saved.audits.filter(a=>a.action==='pointsAutoStart').length,1);assert.equal(saved.audits.filter(a=>a.action==='liveAutoEnable').length,1);
+ assert.ok(reads.every(s=>s.revision===saved.revision&&s.matches.length===0&&s.events[0].livePlay?.enabled),'racing read retries against committed revision');
  const again=await api.loadClubState();assert.equal(again.revision,saved.revision);assert.deepEqual(again.matches,saved.matches);
  const now=Date.now(),phase=api.createSimulation(now).state,e=phase.events[0],cut=now-1000;
  e.start=now-2*3600000;e.end=now+2*3600000;e.schedulingMode='planned';e.pointsPlan={start:e.start,end:e.end,roundMinutes:15};e.pointsSession={startedAt:e.start,attendance:[],waiting:[]};
@@ -38,7 +40,7 @@ try{
  assert.equal(gapSaved.revision,gapBefore.revision+1);assert.equal(gapSaved.audits.filter(a=>a.action==='pointsGapFill').length,1);assert.equal(gapSaved.matches.length,6);assert.equal(gapSaved.rounds.length,3);
  assert.equal(gapSaved.matches.filter(m=>m.status==='playing').length,2);assert.ok(gapSaved.matches.filter(m=>m.status==='playing').flatMap(m=>[...m.a,...m.b]).every(id=>!ids.slice(10).includes(id)));
  assert.deepEqual(gapSaved.matches.filter(m=>m.roundId==='phase-round-1'),nextPhase);assert.ok(gapReads.every(s=>s.revision===gapSaved.revision));assert.equal((await api.loadClubState()).revision,gapSaved.revision);
- console.log('PASS due points start: concurrent SQLite-backed maintenance reads commit two courts once; retries see authoritative revision and repeated reads are idempotent.');
+ console.log('PASS due points start: concurrent SQLite-backed maintenance reads turn live play on once, with no game until 开始组队; retries see authoritative revision and repeated reads are idempotent.');
  console.log('PASS planned phase switch: racing reads atomically retire unstarted expired courts and start the confirmed next phase once without forfeits or duplicate games.');
  console.log('PASS planned gap fill: concurrent maintenance creates two current-player games exactly once and preserves confirmed future lineups.');
 }finally{database.close();delete globalThis.__pointsClock}

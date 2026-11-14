@@ -4,7 +4,6 @@ import {createSimulation} from '../lib/admin-simulation';
 import {apply} from '../lib/domain/commands';
 import {startDuePointsSessions} from '../lib/domain/points-auto-start';
 import {propose,tiredPlayers,maxConsecutiveRounds} from '../lib/domain/grouping';
-import {hasEmptyLiveCourt} from '../lib/domain/live-play';
 import {roundLineupSnapshot,swapRoundPlayers} from '../lib/domain/round-lineup';
 import {recentlyEnded} from '../lib/client/home-today';
 import type {Match,Round,State} from '../lib/domain/types';
@@ -87,7 +86,7 @@ test('live play: a scored court waits for 开始组队, which sends everyone off
  const bench=s.players.map(p=>p.id).filter(id=>!s.matches.some(m=>m.status==='playing'&&players(m).includes(id)));
  await apply(s,member,'score',{matchId:first.id,a:21,b:19},e.start+15*minute);
  assert.ok(!s.matches.some(m=>m.status==='playing'&&m.courtId===first.courtId),'no next game on its own');
- assert.equal(hasEmptyLiveCourt(s,e,e.start+16*minute),false,'the clock does not treat a waiting court as work');
+ {const count=s.matches.length;await startDuePointsSessions(s,e.start+16*minute,apply);assert.equal(s.matches.length,count,'the clock never starts a waiting court')}
  await apply(s,member,'liveNext',{eventId:e.id,courtId:first.courtId},e.start+16*minute);
  const next=s.matches.find(m=>m.status==='playing'&&m.courtId===first.courtId)!;assert.ok(players(first).every(id=>!players(next).includes(id)));assert.equal(players(next).filter(id=>bench.includes(id)).length,4);
  const outsider={id:'outsider',email:'',role:'member' as const,playerId:'nobody'};s.accounts.push(outsider);

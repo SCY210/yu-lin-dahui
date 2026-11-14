@@ -17,8 +17,18 @@ test('unchanged scheduled and occupied live courts do not clone the whole club d
  }
 });
 
-test('due clock starts live and first generated round once, with scheduled session time and actual match time',async()=>{
- for(const mode of ['live','round'] as const){
+test('due clock turns live play on without a game: every court waits for 开始组队, the first game included',async()=>{
+ const s=createSimulation(now).state,e=s.events[0];e.start=now-minute;e.schedulingMode='live';
+ assert.equal(await startDuePointsSessions(s,now,apply),true);assert.equal(s.events[0].pointsSession?.startedAt,e.start);
+ assert.equal(s.events[0].livePlay?.enabled,true);assert.equal(s.matches.length,0,'no game starts on the clock');
+ assert.equal(s.audits.filter(a=>a.action==='liveAutoEnable').length,1);
+ const before=structuredClone(s);assert.equal(await startDuePointsSessions(s,now+5*minute,apply),false);assert.deepEqual(s,before,'later clock runs start nothing either');
+ const member=s.accounts.find(a=>s.registrations.some(r=>r.eventId===e.id&&r.playerId===a.playerId&&r.status==='confirmed'))!;
+ await apply(s,member,'liveNext',{eventId:e.id,courtId:s.bookings[0].id},now+5*minute);
+ assert.equal(s.matches.filter(m=>m.status==='playing').length,1,'开始组队 starts the first game on that court only');assert.equal(s.matches[0].start,now+5*minute);
+});
+test('due clock starts the first generated round once, with scheduled session time and actual match time',async()=>{
+ for(const mode of ['round'] as const){
   const s=createSimulation(now).state,e=s.events[0];e.start=now-minute;e.schedulingMode=mode;
   assert.equal(await startDuePointsSessions(s,now,apply),true);assert.equal(s.events[0].pointsSession?.startedAt,e.start);
   assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.ok(s.matches.every(m=>m.start===now));
@@ -54,10 +64,10 @@ test('unavailable arrivals do not partially generate; paused live sessions are p
  assert.equal(await startDuePointsSessions(live,now+1,apply),true);assert.equal(live.events[0].livePlay?.paused,true);assert.equal(live.matches.length,0);
 });
 
-test('live clock fills a later booking without a manual button, and a due switch keeps current games',async()=>{
+test('live clock never starts a game, not even when a later booking opens, and a due switch keeps current games',async()=>{
  const s=createSimulation(now).state;s.bookings[1].start=now+minute;
- await startDuePointsSessions(s,now,apply);assert.equal(s.matches.length,1);const first=structuredClone(s.matches[0]);
- assert.equal(await startDuePointsSessions(s,now+minute,apply),true);assert.equal(s.matches.length,2);assert.deepEqual(s.matches[0],first);const before=structuredClone(s);assert.equal(await startDuePointsSessions(s,now+minute+1,apply),false);assert.deepEqual(s,before);
+ await startDuePointsSessions(s,now,apply);assert.equal(s.matches.length,0);
+ const before=structuredClone(s);assert.equal(await startDuePointsSessions(s,now+minute,apply),false);assert.deepEqual(s,before,'the later court waits for 开始组队 too');
  const r=createSimulation(now).state; r.events[0].schedulingMode='round';await startDuePointsSessions(r,now,apply);const original=structuredClone(r.matches);
  await apply(r,r.accounts[0],'schedulingMode',{eventId:r.events[0].id,mode:'live',expectedMode:'round',expectedPendingIds:[]},now);
  assert.equal(await startDuePointsSessions(r,now,apply),true);assert.ok(r.events[0].livePlay?.enabled);assert.deepEqual(r.matches,original);

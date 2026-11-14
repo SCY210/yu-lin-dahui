@@ -4,7 +4,7 @@ import {canEnableEventRanking,eventRankingEnabled} from './event-ranking';
 import {pointsSession} from './points-attendance';
 import {automaticPlanInput,pointsWindow} from './points-window';
 import {schedulingMode} from './scheduling';
-import {fillLiveCourts,hasEmptyLiveCourt,livePresentIds} from './live-play';
+import {enableLivePlay,livePresentIds} from './live-play';
 import {advanceScheduledCourts,scheduledCourtProgress} from './scheduled-courts';
 import type {State,Account,Round,Event} from './types';
 
@@ -30,8 +30,9 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
   // Cloning the complete history twice on every unchanged poll would cost more than the whole rest of a read.
   // First activation still records its audit; later polls clone only when a clock action can actually run.
   if(original.pointsSession?.startedAt){
+   // Live play started on the clock only turns on; every game, the first included, waits for 开始组队.
    if(mode==='live'){
-    if(original.livePlay?.paused||(original.livePlay?.enabled&&!hasEmptyLiveCourt(s,original,now)))continue;
+    if(original.livePlay?.paused||original.livePlay?.enabled)continue;
    }else{
     const rounds=s.rounds.filter(r=>r.eventId===original.id);
     const progress=scheduledCourtProgress(s,original,now);
@@ -52,15 +53,12 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
   const beforeAudits=attempt.audits.length;
   try{
    if(mode==='live'){
-    // Respect an explicit pause; live mode selection otherwise enables itself.
-    // Refill empty courts as booking/arrival times advance, even without a write.
+    // Respect an explicit pause. At the activity's start live play turns on without a game: the first game on each court,
+    // like every later one, waits for someone to press 开始组队 (docs/LIVE_PLAY.md), so nobody's first game, and with it
+    // the end of their bounty offer, comes from the clock.
     if(!event.livePlay?.enabled&&!event.livePlay?.paused){
-     await run(attempt,actor,'liveStart',{eventId:e.id},now);started=true;
-    }else if(event.livePlay?.enabled&&!event.livePlay.paused){
-     const count=attempt.matches.length;fillLiveCourts(attempt,event,now);
-     if(attempt.matches.length>count){
-      started=true;attempt.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-clock',action:'pointsAutoFill',reason:'到场或场地时段开始，自动补排空场',changes:{eventId:e.id,matchIds:attempt.matches.slice(count).map(m=>m.id)}});
-     }
+     enableLivePlay(attempt,event);started=true;
+     attempt.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-clock',action:'liveAutoEnable',reason:'积分赛时段到达，开启实时排场，等待开始组队',changes:{eventId:e.id}});
     }
    }else{
     // A planned activity that nobody planned before it started is planned and published on the clock.

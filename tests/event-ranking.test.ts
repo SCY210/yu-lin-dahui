@@ -63,7 +63,8 @@ test('tester authority is creator-scoped, revocable, and cannot grant club admin
 });
 
 test('automatic scheduling selects the tester creator rather than another tester',async()=>{
- const {s,e,host}=await fixture('host',{},['host','member']);e.schedulingMode='live';s.accounts=s.accounts.filter(a=>a.role==='member');s.accounts.reverse();
+ // Live play no longer starts games on the clock (docs/LIVE_PLAY.md); the one-round mode still does.
+ const {s,e,host}=await fixture('host',{},['host','member']);e.schedulingMode='round';s.accounts=s.accounts.filter(a=>a.role==='member');s.accounts.reverse();
  assert.equal(await startDuePointsSessions(s,now,apply),true);assert.ok(s.matches.some(m=>m.status==='playing'&&m.monthly));assert.equal(host.role,'member');
 });
 
