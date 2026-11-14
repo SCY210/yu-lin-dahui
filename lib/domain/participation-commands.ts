@@ -2,7 +2,6 @@ import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
-import {fillLiveCourts} from './live-play';
 import {fail,type State,type Account} from './types';
 
 const id=z.string().min(1).max(100);
@@ -19,7 +18,6 @@ export function applyParticipation(s:State,a:Account,action:string,input:unknown
  if(stopped.length)e.matchingStopped=stopped;else delete e.matchingStopped;
  // The current game and any recorded score remain real results. Future pending
  // lineups are validated at publish/start/early-score time instead of forfeited.
- fillLiveCourts(s,e,now);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:p.playing?'恢复参与排场':'本次不再上场',changes:p});
  return true;
 }

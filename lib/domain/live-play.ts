@@ -54,12 +54,12 @@ export function liveWinStreaks(s:Pick<State,'matches'|'rounds'>,e:Event){
  for(const m of games){const won=new Set(winners(m));for(const id of [...m.a,...m.b])runs.set(id,won.has(id)?(runs.get(id)??0)+1:0)}
  return runs;
 }
-/** Cheap no-work guard for read maintenance; use the same physical-court identity as fillLiveCourts. */
-export function hasEmptyLiveCourt(s:Pick<State,'bookings'|'matches'>,e:Event,now:number){
- const busy=new Set<string>(),used=new Set<string>();
- for(const m of s.matches)if(m.eventId===e.id){if(playing(m))busy.add(physical(s,e,m.courtId));else if(m.start!==null&&!['draft','published'].includes(m.status))used.add(physical(s,e,m.courtId))}
- // A court that has finished a game waits for 开始组队, so it is not work for the clock.
- return s.bookings.some(b=>b.eventId===e.id&&b.start<=now&&b.end>now&&!busy.has(physical(s,e,b.id))&&!used.has(physical(s,e,b.id)));
+/** Turns live play on without starting a game: the organiser's 开始实时排场 then fills the free courts, while the clock
+ * at the activity's start only turns it on, so each court waits for 开始组队 (docs/LIVE_PLAY.md). */
+export function enableLivePlay(s:State,e:Event){
+ cancelPendingScheduling(s,e.id);
+ e.schedulingMode='live';
+ const config=configuration(e);config.enabled=true;config.paused=false;e.playMode='balanced';
 }
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
@@ -81,17 +81,19 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  return {a:best.slice(0,size),b:best.slice(size),cost:bestCost};
 }
 
-/** Courts that have not had a game yet start on their own (activity start, a court slot opening, an arrival). A court
- * that has finished a game waits until someone presses 开始组队 (liveNext, `next`). Everyone leaves the court after
+/** Every live game starts on an explicit request, the first one on a court included: 开始组队 on one court (liveNext) or
+ * the organiser's 开始实时排场 / 安排空闲场地 for every free court (liveStart), or a no-show replacement. Nothing starts a game
+ * on its own: not the activity's start, a court slot opening, an arrival or a score (docs/LIVE_PLAY.md; a member's bounty
+ * offer stays open until their first game starts, docs/BOUNTIES.md). Everyone leaves the court after
  * each game and the next four come from a queue (docs/LIVE_PLAY.md): waiting players before the just-finished ones,
  * longest wait first, then fewer games; then the existing pairing algorithm splits them into teams. Attendance/court
  * times constrain availability internally; no duration is guessed. Returns the started matches. */
-export function fillLiveCourts(s:State,e:Event,now:number,next?:{courtId?:string;allowSame?:boolean}){
+export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;allowSame?:boolean}){
  const started:Match[]=[];
  const config=e.livePlay;
  // Only an explicit action can create overtime matches; clock maintenance must
  // never restart an old activity just because its participants remain signed up.
- if(e.tournament||isPractice(e)||!config?.enabled||config.paused||!liveActivityAvailable(e,now)||now<e.start||(now>=e.end&&!next))return started;
+ if(e.tournament||isPractice(e)||!config?.enabled||config.paused||!liveActivityAvailable(e,now)||now<e.start)return started;
  const at=liveAvailabilityTime(e,now);
  // A manual request (liveNext for one court, or the organiser starting live play for every free court) also fills
  // courts that have already had a game.
@@ -268,7 +270,6 @@ export function finishLiveMatch(s:State,e:Event,m:Match,now:number){
  for(const playerId of [...m.a,...m.b])if(config.preferences.some(p=>p.playerId===playerId&&p.avoidConsecutive)){
   config.rest=config.rest.filter(p=>p.playerId!==playerId||p.venue!==venue);config.rest.push({playerId,venue,after:m.end??now});
  }
- fillLiveCourts(s,e,Math.max(now,m.end??now));
 }
 
 export async function applyLivePlay(s:State,a:Account,action:string,input:unknown,now:number){
@@ -300,9 +301,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(action==='liveStart'&&now<e.start)fail('请在活动进行时开始实时排场');
  const config=configuration(e);
  if(command.action==='liveStart'){
-  cancelPendingScheduling(s,e.id);
-  e.schedulingMode='live';
-  config.enabled=true;config.paused=false;e.playMode='balanced';
+  enableLivePlay(s,e);
  }else if(command.action==='livePause')config.paused=command.payload.paused;
  else if(command.action==='livePreference'){
   const p=command.payload;
@@ -310,7 +309,7 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
   config.preferences.push({playerId:p.playerId,avoidConsecutive:p.avoidConsecutive});
   if(!p.avoidConsecutive)config.rest=config.rest.filter(rest=>rest.playerId!==p.playerId);
  }else config.rest=config.rest.filter(rest=>rest.playerId!==command.payload.playerId);
- fillLiveCourts(s,e,now,command.action==='liveStart'?{allowSame:true}:undefined);
+ if(command.action==='liveStart')fillLiveCourts(s,e,now,{allowSame:true});
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:action==='livePreference'?'调整连续上场意愿':action==='liveReady'?'轮休后准备上场':'实时公平排场',changes:p});
  return true;
 }

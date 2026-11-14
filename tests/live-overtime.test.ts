@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
 import {emptyState,type Event} from '../lib/domain/types';
-import {fillLiveCourts,livePresentIds} from '../lib/domain/live-play';
+import {livePresentIds} from '../lib/domain/live-play';
 import {liveLineupSnapshot} from '../lib/domain/live-lineup';
 import {canSwapLivePlayers} from '../lib/domain/permissions';
 import {pendingSchedulingIds} from '../lib/domain/scheduling';
@@ -32,7 +32,6 @@ for(const status of ['open','ended'] as const)test('manual live play starts afte
  await apply(s,member,'score',{matchId:first.id,a:21,b:19,reason:'Fixture overtime score'},end+2*minute);
  assert.equal(first.end,end+2*minute,'overtime scores keep their real completion time');
  assert.equal(s.matches.filter(m=>m.status==='playing').length,0,'the ended activity never refills on a background read');
- assert.equal(fillLiveCourts(s,e,end+3*minute).length,0);
  await apply(s,member,'liveNext',{eventId:e.id,courtId:'court'},end+3*minute);
  assert.equal(s.matches.filter(m=>m.status==='playing').length,1);assert.equal(s.matches.at(-1)!.start,end+3*minute);
  assert.deepEqual({event:[e.start,e.end],bookings:s.bookings,registrations:s.registrations},times);

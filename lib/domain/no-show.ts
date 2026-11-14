@@ -60,7 +60,6 @@ export async function applyNoShow(s:State,a:Account,action:string,input:unknown,
  if(!e.noShowHold?.includes(player.id))fail('该球友没有被标记为没到场');
  e.noShowHold=e.noShowHold.filter(id=>id!==player.id);if(!e.noShowHold.length)delete e.noShowHold;
  const late=e.pointsSession?.attendance.find(row=>row.playerId===player.id);if(late)late.available=true;
- fillLiveCourts(s,e,now);
  s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'没到场的选手已到场，恢复排场',changes:{eventId:e.id,playerId:player.id}});
  return true;
 }
