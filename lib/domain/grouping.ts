@@ -1,4 +1,5 @@
 import {keepsLocks,lockCounts,lockedPartners,pickFour} from './locked-pairs';
+import {duelFour,schedulableDuels} from './duels';
 import {matchingStopped} from './matching-participation';
 import {awaitingArrival} from './points-attendance';
 import {arenaStatus} from './social';
@@ -48,7 +49,11 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  // When only one of them plays this round, the other does not play on another court in the same round.
  const partner=e.playMode==='arena'?new Map<string,string>():lockedPartners(e,eligible),released=new Set<string>();
  const swappable=(out:string,incoming:string)=>sameTurn(debts.get(incoming)!,debts.get(out)!,tired.has(incoming),tired.has(out));
- for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&!released.has(id)&&canUse(court.id,id));const chosen=pickFour(pool,partner,swappable);if(!chosen)continue;for(const id of chosen){const other=partner.get(id);if(other!==undefined&&!chosen.includes(other))released.add(other)}chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
+ // 天机战帖 (lib/domain/duels.ts): when one of an accepted duel's players is among a court's four and the others are as due,
+ // the four play it, its two teams locked like 锁组 so the split below keeps them apart.
+ const duels=schedulableDuels(s,e,partner),placedDuels:string[][]=[];
+ for(const court of courts){const pool=eligible.filter(id=>!picked.has(id)&&!released.has(id)&&canUse(court.id,id));let chosen=pickFour(pool,partner,swappable);if(!chosen)continue;
+  const duel=duelFour(pool,chosen,duels,swappable);if(duel){chosen=duel;placedDuels.push(duel);partner.set(duel[0],duel[1]);partner.set(duel[1],duel[0]);partner.set(duel[2],duel[3]);partner.set(duel[3],duel[2])}for(const id of chosen){const other=partner.get(id);if(other!==undefined&&!chosen.includes(other))released.add(other)}chosen.forEach(id=>picked.add(id));selected.push(...chosen);usedCourts.push(court)}
  courts=usedCourts;if(!courts.length)fail('本时段同球馆正式球友不足4人，无法安排双打');let fixed=0;let arenaLosers:string[]=[];if(e.playMode==='arena'&&arenaCourt){const arena=arenaStatus(s,e.id);const holders=arena.holders.filter(id=>eligible.includes(id)&&canUse(arenaCourt.id,id));if(holders.length===2){const latest=s.matches.find(m=>m.id===arena.matchId)!;const losers=[...latest.a,...latest.b].filter(id=>!holders.includes(id));arenaLosers=losers;const challengers=eligible.filter(id=>!holders.includes(id)&&!losers.includes(id)&&canUse(arenaCourt.id,id)).slice(0,2);if(challengers.length<2)fail('擂台需要两名新的接擂球友；请等待更多正式球友参加或切回公平轮转');const pinned=[...holders,...challengers];const used=new Set(pinned);selected=[...pinned];for(const court of courts.slice(1)){const pool=eligible.filter(id=>!used.has(id)&&canUse(court.id,id)).slice(0,4);pool.forEach(id=>used.add(id));selected.push(...pool)}fixed=2}}
  // Each locked pair keeps how many of its players were chosen, so the search below neither splits nor completes it.
  const required=lockCounts(selected,partner);
@@ -68,6 +73,8 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
   }
   const cached=costCache.get(key);if(cached)return cached;
   if(partner.size&&!keepsLocks(list,partner,required)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
+  // A placed 天机战帖 keeps its four on one court, so its two teams face each other.
+  if(placedDuels.some(d=>new Set(d.map(id=>Math.floor(list.indexOf(id)/4))).size!==1)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
   let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0,courtWaits=0,blocks=0,recent=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);

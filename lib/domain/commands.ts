@@ -7,6 +7,7 @@ import {applyTreasure,isTreasureAction} from './treasure-shop';
 import {applyBond,isBondAction} from './bonds';
 import {applyPairingOdds} from './pairing-odds';
 import {applyBounty} from './bounties';
+import {applyDuels,duelActions} from './duels';
 import {recordCancellation} from './cancellations';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {applyPointsSession} from './points-session-commands';
@@ -69,7 +70,7 @@ const rulesSchema = z.object({ win: z.number().int().min(0).max(100), loss: z.nu
 export async function digest(v: string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)))).map(x => x.toString(16).padStart(2, '0')).join(''); }
 /** Testers manage recorded friends with administrators (docs/TESTER_MEMBER_MANAGEMENT.md). */
 const guestFriendActions = ['guestFriendMerge', 'guestFriendEdit', 'guestFriendHide'];
-export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && !(guestFriendActions.includes(action) && canManageMembers(a)) && a.role !== 'admin')
+export function authorized(a: Account, action: string) { if (!['bonusSeen', 'guestLevel', 'guestGender', 'noShow', 'noShowArrived', 'register', 'cancel', 'courtRegister', 'courtCancel', 'courtMoveQueue', 'friend', 'friendSignup', 'event', 'shuttleVote', 'pointsModeVote', 'feePaid', 'feeTransferPaid', 'feePayeeRemove', 'bountyRespond', 'bountySettings', ...duelActions, ...memberSocialActions].includes(action) && !isTreasureAction(action) && !isBondAction(action) && !isEventAction(action) && !(guestFriendActions.includes(action) && canManageMembers(a)) && a.role !== 'admin')
     fail('403: 仅副宗主可以执行此操作'); }
 const schemas = {
     grantPoints: pointGrantInput,
@@ -112,6 +113,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
     if(applyPairingOdds(s,a,action,input,now)) return null;
     if(applyLockedPairs(s,a,action,input,now)) return null;
     if(applyBounty(s,a,action,input,now)) return null;
+    if(applyDuels(s,a,action,input,now)) return null;
     if(applyParticipation(s,a,action,input,now)) return null;
     if(await applyPointsSession(s,a,action,input,now,apply)) return null;
     if (await applyTournament(s, a, action, input, now)) return null;

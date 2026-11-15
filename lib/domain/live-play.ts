@@ -7,6 +7,7 @@ import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {lockSplits,lockedPartners,pickFour} from './locked-pairs';
+import {duelFour,schedulableDuels} from './duels';
 import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority} from './match-balance';
 import {doublesTypeMismatch,genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
@@ -172,7 +173,8 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
    const lowest=lowestWait(ids);if(lowest===Infinity)return true;
    return pool.every(id=>ids.includes(id)||justFinished.has(id)||waited(id)<=lowest+(passed.has(id)?0:1));
   };
-  let teams:{a:string[];b:string[]}|undefined;
+  let teams:{a:string[];b:string[]}|undefined,duelTeams:{a:string[];b:string[]}|undefined;
+  const duelPick=()=>{const first=locks.size?pickFour(pool,locks,sameTurn)!:pool.slice(0,4),four=duelFour(pool,first,schedulableDuels(s,e,locks),sameTurn);return four?{a:four.slice(0,2),b:four.slice(2)}:undefined};
   if(eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'){
    const fixed=e.pointsChoice.teams??fixedPartnerTeams(s,e);e.pointsChoice.teams=fixed;
    const candidates=fixed.filter(team=>team.length===2&&team.every(id=>pool.includes(id)))
@@ -205,6 +207,9 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
     }
     teams={a:chosen[0],b:chosen[1]};
    }
+  }else if(doubles&&pool.length>=4&&(duelTeams=duelPick())){
+   // 天机战帖 (lib/domain/duels.ts): an accepted duel's four, brought together within the turn margin of 锁组, play it.
+   teams=duelTeams;
   }else if(pool.length>=courtPlayers(e)){
    const first=locks.size?pickFour(pool,locks,sameTurn)!:pool.slice(0,courtPlayers(e));
    let chosen=pair(s,e,first,history,rating,female,lockSplits(first,locks));
