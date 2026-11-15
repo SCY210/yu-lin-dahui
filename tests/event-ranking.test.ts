@@ -63,9 +63,11 @@ test('tester authority is creator-scoped, revocable, and cannot grant club admin
 });
 
 test('automatic scheduling selects the tester creator rather than another tester',async()=>{
- // Live play no longer starts games on the clock (docs/LIVE_PLAY.md); the one-round mode still does.
+ // Live play no longer starts games on the clock (docs/LIVE_PLAY.md); the one-round mode generates and publishes.
  const {s,e,host}=await fixture('host',{},['host','member']);e.schedulingMode='round';s.accounts=s.accounts.filter(a=>a.role==='member');s.accounts.reverse();
- assert.equal(await startDuePointsSessions(s,now,apply),true);assert.ok(s.matches.some(m=>m.status==='playing'&&m.monthly));assert.equal(host.role,'member');
+ // The clock generates and publishes the round as the creator; the first game waits for 开始比赛 (AGENTS.md C2).
+ assert.equal(await startDuePointsSessions(s,now,apply),true);assert.ok(s.rounds.some(r=>r.eventId===e.id&&r.status==='published'));assert.ok(!s.matches.some(m=>m.status==='playing'));
+ await apply(s,host,'pointsPlay',{eventId:e.id},now);assert.ok(s.matches.some(m=>m.status==='playing'&&m.monthly));assert.equal(host.role,'member');
 });
 
 for(const mode of ['live','round','planned'] as const)test('ordinary '+mode+' scheduling and scoring never change points or cultivation',async()=>{

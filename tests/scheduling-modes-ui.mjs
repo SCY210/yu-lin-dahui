@@ -52,14 +52,29 @@ try{
  data.bookings.forEach(b=>{b.start=e.start;b.end=e.end});data.registrations.forEach(r=>{r.arrival=e.start;r.departure=e.end});
  await mount();const overtimeSelector=ui.root.findByProps({'aria-label':'排场方式'});assert.equal(overtimeSelector.props.disabled,false);assert.equal(overtimeSelector.findAllByType('option').find(o=>o.props.value==='live').props.disabled,false);assert.equal(overtimeSelector.findAllByType('option').find(o=>o.props.value==='planned').props.disabled,true);
  e.schedulingMode='live';delete e.livePlay;data.matches=[];data.rounds=[];await mount();const overtimeStart=buttons().find(b=>text(b)==='开始实时排场');assert.ok(overtimeStart&&!overtimeStart.props.disabled);await act(()=>overtimeStart.props.onClick());assert.deepEqual(sent.at(-1),['liveStart',{eventId:e.id}]);
- // The recommendation above the selector is always the planned schedule, only for those who can switch.
- Object.assign(e,{status:'open',start:now-600000,end:now+3600000,schedulingMode:'planned'});delete e.livePlay;data.rounds=[];data.matches=[];data.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200},{id:'court-2',eventId:e.id,name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:1200}];
+ // The recommendation above the selector follows the courts (AGENTS.md C1), only for those who can switch: planned on
+ // one court, live on two or more.
+ Object.assign(e,{status:'open',start:now-600000,end:now+3600000,schedulingMode:'planned'});delete e.livePlay;data.rounds=[];data.matches=[];data.bookings=[{id:'court',eventId:e.id,name:'Court',start:e.start,end:e.end,pricing:'total',cents:1200}];
  const advice=()=>ui.root.findAllByProps({'aria-label':'推荐排场方式'}).find(n=>n.type==='aside');
  await mount();assert.match(text(advice()),/推荐：预排赛程 · 正在使用/);assert.ok(text(advice()).length<40,'the recommendation stays one short line');assert.ok(buttons().some(b=>text(b)==='何时用实时？'),'the why and the live cases open in a dialog');assert.ok(!buttons().some(b=>/^改用/.test(text(b))),'no switch button for the current mode');
  assert.equal(text(ui.root.findByProps({'aria-label':'排场方式'}).findAllByType('option').find(o=>o.props.value==='planned')),'预排赛程（推荐）');
  e.schedulingMode='live';await mount();assert.match(text(advice()),/推荐：预排赛程/);assert.doesNotMatch(text(advice()),/正在使用/);
  await click('改用预排赛程');assert.equal(opened.at(-1)[0],'切换排场方式');assert.equal(opened.at(-1)[2].mode,'planned');
+ data.bookings.push({id:'court-2',eventId:e.id,name:'Court 2',start:e.start,end:e.end,pricing:'total',cents:1200});
+ await mount();assert.match(text(advice()),/推荐：实时排场 · 正在使用/);assert.ok(buttons().some(b=>text(b)==='何时用预排？'),'two courts: the planned cases open in the dialog');
+ assert.equal(text(ui.root.findByProps({'aria-label':'排场方式'}).findAllByType('option').find(o=>o.props.value==='live')),'实时排场（推荐）');
+ e.schedulingMode='planned';await mount();assert.match(text(advice()),/推荐：实时排场/);await click('改用实时排场');assert.equal(opened.at(-1)[2].mode,'live');
  ctx.readOnly=true;await mount();assert.equal(advice(),undefined,'members see no recommendation');delete ctx.readOnly;
+ // 开始比赛 (AGENTS.md C2): published games wait for a press by anyone signed up, the organiser or an administrator.
+ data.bookings=data.bookings.slice(0,1);e.schedulingMode='planned';delete e.pointsSession;
+ data.rounds=[{id:'waiting',eventId:e.id,start:e.start,duration:13,status:'published',eligible:data.players.map(p=>p.id),rest:[],seed:1,pointsSlot:1}];
+ data.matches=[{id:'waiting-match',eventId:e.id,roundId:'waiting',courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'published',start:null,end:null,scoreA:null,scoreB:null,games:[],locked:false}];
+ const playCard=()=>ui.root.findAllByProps({'aria-label':'开始比赛'}).find(n=>n.type==='section');
+ await mount();assert.match(text(playCard()),/赛程已排定，静候开战/);await click('开始比赛');assert.deepEqual(sent.at(-1),['pointsPlay',{eventId:e.id}]);
+ data.me={id:'member4',playerId:'p4',role:'member'};ctx.admin=false;await mount();assert.ok(playCard(),'a signed-up member can start the games');
+ data.me={id:'outsider',playerId:'nobody',role:'member'};await mount();assert.equal(playCard(),undefined,'someone not signed up sees no button');
+ data.me={id:'owner',playerId:'p0',role:'admin'};ctx.admin=true;
+ data.matches[0].status='playing';data.matches[0].start=now-60000;data.rounds[0].status='playing';await mount();assert.equal(playCard(),undefined,'gone once a game has started');
  e.matchFormat='practice';await mount();assert.equal(ui.toJSON(),null);await act(()=>ui.unmount());ui=null;assert.equal(listeners.size,0);
- console.log('PASS scheduler UI: two-mode confirmation with retired one-round mode, legacy schedule visibility, batch/single publish, draft swap/court controls without locks, manual generation gating, live start, member permissions, historic score correction, the highlighted mode recommendation and practice exclusion');
+ console.log('PASS scheduler UI: two-mode confirmation with retired one-round mode, legacy schedule visibility, batch/single publish, draft swap/court controls without locks, manual generation gating, live start, member permissions, historic score correction, the mode recommendation by courts, the 开始比赛 button and practice exclusion');
 }finally{if(ui)await act(()=>ui.unmount());Object.assign(globalThis,{window:original.window,document:original.document,IS_REACT_ACT_ENVIRONMENT:original.act})}

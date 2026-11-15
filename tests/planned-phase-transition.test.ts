@@ -11,7 +11,8 @@ import type {Round} from '../lib/domain/types';
 const start=Date.parse('2030-10-10T09:00:00Z'),minute=60000,boundary=start+120*minute+1234;
 function fixture(){
  const s=createSimulation(start).state,e=s.events[0];e.schedulingMode='planned';e.end=start+240*minute;
- e.pointsSession={startedAt:start,attendance:[],waiting:[]};e.pointsPlan={start,end:e.end,roundMinutes:15};
+ // Play is under way: someone pressed 开始比赛 at the start (AGENTS.md C2).
+ e.pointsSession={startedAt:start,playStartedAt:start,attendance:[],waiting:[]};e.pointsPlan={start,end:e.end,roundMinutes:15};
  s.bookings.forEach(b=>b.end=e.end);s.registrations.forEach((r,i)=>{r.departure=i===8||i===9?boundary:e.end;if(i>=10)r.arrival=boundary});
  const ids=s.players.map(p=>p.id);
  for(let n=0;n<4;n++){

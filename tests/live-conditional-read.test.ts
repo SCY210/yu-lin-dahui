@@ -83,6 +83,7 @@ test('a cached planned view expires exactly when the two-hour attendance phase s
  s.registrations.forEach((r,i)=>{r.departure=i<4?cut:e.end;if(i>=8)r.arrival=cut});
  await apply(s,a,'planPoints',{eventId:e.id,at:e.start,pointsMinutes:240,roundMinutes:15,seed:1,pairing:'rotate'},e.start-1);
  await apply(s,a,'publishPoints',{eventId:e.id},e.start-1);
+ await apply(s,a,'pointsPlay',{eventId:e.id},e.start);
  await startDuePointsSessions(s,cut-1,apply);
  assert.equal(clubViewValidUntil(s,a,cut-1),cut);
  assert.equal(await startDuePointsSessions(structuredClone(s),cut-1,apply),false);

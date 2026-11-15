@@ -15,6 +15,8 @@ async function plannedRun(count:number,courts:number,format:'doubles'|'singles'=
  await apply(s,s.accounts[0],'publishPoints',{eventId:e.id},e.start-minute);
  for(let t=e.start;t<e.start+120*minute;t+=minute){
   await startDuePointsSessions(s,t,apply);
+  // The clock never starts the first game of a planned schedule; someone presses 开始比赛 (AGENTS.md C2).
+  if(t===e.start)await apply(s,s.accounts[0],'pointsPlay',{eventId:e.id},t);
   for(const m of s.matches.filter(m=>m.status==='playing'&&t-(m.start??t)>=12*minute))await apply(s,s.accounts[0],'score',{matchId:m.id,a:21,b:17},t);
  }
  return {s,games:s.matches.filter(m=>m.status==='complete'),players:s.registrations.map(r=>r.playerId)};

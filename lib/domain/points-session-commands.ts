@@ -1,21 +1,23 @@
 import {z} from 'zod';
-import {eventRankingEnabled} from './event-ranking';
+import {canEnableEventRanking,eventRankingEnabled} from './event-ranking';
 import {parseDomainCommand} from './command-contract';
 import {authorizeEventAction,canManageEvent} from './permissions';
 import {eventStatusAt} from './event-lifecycle';
 import {eventFormat} from './match-format';
 import {automaticPlanInput} from './points-window';
-import {schedulingMode,pendingSchedulingIds} from './scheduling';
+import {schedulingMode,pendingSchedulingIds,plannedPlayStarted} from './scheduling';
 import {pointsSession} from './points-attendance';
 import {livePresentIds,liveResting,liveAppearances} from './live-play';
 import {bookingAllowsPlayer} from './booking-signups';
 import {propose,validateRound} from './grouping';
 import {proposeFixed} from './fixed-partners';
 import {decorateMatch} from './play';
+import {advanceScheduledCourts} from './scheduled-courts';
 import {fail,month,type State,type Account,type Match,type Event} from './types';
 const id=z.string().min(1).max(100),mode=z.enum(['planned','round','live']),replacement=z.enum(['player','group']);
 const schemas={
  pointsStart:z.object({eventId:id,expectedMode:mode,expectedPendingIds:z.array(id).max(1000)}),
+ pointsPlay:z.object({eventId:id}),
  pointsLate:z.object({matchId:id,playerId:id,replacement,expectedA:z.array(id).min(1).max(2),expectedB:z.array(id).min(1).max(2)}),
  pointsReplace:z.object({eventId:id,matchId:id,replacement}),
  pointsPresence:z.object({eventId:id,playerId:id,status:z.enum(['on-time','arrived','clear-late'])}),
@@ -80,7 +82,37 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
     }
    }
    if(!work.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('目前没有完整可上场队伍，积分赛尚未开始');
-   session.startedAt=now;break;
+   session.startedAt=now;session.playStartedAt??=now;break;
+  }
+  case 'pointsPlay':{
+   // 开始比赛 on a planned schedule (AGENTS.md C2): anyone signed up, the organiser or an administrator. The clock
+   // plans and publishes at the start, and the first games wait for this. Pressing it again changes nothing.
+   const mode=schedulingMode(work,e);
+   if(mode==='live')fail('本活动使用实时排场，请在场地上点“开始组队”');
+   if(plannedPlayStarted(work,e))return true;
+   const manager=canManageEvent(a,e)||canEnableEventRanking(work,a,e);
+   const pending=()=>work.rounds.filter(r=>r.eventId===e.id&&!r.live&&['draft','published'].includes(r.status)).sort((x,y)=>x.start-y.start||(x.pointsSlot??0)-(y.pointsSlot??0));
+   if(!pending().length){
+    // Nothing planned yet (too few players when the activity began): an organiser's press plans the rest first.
+    if(!manager)fail('赛程还没排出：人数够了会自动排好，也可请宗主或副宗主排赛程');
+    if(mode==='planned'){const plan=automaticPlanInput(e,eventFormat(e)==='singles',now)??fail('剩余活动时间不足5分钟');await run(work,a,'planPoints',plan,now);await run(work,a,'publishPoints',{eventId:e.id},now)}
+    else{const duration=Math.min(15,Math.floor((e.end-now)/60000));if(duration<5)fail('剩余活动时间不足5分钟');await run(work,a,'generate',{eventId:e.id,at:now,duration,seed:1},now);const r=work.rounds.find(r=>r.eventId===e.id&&r.status==='draft');if(r)await run(work,a,'publish',{roundId:r.id},now)}
+   }
+   const first=pending()[0]??fail('目前没有完整可上场队伍，比赛尚未开始');
+   // Drafts are never published by this button (AGENTS.md A7).
+   if(first.status==='draft')fail('赛程还是草稿，请宗主或副宗主先确认发布');
+   // Planning runs replace the working copy's records, so look the activity up again.
+   const event=work.events.find(x=>x.id===e.id)!;
+   // An automatic plan starts at the next whole minute; pressing the button within that minute starts it now. A
+   // schedule an organiser timed later keeps its time. Courts, signup times and the venue are still checked.
+   if(first.start>now){
+    if(first.start-now>60000)fail('尚未到预排赛程的开始时间');
+    first.start=now;if(event.pointsPlan&&event.pointsPlan.start>now)event.pointsPlan.start=now;
+   }
+   event.pointsSession??=pointsSession();event.pointsSession.startedAt??=now;event.pointsSession.playStartedAt=now;
+   advanceScheduledCourts(work,event,now,true);
+   if(!work.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('目前没有完整可上场队伍，比赛尚未开始');
+   break;
   }
   case 'pointsLate':{
    const p=c.payload,m=work.matches.find(m=>m.id===p.matchId)??fail('对局不存在');

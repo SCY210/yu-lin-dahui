@@ -1,8 +1,13 @@
 import type {Event} from './types';
+import {eventGamePoints} from './game-points';
 
 const minute=60000;
 export function defaultPointsMinutes(e:Pick<Event,'start'|'end'>){return Math.max(0,Math.floor((e.end-e.start)/minute))}
-export function pointsWindow(e:Event){return e.pointsPlan??{start:e.start,end:e.start+defaultPointsMinutes(e)*minute,roundMinutes:15}}
+/** Expected minutes of one round before anything is planned: a 21-point game takes about 13 minutes, a 15-point one
+ * about 7 (owner's instruction, 2026-11-15). A planned or edited round length is kept. */
+export function defaultRoundMinutes(e:Pick<Event,'gamePoints'>){return eventGamePoints(e)===15?7:13}
+export function roundMinutes(e:Event){return e.pointsPlan?.roundMinutes??defaultRoundMinutes(e)}
+export function pointsWindow(e:Event){return e.pointsPlan??{start:e.start,end:e.start+defaultPointsMinutes(e)*minute,roundMinutes:defaultRoundMinutes(e)}}
 export function isPointsTime(e:Event,at:number){return !e.pointsPlan||(at>=e.pointsPlan.start&&at<e.pointsPlan.end)}
 /** The planPoints input that plans the rest of an activity when it starts without a planned schedule: from the next
  * whole minute (never before its start) until the points window ends, keeping its round length and partner mode.

@@ -1,6 +1,6 @@
 import {propose,tiredPlayers} from './grouping';
-import {balanceCost,compareBalance} from './match-balance';
-import {genderMismatches} from './gender-balance';
+import {balanceCost,compareBalance,newbieExposure} from './match-balance';
+import {genderMismatches,isFemale} from './gender-balance';
 import {matchHistory} from './match-history';
 import {venueParticipation,bookingAllowsPlayer} from './booking-signups';
 import {fail,type Event,type State} from './types';
@@ -39,7 +39,7 @@ export function proposeFixed(s:State,e:Event,at:number,duration:number,seed:numb
  const rating=(t:string[])=>t.reduce((sum,id)=>sum+(s.players.find(p=>p.id===id)?.rating??1000),0)/2;
  const history=matchHistory(s,e.id);
  const playerRating=(id:string)=>s.players.find(p=>p.id===id)?.rating??1000;
- const penalty=(list:string[][])=>{let variety=0,mismatches=0,cohorts=0;const gaps:number[]=[];for(let i=0;i<list.length;i+=2){mismatches+=genderMismatches(s,list[i],list[i+1],playerRating);if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(list[i])-rating(list[i+1])));variety+=history.rematches(list[i],list[i+1]);cohorts+=history.cohorts([...list[i],...list[i+1]])}return balanceCost(gaps,variety*150,mismatches,variety,cohorts)};
+ const penalty=(list:string[][])=>{let variety=0,mismatches=0,cohorts=0,newbie=0;const gaps:number[]=[];for(let i=0;i<list.length;i+=2){mismatches+=genderMismatches(s,list[i],list[i+1],playerRating);newbie+=newbieExposure([...list[i],...list[i+1]],playerRating,id=>isFemale(s,id));if([...list[i],...list[i+1]].some(id=>!bookingAllowsPlayer(s,e.id,courts[i/2].courtId,id,at,at+duration*60000)))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(list[i])-rating(list[i+1])));variety+=history.rematches(list[i],list[i+1]);cohorts+=history.cohorts([...list[i],...list[i+1]])}return balanceCost(gaps,variety*150,mismatches,variety,cohorts,0,0,0,0,0,0,newbie)};
  let rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  let best=[...selected],bestCost=penalty(best);
  for(let i=0;i<180;i++){const next=[...best],a=Math.floor(rand()*next.length),b=Math.floor(rand()*next.length);[next[a],next[b]]=[next[b],next[a]];const cost=penalty(next);if(compareBalance(cost,bestCost)<0||(compareBalance(cost,bestCost)===0&&rand()<0.1)){best=next;bestCost=cost}}

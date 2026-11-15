@@ -61,7 +61,8 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
      attempt.audits.push({id:crypto.randomUUID(),at:now,actor:'system:points-clock',action:'liveAutoEnable',reason:'积分赛时段到达，开启实时排场，等待开始组队',changes:{eventId:e.id}});
     }
    }else{
-    // A planned activity that nobody planned before it started is planned and published on the clock.
+    // A planned activity that nobody planned before it started is planned and published on the clock. Its first games
+    // wait for someone to press 开始比赛 (pointsPlay, AGENTS.md C2); after that each court moves on as scores come in.
     let planned=false;
     if(planNow){
      const plan=automaticPlanInput(event,eventFormat(event)==='singles',now);
@@ -73,7 +74,7 @@ export async function startDuePointsSessions(s:State,now:number,run:Runner){
      if(duration>=5){
       await run(attempt,actor,'generate',{eventId:e.id,at:now,duration,seed:1},now);
       next=attempt.rounds.find(r=>r.eventId===e.id&&r.status==='draft');
-      if(next)await run(attempt,actor,'publish',{roundId:next.id},now);
+      if(next){await run(attempt,actor,'publish',{roundId:next.id},now);planned=true}
      }
     }
     started=advanceScheduledCourts(attempt,event,now)||planned;

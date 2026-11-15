@@ -60,10 +60,12 @@ test('future rounds start at the activity, with no phantom pre-activity countdow
 test('arrival, booking and live fee boundaries never return a stale unchanged view',()=>{
  const {s,a,e}=fixture();
  assert.equal(clubViewValidUntil(s,a,e.start-1000),e.start);
- // A running activity is reused briefly; its first remaining-round change is 10 minutes in.
+ // A running activity is reused briefly. A 21-point round is expected to take 13 minutes (lib/domain/points-window.ts),
+ // so the remaining rounds of this hour change 3 and 16 minutes in (5 minutes plus whole rounds before the end).
  assert.equal(clubViewValidUntil(s,a,e.start),e.start+liveMaxAge);
- assert.equal(clubViewValidUntil(s,a,e.start+60000),e.start+60000+liveMaxAge);
- assert.equal(clubViewValidUntil(s,a,e.start+10*60000-3000),e.start+10*60000);
+ assert.equal(clubViewValidUntil(s,a,e.start+3*60000-3000),e.start+3*60000);
+ assert.equal(clubViewValidUntil(s,a,e.start+4*60000),e.start+4*60000+liveMaxAge);
+ assert.equal(clubViewValidUntil(s,a,e.start+16*60000-3000),e.start+16*60000);
  assert.deepEqual(projectClubState(s,a,'2026-10',2026,e.start+60000).drafts,projectClubState(s,a,'2026-10',2026,e.start+120000).drafts,'planned estimates stay stable as time passes');
  assert.notDeepEqual(calculateSettlement(s,e,e.start+60000),calculateSettlement(s,e,e.start+120000),'actual elapsed accounting still advances');
  const at=now+1000;s.bookings[0].start=at+5000;

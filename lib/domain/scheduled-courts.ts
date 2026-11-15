@@ -1,6 +1,6 @@
 import {eventStatusAt} from './event-lifecycle';
 import {courtPlayers,eventFormat,isPractice} from './match-format';
-import {pointsWindow} from './points-window';
+import {pointsWindow,roundMinutes} from './points-window';
 import {readyIds,validateRound} from './grouping';
 import {isPlannedLineup,pendingMatchLineup} from './round-lineup';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
@@ -10,6 +10,7 @@ import {livePresentIds} from './live-play';
 import {markRanked} from './all-ranked';
 import {clearFilledPointsWaiting} from './points-attendance';
 import {liveActivityAvailable} from './live-window';
+import {plannedPlayStarted} from './scheduling';
 import {month,type Event,type Match,type Round,type State} from './types';
 
 const terminal=(m:Match)=>['complete','forfeit','cancelled'].includes(m.status);
@@ -25,7 +26,7 @@ export function scheduledCourtProgress(s:State,e:Event,now:number,explicit=false
  const late=now>=e.end;
  if(e.livePlay?.enabled||e.tournament||isPractice(e)||e.deletedAt!==undefined||(late?!explicit||!liveActivityAvailable(e,now):['draft','ended','cancelled'].includes(eventStatusAt(e,now)))||now<Math.max(e.start,pointsWindow(e).start))return empty;
  const rounds=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled');
- if(!rounds.some(r=>['published','playing'].includes(r.status)&&(!late||r.overtime)))return empty;
+ if(!rounds.some(r=>['published','playing'].includes(r.status)&&(!late||r.overtime))||!plannedPlayStarted(s,e))return empty;
  // Attendance/court phases, not estimated individual match durations, control
  // the switch. An unfinished game may continue beyond its players' phase.
  const enabled=new Set(s.players.filter(p=>p.enabled).map(p=>p.id));
@@ -81,7 +82,7 @@ export function scheduledCourtProgress(s:State,e:Event,now:number,explicit=false
   const current=rounds.filter(r=>{const p=phases.get(r.id);return p&&p.start===currentStart});
   const pending=current.some(r=>(byRound.get(r.id)??[]).some(m=>pendingMatchLineup(m)));
   const played=current.some(r=>(byRound.get(r.id)??[]).some(m=>['complete','forfeit'].includes(m.status)&&m.start!==null&&m.end!==null&&m.end<=now));
-  const until=Math.min(currentEnd,pointsWindow(e).end,e.end),duration=Math.min(e.pointsPlan?.roundMinutes??15,60,Math.floor((until-now)/60000));
+  const until=Math.min(currentEnd,pointsWindow(e).end,e.end),duration=Math.min(roundMinutes(e),60,Math.floor((until-now)/60000));
   if(confirmedFuture&&!pending&&played&&duration>=5){
    const reserved=new Set(s.matches.filter(m=>m.end!==null&&m.end>now&&terminal(m)).map(court));
    const free=[...bookings.values()].filter(b=>b.eventId===e.id&&b.start<=now&&b.end>=now+duration*60000&&!busyCourts.has(court({eventId:e.id,courtId:b.id}))&&!reserved.has(court({eventId:e.id,courtId:b.id})));

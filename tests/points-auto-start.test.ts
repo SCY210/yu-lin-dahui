@@ -27,10 +27,13 @@ test('due clock turns live play on without a game: every court waits for 开始�
  await apply(s,member,'liveNext',{eventId:e.id,courtId:s.bookings[0].id},now+5*minute);
  assert.equal(s.matches.filter(m=>m.status==='playing').length,1,'开始组队 starts the first game on that court only');assert.equal(s.matches[0].start,now+5*minute);
 });
-test('due clock starts the first generated round once, with scheduled session time and actual match time',async()=>{
+test('due clock generates and publishes the first round once; 开始比赛 starts it with the actual match time',async()=>{
  for(const mode of ['round'] as const){
   const s=createSimulation(now).state,e=s.events[0];e.start=now-minute;e.schedulingMode=mode;
   assert.equal(await startDuePointsSessions(s,now,apply),true);assert.equal(s.events[0].pointsSession?.startedAt,e.start);
+  assert.equal(s.rounds.filter(r=>r.status==='published').length,1);assert.equal(s.matches.filter(m=>m.status==='playing').length,0,'no game starts on the clock');
+  assert.equal(await startDuePointsSessions(s,now+30000,apply),false,'and later clock runs wait too');
+  await apply(s,s.accounts[0],'pointsPlay',{eventId:e.id},now);
   assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.ok(s.matches.every(m=>m.start===now));
   const before=structuredClone(s);assert.equal(await startDuePointsSessions(s,now+1,apply),false);assert.deepEqual(s,before);
   assert.ok(s.audits.filter(a=>a.action==='pointsAutoStart').length===1);
@@ -42,7 +45,8 @@ test('published planned slots start in order only after prior scores; drafts nev
  const s=createSimulation(now).state,e=s.events[0],a=s.accounts[0];
  await apply(s,a,'planPoints',{eventId:e.id,at:now,pointsMinutes:30,roundMinutes:15,seed:1,pairing:'rotate'},now-1);
  assert.equal(await startDuePointsSessions(s,now,apply),true);assert.ok(s.matches.every(m=>m.status==='draft'));assert.ok(s.rounds.every(r=>r.status==='draft'));
- await apply(s,a,'publishPoints',{eventId:e.id},now);assert.equal(await startDuePointsSessions(s,now,apply),true);
+ await apply(s,a,'publishPoints',{eventId:e.id},now);assert.equal(await startDuePointsSessions(s,now,apply),false,'published games wait for 开始比赛');
+ await apply(s,a,'pointsPlay',{eventId:e.id},now);
  const first=s.rounds[0].id;assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.equal(await startDuePointsSessions(s,now+16*minute,apply),false,'do not interrupt existing courts');
  for(const m of s.matches.filter(m=>m.roundId===first))await apply(s,a,'score',{matchId:m.id,a:21,b:19},now+16*minute);
  const history=structuredClone(s.matches.filter(m=>m.roundId===first));assert.equal(await startDuePointsSessions(s,now+17*minute,apply),false,'scoring already advanced the ready courts in the write transaction');
@@ -68,7 +72,7 @@ test('live clock never starts a game, not even when a later booking opens, and a
  const s=createSimulation(now).state;s.bookings[1].start=now+minute;
  await startDuePointsSessions(s,now,apply);assert.equal(s.matches.length,0);
  const before=structuredClone(s);assert.equal(await startDuePointsSessions(s,now+minute,apply),false);assert.deepEqual(s,before,'the later court waits for 开始组队 too');
- const r=createSimulation(now).state; r.events[0].schedulingMode='round';await startDuePointsSessions(r,now,apply);const original=structuredClone(r.matches);
+ const r=createSimulation(now).state; r.events[0].schedulingMode='round';await startDuePointsSessions(r,now,apply);await apply(r,r.accounts[0],'pointsPlay',{eventId:r.events[0].id},now);const original=structuredClone(r.matches);
  await apply(r,r.accounts[0],'schedulingMode',{eventId:r.events[0].id,mode:'live',expectedMode:'round',expectedPendingIds:[]},now);
  assert.equal(await startDuePointsSessions(r,now,apply),true);assert.ok(r.events[0].livePlay?.enabled);assert.deepEqual(r.matches,original);
 });
@@ -79,6 +83,8 @@ test('cancelled first-round drafts remain cancelled instead of being generated a
 
 test('published delayed rounds catch up after their planned end while activity and bookings remain available',async()=>{
  const s=createSimulation(now).state,e=s.events[0],a=s.accounts[0];await apply(s,a,'planPoints',{eventId:e.id,at:now,pointsMinutes:15,roundMinutes:15,seed:1,pairing:'rotate'},now-1);await apply(s,a,'publishPoints',{eventId:e.id},now);
+ await startDuePointsSessions(s,now+20*minute,apply);assert.equal(s.matches.filter(m=>m.status==='playing').length,0,'nobody pressed 开始比赛 yet');
+ s.events[0].pointsSession!.playStartedAt=now;
  assert.equal(await startDuePointsSessions(s,now+20*minute,apply),true);assert.equal(s.matches.filter(m=>m.status==='playing').length,2);assert.ok(s.matches.every(m=>m.start===now+20*minute));
 });
 
