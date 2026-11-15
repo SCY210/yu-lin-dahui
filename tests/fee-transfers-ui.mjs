@@ -39,6 +39,16 @@ try{
  // A collector is named with their phone.
  await mount(FeeTransfers,{e:{...e,feeRecipient:{name:'卡萝',phone:'+34 600',playerId:'p3'}},settlement:{...settlement,collector:'p3'},ctx:ctx('p0'),manager:false});
  assert.match(text(ui.toJSON()),/收款人 卡萝（\+34 600）/);
+ // Without one collector, each member sees the number of the people they transfer with, ready to copy.
+ const withPhones=(me)=>{const c=ctx(me);c.data.players=[{id:'p1',profile:{phone:'600 111 111'}},{id:'p2',profile:{}}];return c};
+ await mount(FeeTransfers,{e,settlement,ctx:withPhones('p0'),manager:false});
+ const phoneRows=ui.root.findAll(n=>n.props.className==='fee-transfer-phone');assert.equal(phoneRows.length,2,'one per own transfer');
+ assert.match(text(phoneRows[0]),/爱丽丝 的电话 600 111 111/);assert.equal(phoneRows[0].findAllByType('button').length,1);
+ assert.match(text(phoneRows[1]),/小波 还没填电话号码/);
+ assert.equal(ui.root.findAll(n=>n.props.className==='fee-transfer-others')[0].findAll(n=>n.props.className==='fee-transfer-phone').length,0,'no numbers on other people’s transfers');
+ // A collector without a saved payee number shows their profile number.
+ await mount(FeeTransfers,{e,settlement:{...settlement,collector:'p1'},ctx:withPhones('p0'),manager:false});
+ assert.match(text(ui.toJSON()),/收款人 爱丽丝（600 111 111）/);
  // Home: the open transfers of this member, marked together.
  const players=Object.entries(names).map(([id,name])=>({id,name,ownerId:id}));
  await mount(HomeUnpaid,{settlements:[settlement],payments:[{eventId:'e',playerId:'p0',to:'p1',cents:720}],players,me:{id:'owner',playerId:'p0'},events:[e],onOpen:()=>{},onMarkTransfers:list=>actions.push(['home',list])});

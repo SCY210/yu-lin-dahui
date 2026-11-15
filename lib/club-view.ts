@@ -34,6 +34,18 @@ import {enableDefaultAttendance,applyDefaultAttendance} from './domain/attendanc
 
 // Retired profile fields may remain in stored JSON for compatibility, but are never shown: grip/shoes and the self-assessed level.
 const hiddenProfileKeys=['grip','shoes','level'];
+/** Whose phone numbers a member may read besides their own: everyone they pay or who pays them in a visible fee
+ * split, and the split's collector, so members can transfer directly (docs/PROFILE_PHONE.md). The owner and
+ * administrators read every number. */
+export function phonePeers(settlements:readonly {transfers?:{from:string;to:string}[];collector?:string}[],playerId:string){
+ const peers=new Set<string>();
+ for(const x of settlements){
+  const mine=(x.transfers??[]).filter(t=>t.from===playerId||t.to===playerId);
+  for(const t of mine)peers.add(t.from===playerId?t.to:t.from);
+  if(x.collector&&mine.length)peers.add(x.collector);
+ }
+ return peers;
+}
 /** `shared.revision`: the stored revision this state was loaded at. Only the read route passes it, so history-only
  * results can be reused across members' requests (lib/club-view-shared.ts); without it everything is computed. */
 export function projectClubState(s:State,a:Account,period:string,year:number,now=Date.now(),shared?:{revision:number;consumeState?:boolean;activityId?:string}){
@@ -45,6 +57,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
  const historicalIds=new Set(s.events.map(e=>e.id));
  const eventCollections=['bookings','registrations','attendance','rounds','matches','costs','settlements','payments','awardVotes'] as const;
  for(const key of eventCollections)(s[key] as unknown[])=s[key].filter(row=>historicalIds.has(row.eventId));
+ const phones=phonePeers(s.settlements.filter(x=>x.revokedAt===undefined),a.playerId),showPhone=(id:string)=>admin||id===a.playerId||phones.has(id);
  // Deletion hides an activity's workspace; completed results stay historical facts.
  // Realms, 修为 and strength labels settle per activity, while ranking points stay live.
  const guests=guestIds(history);
@@ -95,7 +108,7 @@ export function projectClubState(s:State,a:Account,period:string,year:number,now
   bountyHonors:bountyHonors(history,now,id=>ledger.byPlayer.get(id)??[]),
   // Bought 传音喇叭 texts scroll at the top for everyone until they expire (app/horn-banner.tsx).
   hornBroadcasts:hornBroadcasts(history,now),
-  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestHostId:guestHostPlayerId(s,p.id),guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
+  players:s.players.filter(p=>!p.guestEventId||ids.has(p.guestEventId)).map(p=>({...p,winningStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.winningStreak??noStreak:noStreak,losingStreak:p.enabled&&members.has(p.id)?avatarStreaks.get(p.id)?.losingStreak??noStreak:noStreak,...(guests.has(p.id)?{guest:true,guestHost:guestHostName(s,p.id)??'球友',guestHostId:guestHostPlayerId(s,p.id),guestLevel:guestLevelAt(p)}:{}),profileEditMode:profileEditMode(s,p.id,a),protectedOwner:p.id===ownerPlayerId,...(p.profile?{profile:Object.fromEntries(Object.entries(p.profile).filter(([key])=>!hiddenProfileKeys.includes(key)&&(key!=='phone'||showPhone(p.id))))}:{}),...(!admin?{rating:null,initialRating:null,ratingReason:''}:{}),ownerId:p.ownerId===a.id?a.id:''})),
   events:s.events.map(e=>({...e,canViewCourtOccupancy:a.id===ownerId||!!e.creatorId&&e.creatorId===a.id,mapUrl:googleMapsUrl(e.venue,e.address),
    ...(bountyOffer(s,e,a.playerId,now,()=>upsetOfferEligible(s,e,a.playerId,now,ledger.snapshot,bountyUpsetGap))?.kind==='upset'?{bountyUpsetEligible:true}:{}),
    // Bounty answers are private: each member sees their own (with its result once settled); administrators see all.

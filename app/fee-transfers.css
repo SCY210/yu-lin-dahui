@@ -27,3 +27,8 @@
  .fee-transfer{padding:14px}
  .fee-transfer-actions>button{padding:8px 10px}
 }
+.fee-transfer-phone{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:14px;min-width:0}
+.fee-transfer-phone>svg{color:var(--primary);flex-shrink:0}
+.fee-transfer-phone b{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fee-transfer-phone>button{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px 10px}
+.fee-transfer-phone .hint{margin:0;font-size:13px}
