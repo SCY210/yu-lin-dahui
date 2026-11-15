@@ -1,7 +1,7 @@
 import {seasonPointsPolicy} from '../domain/season-points';
 
 /** The point fields of a leaderboard row (aggregateLeaderboard in lib/domain/ranking.ts). */
-export type BreakdownRow={points:number;wins?:number;halfRewardWins?:number;halfRewardLosses?:number;losses?:number;upsetPoints?:number;streakPoints?:number;mvpPoints?:number;bountyPoints?:number;bountyWonPoints?:number;bountyLostPoints?:number;notificationPoints?:number;attendancePoints?:number;manualPoints?:number};
+export type BreakdownRow={points:number;wins?:number;halfRewardWins?:number;halfRewardLosses?:number;losses?:number;upsetPoints?:number;streakPoints?:number;mvpPoints?:number;bountyPoints?:number;bountyWonPoints?:number;bountyLostPoints?:number;duelWonPoints?:number;duelLostPoints?:number;notificationPoints?:number;attendancePoints?:number;manualPoints?:number};
 export type BreakdownLine={label:string;points:number};
 
 /** Where a ranking row's points come from (docs/RANKING_POINTS_BREAKDOWN.md): non-zero sources only, adding up to `points`.
@@ -18,6 +18,8 @@ export function pointsBreakdown(r:BreakdownRow):BreakdownLine[]{
   {label:'MVP 加分',points:r.mvpPoints??0},
   {label:'悬赏成功',points:r.bountyWonPoints??0},
   {label:'悬赏失败',points:r.bountyLostPoints??0},
+  {label:'天机战帖赢分',points:r.duelWonPoints??0},
+  {label:'天机战帖输分',points:r.duelLostPoints??0},
   {label:'通知积分',points:r.notificationPoints??0},
   {label:'迟到扣分',points:r.attendancePoints??0},
   {label:'宗主调整',points:r.manualPoints??0},

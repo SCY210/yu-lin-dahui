@@ -1,0 +1,64 @@
+/* 天机战帖 announcement (app/duel-alert.tsx): ink, rice paper and vermilion, a scroll and a brush-written 战, apart from
+ * the bounty popups' night skies and gold (app/bounty-effects.css). The resting style of every element is its final
+ * frame; the keyframes only bring it there, so reduced motion shows the finished scene still. No color-mix(), :is() or
+ * inset shorthand: older phones (docs/OLD_BROWSER_SUPPORT.md). */
+.duel-spectacle{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1000;display:grid;place-items:center;overflow:hidden;cursor:pointer;color:#16110d;animation:dz-in .3s ease-out both}
+.duel-spectacle.is-leaving{animation:dz-out .6s ease-in both}
+@keyframes dz-in{from{opacity:0}}
+@keyframes dz-out{to{opacity:0;transform:translateY(-3%)}}
+
+/* Rice paper: warm ground, faint fibres, darker edges. */
+.dz-paper{position:absolute;top:0;right:0;bottom:0;left:0;background:radial-gradient(ellipse at 50% 45%,#faf4e4 0%,#efe4c9 62%,#d9c9a4 100%)}
+.dz-paper::after{content:'';position:absolute;top:0;right:0;bottom:0;left:0;opacity:.35;background:repeating-linear-gradient(97deg,rgba(120,96,60,.06) 0 1px,transparent 1px 7px),repeating-linear-gradient(8deg,rgba(120,96,60,.05) 0 1px,transparent 1px 11px)}
+
+/* Ink mountains rising from the bottom. */
+.dz-mountains{position:absolute;left:0;right:0;bottom:0;width:100%;height:34vh}
+.dz-hill-far{fill:rgba(40,34,28,.16);animation:dz-rise 1.2s ease-out .1s both}
+.dz-hill-near{fill:rgba(28,24,20,.3);animation:dz-rise 1.2s ease-out .25s both}
+@keyframes dz-rise{from{opacity:0;transform:translateY(30px)}}
+
+/* A sword-light cuts across the screen first. */
+.dz-slash{position:absolute;left:-20%;top:50%;width:140%;height:3px;margin-top:-1.5px;transform:rotate(-24deg) scaleX(0);transform-origin:0 50%;background:linear-gradient(90deg,rgba(22,17,13,0),#16110d 30%,#fffdf6 50%,#16110d 70%,rgba(22,17,13,0));box-shadow:0 0 18px rgba(255,255,255,.9);opacity:0;animation:dz-slash .5s cubic-bezier(.7,0,.3,1) .1s}
+@keyframes dz-slash{0%{opacity:1;transform:rotate(-24deg) scaleX(0)}70%{opacity:1;transform:rotate(-24deg) scaleX(1)}100%{opacity:0;transform:rotate(-24deg) scaleX(1)}}
+
+/* The scroll: two dark rods and a paper sheet that unrolls between them. */
+.dz-scroll{position:relative;display:grid;justify-items:center;width:min(86vw,420px)}
+.dz-rod{display:block;width:108%;height:14px;border-radius:7px;background:linear-gradient(180deg,#5a3a22,#2b1a0e 60%,#4a2f1b);box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.dz-sheet{position:relative;width:100%;max-height:78vh;overflow:hidden;padding:0 18px;box-sizing:border-box;text-align:center;background:linear-gradient(180deg,#fbf6e8,#f3e9d1);box-shadow:inset 0 0 30px rgba(140,110,60,.25);animation:dz-unroll 1s cubic-bezier(.3,.7,.3,1) .45s both}
+@keyframes dz-unroll{from{max-height:0}}
+.dz-kicker{margin:16px 0 0;color:#7a5a36;font-size:13px;letter-spacing:4px;animation:dz-ink .5s ease-out 1s both}
+
+/* The great 战: the outline is written first, then the ink fills it and splashes. */
+.dz-brush{display:block;width:min(52vw,220px);height:min(52vw,220px);margin:0 auto;overflow:visible}
+.dz-zhan{font:900 170px/1 'STKaiti','KaiTi','Kaiti SC','楷体',serif;fill:#16110d;stroke:#16110d;stroke-width:3;stroke-linejoin:round;stroke-dasharray:1400;stroke-dashoffset:0;animation:dz-write 1.5s ease-in-out 1.15s both}
+@keyframes dz-write{0%{stroke-dashoffset:1400;fill-opacity:0}70%{stroke-dashoffset:0;fill-opacity:0}100%{stroke-dashoffset:0;fill-opacity:1}}
+.dz-splash circle{fill:#16110d;opacity:.85;transform-box:fill-box;transform-origin:center;animation:dz-splat .35s cubic-bezier(.2,.9,.3,1.4) calc(2.2s + var(--i) * .04s) both}
+@keyframes dz-splat{from{opacity:0;transform:scale(0)}}
+
+.dz-title{margin:4px 0 0;font:700 20px/1.2 'STKaiti','KaiTi','Kaiti SC','楷体',serif;letter-spacing:12px;padding-left:12px;color:#16110d;animation:dz-ink .6s ease-out 2.3s both}
+.dz-teams{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 12px;margin:14px 0 0;font:700 clamp(17px,5vw,21px)/1.4 'STKaiti','KaiTi','Kaiti SC','楷体',serif;animation:dz-ink .7s ease-out 2.5s both}
+.dz-teams b{color:#c0392b;font-size:1.25em}
+.dz-meta{margin:8px 0 22px;color:#5d4630;font-size:14px;animation:dz-ink .6s ease-out 2.75s both}
+/* Ink bleeding into the paper: out of focus, then sharp. */
+@keyframes dz-ink{from{opacity:0;filter:blur(6px)}}
+
+/* The vermilion seal stamps down last. */
+.dz-seal{position:absolute;right:14px;bottom:14px;display:grid;grid-template-rows:1fr 1fr;place-items:center;width:44px;height:44px;box-sizing:border-box;border:2px solid #c0392b;border-radius:4px;color:#c0392b;background:rgba(192,57,43,.06);transform:rotate(-8deg);animation:dz-stamp .45s cubic-bezier(.2,.9,.3,1.3) 3s both}
+.dz-seal b{display:block;font:700 16px/1 'STKaiti','KaiTi','Kaiti SC','楷体',serif}
+@keyframes dz-stamp{from{opacity:0;transform:scale(2.6) rotate(-20deg)}}
+
+/* The four's popup: a small scroll scene with the same ink, mountains and seal. */
+.duel-call-scene{position:relative;height:160px;margin:-4px -4px 6px;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#fbf6e8 0%,#efe4c9 70%,#dccca8 100%);box-shadow:inset 0 0 0 1px rgba(120,90,50,.25)}
+.duel-call-hills{position:absolute;left:0;right:0;bottom:0;width:100%;height:58px}
+.duel-call-brush{position:absolute;left:50%;top:50%;width:140px;height:140px;margin:-74px 0 0 -70px;overflow:visible}
+.duel-call-brush .dz-zhan{animation-delay:.25s}
+.duel-call-brush .dz-splash circle{animation-delay:calc(1.2s + var(--i) * .04s)}
+.duel-call-seal{animation-delay:1.5s}
+.duel-call-teams{margin:0 0 12px;text-align:center;font-weight:600}
+.duel-call-teams b{color:#c0392b}
+.duel-call-actions{display:grid;gap:8px}
+
+@media (prefers-reduced-motion:reduce){
+ .duel-spectacle,.duel-spectacle *,.duel-call-scene *{animation:none!important}
+ .dz-slash{display:none}
+}

@@ -1,0 +1,12 @@
+/* 天机战帖 on the 玩法 tab (app/duels.tsx). */
+.duels .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.duels h3{display:flex;align-items:center;gap:6px;margin:0;font-size:15px}
+.duels .row>button{flex:none;min-height:40px;padding:4px 14px;font-size:14px}
+.duel-list{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.duel-list>li{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);font-size:14px}
+.duel-status{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.duel-status small{color:var(--muted-foreground)}
+.duel .actions{display:flex;flex-wrap:wrap;gap:6px}
+.duel .actions button{min-height:36px;padding:4px 12px;font-size:13px}
+.duel.is-locked{border-color:var(--primary)}
+.duel.is-expired,.duel.is-declined,.duel.is-withdrawn,.duel.is-void{opacity:.7}

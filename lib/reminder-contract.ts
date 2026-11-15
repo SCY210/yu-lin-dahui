@@ -4,6 +4,7 @@ import type {State,Event,Registration,Settlement,Bill} from './domain/types';
 import {feeContact,unpaidBills} from './domain/fee-payments';
 import {newlyOpenedSignups} from './push-contract';
 import {bountyTitles,drawnBounty} from './domain/bounties';
+import {duelGameOf} from './domain/duels';
 export const reminderKinds=['signup','registration','changes','matches','fees','awards','upcoming','bounty'] as const;
 export type ReminderKind=typeof reminderKinds[number];
 export const reminderLabels:Record<ReminderKind,string>={signup:'新活动开放',registration:'我的报名与候补',changes:'活动变更与取消',matches:'比赛上场',fees:'费用确认',awards:'赛后评选',upcoming:'临近开场',bounty:'悬赏令'};
@@ -68,6 +69,16 @@ export function remindersForChange(next:State,previous:State,actor:string,key:st
  }
  // A competition puts matches straight on a court (often the system, after a result): tell the players where to go.
  for(const m of next.matches){if(m.status!=='playing'||previous.matches.some(x=>x.id===m.id))continue;const e=next.events.find(e=>e.id===m.eventId);if(!e?.tournament||e.deletedAt!==undefined||e.status==='cancelled')continue;const court=next.bookings.find(b=>b.id===m.courtId)?.name??'场地',names=(ids:string[])=>ids.map(id=>next.players.find(p=>p.id===id)?.name??'球友').join(' / ');add(e,'matches',m.id,'轮到你上场了 · '+court,`${names(m.a)} 对 ${names(m.b)}`,next.accounts.filter(a=>[...m.a,...m.b].includes(a.playerId)&&a.id!==actor).map(a=>a.id),'rounds',{roundId:m.roundId});}
+ // 天机战帖 (lib/domain/duels.ts): the three named in a new challenge are asked; once all four accept, all four hear it holds.
+ for(const e of next.events)for(const d of e.duels??[]){
+  const old=before.get(e.id)?.duels?.find(x=>x.id===d.id),four=[...d.a,...d.b],name=(id:string)=>next.players.find(p=>p.id===id)?.name??'道友';
+  const to=(ids:string[])=>next.accounts.filter(a=>ids.includes(a.playerId)).map(a=>a.id);
+  if(!old)add(e,'matches','duel:'+d.id,'天机战帖',`${name(d.a[0])} / ${name(d.a[1])} 约战 ${name(d.b[0])} / ${name(d.b[1])}，每人以 ${d.stake} 积分为注，道友敢应战否？`,to(four.filter(id=>id!==d.by)),'social');
+  else if(!d.withdrawn&&!d.declinedBy&&four.every(id=>d.accepted.includes(id))&&!four.every(id=>old.accepted.includes(id)))add(e,'matches','duel-on:'+d.id,'天机战帖已成',`${name(d.a[0])} / ${name(d.a[1])} 对 ${name(d.b[0])} / ${name(d.b[1])}，四位已应战，开赛后排场会安排这一局。`,to(four),'social');
+  // Its game has started: the four are called to the court, like the in-app popup (app/duel-alert.tsx).
+  const game=duelGameOf(d,e,next.matches),was=game&&previous.matches.find(m=>m.id===game.id);
+  if(game?.status==='playing'&&was?.status!=='playing'&&four.every(id=>d.accepted.includes(id))){const court=next.bookings.find(b=>b.id===game.courtId)?.name??'场地';add(e,'matches','duel-start:'+d.id,'天机战帖开战',`${name(d.a[0])} / ${name(d.a[1])} 对 ${name(d.b[0])} / ${name(d.b[1])} 在${court}斗法开场，道友速速登场！`,to(four),'rounds',{roundId:game.roundId});}
+ }
  // A reissued bounty offer (bountyReissue): its member hears of it again, the same way as the first offer.
  for(const e of next.events)for(const r of e.bountyReissued??[]){
   if(before.get(e.id)?.bountyReissued?.some(x=>x.playerId===r.playerId))continue;
