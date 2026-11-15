@@ -1,102 +1,92 @@
-# Activity scheduling modes
+# 活动排场方式
 
-Singles and doubles offer two modes: the planned schedule (the default) and live per-court scheduling. Practice activities keep signup and fees without competition.
+单打和双打活动有两种排场方式：预排赛程和实时排场（逐片场安排）。练球活动只有接龙和费用，不安排比赛。
 
-## Default planned schedule
+## 默认方式：按场地数（规则清单 C1）
 
-An activity that has no arrangement yet uses the planned schedule. When it starts and nobody has planned it, the clock plans the rest of the activity from the start minute (its points window, round length and confirmed partner mode, `automaticPlanInput`), publishes it and starts the first games (`lib/domain/points-auto-start.ts`). Pressing start by hand does the same. If the plan cannot be made, for example with too few players present, the attempt is remembered with its signups, presence and courts (`pointsSession.autoPlanKey`) and repeated only after one of them changes, such as a new signup or a player's arrival time. Only activities that never had a round are planned automatically; a schedule cancelled on purpose is not recreated. The planned controls are shown expanded.
+组织者没有选过排场方式时，按本活动的物理场地数决定（`schedulingMode`，`lib/domain/scheduling.ts`）：
 
-## Retired one-round mode
+- **只有一片场**：默认预排赛程。
+- **两片场或以上**：默认实时排场。
 
-"One round after each completed round" can no longer be chosen, and the server rejects switching to it. An activity that already uses it keeps its rounds and controls until it ends, and the selector lets it switch to another mode.
+同一球馆、同名的场地算一片物理场地（`eventCourtCount`），同一片场预约了两段时间也只算一片。组织者明确选过的方式、已经用预排或逐轮安排排过的活动，都保持原来的方式。只打过实时排场对局的活动仍是实时排场。
 
-## Recommended mode
+## 推荐方式
 
-Above the selector, organisers who can still switch (the creator, administrators
-and the club owner) see a highlighted recommendation (`recommendedSchedulingMode`
-in `lib/domain/scheduling.ts`), with a button to switch when the activity uses
-live scheduling and a "recommended" mark on its option. It always recommends the
-planned schedule, because it keeps the two sides of a game close in strength: it
-splits everybody playing a round into teams at once, while live play can only
-split the four players whose turn it is. In whole-evening simulations on two to
-four courts with 9-28 players:
+还能切换方式的人（活动创建者、副宗主和宗主）会在选择框上方看到高亮的推荐（`recommendedSchedulingMode(场地数)`，`lib/domain/scheduling.ts`），推荐的选项后标"（推荐）"。推荐也按场地数：
 
-| Rating gap between the sides | Planned | Live |
+- **一片场推荐预排**：预排把一轮里所有上场的人一起分队，实时排场只能在刚轮到的四人里分队，所以预排双方强弱更接近。
+- **两片场或以上推荐实时排场**：每片场打完就补人，不用等别的场地的人下来，场地不空等（规则清单 E2）。
+
+推荐框里的"何时用实时？"/"何时用预排？"会打开说明，写明另一种方式更适合的情况。本场确认人数和场地数正好是每片场只多约 1 人轮休时，额外提示一句（`liveSchedulingFits`）。普通道友看不到推荐。
+
+在两到四片场、9–28 人的整晚模拟中：
+
+| 双方修为分差 | 预排 | 实时 |
 | --- | --- | --- |
-| Mean, full attendance | 20-37 | 106-140 |
-| Games with a gap over 100, full attendance | 0-1% | 41-61% |
-| Mean, late arrivals and early departures | 48-115 | 107-145 |
+| 平均值，全员到齐 | 20–37 | 106–140 |
+| 分差超过 100 的局，全员到齐 | 0–1% | 41–61% |
+| 平均值，有人迟到早退 | 48–115 | 107–145 |
 
-Live play gives 3-22% more games and shorter waits, which the club ranks below
-balanced games. Members see no recommendation.
+实时排场多打 3–22% 的局、等待更短。
 
-## Switching
+## 预排赛程：自动排好，按「开始比赛」开打（规则清单 C2）
 
-The creator or an administrator switches modes through a confirmation carrying the expected mode and pending match IDs. A stale request is rejected. Switching disables live auto-advance and cancels only unstarted draft/published matches from the old arrangement. Completed scores, started matches, attendance, fees and rest preferences remain unchanged. No production records are rewritten by deployment.
+活动开始时还没有人预排的，时钟会从开始的下一个整分钟起预排剩余赛程（积分时段、每轮时长和已确认的搭档方式，`automaticPlanInput`），并发布（`lib/domain/points-auto-start.ts`）。**时钟不开打第一局**：已发布的对局要等有人点「开始比赛」（`pointsPlay`，`lib/domain/points-session-commands.ts`）。
 
-Legacy activities infer their mode from enabled live play, existing planned rounds, existing ordinary rounds, or only live rounds; an activity with no rounds at all is planned. Historical planned schedules therefore remain visible. Ended activities are read-only for scheduling.
+- 本活动已正式接龙的道友、活动创建者和副宗主都可以点。重复点不会再开新局。
+- 点下后，各片场按赛程开打第一局；之后每片场录分后在同一事务里自动接下一局（规则清单 C3）。
+- 自动预排的第一轮从下一个整分钟开始，在这一分钟内点「开始比赛」会立即开打；组织者排在更晚时间的赛程保持原时间，到点前点会提示还没到时间。
+- 还没有赛程（例如开始时人数不够）时，普通道友点会提示等人够了自动排好；组织者点会先按接龙排好再开打。
+- 草稿不会因为这个按钮发布（规则清单 A7）。
+- 组织者手动开始某一轮、或有人已经录了比分，也算已经开打。本按钮上线前已经开打的活动不受影响（`plannedPlayStarted`，`lib/domain/scheduling.ts`）。
+- 在点「开始比赛」之前，时段切换和空场补排也不会开局。
 
-Planned round headings show the round number and status without an estimated start time. Stored timestamps, round ordering and scheduling behavior are preserved; planning forms and the other modes retain their time controls.
+预排失败（例如到场人数太少）时，会记住当时的接龙、到场和场地（`pointsSession.autoPlanKey`），只有其中有变化（新接龙、有人到场时间到了）才再试。只有从未有过轮次的活动会自动预排，被有意取消的赛程不会重建。预排管理区默认展开。
 
-Planned mode restores multi-round creation, draft swaps/court changes, batch publishing, ordered starts, rest rosters, profiles and score entry. After all current games finish, the host can plan remaining time after the current clock without replacing completed games. A legacy one-round activity exposes generation only after current games and pending rounds are resolved. Live mode retains independent score-triggered advancement, bench priority and voluntary rest, and its current games are shown and corrected like a planned round (see `docs/LIVE_PLAY.md`). Selecting live mode does not start games; the host explicitly starts live scheduling during the activity.
+## 每轮预计时长
 
-After games have finished, remaining-time replanning keeps the confirmed partner mode; existing fixed teams are reused rather than reassigned from changed ratings.
+还没预排时，每轮预计时长按分制取默认值（`defaultRoundMinutes`，`lib/domain/points-window.ts`）：
 
-Cancelled arrangements remain available in a read-only archive in all modes. Removing the last pending round does not unexpectedly change the inferred mode of a legacy activity.
+- 21 分制：13 分钟。
+- 15 分制：7 分钟。
 
-Planned lineups remain editable until a score is stored, including legacy automatically started records. Their public state is pending score or ended; scheduler metadata does not block substitutions. Group locking is retired, and old stored lock flags do not restrict edits or generation.
+新建活动、自动预排和"预排剩余赛程"表单都用这个默认值。修改分制时，如果每轮时长还是旧分制的默认值且还没预排过，会跟着改成新分制的默认值；组织者改过或已经预排的时长保持不变。
 
-## Attendance phase transitions
+## 已停用的逐轮安排
 
-The backend advances confirmed planned schedules by actual server time at signup
-arrival/departure and court-booking boundaries. At a boundary such as 13:00, it
-retires only published, unstarted matches from earlier attendance phases and
-continues with the confirmed next phase. This also retires an earlier-phase
-match whose four players happen to attend all day; it must not hold up the new
-phase. Skipped matches are cancelled without scores, forfeits or point penalties,
-and the transition is audited once as `pointsPhaseAdvance`. The later unstarted
-rounds are then planned again from the games actually played, so the players of
-the skipped games get them back (`pointsReplan`, docs/MATCH_GROUPING.md).
-Expiration requires a confirmed successor phase. Without one, a final lineup
-manually changed to include a later arrival remains pending until that person
-can play; the clock does not discard the host's last confirmed adjustment.
+"每轮打完再生成下一轮"不能再选，服务端也拒绝切换到它。已经在用的活动保留原有轮次和操作直到结束，并可以切换到其他方式。时钟同样只生成并发布第一轮，开打要点「开始比赛」。
 
-A game already in progress continues. Its court and players remain occupied;
-other free courts can enter the new phase immediately, and its next match starts
-after the current score releases the court. Future phases cannot start early
-just because the preceding courts scored quickly. Draft confirmation, historical
-results, manual score entry, signup windows and fee allocation are preserved.
-No frontend changes or production-data rewrite are needed for existing confirmed
-plans. The normal server read/write maintenance commits the transition atomically,
-and conditional-read validators expire at the same attendance/booking boundary.
+## 切换方式
 
-Coverage: `tests/planned-phase-transition.test.ts`,
-`tests/live-conditional-read.test.ts` and `tests/points-auto-start-api.mjs` include
-partial rounds, exact clock boundaries, actual games crossing the boundary,
-unavailable next players and concurrent SQLite-backed maintenance reads.
+活动创建者或副宗主通过确认框切换，请求带上预期的方式和尚未开打的对局 ID，过时的请求会被拒绝。切换会关闭实时排场的自动接续，只撤销旧安排里尚未开打的草稿或已发布对局。已完成比分、已开打的对局、到场、费用和轮休意愿都不变。部署不会改写线上记录。
 
-## Finishing a phase early
+旧活动按实际记录推断方式：已开启的实时排场、已有的预排轮次、已有的普通轮次，或只有实时对局。因此历史预排仍然可见。已结束的活动排场只读。
 
-When the current phase's confirmed queue has finished but the next confirmed
-phase has not begun, the backend fills free courts with new games from the
-currently available signup pool. It reuses fair-turn, venue, gender/strength and
-fixed-partner grouping; future published matches are excluded from the proposal's
-played history. Actual busy players and physical courts remain unavailable.
-Each extra game starts immediately and its estimated duration is limited by the
-current attendance/booking phase and points window. At least five whole minutes
-must remain. A game still in progress at the boundary finishes normally.
+预排轮次标题只显示轮次编号和状态，不显示预计开始时间。存储的时间、轮次顺序和排场行为不变；预排表单和其他方式仍有时间输入。
 
-Extra rounds receive new slot IDs without renumbering historical or future
-rounds. Backend ordering uses attendance phase first, then original slot order,
-so repeated gap games do not block behind the later phase's earlier slot IDs.
-Future confirmed lineups stay intact. Current drafts/pending games, an intentionally
-cancelled phase, insufficient players, and a future phase awaiting confirmation
-do not trigger gap filling. Once the entire confirmed schedule is exhausted,
-the existing explicit append action remains available while the activity has time.
+预排方式支持多轮创建、草稿换人和调整场地、批量发布、按顺序开打、轮休名单、球友资料和录分。当前对局都结束后，组织者可以从当前时间起预排剩余时间，不替换已完成的对局。逐轮安排的旧活动只在当前对局和未开打轮次都处理完后才能生成下一轮。实时排场保留按录分独立推进、场下优先和主动轮休，当前对局可以像预排一轮那样显示和换人（见 `docs/LIVE_PLAY.md`）。选择实时排场不会自动开局：每片场都要有人点「开始组队」。
 
-`pointsGapFill` audits the new games. Score-triggered advancement and read
-maintenance use the same transaction; concurrent reads commit only one set of
-games. `tests/planned-gap.test.ts` and `tests/points-auto-start-api.mjs` cover
-continued play, two simultaneous courts, phase ordering, singles/fixed pairs,
-cross-activity occupancy, exact cutoffs and request races. Frontend code is
-unchanged.
+比赛结束后重新预排剩余时间，沿用已确认的搭档方式；已有的固定搭档按原队伍继续，不会因修为变化重新分配。
+
+被撤销的安排在所有方式下都保留在只读的归档里。撤掉最后一个未开打轮次不会意外改变旧活动推断出的方式。
+
+预排阵容在录入比分前都可以修改，包括旧版自动开始的记录。它们对外显示为待录分或已结束；排场元数据不会阻止换人。锁定分组已停用，旧数据里的锁定标记不限制修改或生成。
+
+## 参加时段切换
+
+后台按服务器实际时间，在接龙到场、离场和场地预约的分界点推进已确认的预排赛程。到了分界点（例如 13:00），只撤销前一参加时段里已发布、尚未开打的对局，然后继续已确认的下一时段。即使前一时段某局的四个人整天都在，这局也会被撤销，不会拖住新时段。被跳过的对局不记比分、不判负、不扣分，整个切换只记一次 `pointsPhaseAdvance` 审计。之后所有没开打的轮次按实际打过的局重新预排，被跳过那几局的球友会补回机会（`pointsReplan`，见 docs/MATCH_GROUPING.md）。
+
+撤销前提是存在已确认的下一时段。没有下一时段时，组织者手动加入了晚到球友的最后阵容会一直保留到这个人能上场；时钟不会丢掉组织者最后确认的调整。
+
+正在打的对局继续打完，它的场地和球友仍算占用；其他空场可以立即进入新时段，这片场的下一局在录分释放场地后开始。前面的场地提前打完，也不会让后面的时段提前开始。草稿确认、历史结果、手动录分、接龙时段和费用分摊都保持不变。已确认的旧赛程不需要前端改动或改写线上数据。正常的服务端读写维护在同一事务里提交切换，条件读取的校验也在同一到场或场地分界点过期。
+
+测试：`tests/planned-phase-transition.test.ts`、`tests/live-conditional-read.test.ts` 和 `tests/points-auto-start-api.mjs` 覆盖了部分轮次、准确的时钟分界、跨分界的实际对局、下一时段球友不可上场，以及基于 SQLite 的并发维护读取。
+
+## 提前打完当前时段
+
+当前时段已确认的对局都打完、下一已确认时段还没开始时，后台用当前可上场的接龙球友给空场补排新对局。它沿用公平轮次、球馆、性别和强弱以及固定搭档的分组规则；未来已发布的对局不算进打过的历史。正在比赛的球友和物理场地仍不可用。每局补排的对局立即开始，预计时长不超过当前参加或场地时段以及积分时段，而且至少要剩五整分钟。分界点上仍在打的对局正常打完。
+
+补排的轮次使用新的轮次编号，不重排历史或未来的轮次。后台先按参加时段、再按原轮次顺序排序，所以反复补排不会排在下一时段较小编号的轮次后面。未来已确认的阵容保持不变。当前有草稿或待开打的对局、有意取消的时段、人数不够、下一时段等待确认，都不会触发补排。整份已确认赛程打完后，只要活动还有时间，组织者仍可以手动追加一轮。
+
+`pointsGapFill` 记录补排的对局。录分触发的推进和读取时的维护使用同一事务，并发读取只会提交一组对局。`tests/planned-gap.test.ts` 和 `tests/points-auto-start-api.mjs` 覆盖了连续补排、两片场同时补排、时段顺序、单打和固定搭档、跨活动占用、准确截止时间和请求竞争。

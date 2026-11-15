@@ -47,15 +47,19 @@ test('remaining-time planning preserves the confirmed partner mode and previousl
  await apply(s,owner,'planPoints',{eventId:e.id,at:start+30*minute,pointsMinutes:30,roundMinutes:15,seed:4,pairing:'fixed'},start+11*minute);assert.deepEqual(e.pointsChoice!.teams,teams);assert.equal(m.scoreA,21);
 });
 
-test('a planned activity that nobody planned is planned, published and started on the clock, once',async()=>{
+test('a planned activity that nobody planned is planned and published on the clock, once, and starts on 开始比赛',async()=>{
  const {s,e}=fixture();assert.equal(schedulingMode(s,e),'planned');
  assert.equal(await startDuePointsSessions(s,start-1,apply),false,'nothing happens before the activity starts');
  assert.equal(await startDuePointsSessions(s,start+20000,apply),true);
  const rounds=s.rounds.filter(r=>r.eventId===e.id&&r.status!=='cancelled');
  assert.ok(rounds.length>=7,'the whole two hours are planned');assert.ok(rounds.every(r=>r.pointsSlot!==undefined&&r.status!=='draft'),'and published');
  assert.equal(s.events[0].pointsPlan!.start,start+minute,'from the next whole minute');
- assert.equal(await startDuePointsSessions(s,start+minute,apply),true);assert.equal(s.matches.filter(m=>m.status==='playing').length,1,'the first game starts on the minute');
+ assert.equal(await startDuePointsSessions(s,start+minute,apply),false);assert.equal(s.matches.filter(m=>m.status==='playing').length,0,'the clock never starts the first game (AGENTS.md C2)');
  assert.ok(s.audits.some(a=>a.action==='planPoints'&&a.actor==='system:points-clock'));
+ // Any confirmed player may press 开始比赛; pressing before the first round's minute starts it at once.
+ const member=s.accounts.find(a=>a.id==='member3')!;await apply(s,member,'pointsPlay',{eventId:'e'},start+40000);
+ const playing=s.matches.filter(m=>m.status==='playing');assert.equal(playing.length,1);assert.equal(playing[0].start,start+40000);
+ const pressed=structuredClone(s);await apply(s,s.accounts[5],'pointsPlay',{eventId:'e'},start+50000);assert.deepEqual(s,pressed,'pressing again changes nothing');
  const after=structuredClone(s);assert.equal(await startDuePointsSessions(s,start+minute+40000,apply),false);assert.deepEqual(s,after,'it never plans again');
 });
 
@@ -106,10 +110,37 @@ test('with too few players at the start, planning waits for a signup or an arriv
  s.registrations.push({...s.registrations[0],id:'late',playerId:'p3',sequence:3,arrival:start+30*minute});
  assert.equal(await startDuePointsSessions(s,start+2*minute,apply),true,'the new signup is remembered');assert.equal(s.rounds.length,0,'still three present');
  assert.equal(await startDuePointsSessions(s,start+30*minute+1000,apply),true);assert.ok(s.rounds.length>0,'planned once four are present');
- assert.equal(await startDuePointsSessions(s,start+31*minute,apply),true);assert.ok(s.matches.some(m=>m.status==='playing'),'and started on the next minute');
+ assert.equal(await startDuePointsSessions(s,start+31*minute,apply),false);assert.ok(!s.matches.some(m=>m.status==='playing'),'the first game still waits for 开始比赛');
+ await apply(s,owner,'pointsPlay',{eventId:'e'},start+31*minute);assert.ok(s.matches.some(m=>m.status==='playing'),'and starts when it is pressed');
  // Cancelling a schedule on purpose is not undone by a later signup.
  const cancelled=fixture();await startDuePointsSessions(cancelled.s,start+1000,apply);for(const r of cancelled.s.rounds)if(r.status!=='complete')await apply(cancelled.s,owner,'cancelRound',{roundId:r.id},start+2000).catch(()=>{});
  cancelled.s.matches.filter(m=>m.status==='playing').forEach(m=>{m.status='cancelled'});cancelled.s.rounds.forEach(r=>{r.status='cancelled'});
  cancelled.s.registrations.push({...cancelled.s.registrations[0],id:'extra',playerId:'p8',sequence:9});const count=cancelled.s.rounds.length;
  await startDuePointsSessions(cancelled.s,start+3*minute,apply);assert.equal(cancelled.s.rounds.length,count);
+});
+
+test('开始比赛: only confirmed players and organisers, never on live play, never publishes a draft, and plans first for an organiser',async()=>{
+ const {s,e,owner}=fixture();await startDuePointsSessions(s,start+1000,apply);
+ const before=structuredClone(s);
+ await assert.rejects(()=>apply(s,{id:'outsider',email:'',playerId:'nobody',role:'member'},'pointsPlay',{eventId:'e'},start+2000),/403/);assert.deepEqual(s,before);
+ await assert.rejects(()=>apply(s,owner,'pointsPlay',{eventId:'e'},start-minute),/活动进行时/,'not before the activity');assert.deepEqual(s,before);
+ // Nothing planned (the clock failed): a member is told to wait, an organiser's press plans, publishes and starts.
+ const empty=fixture();empty.e.pointsSession={startedAt:start,attendance:[],waiting:[]};
+ await assert.rejects(()=>apply(empty.s,empty.s.accounts[2],'pointsPlay',{eventId:'e'},start+5*minute),/赛程还没排出/);
+ await apply(empty.s,empty.owner,'pointsPlay',{eventId:'e'},start+5*minute);assert.ok(empty.s.rounds.length>=6);assert.equal(empty.s.matches.filter(m=>m.status==='playing').length,1);
+ // A draft is never published by the button (AGENTS.md A7).
+ const draft=fixture();await apply(draft.s,draft.owner,'planPoints',{eventId:'e',at:start,pointsMinutes:30,roundMinutes:15,seed:2,pairing:'rotate'},start-minute);
+ const drafted=structuredClone(draft.s);await assert.rejects(()=>apply(draft.s,draft.owner,'pointsPlay',{eventId:'e'},start+minute),/草稿/);assert.deepEqual(draft.s,drafted);
+ // Live play has its own 开始组队.
+ const live=fixture();await apply(live.s,live.owner,'liveStart',{eventId:'e'},start);await assert.rejects(()=>apply(live.s,live.owner,'pointsPlay',{eventId:'e'},start+minute),/开始组队/);
+ void e;
+});
+
+test('one court defaults to the planned schedule, two or more courts to live play; a chosen or used mode is kept',()=>{
+ const {s,e}=fixture();assert.equal(schedulingMode(s,e),'planned');
+ s.bookings.push({...s.bookings[0],id:'court-2',name:'Court 2'});assert.equal(schedulingMode(s,e),'live');
+ s.bookings.push({...s.bookings[0],id:'court-1-later',start:start+60*minute});assert.equal(schedulingMode(s,e),'live','the same court booked twice is still one court');
+ s.bookings=s.bookings.filter(b=>b.id!=='court-2');assert.equal(schedulingMode(s,e),'planned');
+ s.bookings.push({...s.bookings[0],id:'court-2',name:'Court 2'});e.schedulingMode='planned';assert.equal(schedulingMode(s,e),'planned','an explicit choice wins');
+ delete e.schedulingMode;s.rounds=[{id:'old',eventId:e.id,start,duration:15,status:'published',eligible:[],rest:[],seed:1,pointsSlot:1}];assert.equal(schedulingMode(s,e),'planned','an activity already planned stays planned');
 });

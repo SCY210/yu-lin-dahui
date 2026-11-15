@@ -18,7 +18,7 @@ try{
  assert.ok(reads.every(s=>s.revision===saved.revision&&s.matches.length===0&&s.events[0].livePlay?.enabled),'racing read retries against committed revision');
  const again=await api.loadClubState();assert.equal(again.revision,saved.revision);assert.deepEqual(again.matches,saved.matches);
  const now=Date.now(),phase=api.createSimulation(now).state,e=phase.events[0],cut=now-1000;
- e.start=now-2*3600000;e.end=now+2*3600000;e.schedulingMode='planned';e.pointsPlan={start:e.start,end:e.end,roundMinutes:15};e.pointsSession={startedAt:e.start,attendance:[],waiting:[]};
+ e.start=now-2*3600000;e.end=now+2*3600000;e.schedulingMode='planned';e.pointsPlan={start:e.start,end:e.end,roundMinutes:15};e.pointsSession={startedAt:e.start,playStartedAt:e.start,attendance:[],waiting:[]};
  phase.bookings.forEach(b=>{b.start=e.start;b.end=e.end});phase.registrations.forEach((r,i)=>{r.arrival=i>=10?cut:e.start;r.departure=i===8||i===9?cut:e.end;r.registeredAt=e.start-86400000});
  const ids=phase.players.map(p=>p.id);
  for(let n=0;n<2;n++){

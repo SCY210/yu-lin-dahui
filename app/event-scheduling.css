@@ -79,3 +79,5 @@
 .event-scheduling.is-ended .round-tab.is-playing small::before{display:none}
 @media(prefers-reduced-motion:reduce){.round-tab.is-playing small::before{animation:none}}
 /* When live scheduling serves better (lib/domain/scheduling.ts), and a note when this activity's numbers match. */
+/* 开始比赛: published planned games wait for a press (AGENTS.md C2). */
+.planned-play-start{display:flex;align-items:center;justify-content:space-between;gap:12px;border-left:4px solid var(--primary)}.planned-play-start>div{min-width:0}.planned-play-start strong{font-size:16px}.planned-play-start .hint{margin:4px 0 0}.planned-play-start button{flex-shrink:0}@media(max-width:600px){.planned-play-start{flex-direction:column;align-items:stretch}}

@@ -12,6 +12,7 @@ import { decorateMatch } from './play';
 import { authorizeEventAction } from './permissions';
 import { businessTimestamp } from './timestamp';
 import { fail, type State, type Account, type Match, type Round } from './types';
+import { roundMinutes } from './points-window';
 export { defaultPointsMinutes, pointsWindow, isPointsTime } from './points-window';
 const minute = 60000;
 const id = z.string().min(1).max(100);
@@ -50,7 +51,7 @@ export async function applyPointsPlan(s: State, a: Account, action: string, inpu
             if(recordedEnd>now)fail('上一轮记录的结束时间尚未到，请稍后添加');
             const at=Math.max(now,e.start,recordedEnd,...rounds.map(r=>r.start+r.duration*minute));
             // Less than five minutes left: the round runs past the end with the usual length, using the final phase's players and courts.
-            const left=Math.floor((e.end-at)/minute),overtime=left<5,duration=Math.min(e.pointsPlan?.roundMinutes??15,60,...(overtime?[]:[left]));
+            const left=Math.floor((e.end-at)/minute),overtime=left<5,duration=Math.min(roundMinutes(e),60,...(overtime?[]:[left]));
             const phaseAt=overtime?e.end-1:at,phaseMinutes=overtime?0:duration;
             const work=structuredClone(s),event=work.events.find(x=>x.id===e.id)!;
             // A future appended slot may reuse players/courts currently playing;

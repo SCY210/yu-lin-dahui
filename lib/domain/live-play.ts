@@ -7,7 +7,7 @@ import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
 import {bookingAllowsPlayer,registrationSpans} from './booking-signups';
 import {fixedPartnerTeams} from './fixed-partners';
 import {lockSplits,lockedPartners,pickFour} from './locked-pairs';
-import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority} from './match-balance';
+import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesPriority,newbieExposure} from './match-balance';
 import {doublesTypeMismatch,genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
 import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions';
@@ -71,7 +71,7 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
-  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female));
+  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female),newbieExposure(order,rating,female));
  };
  const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
  let best=first,bestCost=cost(first);
@@ -182,7 +182,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
     const cost=(ts:string[][])=>{
      const [a,b]=ts;
      const gap=Math.abs(a.reduce((sum,id)=>sum+rating(id),0)-b.reduce((sum,id)=>sum+rating(id),0))/2;
-     return balanceCost([gap],history.variety(a,b,0),genderMismatches(s,a,b,rating),history.rematches(a,b),history.cohorts(ts.flat()),0,0,0,0,history.liveMixedRepeats(a,b),doublesTypeMismatch(a,b,female));
+     return balanceCost([gap],history.variety(a,b,0),genderMismatches(s,a,b,rating),history.rematches(a,b),history.cohorts(ts.flat()),0,0,0,0,history.liveMixedRepeats(a,b),doublesTypeMismatch(a,b,female),newbieExposure(ts.flat(),rating,female));
     };
     let bestCost=cost(chosen);
     for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){

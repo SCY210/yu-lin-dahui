@@ -52,6 +52,7 @@ import { applySocial, memberSocialActions } from './social-commands';
 import { applyShuttles } from './shuttles';
 import { applyFeePayments, feeContact, unpaidBills } from './fee-payments';
 import { applyPointsPlan, defaultPointsMinutes } from './points-plan';
+import { defaultRoundMinutes } from './points-window';
 import { applyPointsChoice } from './points-choice';
 import { applyLockedPairs } from './locked-pair-commands';
 import { fixedPartnerTeams, proposeFixed } from './fixed-partners';
@@ -205,7 +206,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             const e: Event = { ...details, title:details.title??automaticEventTitle(p.start,p.matchFormat),automaticTitle:!details.title, signupDeadline: initialSignupDeadline(p.start, now), cancelDeadline: cancellationDeadline(p), id: id(), creatorId: a.id, ranked:p.matchFormat!=='practice'&&(p.ranked??canEnableEventRanking(s,a)), attendanceMode: 'automatic', courtMode: 'interval', ballMode: 'interval' };
             if(e.gamePoints!==15||tournament||isPractice(e))delete e.gamePoints;
             if(isPractice(e))e.practiceShuttleCents=practiceShuttleCents??200;
-            else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
+            else e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: defaultRoundMinutes(e) };
             if(tournament){e.tournament=newTournament();if(category){if(!categoryFits(category,p.matchFormat==='singles'))fail('项目与单打 / 双打不一致');e.tournament.category=category}if(e.automaticTitle)e.title=autoTitle(e);delete e.pointsPlan}
             // New activities record who advanced every court slot and expense (docs/FEE_ADVANCES.md).
             e.feeAdvances = true;
@@ -263,7 +264,10 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if(p.gamePoints!==undefined&&p.gamePoints!==eventGamePoints(e)){
                 if(e.tournament)fail('比赛的分制请在赛制设置里调整');
                 if(s.matches.some(m=>m.eventId===e.id&&m.status==='complete'))fail('已有比分，不能更改分制');
+                const before=defaultRoundMinutes(e);
                 if(p.gamePoints===15)e.gamePoints=15;else delete e.gamePoints;
+                // A round length nobody has planned or changed follows the new game length.
+                if(e.pointsPlan&&!e.pointsPlan.generatedAt&&e.pointsPlan.roundMinutes===before)e.pointsPlan.roundMinutes=defaultRoundMinutes(e);
             }
             if(isPractice(e))delete e.gamePoints;
             Object.assign(e, { title: p.title??(e.automaticTitle?autoTitle(e):e.title), venue: p.venue, address: p.address, capacity: p.capacity, cancelDeadline: cancellationDeadline(e), note: p.note });
@@ -483,7 +487,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
             if (e.livePlay?.enabled)
                 fail('本活动使用实时排场，请在比赛页面开始或恢复排场');
             if (p.usePointsWindow && !e.pointsPlan)
-                e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: 15 };
+                e.pointsPlan = { start: e.start, end: e.start + defaultPointsMinutes(e) * 60000, roundMinutes: defaultRoundMinutes(e) };
             if (['cancelled', 'ended', 'draft'].includes(e.status))
                 fail('请先开放或开始活动');
             if (s.rounds.some(r => r.eventId === e.id && r.pointsSlot !== undefined && ['draft', 'published', 'playing'].includes(r.status)))

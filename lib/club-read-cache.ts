@@ -4,7 +4,7 @@ import {bountyHonorUntil,bountyOfferAt} from './domain/bounties';
 import {nextHornEnd} from './domain/horn';
 import {attendanceForEvent,usesAutomaticAttendance} from './domain/attendance';
 import {registrationSpans} from './domain/booking-signups';
-import {pointsWindow} from './domain/points-window';
+import {pointsWindow,roundMinutes} from './domain/points-window';
 import {inactivityDeadline,isRatedMatch} from './domain/realm-rating';
 import {month} from './domain/types';
 import {nextQuarterStart} from './ranking-quarter';
@@ -55,7 +55,7 @@ export function createClubReadCache(limit=256){
 /** Clock moments inside a running activity at which a member's view, or the clock-driven maintenance that only runs
  * on a full read (auto-started rounds, refilled live courts), can change without a write. */
 function liveBoundaries(s:State,e:Event,boundary:(at:number)=>void,now:number){
- const round=(e.pointsPlan?.roundMinutes??15)*minute,window=pointsWindow(e),cuts=[e.start,e.end];
+ const round=roundMinutes(e)*minute,window=pointsWindow(e),cuts=[e.start,e.end];
  boundary(window.start);boundary(window.end);
  // Automatic gap games need five whole minutes before the phase/window ends.
  boundary(window.end-5*minute+1);

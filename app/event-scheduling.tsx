@@ -4,7 +4,7 @@ import type {LiveOp,LiveScore} from '../lib/domain/live-score';
 import PointsAttendance from './points-attendance';
 import EventTournament from './event-tournament';
 import {lazy,Suspense,useState} from 'react';
-import {Check,Shuffle,CalendarDays,Sparkles} from 'lucide-react';
+import {Check,Shuffle,CalendarDays,Sparkles,Swords} from 'lucide-react';
 import type {ClubData} from '../lib/contracts/club';
 import type {Event,Match,Round,State} from '../lib/domain/types';
 import {isPlannedLineup,editableMatchLineup,roundBenchIds,roundLineupSnapshot,type RoundLineup} from '../lib/domain/round-lineup';
@@ -14,10 +14,10 @@ import {ceilHalfHour} from '../lib/time-planning';
 import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {liveActivityAvailable} from '../lib/domain/live-window';
-import {canScheduleEvent} from '../lib/domain/permissions';
+import {canRecordScore,canScheduleEvent} from '../lib/domain/permissions';
 import {isPractice,eventFormat,courtPlayers} from '../lib/domain/match-format';
-import {pointsWindow} from '../lib/domain/points-window';
-import {liveSchedulingFits,pendingSchedulingIds,recommendedSchedulingMode,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
+import {pointsWindow,roundMinutes} from '../lib/domain/points-window';
+import {eventCourtCount,liveSchedulingFits,pendingSchedulingIds,plannedPlayStarted,recommendedSchedulingMode,schedulingMode,schedulingLabels,type SchedulingMode} from '../lib/domain/scheduling';
 import EventLivePlay from './event-live-play';
 import EventPointsPlan,{EventLockedPairs} from './event-points-plan';
 import MatchCard from './match-card';
@@ -36,7 +36,7 @@ export type SchedulingContext={/** The competition sandbox keeps live scores in 
 function SchedulingAdvice({advice,mode,fit,busy,change}:{advice:ReturnType<typeof recommendedSchedulingMode>;mode:SchedulingMode;fit?:{players:number;courts:number};busy:boolean;change:(next:SchedulingMode)=>void}){
  const [open,setOpen]=useState(false),current=advice.mode===mode;
  return <aside className={'scheduling-advice'+(current?' is-current':'')} aria-label="推荐排场方式">
-  <div className="scheduling-advice-row"><Sparkles size={15} aria-hidden="true"/><strong>推荐：{schedulingLabels[advice.mode]}{current?' · 正在使用':''}</strong><button type="button" className="scheduling-advice-why" aria-haspopup="dialog" onClick={()=>setOpen(true)}>何时用实时？</button>{!current&&<button type="button" className="primary" disabled={busy} onClick={()=>change(advice.mode)}>改用{schedulingLabels[advice.mode]}</button>}</div>
+  <div className="scheduling-advice-row"><Sparkles size={15} aria-hidden="true"/><strong>推荐：{schedulingLabels[advice.mode]}{current?' · 正在使用':''}</strong><button type="button" className="scheduling-advice-why" aria-haspopup="dialog" onClick={()=>setOpen(true)}>何时用{advice.other==='live'?'实时':'预排'}？</button>{!current&&<button type="button" className="primary" disabled={busy} onClick={()=>change(advice.mode)}>改用{schedulingLabels[advice.mode]}</button>}</div>
   {fit&&<p className="scheduling-advice-fit" role="note"><span>本场 {fit.players} 人 / {fit.courts} 片场，{mode==='live'?'正适合实时排场':'更适合实时排场'}</span>{mode!=='live'&&<button type="button" className="secondary" disabled={busy} onClick={()=>change('live')}>改用实时排场</button>}</p>}
   {open&&<Suspense fallback={null}><AdviceDialog advice={advice} onClose={()=>setOpen(false)}/></Suspense>}
  </aside>;
@@ -57,11 +57,11 @@ export default function EventScheduling({e,ctx}:{e:Event;ctx:SchedulingContext})
  const change=(next:SchedulingMode)=>ctx.open('切换排场方式','schedulingMode',{eventId:e.id,mode:next,expectedMode:mode,expectedPendingIds:pendingSchedulingIds(ctx.data,e.id)},[],undefined,
   '切换为「'+schedulingLabels[next]+'」。已完成比分和正在打的对局保持不变；尚未开打的旧安排会撤销，再按新方式安排。');
  // Organisers who can still choose see the recommended way, highlighted above the selector.
- const advice=manager&&active?recommendedSchedulingMode():undefined;
  // This activity's own numbers: confirmed players against its distinct courts (same name and venue count once).
- const courtCount=new Set(ctx.data.bookings.filter(b=>b.eventId===e.id).map(b=>(b.venue??e.venue)+'/'+b.name)).size,playerCount=ctx.data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').length;
- const fit=advice&&liveSchedulingFits(playerCount,courtCount,courtPlayers(e))?{players:playerCount,courts:courtCount}:undefined;
- return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><PointsAttendance e={e} ctx={ctx}/>{advice&&<SchedulingAdvice advice={advice} mode={mode} fit={fit} busy={ctx.busy} change={change}/>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <AppSelect aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</AppSelect></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
+ const courtCount=eventCourtCount(ctx.data,e),advice=manager&&active?recommendedSchedulingMode(courtCount):undefined,playerCount=ctx.data.registrations.filter(r=>r.eventId===e.id&&r.status==='confirmed').length;
+ // The live-fit line only adds something while the planned schedule is the recommendation (one court).
+ const fit=advice?.mode==='planned'&&liveSchedulingFits(playerCount,courtCount,courtPlayers(e))?{players:playerCount,courts:courtCount}:undefined;
+ return <div className={'event-scheduling'+(eventStatusAt(e,now)==='ended'?' is-ended':'')}><PointsAttendance e={e} ctx={ctx}/>{advice&&<SchedulingAdvice advice={advice} mode={mode} fit={fit} busy={ctx.busy} change={change}/>}<section className="card scheduling-selector"><label className="scheduling-mode-select">排场方式 <AppSelect aria-label="排场方式" value={mode} disabled={ctx.busy||!manager||(!active&&!liveAfterEnd)} onChange={event=>change(event.target.value as SchedulingMode)}>{(mode==='round'?['planned','round','live'] as const:['planned','live'] as const).map(value=><option key={value} value={value} disabled={value==='round'||(!active&&value!=='live')}>{value==='round'?'逐轮安排（已停用）':schedulingLabels[value]+(advice?.mode===value?'（推荐）':'')}</option>)}</AppSelect></label><details className="scheduling-mode-info"><summary>说明</summary><p className="hint">{mode==='planned'?'提前分配多轮并发布；未录分的对局可随时换人，录入比分后结束本局。活动开始时还没有预排的，会自动按接龙预排全部赛程；第一局等道友点「开始比赛」再开打。':mode==='round'?'逐轮安排已停用，本活动结束前仍可继续使用；可切换为预排赛程或实时排场。':'每片场地录分后立即安排下一局，其他场地继续比赛；未录分的当前对局可像预排一样点两位球友换人。'}{!active?(liveAfterEnd?' 预约结束后仍可切换实时排场，手动继续组队。':' 活动未开放，当前仅查看记录。'):''}</p></details></section>
   {filter}
   <EventLockedPairs e={e} ctx={ctx} now={now}/>
   {mode==='live'?<EventLivePlay key={e.id+':'+playerId} e={e} ctx={filteredContext}/>:<EventRounds key={e.id+':'+playerId} e={e} ctx={filteredContext} mode={mode} now={now} focusRoundId={jump.roundId}/>}
@@ -84,15 +84,20 @@ export function EventRounds({e,ctx,mode,now,focusRoundId}:{e:Event;ctx:Schedulin
  const overtime=Math.floor((e.end-appendAt)/60000)<5,afterEnd=manager&&now>=e.end&&liveActivityAvailable(e,now);
  const canAppend=(editable||afterEnd)&&!busy&&rounds.some(r=>r.pointsSlot!==undefined);
  const appendRound=<button type="button" className="secondary" disabled={!canAppend} onClick={()=>send('pointsNext',{eventId:e.id,expectedRoundIds:rounds.map(r=>r.id).sort()})}><Shuffle size={17}/>{overtime?'临时加一轮 · 加时':'临时加一轮'}</button>;
- const generate=()=>open('生成下一轮','generate',{eventId:e.id,at:Math.max(e.start,now),duration:Math.min(e.pointsPlan?.roundMinutes??15,remaining,90),seed:Math.floor(Math.random()*1000000)+1},[{...number('duration','每轮预计时长 · 分钟'),min:5,max:Math.min(90,remaining)}],undefined,'生成后可交换球友、调整场地，再确认发布。');
+ const generate=()=>open('生成下一轮','generate',{eventId:e.id,at:Math.max(e.start,now),duration:Math.min(roundMinutes(e),remaining,90),seed:Math.floor(Math.random()*1000000)+1},[{...number('duration','每轮预计时长 · 分钟'),min:5,max:Math.min(90,remaining)}],undefined,'生成后可交换球友、调整场地，再确认发布。');
  const arrange=()=>{const window=pointsWindow(e),at=ceilHalfHour(Math.max(e.start,now)),max=Math.min(720,Math.floor((e.end-at)/60000));open('预排剩余赛程','planPoints',{eventId:e.id,at:dt(at),pointsMinutes:Math.max(5,Math.min(max,Math.round((window.end-at)/60000))),roundMinutes:window.roundMinutes,pairing:eventFormat(e)==='singles'?'rotate':e.pointsChoice?.selectedMode??'rotate',seed:Math.floor(Math.random()*1000000)+1},[
   halfTimed('at','赛程开始'),{...number('pointsMinutes','赛程时长 · 分钟'),min:5,max},{...number('roundMinutes','每轮预计时长 · 分钟'),min:5,max:60},...(eventFormat(e)==='singles'||hasStarted?[]:[choice('pairing','搭档方式',[['rotate','每轮换搭档'],['fixed','固定搭档']])])
  ],v=>({...v,at:epoch(String(v.at))}),'按接龙参加时段和可用场地预排剩余对局，不修改已完成比分。重新预排会替换尚未开打的轮次。')};
+ // 开始比赛 (pointsPlay, AGENTS.md C2): the clock plans and publishes, and the first games wait for anyone signed up,
+ // the organiser or an administrator. With nothing planned yet, only an organiser's press plans the rest first.
+ const awaitingPlay=active&&now>=e.start&&now<e.end&&!plannedPlayStarted(data,e)&&!ctx.readOnly&&(manager||canRecordScore(data,data.me,e));
+ const unplanned=!pending.length&&!rounds.length,playable=pending.some(r=>r.status==='published')||(manager&&unplanned);
  const swap=(r:Round,id:string)=>{if(!currentSelected||currentSelected.roundId!==r.id){setSelected({roundId:r.id,playerId:id,lineup:roundLineupSnapshot(data.matches.filter(m=>m.roundId===r.id))});return}if(currentSelected.playerId!==id)send('swap',{roundId:r.id,p1:currentSelected.playerId,p2:id,expectedLineup:currentSelected.lineup});setSelected(null)};
  return <>
   <details className="card scheduling-controls" open><summary className="scheduling-controls-summary"><strong>{mode==='planned'?'预排赛程':'逐轮安排'}</strong><span className="badge">{rounds.length} 轮</span><span>管理</span></summary>{!editable&&afterEnd&&mode==='planned'&&rounds.some(r=>r.pointsSlot!==undefined)&&<div className="actions">{appendRound}</div>}{editable&&<div className="actions">{mode==='planned'?<><button type="button" className="primary" disabled={busy||playing||Math.floor((e.end-ceilHalfHour(Math.max(e.start,now)))/60000)<5} onClick={arrange}><CalendarDays size={17}/> {rounds.length?'重新预排剩余赛程':'预排赛程'}</button>{rounds.some(r=>r.pointsSlot!==undefined)&&appendRound}{pending.some(r=>r.status==='draft')&&<button type="button" className="secondary" disabled={busy||playing} onClick={()=>send('publishPoints',{eventId:e.id})}><Check size={17}/>发布全部预排</button>}</>:<button type="button" className="primary" disabled={!canGenerate} onClick={generate}><Shuffle size={17}/>生成下一轮</button>}</div>}
-   <p className="hint">{mode==='planned'?'未录分的预排对局可随时换人；录入比分后结束本局。'+(overtime?'时间已排满，再加的轮次会超过活动结束时间，沿用最后时段的名单和场地。':''):playing?'每片场地录分后自动接续已发布的下一场；球员尚在其他场地比赛时，下一场会等待。':pending.length?'当前已有未开打轮次，确认发布后到时自动开赛。':'每轮结束后再生成，保留公平轮休与实力平衡。'}</p>
+   <p className="hint">{mode==='planned'?'未录分的预排对局可随时换人；录入比分后结束本局。'+(overtime?'时间已排满，再加的轮次会超过活动结束时间，沿用最后时段的名单和场地。':''):playing?'每片场地录分后自动接续已发布的下一场；球员尚在其他场地比赛时，下一场会等待。':pending.length?'当前已有未开打轮次，确认发布后点「开始比赛」开打。':'每轮结束后再生成，保留公平轮休与实力平衡。'}</p>
   </details>
+  {awaitingPlay&&(playable||pending.length>0)&&<section className="card planned-play-start" aria-label="开始比赛"><div><strong>赛程已排定，静候开战</strong><p className="hint">{!playable?'赛程还是草稿，宗主或副宗主发布后才能开始。':unplanned?'还没有赛程：点「开始比赛」会先按接龙排好，再开打第一局。':'第一局不会自己开打。道友到齐后点「开始比赛」，各片场按赛程开打；之后每片场录分后自动接下一局。'}</p></div>{playable&&<button type="button" className="primary" disabled={busy} onClick={()=>send('pointsPlay',{eventId:e.id})}><Swords size={17}/>开始比赛</button>}</section>}
   {selected&&!currentSelected&&<p className="connection-note" role="status">本轮阵容已更新，请重新选择要交换的两位球友。</p>}
   {!rounds.length&&<p className="empty">{mode==='planned'?'正式接龙后即可预排赛程。':'正式接龙后可生成第一轮。'}</p>}
   {playerId&&!rounds.some(r=>data.matches.some(m=>m.roundId===r.id&&matchIncludesPlayer(m,playerId)))&&<p className="match-filter-empty">这位球友暂时没有对局，轮休不算参赛。</p>}
