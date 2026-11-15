@@ -1,5 +1,5 @@
 'use client';
-import {ArrowRight,Copy} from 'lucide-react';
+import {ArrowRight,Copy,Phone} from 'lucide-react';
 import {toast} from 'sonner';
 import {euro} from './form-fields';
 import {transferPaid,type Advance,type Transfer} from '../lib/domain/fee-transfers';
@@ -7,7 +7,7 @@ import {useState} from 'react';
 import './fee-transfers.css';
 
 type Settlement={id:string;eventId:string;version:number;advances?:Advance[];transfers?:Transfer[];collector?:string};
-type Ctx={data:{me:{playerId:string};payments?:{eventId:string;playerId:string;cents:number;to?:string}[]};name:(id:string)=>string;busy?:boolean;action:(action:string,payload:Record<string,unknown>,close?:boolean)=>Promise<unknown>};
+type Ctx={data:{me:{playerId:string};players?:{id:string;profile?:{phone?:string}}[];payments?:{eventId:string;playerId:string;cents:number;to?:string}[]};name:(id:string)=>string;busy?:boolean;action:(action:string,payload:Record<string,unknown>,close?:boolean)=>Promise<unknown>};
 
 /** The transfer a "去付款" link brings into view (docs/JUMP_TO_MATCH.md): the viewer's first open transfer out, else
  * their first open transfer in. */
@@ -26,13 +26,17 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
  const mark=(t:Transfer,paid:boolean)=>void ctx.action('feeTransferPaid',{eventId:e.id,settlementId:settlement.id,from:t.from,to:t.to,paid,reason:paid?'标记已转账':'撤销转账标记'},false).catch(()=>{});
  const target=payTransfer(transfers,payments,e.id,me);
  const mine=transfers.filter(t=>t.from===me||t.to===me),others=transfers.filter(t=>t.from!==me&&t.to!==me);
- const collectorPhone=settlement.collector&&e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'';
+ // Members see the numbers of the people they transfer with (lib/club-view.ts phonePeers), so they can pay directly.
+ const phoneOf=(id:string)=>data.players?.find(p=>p.id===id)?.profile?.phone?.trim()??'';
+ const collectorPhone=settlement.collector?(e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'')||phoneOf(settlement.collector):'';
+ const copyPhone=async(phone:string)=>{try{await navigator.clipboard.writeText(phone);toast.success('已复制电话号码')}catch{toast.error('复制失败')}};
  const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to} id={t===target?payRowId(e.id):undefined}>
   <div className={'fee-transfer-people'+(t.from===me?' from-me':t.to===me?' to-me':'')}>
    <strong className={'fee-transfer-person'+(t.from===me?' is-self':'')} data-side="from" title={name(t.from)}>{t.from===me?'我':name(t.from)}</strong>
    <ArrowRight className="fee-transfer-direction" size={20} aria-label="转给"/>
    <strong className={'fee-transfer-person'+(t.to===me?' is-self':'')} data-side="to" title={name(t.to)}>{t.to===me?'我':name(t.to)}</strong>
   </div>
+  {(t.from===me||t.to===me)&&(()=>{const other=t.from===me?t.to:t.from,phone=phoneOf(other);return <div className="fee-transfer-phone">{phone?<><Phone size={15} aria-hidden="true"/><span>{name(other)} 的电话 <b>{phone}</b></span><button type="button" className="ghost" onClick={()=>void copyPhone(phone)}><Copy size={14} aria-hidden="true"/> 复制</button></>:<span className="hint">{name(other)} 还没填电话号码，可以在群里问一下。</span>}</div>})()}
   <div className="fee-transfer-footer"><div className="fee-transfer-amount"><span>应转金额</span><b>{euro(t.cents)}</b></div><div className="fee-transfer-actions">
    <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>
    {can&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>mark(t,!paid)}>{paid?'撤销':t.to===me?'确认已收到':'标记已转'}</button>}

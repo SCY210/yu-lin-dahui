@@ -6,15 +6,18 @@ import {eventFormat} from './match-format';
 
 import { assertPlayerMutable } from './ownership';
 import { z } from 'zod';
+import { phoneProblem } from '../player-profile-options';
 import { fail, type State, type Account } from './types';
 import { finished, won } from './social';
 import { authorizeEventAction } from './permissions';
 import { awardCandidateIds, canCastAwardVote, isAwardVotingOpen, mvpVotes } from './activity-voting';
 const id = z.string().min(1).max(100);
-export const memberSocialActions = ['profileDetails', 'profileGender', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
+const phone = z.string().trim().max(40).superRefine((v, c) => { const problem = phoneProblem(v); if (problem) c.addIssue({ code: 'custom', message: problem }); });
+export const memberSocialActions = ['profileDetails', 'profileGender', 'profilePhone', 'challenge', 'challengeRespond', 'tagVote', 'awardVote'];
 const schemas = {
     profileGender:z.object({playerId:id,gender:z.enum(['male','female','other','undisclosed']),reason:z.string().trim().max(500).optional()}).strict(),
-    profileDetails: z.object({ playerId: id, gender: z.enum(['male', 'female', 'other', 'undisclosed']).optional(), years: z.number().min(0).max(80), hand: z.enum(['right', 'left', 'both']), preference: z.enum(['doubles', 'singles', 'mixed', 'all']), style: z.string().trim().max(300), motto: z.string().trim().max(80).optional(), equipment: z.string().trim().max(500), racket: z.string().trim().max(120).optional(), strings: z.string().trim().max(120).optional(), tension: z.string().trim().max(80).optional(), tensionMin: z.number().min(1).max(80).nullable().optional(), tensionMax: z.number().min(1).max(80).nullable().optional() }).superRefine((p, c) => { const hasRange = p.tensionMin !== undefined || p.tensionMax !== undefined; if (!hasRange)
+    profilePhone:z.object({playerId:id,phone,reason:z.string().trim().max(500).optional()}).strict(),
+    profileDetails: z.object({ playerId: id, gender: z.enum(['male', 'female', 'other', 'undisclosed']).optional(), phone: phone.optional(), years: z.number().min(0).max(80), hand: z.enum(['right', 'left', 'both']), preference: z.enum(['doubles', 'singles', 'mixed', 'all']), style: z.string().trim().max(300), motto: z.string().trim().max(80).optional(), equipment: z.string().trim().max(500), racket: z.string().trim().max(120).optional(), strings: z.string().trim().max(120).optional(), tension: z.string().trim().max(80).optional(), tensionMin: z.number().min(1).max(80).nullable().optional(), tensionMax: z.number().min(1).max(80).nullable().optional() }).superRefine((p, c) => { const hasRange = p.tensionMin !== undefined || p.tensionMax !== undefined; if (!hasRange)
         return; if (p.tensionMin === null && p.tensionMax === null)
         return; if (typeof p.tensionMin !== 'number' || typeof p.tensionMax !== 'number')
         c.addIssue({ code: 'custom', path: ['tensionMin'], message: '磅数范围请同时填写最低和最高值，或同时留空' });
@@ -43,6 +46,16 @@ export async function applySocial(s: State, a: Account, action: string, input: u
             const pl=player(p.playerId);
             if(a.role!=='admin'&&p.playerId!==a.playerId)fail('403: 只能编辑自己的档案');
             pl.profile={years:0,hand:'right',preference:'doubles',style:'',equipment:'',...pl.profile,gender:p.gender};
+            break;
+        }
+        case 'profilePhone': {
+            // Like gender, a phone number can be filled in even where the rest of the profile is locked.
+            const p=command.payload;
+            assertPlayerMutable(s,a,p.playerId);
+            if(isGuest(s,p.playerId))fail('403: 临时来宾没有球员档案');
+            const pl=player(p.playerId);
+            if(a.role!=='admin'&&p.playerId!==a.playerId)fail('403: 只能填写自己的电话号码');
+            pl.profile={years:0,hand:'right',preference:'doubles',style:'',equipment:'',...pl.profile,phone:p.phone};
             break;
         }
         case 'profileDetails': {

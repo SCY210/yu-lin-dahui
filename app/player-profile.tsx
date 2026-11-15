@@ -15,7 +15,7 @@ import './player-profile.css';
 const AchievementCollection=lazy(()=>import('./achievement-collection'));
 const BondCard=lazy(()=>import('./bond-card'));
 import {tensionRange,tensionLabel} from '../lib/domain/tension';
-import {genderOptions,genderLabels,needsGender,type ProfileGender} from '../lib/player-profile-options';
+import {genderOptions,genderLabels,needsGender,needsPhone,type ProfileGender} from '../lib/player-profile-options';
 
 const defaults = {gender:'undisclosed',years:0, hand:'right', preference:'doubles', style:'', motto:'', equipment:'', racket:'', strings:''};
 const hands:Record<string,string> = {right:'右手', left:'左手', both:'双手'};
@@ -41,6 +41,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
   const unparsedLegacy=!range&&p.profile?.tension&&!('tensionMin' in p.profile||'tensionMax' in p.profile);
   const edit = () => genderOnly?ctx.open('修改性别','profileGender',{playerId:p.id,gender:p.profile?.gender??'undisclosed'},[{...choice('gender','性别（可不透露）',genderOptions.map(([value,label])=>[value,label])),highlight:needsGender(p.profile?.gender)}]):ctx.open('球友档案', 'profileDetails', {playerId:p.id, ...defaults, ...p.profile,tensionMin:range?.min??'',tensionMax:range?.max??''}, [
     {...choice('gender', '性别（可不透露）', genderOptions.map(([value,label])=>[value,label])),highlight:needsGender(p.profile?.gender)},
+    {key:'phone',label:'电话号码（分摊转账用，仅宗主、副宗主和与你互相转账的道友可见）',type:'tel',optional:!isOwn,highlight:isOwn&&needsPhone(p.profile?.phone)},
     {...number('years', '球龄（年）'),min:0,max:80,step:'any'},
     choice('hand', '惯用手', [['right','右手'], ['left','左手'], ['both','双手']]),
     choice('preference', '参赛偏好', [['doubles','双打'], ['singles','单打'], ['mixed','混双'], ['all','都可以']]),
@@ -51,7 +52,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
     {...number('tensionMin','穿线磅数范围 · 最低（磅）'),optional:true,step:'any',min:1,max:80},
     {...number('tensionMax','穿线磅数范围 · 最高（磅）'),optional:true,step:'any',min:1,max:80},
     optional('equipment', '其他装备与备注（最多500字）'),
-  ], (v:any)=>{const {grip,shoes,tension,tensionMin,tensionMax,...rest}=v;if(unparsedLegacy&&tensionMin===''&&tensionMax==='')return rest;return {...rest,tensionMin:tensionMin===''?null:Number(tensionMin),tensionMax:tensionMax===''?null:Number(tensionMax)}}, '填写最低和最高磅数，如24–28磅；两项同时留空可不填写。其他已登录群友可以查看档案。');
+  ], (v:Record<string,unknown>)=>{const dropped=['grip','shoes','tension','tensionMin','tensionMax','phone'],fields=Object.fromEntries(Object.entries(v).filter(([key])=>!dropped.includes(key))),{tensionMin,tensionMax}=v,trimmed=String(v.phone??'').trim(),rest=trimmed?{...fields,phone:trimmed}:fields;if(unparsedLegacy&&tensionMin===''&&tensionMax==='')return rest;return {...rest,tensionMin:tensionMin===''?null:Number(tensionMin),tensionMax:tensionMax===''?null:Number(tensionMax)}}, '填写最低和最高磅数，如24–28磅；两项同时留空可不填写。其他已登录群友可以查看档案；电话号码只有宗主、副宗主和与你互相转账的道友能看到。');
 
   return <section className="pp-card" aria-label={p.name+'的球友档案'}>
     <header className="pp-header">
@@ -76,6 +77,7 @@ export default function PlayerProfile({p, stats, ctx}:any) {
       <h3 className="pp-section-title"><UserRound size={18} aria-hidden="true"/>认识一下</h3>
       <dl className="pp-facts pp-personal-facts">
         <Fact label="性别" value={genderLabels[(p.profile?.gender??'undisclosed') as ProfileGender]} warn={needsGender(p.profile?.gender)?'排场需要，请填写男或女':undefined}/>
+        {(isOwn||ctx.admin)&&<Fact label="电话" value={p.profile?.phone||null} warn={isOwn&&needsPhone(p.profile?.phone)?'分摊转账需要，请填写':undefined}/>}
         <Fact label="球龄" value={p.profile?.years != null ? `${p.profile.years}年` : null}/>
         <Fact label="惯用手" value={hands[p.profile?.hand]}/>
         <Fact label="参赛偏好" value={preferences[p.profile?.preference]}/>
