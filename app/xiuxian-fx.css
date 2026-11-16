@@ -1,0 +1,79 @@
+/* 修仙风交互层 (docs/XIUXIAN_FX.md): spirit-light feedback, talisman ornaments and flowing 灵力 for the 水墨江湖 theme only; the classic theme is untouched.
+   Decoration only: no layout changes, transform/opacity/box-shadow effects, all motion off under reduced motion. */
+html.wuxia-theme{--xx-aura:#a8382a;--xx-aura-soft:#a8382a2e;--xx-gold:#b8935a;--xx-gold-soft:#b8935a66;--xx-ink:#263029}
+@keyframes xx-rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes xx-flow{0%,35%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes xx-spin{to{transform:rotate(360deg)}}
+@keyframes xx-motes{to{background-position:20px -110px,90px -60px,160px -180px}}
+html.wuxia-theme{
+::selection{background:color-mix(in srgb,var(--xx-gold) 38%,transparent)}
+&{scrollbar-color:color-mix(in srgb,var(--xx-gold) 60%,transparent) transparent}
+
+/* 灵气涟漪: a ring of spirit light spreads from a pressed button and fades after release. */
+.primary,.secondary,.tag-button,.pp-edit,[data-slot=button]{transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .55s ease-out}
+.primary:active:not(:disabled),.secondary:active:not(:disabled),.tag-button:active:not(:disabled),.pp-edit:active:not(:disabled),[data-slot=button]:active:not(:disabled){box-shadow:0 0 0 5px var(--xx-aura-soft),0 0 18px 2px var(--xx-gold-soft);transform:scale(.975);transition-duration:.18s,.18s,.18s,.08s,0s}
+/* 主按钮悬停时镶一圈金芒。 */
+.primary.primary:hover:not(:disabled):not(:active){box-shadow:0 0 0 1px var(--xx-gold-soft),0 6px 18px color-mix(in srgb,var(--xx-gold) 30%,transparent)}
+
+/* 卡片：入场时自下浮现，悬停时描一圈金芒。 */
+.card,.event-card,.match-card,.ts-product,.pp-card{animation:xx-rise .42s cubic-bezier(.2,.8,.3,1) backwards}
+.event-card,.ts-product{transition:border-color .25s ease,box-shadow .25s ease,background .25s ease,transform .25s ease}
+.event-card:hover,.ts-product:hover{box-shadow:0 0 0 1px var(--xx-gold-soft),0 8px 22px color-mix(in srgb,var(--xx-gold) 16%,transparent)}
+
+/* 栏目标题前的金色菱纹。 */
+.section-title h2::before,.section-title h3::before{content:'';display:inline-block;width:.5em;height:.5em;margin-right:.5em;vertical-align:.12em;transform:rotate(45deg);background:linear-gradient(135deg,var(--xx-gold),color-mix(in srgb,var(--xx-gold) 40%,var(--xx-aura)));box-shadow:0 0 6px var(--xx-gold-soft)}
+
+/* 底栏：当前页的图标托起，下方亮起一道灵纹。 */
+.bottom-nav button{position:relative}
+.bottom-nav button svg{transition:transform .25s cubic-bezier(.2,.9,.3,1.4),filter .25s ease}
+.bottom-nav button.active svg{transform:translateY(-2px) scale(1.08);filter:drop-shadow(0 0 5px var(--xx-gold-soft))}
+.bottom-nav button::after{content:'';position:absolute;left:50%;bottom:4px;width:22px;height:3px;margin-left:-11px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--xx-gold),transparent);opacity:0;transform:scaleX(.2);transition:opacity .25s ease,transform .3s cubic-bezier(.2,.9,.3,1.4)}
+.bottom-nav button.active::after{opacity:1;transform:none;box-shadow:0 0 8px var(--xx-gold-soft)}
+.bottom-nav button.active{box-shadow:none}
+
+/* 弹窗：四角金纹如符箓镶边，顶端一线灵光；遮罩带墨色晕染。纹饰画在背景上，内容滚动时不跟着走。 */
+.app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{
+ background-image:
+  linear-gradient(var(--xx-gold),var(--xx-gold)),linear-gradient(var(--xx-gold),var(--xx-gold)),
+  linear-gradient(var(--xx-gold),var(--xx-gold)),linear-gradient(var(--xx-gold),var(--xx-gold)),
+  linear-gradient(var(--xx-gold),var(--xx-gold)),linear-gradient(var(--xx-gold),var(--xx-gold)),
+  linear-gradient(var(--xx-gold),var(--xx-gold)),linear-gradient(var(--xx-gold),var(--xx-gold)),
+  linear-gradient(90deg,transparent,var(--xx-gold-soft) 30%,var(--xx-gold) 50%,var(--xx-gold-soft) 70%,transparent),
+  radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--xx-gold) 14%,transparent),transparent 60%)!important;
+ background-repeat:no-repeat!important;
+ background-size:16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px,70% 1px,100% 90px!important;
+ background-position:8px 8px,8px 8px,calc(100% - 8px) 8px,calc(100% - 8px) 8px,8px calc(100% - 8px),8px calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),50% 0,50% 0!important;
+ box-shadow:0 0 0 1px var(--xx-gold-soft),0 28px 80px #1a16302e,0 0 46px color-mix(in srgb,var(--xx-gold) 14%,transparent);
+}
+[data-slot=dialog-overlay],[data-slot=alert-dialog-overlay]{background:radial-gradient(ellipse at 50% 42%,#2a241a52,#12100bbd)!important;backdrop-filter:blur(2px)}
+.app-dialog [data-slot=dialog-title]{letter-spacing:.04em}
+
+/* 灵力流转：进度条里一道光自左向右流过。 */
+.realm-progress-track>span,.rv-progress-track>span,.bond-bar>span{position:relative;overflow:hidden}
+.realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff8c 50%,transparent 70%);transform:translateX(-100%);animation:xx-flow 2.8s ease-in-out infinite}
+
+/* 太极：加载与刷新时缓缓旋转 (app/taiji.tsx)。 */
+.xx-taiji{display:inline-block;vertical-align:-.2em;flex:none;animation:xx-spin 1.6s linear infinite;filter:drop-shadow(0 0 4px var(--xx-gold-soft))}
+.xx-taiji .xx-yang{fill:var(--xx-gold)}.xx-taiji .xx-yin{fill:var(--xx-ink)}.xx-taiji .xx-rim{fill:none;stroke:var(--xx-gold);stroke-width:1.5}
+.xx-taiji.is-still{animation:none}
+.xx-loading{display:flex;align-items:center;gap:8px}
+
+/* 首页题头：几点灵气缓缓升起。 */
+.shell .home-heading{position:relative}
+.shell .home-heading::before{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;opacity:.9;
+ background-image:radial-gradient(circle,var(--xx-gold) 0 1.5px,transparent 2.5px),radial-gradient(circle,var(--xx-gold) 0 1px,transparent 2px),radial-gradient(circle,color-mix(in srgb,var(--xx-aura) 70%,#fff) 0 1.5px,transparent 2.5px);
+ background-size:190px 150px,130px 170px,240px 200px;background-position:20px 40px,90px 110px,160px 20px;
+ -webkit-mask:linear-gradient(180deg,transparent,#000 35%,#000 70%,transparent);mask:linear-gradient(180deg,transparent,#000 35%,#000 70%,transparent);
+ animation:xx-motes 16s linear infinite}
+.shell .home-heading>*{position:relative}
+
+/* 输入框聚焦时泛起灵光。 */
+.shell input:focus-visible,.shell textarea:focus-visible,.app-dialog input:focus-visible,.app-dialog textarea:focus-visible{box-shadow:0 0 0 3px var(--xx-aura-soft),0 0 14px var(--xx-gold-soft)}
+
+@media(prefers-reduced-motion:reduce){
+ .card,.event-card,.match-card,.ts-product,.pp-card,.xx-taiji,.shell .home-heading::before{animation:none}
+ .realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{display:none}
+ .bottom-nav button svg,.bottom-nav button::after{transition:none}
+ .primary:active:not(:disabled),.secondary:active:not(:disabled),.tag-button:active:not(:disabled),.pp-edit:active:not(:disabled),[data-slot=button]:active:not(:disabled){transform:none}
+}
+}
