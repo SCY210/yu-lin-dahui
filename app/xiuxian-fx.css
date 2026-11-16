@@ -126,6 +126,20 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;z-ind
 .xx-touch::after{border-color:var(--xx-aura);border-style:dashed;animation-duration:.75s;animation-delay:.06s}
 .xx-touch i{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:#f4d792;box-shadow:0 0 6px 1px #e2b860;opacity:0;animation:xx-spark .65s ease-out forwards}
 
+/* 还带着原版白底圆角的部件，统一换成宣纸、金边和小圆角。 */
+.ev-signup-summary,.ev-court-card,.court-occupancy,.ts-product,.ts-ring,.ts-ring-item,.ts-order{background-color:var(--paper,#f9f5eb);border-color:#cbb996;border-radius:5px;box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 24%,transparent),0 3px 12px #3d342810}
+.ev-signup-summary,.ev-court-card{background-image:url('/xiuxian/cloud-tile.svg');background-size:180px 120px;background-position:right -30px top -24px;background-repeat:no-repeat}
+.ev-summary-heading h2{color:#2e352a}
+.ev-summary-heading h2>span{background:#ece0c8;border-color:#d2bc94;color:#806139;border-radius:2px}
+.ev-court-count{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px;color:#685238}
+.venue-heading-link>span{background:#ece0c8!important;color:#765532!important;border-radius:2px!important}
+/* 功能说明的圆形按钮：朱砂描边的宣纸小印。 */
+.shell button[aria-haspopup=dialog].rounded-full{background:#f7efdf;border-color:#c9a68a;color:var(--xx-aura);box-shadow:0 0 0 3px #fbf7ec,0 0 0 4px color-mix(in srgb,var(--xx-aura) 22%,transparent)}
+.rp-pedestal{background:linear-gradient(145deg,#eaddc0,#d9c5a0)}
+.ev-court-card>header{background:linear-gradient(180deg,#f3e9d3,transparent)}
+.venue-heading-link,.ev-court-card a,.venue-address,.legal-footer a{color:#7b4a2e}
+.venue-address{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px}
+
 @media(prefers-reduced-motion:reduce){
  .card,.event-card,.match-card,.ts-product,.pp-card,.xx-taiji,.shell .home-heading::before{animation:none}
  body::before,.topbar .brand,.bottom-nav button.active::before,.shell .home-heading h1,.primary.primary:hover:not(:disabled),.primary.primary:focus-visible:not(:disabled){animation:none}
