@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Bell} from 'lucide-react';
+import {CalendarPlus,Coins,Gift,Swords,Bell} from 'lucide-react';
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {enablePush,notificationConfig,pushSupport,syncPushAccount} from '../lib/client/push-notifications';
@@ -78,14 +78,19 @@ export default function NotificationPrompt({accountId,blocked=false}:{accountId:
  const install=offer.support==='iphone-install';
  const canEnable=!install&&!denied&&!!offer.publicKey;
  return <Dialog open={open} onOpenChange={next=>{if(!next)dismiss()}}><DialogContent className="app-dialog notification-optin" showCloseButton>
-  <DialogHeader><DialogTitle><Bell size={22} aria-hidden="true"/>传音符：活动通知</DialogTitle><DialogDescription>此符可选。开启后，即使没打开网站，天机阁的传讯也会像微信消息一样弹到手机上，开局、转正、悬赏都不错过。不开启也能正常使用网站和查看站内提醒。</DialogDescription></DialogHeader>
-  <NotificationIncentiveNotice/>
-  <ul className="notification-optin-kinds"><li>新活动开放报名</li><li>候补转正</li><li>比赛上场</li><li>活动改时间或取消</li><li>费用确认</li><li>赛后评选</li><li>悬赏令</li></ul>
+  <DialogHeader><DialogTitle><Bell size={22} aria-hidden="true"/>传音符：活动通知</DialogTitle><DialogDescription>开启后，天机阁的传讯会像微信消息一样弹到手机上。此符可选，不开启也能正常使用网站。</DialogDescription></DialogHeader>
+  <ul className="notification-optin-benefits">
+   <li><CalendarPlus size={20} aria-hidden="true"/><span><strong>新活动不错过</strong><small>报名、改期或取消，第一时间知道</small></span></li>
+   <li><Swords size={20} aria-hidden="true"/><span><strong>转正、上场即刻提醒</strong><small>候补转正和轮到你上场时马上通知</small></span></li>
+   <li><Coins size={20} aria-hidden="true"/><span><strong>费用、评选、悬赏令</strong><small>不用反复打开网站查看</small></span></li>
+   <li className="is-reward"><Gift size={20} aria-hidden="true"/><span><strong>手机首次开启 +10 积分</strong><small>双打赛季积分，每个账号领一次</small></span></li>
+  </ul>
+  <details className="notification-optin-rules"><summary>积分细则：开启 +10，关闭 −30（仅手机）</summary><NotificationIncentiveNotice/></details>
   {install?<><p className="notification-optin-lead">苹果手机要先把网站“添加到主屏幕”，才能收到通知。按下面 4 步操作，大约 1 分钟：</p><IosInstallSteps/></>:denied?isIphone()?<><p className="notification-optin-lead">系统已阻止通知。按下面步骤在 iPhone 设置里允许：</p><IosDeniedSteps/></>:<p className="hint">系统已阻止通知。请在浏览器或手机的通知设置中允许本网站，然后点击下方按钮重新检测。</p>:<p className="hint">点击开启后，请在系统提示中选择“允许”。每台设备需要单独开启。</p>}
   {error&&<p className="connection-note" role="alert">{error}</p>}
   <div className="actions notification-optin-actions">{canEnable?<button type="button" className="primary" disabled={busy} onClick={()=>void enable()}>{busy?'正在开启…':'开启通知'}</button>:<button type="button" className="primary" disabled={busy} onClick={()=>void recheck()}>{busy?'正在检测…':install||offer.support==='unsupported'?'重新检测通知支持':denied?'已允许，重新检测并开启':'重新检测通知服务'}</button>}
    <button type="button" className="secondary" onClick={dismiss}>暂不祭出</button>
   </div>
-  <p className="hint">可以稍后在「我的」通知设置中开启。关闭弹窗不会授权通知；下次进入或从后台返回时可能再次提示。</p>
+  <p className="hint notification-optin-foot">也可以稍后在「我的」通知设置中开启；下次进入时可能再次提示。</p>
  </DialogContent></Dialog>;
 }
