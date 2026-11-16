@@ -1,9 +1,21 @@
 .notification-optin [data-slot="dialog-title"]{display:flex;align-items:center;gap:10px}
 .notification-optin{max-height:calc(100dvh - 32px);overflow-y:auto}
-.notification-optin-kinds{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
-.notification-optin-kinds li{padding:4px 10px;border-radius:999px;background:#eeebf8;color:#4b4180;font-size:13px}
-.wuxia-theme .notification-optin-kinds li{background:#efe5cf;color:#5e4a2c;border-radius:4px}
 .notification-optin-lead{margin:2px 0 0;font-size:14px;font-weight:600}
 .notification-optin-actions{align-items:center;gap:10px;flex-wrap:wrap}
 .notification-optin-actions>.primary{flex:1;min-height:48px;font-weight:700}
 .notification-optin-actions>.secondary{flex-basis:100%;min-height:44px}
+.notification-optin-benefits{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.notification-optin-benefits li{display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:#f3f1fb}
+.notification-optin-benefits li>svg{justify-self:center;color:#5146d8}
+.notification-optin-benefits span{display:grid;gap:1px;min-width:0}
+.notification-optin-benefits strong{font-size:15px}
+.notification-optin-benefits small{font-size:13px;color:var(--muted-foreground)}
+.notification-optin-benefits li.is-reward{background:#fdf3d7}.notification-optin-benefits li.is-reward>svg{color:#b7791f}
+.notification-optin-rules{font-size:13px}.notification-optin-rules>summary{cursor:pointer;min-height:36px;display:flex;align-items:center;gap:6px;color:var(--muted-foreground)}
+.notification-optin-rules>summary::before{content:'▸'}.notification-optin-rules[open]>summary::before{content:'▾'}
+.notification-optin-rules>summary::-webkit-details-marker{display:none}
+.notification-optin-rules .connection-note{margin:6px 0 0}
+.notification-optin-foot{margin:0;font-size:12px}
+.wuxia-theme .notification-optin-benefits li{background:#f1e7d3;border:1px solid #dccba8;border-radius:4px}
+.wuxia-theme .notification-optin-benefits li>svg{color:#8d3429}
+.wuxia-theme .notification-optin-benefits li.is-reward{background:#f3e3b7;border-color:#c9a65a}.wuxia-theme .notification-optin-benefits li.is-reward>svg{color:#8c6733}

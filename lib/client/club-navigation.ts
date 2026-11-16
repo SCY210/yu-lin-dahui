@@ -82,6 +82,10 @@ export class ClubNavigation {
  private dialogClosers=new Map<string,()=>boolean|void>();
  private listeners=new Set<(route:ClubRoute)=>void>();
  private moving=false;
+ /** Which way the last route change went, for the page transition (docs/GESTURES.md). */
+ direction:'forward'|'back'='forward';
+ /** Whether Back stays inside the app: a dialog to close or an earlier page to return to. */
+ get canGoBack(){return this.index>0}
  private afterMove:(()=>void)|null=null;
  private generation=0;
  private session:string;
@@ -110,7 +114,7 @@ export class ClubNavigation {
   this.port[push?'push':'replace'](state,clubRouteUrl(this.port.href(),frame.route));
  }
  private rememberScroll(){this.frames[this.index].scrollY=safeScroll(this.port.scrollY())}
- private push(frame:Frame){this.rememberScroll();this.write(false);this.frames=this.frames.slice(0,this.index+1);this.frames.push(frame);this.index++;this.write(true);this.emit()}
+ private push(frame:Frame){this.direction='forward';this.rememberScroll();this.write(false);this.frames=this.frames.slice(0,this.index+1);this.frames.push(frame);this.index++;this.write(true);this.emit()}
  openPlayer(playerId:string,selection?:RankingSelection){
   if(this.moving){this.afterMove=()=>this.openPlayer(playerId,selection);return}
   const id=safeId(playerId);if(!id)return;
@@ -144,14 +148,14 @@ export class ClubNavigation {
  }
  replaceRoute(value:Partial<ClubRoute>){
   if(this.moving){this.afterMove=()=>this.replaceRoute(value);return}
-  this.closeCurrentDialog();this.frames[this.index]={route:normalizeRoute({...homeRoute,...value}),dialog:null,scrollY:0};this.write(false);this.emit();this.port.scrollTo(0);
+  this.direction='forward';this.closeCurrentDialog();this.frames[this.index]={route:normalizeRoute({...homeRoute,...value}),dialog:null,scrollY:0};this.write(false);this.emit();this.port.scrollTo(0);
  }
  backTo(value:Partial<ClubRoute>){
   if(this.moving){this.afterMove=()=>this.backTo(value);return}
   const route=normalizeRoute({...homeRoute,...value});
   for(let i=this.index-1;i>=0;i--)if(!this.frames[i].dialog&&sameRoute(this.frames[i].route,route)){this.move(i-this.index);return}
   // Directly opened details have no list entry to return to. Replace them with their list.
-  this.replaceRoute(route);
+  this.replaceRoute(route);this.direction='back';
  }
  private closeCurrentDialog(){
   const frame=this.frames[this.index];
@@ -187,6 +191,7 @@ export class ClubNavigation {
    const own=marker?.owner===this.owner,source=own&&route.page==='social'&&route.playerId?sourceOf(marker?.profileSource):undefined,ranking=own?rankingOf(marker?.ranking):undefined;
    this.frames=[{route,dialog:null,scrollY:own?safeScroll(marker?.scrollY):0,...(source?{profileSource:source}:{}),...(ranking?{ranking}:{})}];this.index=0;this.write(false);
   }
+  this.direction=this.index<previousIndex?'back':'forward';
   if(previous.dialog&&previous.dialog!==this.frames[this.index].dialog){const close=this.dialogClosers.get(previous.dialog);this.dialogClosers.delete(previous.dialog);close?.()}
   const current=this.frames[this.index];
   // Closed dialogs are transient: forward navigation must never resurrect old form values.

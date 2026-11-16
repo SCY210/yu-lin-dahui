@@ -1,13 +1,15 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {RefreshCw} from 'lucide-react';
+import Taiji from './taiji';
+import {useVisualTheme} from './visual-theme';
 import {isStandaloneApp,pullBlocked,pullProgress,pullThreshold} from '../lib/client/pull-to-refresh';
 import './pull-to-refresh.css';
 
 /** In the home-screen app, pulling down from the top of the page reloads it, which also picks up a newly published
  * version. Normal browser tabs keep their own pull gesture and get nothing extra. */
 export default function PullToRefresh({onRefresh=()=>window.location.reload()}:{onRefresh?:()=>void}){
- const [pull,setPull]=useState(0),[refreshing,setRefreshing]=useState(false);
+ const wuxia=useVisualTheme(),[pull,setPull]=useState(0),[refreshing,setRefreshing]=useState(false);
  const start=useRef<number|null>(null),distance=useRef(0),busy=useRef(false),refresh=useRef(onRefresh);
  useEffect(()=>{refresh.current=onRefresh},[onRefresh]);
  useEffect(()=>{
@@ -41,7 +43,7 @@ export default function PullToRefresh({onRefresh=()=>window.location.reload()}:{
  if(!pull&&!refreshing)return null;
  const ready=refreshing||pull>=pullThreshold;
  return <div className={'pull-refresh'+(refreshing?' is-refreshing':'')} style={{transform:`translate(-50%,${Math.round(pull)-44}px)`,opacity:Math.min(1,pull/40)}} role="status" aria-live="polite">
-  <RefreshCw size={18} aria-hidden="true" style={refreshing?undefined:{transform:`rotate(${Math.round(pull*3)}deg)`}}/>
-  <span>{refreshing?'正在刷新…':ready?'松开刷新':'下拉刷新'}</span>
+  {wuxia?<Taiji size={18} turn={refreshing?undefined:Math.round(pull*3)}/>:<RefreshCw size={18} aria-hidden="true" style={refreshing?undefined:{transform:`rotate(${Math.round(pull*3)}deg)`}}/>}
+  <span>{refreshing?(wuxia?'灵气流转，正在刷新…':'正在刷新…'):ready?'松开刷新':'下拉刷新'}</span>
  </div>;
 }

@@ -1,0 +1,172 @@
+/* 修仙风交互层 (docs/XIUXIAN_FX.md): spirit-light feedback, talisman ornaments and flowing 灵力 for the 水墨江湖 theme only; the classic theme is untouched.
+   Decoration only: no layout changes, transform/opacity/box-shadow effects, all motion off under reduced motion. */
+html.wuxia-theme{--xx-aura:#a8382a;--xx-aura-soft:#a8382a2e;--xx-gold:#b8935a;--xx-gold-soft:#b8935a66;--xx-ink:#263029}
+@keyframes xx-rise{from{opacity:0;transform:translateY(10px)}}
+@keyframes xx-flow{0%,35%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes xx-spin{to{transform:rotate(360deg)}}
+@keyframes xx-mist{from{transform:translate3d(-4%,-2%,0) scale(1)}to{transform:translate3d(5%,3%,0) scale(1.08)}}
+@keyframes xx-sheen{from{background-position:130% 0}to{background-position:-70% 0}}
+@keyframes xx-brand{0%,55%{background-position:120% 0,0 0}85%,100%{background-position:-60% 0,0 0}}
+@keyframes xx-breathe{0%,100%{opacity:.75;transform:scale(.92)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes xx-title{0%,100%{text-shadow:0 2px 12px #0006}50%{text-shadow:0 2px 12px #0006,0 0 22px #e7d5ad66}}
+@keyframes xx-ring{0%{opacity:.9;transform:scale(.15)}100%{opacity:0;transform:scale(1.25)}}
+@keyframes xx-spark{0%{opacity:1;transform:translate(0,0) scale(1.3)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+@keyframes xx-page-forward{from{opacity:0;transform:translate3d(28px,0,0);filter:blur(3px)}}
+@keyframes xx-page-back{from{opacity:0;transform:translate3d(-28px,0,0);filter:blur(3px)}}
+@keyframes xx-motes{to{background-position:20px -110px,90px -60px,160px -180px}}
+html.wuxia-theme{
+::selection{background:color-mix(in srgb,var(--xx-gold) 38%,transparent)}
+&{scrollbar-color:color-mix(in srgb,var(--xx-gold) 60%,transparent) transparent}
+
+/* 灵气涟漪: a ring of spirit light spreads from a pressed button and fades after release. */
+.primary,.secondary,.tag-button,.pp-edit,[data-slot=button]{transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .55s ease-out}
+.primary:active:not(:disabled),.secondary:active:not(:disabled),.tag-button:active:not(:disabled),.pp-edit:active:not(:disabled),[data-slot=button]:active:not(:disabled){box-shadow:0 0 0 5px var(--xx-aura-soft),0 0 18px 2px var(--xx-gold-soft);transform:scale(.975);transition-duration:.18s,.18s,.18s,.08s,0s}
+/* 主按钮悬停时镶一圈金芒。 */
+.primary.primary:hover:not(:disabled):not(:active){box-shadow:0 0 0 1px var(--xx-gold-soft),0 6px 18px color-mix(in srgb,var(--xx-gold) 30%,transparent)}
+
+/* 卡片：入场时自下浮现，悬停时描一圈金芒。 */
+.card,.event-card,.match-card,.ts-product,.pp-card{animation:xx-rise .42s cubic-bezier(.2,.8,.3,1) backwards}
+.event-card,.ts-product{transition:border-color .25s ease,box-shadow .25s ease,background .25s ease,transform .25s ease}
+.event-card:hover,.ts-product:hover{box-shadow:0 0 0 1px var(--xx-gold-soft),0 8px 22px color-mix(in srgb,var(--xx-gold) 16%,transparent)}
+
+/* 栏目标题前的金色菱纹。 */
+.section-title h2::before,.section-title h3::before{content:'';display:inline-block;width:.5em;height:.5em;margin-right:.5em;vertical-align:.12em;transform:rotate(45deg);background:linear-gradient(135deg,var(--xx-gold),color-mix(in srgb,var(--xx-gold) 40%,var(--xx-aura)));box-shadow:0 0 6px var(--xx-gold-soft)}
+
+/* 底栏：当前页的图标托起，下方亮起一道灵纹。 */
+.bottom-nav button{position:relative}
+.bottom-nav button svg{transition:transform .25s cubic-bezier(.2,.9,.3,1.4),filter .25s ease}
+.bottom-nav button.active svg{transform:translateY(-2px) scale(1.08);filter:drop-shadow(0 0 5px var(--xx-gold-soft))}
+.bottom-nav button::after{content:'';position:absolute;left:50%;bottom:4px;width:22px;height:3px;margin-left:-11px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--xx-gold),transparent);opacity:0;transform:scaleX(.2);transition:opacity .25s ease,transform .3s cubic-bezier(.2,.9,.3,1.4)}
+.bottom-nav button.active::after{opacity:1;transform:none;box-shadow:0 0 8px var(--xx-gold-soft)}
+.bottom-nav button.active{box-shadow:none}
+
+/* 弹窗：祥云底纹的宣纸，四角花角镶边，顶端灵光，底部远山，右下一方朱砂印。纹饰画在背景上，内容滚动时不跟着走。
+   开启时金光自外向内收拢（@starting-style，不占用原有的缩放动画）。 */
+.app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{
+ background-color:#fbf7ed!important;
+ background-image:url('/xiuxian/corner-tl.svg'),url('/xiuxian/corner-tr.svg'),url('/xiuxian/corner-bl.svg'),url('/xiuxian/corner-br.svg'),
+  url('/xiuxian/seal.svg'),
+  linear-gradient(90deg,transparent,var(--xx-gold-soft) 25%,var(--xx-gold) 50%,var(--xx-gold-soft) 75%,transparent),
+  radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--xx-gold) 22%,transparent),transparent 62%),
+  url('/xiuxian/mountains.svg'),
+  url('/xiuxian/cloud-tile.svg'),
+  linear-gradient(180deg,#fdf9ef,#f6eedb)!important;
+ background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat-x,repeat,no-repeat!important;
+ background-size:46px 46px,46px 46px,46px 46px,46px 46px,40px 40px,76% 2px,100% 120px,360px 84px,180px 120px,100% 100%!important;
+ background-position:5px 5px,calc(100% - 5px) 5px,5px calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 26px) calc(100% - 22px),50% 0,50% 0,0 100%,0 0,0 0!important;
+ border-color:var(--xx-gold)!important;
+ box-shadow:0 0 0 1px #fff8e6 inset,0 0 0 4px #fbf7ed,0 0 0 5px var(--xx-gold-soft),0 28px 80px #1a16304d,0 0 60px color-mix(in srgb,var(--xx-gold) 22%,transparent);
+ transition:box-shadow 1s cubic-bezier(.2,.8,.2,1);
+}
+@starting-style{.app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{box-shadow:0 0 0 1px #fff8e6 inset,0 0 0 4px #fbf7ed,0 0 0 14px var(--xx-gold),0 28px 80px #1a16304d,0 0 140px 30px color-mix(in srgb,var(--xx-gold) 75%,transparent)}}
+/* 朱砂印不能压住右下角的按钮文字：印章很淡，且避开花角。 */
+.app-dialog [data-slot=dialog-title]{letter-spacing:.06em;text-shadow:0 1px 0 #fff8e6}
+[data-slot=dialog-overlay],[data-slot=alert-dialog-overlay]{background:radial-gradient(ellipse at 50% 40%,#3a2f1c59,#0f0d09d1)!important;backdrop-filter:blur(3px) saturate(.85)}
+
+/* 灵力流转：进度条里一道光自左向右流过。 */
+.realm-progress-track>span,.rv-progress-track>span,.bond-bar>span{position:relative;overflow:hidden}
+.realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff8c 50%,transparent 70%);transform:translateX(-100%);animation:xx-flow 2.8s ease-in-out infinite}
+
+/* 太极：加载与刷新时缓缓旋转 (app/taiji.tsx)。 */
+.xx-taiji{display:inline-block;vertical-align:-.2em;flex:none;animation:xx-spin 1.6s linear infinite;filter:drop-shadow(0 0 4px var(--xx-gold-soft))}
+.xx-taiji .xx-yang{fill:var(--xx-gold)}.xx-taiji .xx-yin{fill:var(--xx-ink)}.xx-taiji .xx-rim{fill:none;stroke:var(--xx-gold);stroke-width:1.5}
+.xx-taiji.is-still{animation:none}
+.xx-loading{display:flex;align-items:center;gap:8px}
+
+/* 首页题头：几点灵气缓缓升起。 */
+.shell .home-heading{position:relative}
+.shell .home-heading::before{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;opacity:.9;
+ background-image:radial-gradient(circle,var(--xx-gold) 0 1.5px,transparent 2.5px),radial-gradient(circle,var(--xx-gold) 0 1px,transparent 2px),radial-gradient(circle,color-mix(in srgb,var(--xx-aura) 70%,#fff) 0 1.5px,transparent 2.5px);
+ background-size:190px 150px,130px 170px,240px 200px;background-position:20px 40px,90px 110px,160px 20px;
+ -webkit-mask:linear-gradient(180deg,transparent,#000 35%,#000 70%,transparent);mask:linear-gradient(180deg,transparent,#000 35%,#000 70%,transparent);
+ animation:xx-motes 16s linear infinite}
+.shell .home-heading>*{position:relative}
+
+/* 输入框聚焦时泛起灵光。 */
+.shell input:focus-visible,.shell textarea:focus-visible,.app-dialog input:focus-visible,.app-dialog textarea:focus-visible{box-shadow:0 0 0 3px var(--xx-aura-soft),0 0 14px var(--xx-gold-soft)}
+
+/* 全站底色：宣纸上浮着缓缓流动的云气，页面底部是淡墨远山。 */
+body::before{content:'';position:fixed;inset:-20% -30%;z-index:-1;pointer-events:none;
+ background:radial-gradient(ellipse 38% 26% at 22% 30%,#fffaf0b3,transparent 70%),radial-gradient(ellipse 44% 22% at 74% 62%,#e9dcc0a6,transparent 70%),radial-gradient(ellipse 30% 20% at 55% 12%,#f3e6c98c,transparent 70%);
+ animation:xx-mist 46s ease-in-out infinite alternate}
+body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;z-index:-1;pointer-events:none;background:url('/xiuxian/mountains.svg') 0 100%/640px 150px repeat-x;opacity:.9}
+
+/* 卡片：宣纸上压一层祥云暗纹，内圈一道金线。 */
+.card,.pp-card,.rv-table-card{background-image:url('/xiuxian/cloud-tile.svg');background-size:180px 120px;background-position:right -30px top -24px;background-repeat:no-repeat;box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 28%,transparent),0 3px 12px #3d342810}
+/* 活动卡：左侧一道朱砂，悬停时托起。 */
+.event-card{box-shadow:inset 3px 0 0 var(--xx-aura)}
+.event-card:hover{transform:translateY(-2px);box-shadow:inset 3px 0 0 var(--xx-aura),0 0 0 1px var(--xx-gold-soft),0 10px 26px color-mix(in srgb,var(--xx-gold) 22%,transparent)}
+
+/* 主按钮：墨底金线，悬停或按下时一道流光掠过。 */
+.primary.primary:not(:disabled){background-image:linear-gradient(105deg,transparent 38%,#f6dfa94d 50%,transparent 62%);background-size:260% 100%;background-position:130% 0;background-repeat:no-repeat;box-shadow:inset 0 0 0 1px #d9c18a40}
+.primary.primary:hover:not(:disabled),.primary.primary:focus-visible:not(:disabled){animation:xx-sheen .85s ease-out}
+.secondary{background-image:linear-gradient(180deg,#fffaf066,transparent)}
+
+/* 站名：金光缓缓掠过墨字。 */
+.topbar .brand{background:linear-gradient(100deg,var(--ink,#263029) 42%,#c9a15a 50%,var(--ink,#263029) 58%) 120% 0/260% 100% no-repeat,var(--ink,#263029);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:xx-brand 8s ease-in-out infinite}
+.topbar .brand span{-webkit-text-fill-color:#89734e}
+
+/* 底栏：顶边一线金光，当前页图标背后一团灵光呼吸。 */
+.bottom-nav{background-image:linear-gradient(90deg,transparent,var(--xx-gold) 50%,transparent),url('/xiuxian/cloud-tile.svg');background-size:80% 1px,180px 120px;background-position:50% 0,0 0;background-repeat:no-repeat,repeat;box-shadow:0 8px 28px #141c2540,0 0 0 1px #d9c18a26 inset}
+.bottom-nav button::before{content:'';position:absolute;left:50%;top:6px;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:radial-gradient(circle,#e2c28a59,transparent 68%);opacity:0;transform:scale(.4);transition:opacity .3s ease,transform .4s cubic-bezier(.2,.9,.3,1.4);pointer-events:none}
+.bottom-nav button.active::before{opacity:1;transform:none;animation:xx-breathe 3.2s ease-in-out infinite}
+
+/* 页签：当前项下方一道灵光。 */
+.event-tabs button[data-state=active],.social-tabs button[data-state=active]{text-shadow:0 0 10px color-mix(in srgb,var(--xx-aura) 35%,transparent);box-shadow:0 6px 10px -8px var(--xx-aura)}
+
+/* 首页题头：云气横移，标题泛光。 */
+.shell .home-heading{box-shadow:0 0 0 1px var(--xx-gold-soft),0 0 0 4px #ece6d8,0 0 0 5px color-mix(in srgb,var(--xx-gold) 30%,transparent),0 14px 34px #2a221430;overflow:hidden}
+.shell .home-heading h1{animation:xx-title 5s ease-in-out infinite}
+
+/* 传音符（toast）：金边与祥云暗纹。 */
+[data-sonner-toast][data-styled=true]{background-image:url('/xiuxian/cloud-tile.svg');background-size:150px 100px;background-position:right -20px top -30px;background-repeat:no-repeat;box-shadow:0 6px 18px #2a22142e,0 0 0 1px var(--xx-gold-soft),0 0 22px color-mix(in srgb,var(--xx-gold) 22%,transparent)}
+
+/* 点按灵气 (app/spirit-touch.tsx)：指尖落处绽开一圈灵纹和几点金芒。 */
+.xx-touch-layer{position:fixed;inset:0;z-index:2147483600;pointer-events:none;overflow:hidden;contain:strict}
+.xx-touch{position:absolute;width:0;height:0}
+.xx-touch::before,.xx-touch::after{content:'';position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:1.5px solid var(--xx-gold);opacity:0;animation:xx-ring .6s ease-out forwards}
+.xx-touch::after{border-color:var(--xx-aura);border-style:dashed;animation-duration:.75s;animation-delay:.06s}
+.xx-touch i{position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:#f4d792;box-shadow:0 0 6px 1px #e2b860;opacity:0;animation:xx-spark .65s ease-out forwards}
+
+/* 还带着原版白底圆角的部件，统一换成宣纸、金边和小圆角。 */
+.ev-signup-summary,.ev-court-card,.court-occupancy,.ts-product,.ts-ring,.ts-ring-item,.ts-order{background-color:var(--paper,#f9f5eb);border-color:#cbb996;border-radius:5px;box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 24%,transparent),0 3px 12px #3d342810}
+.ev-signup-summary,.ev-court-card{background-image:url('/xiuxian/cloud-tile.svg');background-size:180px 120px;background-position:right -30px top -24px;background-repeat:no-repeat}
+.ev-summary-heading h2{color:#2e352a}
+.ev-summary-heading h2>span{background:#ece0c8;border-color:#d2bc94;color:#806139;border-radius:2px}
+.ev-court-count{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px;color:#685238}
+.venue-heading-link>span{background:#ece0c8!important;color:#765532!important;border-radius:2px!important}
+/* 功能说明的圆形按钮：朱砂描边的宣纸小印。 */
+.shell button[aria-haspopup=dialog].rounded-full{background:#f7efdf;border-color:#c9a68a;color:var(--xx-aura);box-shadow:0 0 0 3px #fbf7ec,0 0 0 4px color-mix(in srgb,var(--xx-aura) 22%,transparent)}
+.rp-pedestal{background:linear-gradient(145deg,#eaddc0,#d9c5a0)}
+.event-tabs button[data-state=active],.social-tabs button[data-state=active]{background:#fbf7ec;border-radius:3px}
+.score-reminder-bar{border-radius:5px;border-color:#cbb996}
+.shell button[aria-haspopup=dialog].rounded-full{margin:4px}
+.ev-court-card>header{background:linear-gradient(180deg,#f3e9d3,transparent)}
+.venue-heading-link,.ev-court-card a,.venue-address,.legal-footer a{color:#7b4a2e}
+.venue-address{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px}
+
+/* 页面切换 (lib/client/page-transition.ts)：新页面如水墨晕开，从来的方向滑入；返回时反向。切换活动页签时只动页签下面的内容。 */
+.shell[data-nav=forward]>:not(.topbar,.bottom-nav,.pull-refresh,.swipe-back,[data-sonner-toaster]){animation:xx-page-forward .34s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=back]>:not(.topbar,.bottom-nav,.pull-refresh,.swipe-back,[data-sonner-toaster]){animation:xx-page-back .34s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=tab-forward]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-forward .28s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=tab-back]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-back .28s cubic-bezier(.2,.8,.3,1) backwards}
+
+@media(prefers-reduced-motion:reduce){
+ .card,.event-card,.match-card,.ts-product,.pp-card,.xx-taiji,.shell .home-heading::before{animation:none}
+ body::before,.topbar .brand,.bottom-nav button.active::before,.shell .home-heading h1,.primary.primary:hover:not(:disabled),.primary.primary:focus-visible:not(:disabled){animation:none}
+ .app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{transition:none}
+ .xx-touch-layer{display:none}
+ .shell[data-nav]>*{animation:none!important}
+ .event-card:hover{transform:none}
+ .realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{display:none}
+ .bottom-nav button svg,.bottom-nav button::after{transition:none}
+ .primary:active:not(:disabled),.secondary:active:not(:disabled),.tag-button:active:not(:disabled),.pp-edit:active:not(:disabled),[data-slot=button]:active:not(:disabled){transform:none}
+}
+}
+/* 手机上的长弹窗：操作按钮吸在弹窗底部，不用滚到最下面才能开启或关闭。 */
+@media(max-width:600px){
+ html.wuxia-theme .app-dialog form>button.primary.full[type=submit]{position:sticky;bottom:0;z-index:1;box-shadow:0 0 0 12px #fbf7ed,0 12px 0 12px #fbf7ed,0 -14px 14px 4px #fbf7ed}
+ /* A see-through disabled button would let the fields show through it. */
+ html.wuxia-theme .app-dialog form>button.primary.full[type=submit]:disabled{opacity:1;background:#a9a595;border-color:#a9a595;color:#f4ecd8}
+ html.wuxia-theme .notification-optin-actions{position:sticky;bottom:-23px;z-index:1;margin:0 -23px;padding:12px 23px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#fbf7ed00,#fbf7ed 14px);border-top:1px solid var(--xx-gold-soft)}
+}

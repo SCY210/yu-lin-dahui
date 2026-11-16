@@ -1,4 +1,6 @@
 'use client';
+import Taiji from './taiji';
+import {useVisualTheme} from './visual-theme';
 import {Component,Suspense,type ReactNode} from 'react';
 import {isChunkLoadError,reloadOnceForNewVersion,sessionStore} from '../lib/client/wake-recovery';
 
@@ -14,6 +16,10 @@ class LoadRecovery extends Component<{children:ReactNode},{failed:boolean;update
  }
 }
 
+/** The 水墨江湖 theme waits with a turning 太极; the classic theme keeps its plain line. */
+function LoadingHint(){
+ return useVisualTheme()?<p className="hint xx-loading" role="status"><Taiji size={16}/>灵气汇聚中，正在加载…</p>:<p className="hint" role="status">正在加载…</p>;
+}
 export default function Deferred({children}:{children:ReactNode}){
- return <LoadRecovery><Suspense fallback={<p className="hint" role="status">正在加载…</p>}>{children}</Suspense></LoadRecovery>;
+ return <LoadRecovery><Suspense fallback={<LoadingHint/>}>{children}</Suspense></LoadRecovery>;
 }
