@@ -4,6 +4,7 @@
 
 - Cloudflare 是主站：https://yu-lin-dahui.chenyueshanxd.workers.dev/ 。新批准的 PR 和功能更新通过受控的私有 Cloudflare 流程发布。
 - 从 Sites 到 Cloudflare 的业务数据复制只做过一次迁移。不要假设两边持续同步，也不要在发布代码时覆盖任何一边的数据库。
+- 线上构建使用私有版本的 `app/layout.tsx`，公共仓库对 layout 的改动不会上线。全站共用的样式和组件要从 `app/visual-theme.tsx` 这类两边都会用到的组件引入，不要只加在 layout 里。
 - 独立的 Sites 部署仍是次要入口。没有所有者明确要求时，不要自动把 PR 发布到那里，不要改变它的访问范围，也不要添加跳转。
 
 ## 重要更新必须同步到 GitHub

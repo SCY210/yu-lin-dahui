@@ -2,6 +2,8 @@
 
 按群主要求，这一层交互和特效只在「水墨江湖」主题下生效，「清雅原版」主题保持原样；下面单独注明的布局修正和大屏适配除外。样式集中在 `app/xiuxian-fx.css`，整个文件包在 `html.wuxia-theme` 里；太极图标在 `app/taiji.tsx`。
 
+这份样式和点按灵气（`app/spirit-touch.tsx`）从 `app/visual-theme.tsx` 的主题容器引入，不只挂在 `app/layout.tsx` 上。线上构建用的是私有版本的 layout（`docs/PRIVATE_RELEASES.md`），第一版只在公共 layout 里引入，结果线上没有这些特效。公共 layout 里原有的两行引入保留不动，避免私有仓库合并时冲突；点按灵气被挂了两份时只有先挂上的那份响应。
+
 ## 有哪些效果
 
 纹饰图在 `public/xiuxian/`：祥云底纹、四个花角、远山剪影和一方「羽」字朱砂印，都是本仓库自己画的矢量图。

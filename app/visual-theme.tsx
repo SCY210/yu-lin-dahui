@@ -6,10 +6,14 @@ import {Palette} from 'lucide-react';
 import {brandTheme,type BrandTheme} from '../lib/theme-brand';
 import {syncThemeBrand} from '../lib/client/theme-brand';
 import './visual-theme.css';
+// Production renders a private app/layout.tsx (docs/PRIVATE_RELEASES.md), so site-wide shared styles and effects hang
+// off this provider, which both layouts use, rather than off the shared layout alone (docs/XIUXIAN_FX.md).
+import './xiuxian-fx.css';
+import SpiritTouch from './spirit-touch';
 
 export function VisualThemeProvider({children,initialTheme='classic'}:{children:ReactNode;initialTheme?:BrandTheme}){
  return <ThemeProvider attribute="class" themes={['classic','wuxia']} value={{classic:'classic-theme',wuxia:'wuxia-theme'}} defaultTheme={brandTheme(initialTheme)} storageKey="yulin-ui-theme" enableSystem={false} enableColorScheme={false} disableTransitionOnChange>
-  <ThemeBrowserColor/>{children}
+  <ThemeBrowserColor/><SpiritTouch/>{children}
  </ThemeProvider>;
 }
 
