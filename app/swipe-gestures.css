@@ -1,0 +1,5 @@
+/* The indicator of the edge swipe that goes back (app/swipe-gestures.tsx). */
+.swipe-back{position:fixed;left:0;z-index:2147483500;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--muted-foreground);box-shadow:0 4px 16px #0003;pointer-events:none;transition:background .15s ease,color .15s ease}
+.swipe-back.is-ready{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground)}
+.wuxia-theme .swipe-back{border-color:#b8935a;background:#f9f5eb;color:#7c5d30;box-shadow:0 0 0 3px #fbf7ec,0 0 0 4px #b8935a66,0 6px 18px #2a221440}
+.wuxia-theme .swipe-back.is-ready{background:#8d3429;border-color:#8d3429;color:#fff9eb;box-shadow:0 0 0 3px #fbf7ec,0 0 0 4px #a8382a66,0 0 22px #b8935a99}

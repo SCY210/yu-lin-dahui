@@ -19,6 +19,7 @@ import {useActivityClock} from '../lib/client/use-activity-clock';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {canManageEvent} from '../lib/domain/permissions';
 import {lazy} from 'react';
+import {useTabSwipe} from './swipe-gestures';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {ChevronLeft,Clock,MapPin,Trash2} from 'lucide-react';
 import {Pick,fmt,hm,dt,text,number,why,labels,choice} from './ui';
@@ -38,6 +39,7 @@ export default function EventView({e,ctx,tab,setTab,back}:any){const {data,open,
 const clock=useActivityClock(e);e={...e,status:eventStatusAt(e,clock)};
 const practice=isPractice(e);
 const activityTab=practice&&['rounds','matches','social'].includes(tab)?'signup':tab==='overview'?'signup':tab==='matches'?'rounds':tab;
+const tabOrder=practice?['signup','fees']:['signup','rounds','fees','social'];useTabSwipe(tabOrder,activityTab,setTab);
 const manager=canManageEvent(data.me,e);const eventRules=data.seasons.find((s:any)=>s.id===month(e.start))?.rules??data.settings.rules;
 const scoreRules=eventScoreRules(eventRules,e);
 const venueAddress=findVenue(e.venue)?.address||e.address||'';

@@ -11,6 +11,8 @@ html.wuxia-theme{--xx-aura:#a8382a;--xx-aura-soft:#a8382a2e;--xx-gold:#b8935a;--
 @keyframes xx-title{0%,100%{text-shadow:0 2px 12px #0006}50%{text-shadow:0 2px 12px #0006,0 0 22px #e7d5ad66}}
 @keyframes xx-ring{0%{opacity:.9;transform:scale(.15)}100%{opacity:0;transform:scale(1.25)}}
 @keyframes xx-spark{0%{opacity:1;transform:translate(0,0) scale(1.3)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+@keyframes xx-page-forward{from{opacity:0;transform:translate3d(28px,0,0);filter:blur(3px)}}
+@keyframes xx-page-back{from{opacity:0;transform:translate3d(-28px,0,0);filter:blur(3px)}}
 @keyframes xx-motes{to{background-position:20px -110px,90px -60px,160px -180px}}
 html.wuxia-theme{
 ::selection{background:color-mix(in srgb,var(--xx-gold) 38%,transparent)}
@@ -136,15 +138,25 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;z-ind
 /* 功能说明的圆形按钮：朱砂描边的宣纸小印。 */
 .shell button[aria-haspopup=dialog].rounded-full{background:#f7efdf;border-color:#c9a68a;color:var(--xx-aura);box-shadow:0 0 0 3px #fbf7ec,0 0 0 4px color-mix(in srgb,var(--xx-aura) 22%,transparent)}
 .rp-pedestal{background:linear-gradient(145deg,#eaddc0,#d9c5a0)}
+.event-tabs button[data-state=active],.social-tabs button[data-state=active]{background:#fbf7ec;border-radius:3px}
+.score-reminder-bar{border-radius:5px;border-color:#cbb996}
+.shell button[aria-haspopup=dialog].rounded-full{margin:4px}
 .ev-court-card>header{background:linear-gradient(180deg,#f3e9d3,transparent)}
 .venue-heading-link,.ev-court-card a,.venue-address,.legal-footer a{color:#7b4a2e}
 .venue-address{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px}
+
+/* 页面切换 (lib/client/page-transition.ts)：新页面如水墨晕开，从来的方向滑入；返回时反向。切换活动页签时只动页签下面的内容。 */
+.shell[data-nav=forward]>:not(.topbar,.bottom-nav,.pull-refresh,.swipe-back,[data-sonner-toaster]){animation:xx-page-forward .34s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=back]>:not(.topbar,.bottom-nav,.pull-refresh,.swipe-back,[data-sonner-toaster]){animation:xx-page-back .34s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=tab-forward]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-forward .28s cubic-bezier(.2,.8,.3,1) backwards}
+.shell[data-nav=tab-back]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-back .28s cubic-bezier(.2,.8,.3,1) backwards}
 
 @media(prefers-reduced-motion:reduce){
  .card,.event-card,.match-card,.ts-product,.pp-card,.xx-taiji,.shell .home-heading::before{animation:none}
  body::before,.topbar .brand,.bottom-nav button.active::before,.shell .home-heading h1,.primary.primary:hover:not(:disabled),.primary.primary:focus-visible:not(:disabled){animation:none}
  .app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{transition:none}
  .xx-touch-layer{display:none}
+ .shell[data-nav]>*{animation:none!important}
  .event-card:hover{transform:none}
  .realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{display:none}
  .bottom-nav button svg,.bottom-nav button::after{transition:none}
