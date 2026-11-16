@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useRef} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Maximize2,X} from 'lucide-react';
 import type {Event,Match} from '../lib/domain/types';
 import {defaultScoring,matchRule} from '../lib/domain/tournament';
@@ -22,16 +22,28 @@ export default function LiveScoreboard({e,ctx,close}:{e:Event;ctx:SchedulingCont
  const matches=ctx.data.matches.filter(m=>m.eventId===e.id&&m.status==='playing'&&fixtures.some(f=>f.matchId===m.id)&&scores[m.id]?.status!=='finished');
  const t=e.tournament,groupPhase=t?.phase==='groups';
  useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.key==='Escape')close()};window.addEventListener('keydown',key);return ()=>window.removeEventListener('keydown',key)},[close]);
- const full=()=>{void root.current?.requestFullscreen?.().catch(()=>{})};
+ // iPad Safari before 16.4 only has the prefixed call, and a home-screen app has none: the button hides there.
+ type FullscreenTarget=HTMLDivElement&{webkitRequestFullscreen?:()=>void};
+ const [canFull,setCanFull]=useState(false);
+ useEffect(()=>{const el=root.current as FullscreenTarget|null;setCanFull(!!el&&(typeof el.requestFullscreen==='function'||typeof el.webkitRequestFullscreen==='function'))},[]);
+ const full=()=>{const el=root.current as FullscreenTarget|null;if(!el)return;if(el.requestFullscreen)void el.requestFullscreen().catch(()=>{});else el.webkitRequestFullscreen?.()};
+ // An iPad standing by the courts must not dim or lock while the board is open; the lock is retaken when the page returns.
+ useEffect(()=>{
+  type Lock={release:()=>Promise<void>};
+  const wake=(navigator as Navigator&{wakeLock?:{request:(type:'screen')=>Promise<Lock>}}).wakeLock;
+  if(!wake)return;
+  let lock:Lock|null=null,closed=false;
+  const hold=()=>{if(document.visibilityState!=='visible')return;void wake.request('screen').then(next=>{if(closed)void next.release().catch(()=>{});else lock=next}).catch(()=>{})};
+  hold();document.addEventListener('visibilitychange',hold);
+  return ()=>{closed=true;document.removeEventListener('visibilitychange',hold);void lock?.release().catch(()=>{})};
+ },[]);
  const team=(m:Match,side:Side,winner:boolean,align:'left'|'right')=><div className={'board-team is-'+align+(winner?' is-winner':'')}>
   <div className="board-avatars">{m[side].map(id=><Avatar key={id} p={ctx.data.players.find(p=>p.id===id)} size="board-avatar"/>)}</div>
   <div className="board-names">{m[side].map(id=><span key={id}>{ctx.name(id)}</span>)}</div>
  </div>;
  return <div className="live-board" ref={root} role="dialog" aria-modal="true" aria-label="实时比分">
-  <header className="live-board-top"><div><h2>{e.title}</h2><small>{error||'实时比分 · 每 2 秒自动更新'}</small></div><div className="actions"><button type="button" className="secondary" onClick={full}><Maximize2 size={16}/>全屏</button><button type="button" className="secondary" aria-label="关闭实时比分" onClick={close}><X size={18}/></button></div></header>
-  {t&&t.fixtures.some(f=>f.stage==='knockout')&&<section className="board-panel"><h3>淘汰赛对阵图</h3><TournamentBracket t={t} data={ctx.data} name={ctx.name} compact/></section>}
-  {t&&groupPhase&&<section className="board-panel board-groups">{t.groups.map((_,g)=><div key={g} className="board-group"><h3>{tournamentFormat(t)==='round-robin'?'循环赛':String.fromCharCode(65+g)+' 组'}</h3><ol>{groupStandings(t,ctx.data,g).map((row,i)=><li key={row.id} className={tournamentFormat(t)==='groups'&&i<t.advance?'is-qualifying':''}><span>{i+1}</span><strong>{t.teams.find(x=>x.id===row.id)?.players.map(ctx.name).join(' / ')}</strong><small>{row.wins} 胜 {row.losses} 负</small></li>)}</ol></div>)}</section>}
-  {matches.length?<div className="live-board-grid">{matches.map(m=>{
+  <header className="live-board-top"><div><h2>{e.title}</h2><small>{error||'实时比分 · 每 2 秒自动更新'}</small></div><div className="actions">{canFull&&<button type="button" className="secondary" onClick={full}><Maximize2 size={16}/>全屏</button>}<button type="button" className="secondary" aria-label="关闭实时比分" onClick={close}><X size={18}/></button></div></header>
+  {matches.length?<div className="live-board-grid" data-count={Math.min(matches.length,5)}>{matches.map(m=>{
    const rule=matchRule(e.tournament,m.id)??defaultScoring,live=scores[m.id],tally=liveTally(rule,live?.events??[]),[left,right]:Side[]=sidesSwapped(live,tally)?['b','a']:['a','b'],pause=currentBreak(tally,now);
    // Every warning and card of the match, oldest first, with the player when the referee named one.
    const cards=(live?.events??[]).flatMap(x=>x.type==='card'?[x]:[]);
@@ -53,5 +65,8 @@ export default function LiveScoreboard({e,ctx,close}:{e:Event;ctx:SchedulingCont
     {cards.length>0&&<ul className="board-cards">{cards.map((c,i)=><li key={i}><i className={'card-chip is-'+c.kind} aria-hidden="true"/><strong>{cardRules[c.kind].label}</strong><span>{c.playerId?ctx.name(c.playerId):m[c.side].map(ctx.name).join(' / ')} · {cardRules[c.kind].effect}</span></li>)}</ul>}
    </article>;
   })}</div>:<p className="live-board-empty">现在没有进行中的比赛。下一场开赛后，比分会出现在这里。</p>}
+  {/* The courts come first: on an iPad the scores must be on screen without scrolling. */}
+  {t&&t.fixtures.some(f=>f.stage==='knockout')&&<section className="board-panel"><h3>淘汰赛对阵图</h3><TournamentBracket t={t} data={ctx.data} name={ctx.name} compact/></section>}
+  {t&&groupPhase&&<section className="board-panel board-groups">{t.groups.map((_,g)=><div key={g} className="board-group"><h3>{tournamentFormat(t)==='round-robin'?'循环赛':String.fromCharCode(65+g)+' 组'}</h3><ol>{groupStandings(t,ctx.data,g).map((row,i)=><li key={row.id} className={tournamentFormat(t)==='groups'&&i<t.advance?'is-qualifying':''}><span>{i+1}</span><strong>{t.teams.find(x=>x.id===row.id)?.players.map(ctx.name).join(' / ')}</strong><small>{row.wins} 胜 {row.losses} 负</small></li>)}</ol></div>)}</section>}
  </div>;
 }

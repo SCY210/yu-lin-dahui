@@ -46,3 +46,19 @@
 .board-cards strong{color:var(--foreground)}
 .board-cards .card-chip{display:inline-block;width:12px;height:17px;border-radius:2px;box-shadow:0 0 0 1px #0004}
 .board-cards .card-chip.is-warning{background:#d0d5dd}.board-cards .card-chip.is-yellow{background:#ffd60a}.board-cards .card-chip.is-red{background:#e5383b}.board-cards .card-chip.is-black{background:#111}
+/* iPad by the courts: sizes follow each court card, so one or two matches fill the screen and four still fit. */
+.live-board{padding-left:max(clamp(12px,3vw,32px),env(safe-area-inset-left));padding-right:max(clamp(12px,3vw,32px),env(safe-area-inset-right));padding-bottom:max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain;-webkit-user-select:none;user-select:none}
+.live-board-top .secondary{min-height:44px;min-width:44px}
+.board-court{container-type:inline-size}
+@supports(font-size:1cqi){
+ .board-digits{font-size:clamp(44px,17cqi,190px)}
+ .avatar.board-avatar{width:clamp(44px,11cqi,120px);height:clamp(44px,11cqi,120px)}
+ .board-names{font-size:clamp(14px,3.6cqi,34px)}
+ .board-court-head{font-size:clamp(13px,2.6cqi,22px)}.board-court-head strong{font-size:clamp(15px,3.2cqi,28px)}
+ .board-games{font-size:clamp(12px,2.6cqi,22px)}
+}
+/* One match takes the whole width; two sit side by side in landscape and stack in portrait; three or more go two
+   to a row either way, so four courts fit an iPad screen without scrolling. */
+.live-board-grid[data-count="1"]{grid-template-columns:minmax(0,1fr)}
+@media(orientation:landscape) and (min-width:900px){.live-board-grid[data-count="2"],.live-board-grid[data-count="3"],.live-board-grid[data-count="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(orientation:portrait) and (min-width:700px){.live-board-grid[data-count="2"]{grid-template-columns:minmax(0,1fr)}.live-board-grid[data-count="3"],.live-board-grid[data-count="4"],.live-board-grid[data-count="5"]{grid-template-columns:repeat(2,minmax(0,1fr))}}

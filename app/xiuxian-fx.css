@@ -77,3 +77,10 @@ html.wuxia-theme{
  .primary:active:not(:disabled),.secondary:active:not(:disabled),.tag-button:active:not(:disabled),.pp-edit:active:not(:disabled),[data-slot=button]:active:not(:disabled){transform:none}
 }
 }
+/* 手机上的长弹窗：操作按钮吸在弹窗底部，不用滚到最下面才能开启或关闭。 */
+@media(max-width:600px){
+ html.wuxia-theme .app-dialog form>button.primary.full[type=submit]{position:sticky;bottom:0;z-index:1;box-shadow:0 0 0 12px #fbf7ed,0 12px 0 12px #fbf7ed,0 -14px 14px 4px #fbf7ed}
+ /* A see-through disabled button would let the fields show through it. */
+ html.wuxia-theme .app-dialog form>button.primary.full[type=submit]:disabled{opacity:1;background:#a9a595;border-color:#a9a595;color:#f4ecd8}
+ html.wuxia-theme .notification-optin-actions{position:sticky;bottom:-23px;z-index:1;margin:0 -23px;padding:12px 23px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#fbf7ed00,#fbf7ed 14px);border-top:1px solid var(--xx-gold-soft)}
+}
