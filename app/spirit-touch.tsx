@@ -2,12 +2,15 @@
 import {useEffect} from 'react';
 
 const sparks=6,life=800;
+// The shared layout and the theme provider both mount this; only the first mounted copy listens.
+let mounted=0;
 
 /** 点按灵气 (docs/XIUXIAN_FX.md): in the 水墨江湖 theme, each tap or click blooms a ring of spirit light with a few
  * golden sparks at the pointer. Decoration only: the layer never takes pointer events, holds at most a handful of
  * short-lived nodes, and does nothing in the classic theme or when the system asks for reduced motion. */
 export default function SpiritTouch(){
  useEffect(()=>{
+  if(mounted++)return ()=>{mounted--};
   const still=window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let layer:HTMLDivElement|null=null;
   const down=(event:PointerEvent)=>{
@@ -23,7 +26,7 @@ export default function SpiritTouch(){
    layer.appendChild(bloom);window.setTimeout(()=>bloom.remove(),life);
   };
   window.addEventListener('pointerdown',down,{passive:true,capture:true});
-  return ()=>{window.removeEventListener('pointerdown',down,{capture:true});layer?.remove()};
+  return ()=>{mounted--;window.removeEventListener('pointerdown',down,{capture:true});layer?.remove()};
  },[]);
  return null;
 }
