@@ -15,6 +15,9 @@ export function canManageEvent(account:Pick<Account,'id'|'role'>&{isOwner?:boole
  return account.role==='admin'||account.isOwner===true||event.creatorId===account.id;
 }
 
+/** 上场意愿 for everyone signed up: 宗主, 副宗主, 长老 and the activity's organiser. */
+export function canManageParticipation(account:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Pick<Event,'creatorId'>){return canManageEvent(account,event)||account.simulationTester===true}
+
 export function canScheduleEvent(account:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Event){return (canManageEvent(account,event)||!!account.isOwner)&&(!eventRankingEnabled(event)||canManageRankedEvent(account,event))}
 
 /** Score entry is shared by the event's signed-up accounts, not just its host.
@@ -73,7 +76,8 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
   if(!canManageEvent(a,event)&&a.playerId===p.playerId)fail('403: 不能给自己报告迟到，请让场上球友或组织者操作');
  }else if(action==='pointsParticipation'){
   const player=s.players.find(x=>x.id===p.playerId);
-  if(!canManageEvent(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能调整自己或代报名朋友的上场意愿');
+  // 宗主, 副宗主 and 长老 may change anyone's; others only their own and their signed-up friends (docs/COMPACT_MOBILE_LAYOUT.md).
+  if(!canManageParticipation(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能调整自己或代报名朋友的上场意愿');
  }else if(action==='pointsPresence'&&p.status==='arrived'){
   const player=s.players.find(x=>x.id===p.playerId);
   if(!canManageEvent(a,event)&&!(player&&(player.id===a.playerId||player.ownerId===a.id)))fail('403: 只能确认自己或代报名朋友已到场');

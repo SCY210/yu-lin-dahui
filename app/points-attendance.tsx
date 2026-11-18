@@ -7,9 +7,6 @@ import type {SchedulingContext} from './event-scheduling';
 import {canManageEvent} from '../lib/domain/permissions';
 import {eventStatusAt} from '../lib/domain/event-lifecycle';
 import {useActivityClock} from '../lib/client/use-activity-clock';
-import {pointsWindow} from '../lib/domain/points-window';
-import {schedulingMode} from '../lib/domain/scheduling';
-import PointsParticipation from './points-participation';
 import {choice} from './form-fields';
 import './points-attendance.css';
 
@@ -23,32 +20,31 @@ export function MatchArrival({m,ctx}:{m:Match;ctx:CardContext}){
 function ArrivalControl({e,m,ctx,candidates}:{e:Event;m:Match;ctx:CardContext;candidates:string[]}){
  const now=useActivityClock(e);if(!['open','locked','live'].includes(eventStatusAt(e,now)))return null;
  const playing=ctx.data.matches.some(m=>m.eventId===e.id&&m.status==='playing'),round=ctx.data.rounds.find(r=>r.id===m.roundId);
- return <div className="points-match-arrival"><button type="button" className="secondary" disabled={ctx.busy||now<e.start||!playing&&!e.pointsSession?.startedAt||!!round&&round.start>now} onClick={()=>ctx.open('有人迟到，先换人打','pointsLate',{matchId:m.id,playerId:candidates[0],replacement:'player',expectedA:m.a,expectedB:m.b},[
+ // Before the match or the round has begun there is nobody to replace yet, so the button stays out of the way.
+ if(now<e.start||!playing&&!e.pointsSession?.startedAt||!!round&&round.start>now)return null;
+ return <div className="points-match-arrival"><button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open('有人迟到，先换人打','pointsLate',{matchId:m.id,playerId:candidates[0],replacement:'player',expectedA:m.a,expectedB:m.b},[
   choice('playerId','哪位球友迟到',candidates.map(id=>[id,ctx.name(id)])),choice('replacement','重新安排方式',[['group','当前整组换下，重新安排一组'],['player','只替换迟到者，其余道友保留']])
  ],undefined,'用于人会晚点到：积分赛中的正式道友本活动首次迟到扣 1 积分，普通活动不扣分，均不扣修为；临时来宾不计积分或修为。原对局撤销，不计胜负，先换场下的人打；TA 到了以后点“已到场”恢复排场。如果人不来了或联系不上，请改用“有人不来了？”判负。')}>有人迟到？先换人打</button></div>;
 }
-export default function PointsAttendance({e,ctx}:{e:Event;ctx:SchedulingContext}){
+function useAttendance(e:Event,ctx:SchedulingContext){
  const now=useActivityClock(e),manager=!ctx.readOnly&&canManageEvent(ctx.data.me,e),active=['open','locked','live'].includes(eventStatusAt(e,now))&&now>=e.start&&now<e.end,session=e.pointsSession;
  const own=(id:string)=>id===ctx.data.me.playerId||ctx.data.players.find(p=>p.id===id)?.ownerId===ctx.data.me.id;
- const guest=(id:string)=>{const p=ctx.data.players.find(p=>p.id===id);return !!(p?.guest||p?.guestEventId)};
  const late=session?.attendance.filter(row=>row.late)??[];
- const lifecycle=eventStatusAt(e,now),window=pointsWindow(e),due=now>=Math.max(e.start,window.start);
- const status=lifecycle==='cancelled'?'已取消':lifecycle==='draft'?'未开放':lifecycle==='ended'?'已结束':session?.startedAt||due?'进行中':'未到开赛时间';
- const missing=late.filter(row=>!row.available),resumable=active?missing.filter(row=>manager||own(row.playerId)):[],me=ctx.data.me.playerId;
+ return {manager,active,own,late,waiting:session?.waiting??[]};
+}
+/** Never folded, on top of the rounds tab: whoever is still missing with the button that puts them back into scheduling,
+ * everyone's late record for all to see with 撤销误标 for the activity's managers (宗主, 副宗主 and the organiser), and games waiting for a
+ * replacement. Nothing shows while nobody is late. */
+export default function PointsAttendance({e,ctx}:{e:Event;ctx:SchedulingContext}){
+ const {manager,active,own,late,waiting}=useAttendance(e,ctx),me=ctx.data.me.playerId;
+ const guest=(id:string)=>{const p=ctx.data.players.find(p=>p.id===id);return !!(p?.guest||p?.guestEventId)};
+ const rows=active?late:[],missing=rows.filter(row=>!row.available);
  return <>
- {/* Never folded: whoever is still missing, and the button that puts them back into scheduling. */}
- {resumable.length>0&&<section className="card points-arrival-alert" role="status">
-  <strong><Clock size={18} aria-hidden="true"/>{!manager&&resumable.some(row=>row.playerId===me)?'你被报告迟到，暂时不会排你上场':`迟到未到场 · ${resumable.length} 人`}</strong>
-  <p className="hint">到了球馆就点“已到场”，马上恢复排场，按场数正常轮换上场。</p>
-  <div className="actions">{resumable.map(row=><button type="button" key={row.playerId} className="primary" disabled={ctx.busy} onClick={()=>ctx.send('pointsPresence',{eventId:e.id,playerId:row.playerId,status:'arrived'})}><UserCheck size={17} aria-hidden="true"/>{row.playerId===me?'我已到场':ctx.name(row.playerId)+' 已到场'}</button>)}</div>
+ {rows.length>0&&<section className="card points-arrival-alert" role="status">
+  <strong><Clock size={18} aria-hidden="true"/>{!manager&&missing.some(row=>row.playerId===me)?'你被报告迟到，暂时不会排你上场':missing.length?`迟到未到场 · ${missing.length} 人`:`迟到记录 · ${rows.length} 人`}</strong>
+  {missing.length>0&&<p className="hint">到了球馆就点“已到场”，马上恢复排场，按场数正常轮换上场。</p>}
+  <div className="points-late-list">{rows.map(row=><div className="row" key={row.playerId}><span className="points-late-name">{ctx.name(row.playerId)} · {row.available?'已到场':'暂不排场'}{' · '+(guest(row.playerId)?'来宾不计积分':eventRankingEnabled(e)?'迟到 −1 分':'不扣分')}</span><div className="actions">{!row.available&&(manager||own(row.playerId))&&<button type="button" className="primary" disabled={ctx.busy} onClick={()=>ctx.send('pointsPresence',{eventId:e.id,playerId:row.playerId,status:'arrived'})}><UserCheck size={17} aria-hidden="true"/>{row.playerId===me?'我已到场':'已到场'}</button>}{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>ctx.open('撤销误标迟到','pointsPresence',{eventId:e.id,playerId:row.playerId,status:'clear-late'},[],undefined,'撤销迟到标记并恢复可排场状态；积分赛中的正式道友返还本次扣除的 1 积分，普通活动和来宾不计积分。已完成比分保持不变。')}>撤销误标</button>}</div></div>)}</div>
  </section>}
- <details className="card points-attendance">
-  <summary className="points-attendance-summary"><strong>上场与到场</strong><span className="badge">{status}</span>{missing.length>0&&<span className="points-attendance-missing">{missing.length} 人迟到未到</span>}<span>上场意愿 · 迟到 · 补位</span></summary>
-  <p className="hint">{(mode=>mode==='planned'?'到活动开始时间自动排好赛程：还没有预排的，会按接龙预排全部赛程并发布。第一局等道友点「开始比赛」开打，之后每片场录分后自动接下一局；未录分的对局可随时换人，录入比分后结束本局。':mode==='live'?'到活动对局时段开启实时排场；每片场的每一局都由道友点「开始组队」开打。':'到活动开始时间生成并发布第一轮，点「开始比赛」开打；每轮录分后再生成下一轮。')(schedulingMode(ctx.data,e))}</p>
-  <PointsParticipation e={e} ctx={ctx}/>
-  <p className="hint">正式报名的球友默认都已到场，不用逐个确认。有人迟到（会来）或不来了，同场球友或组织者在对应对局上报告：迟到先换人打，积分赛中的正式道友本活动扣 1 积分，普通活动不扣分；不来了判本局负。临时来宾不计积分或修为。</p>
-  {late.length>0&&<div className="points-late-list">{late.map(row=><div className="row" key={row.playerId}><strong>{ctx.name(row.playerId)} · {guest(row.playerId)?'来宾迟到（不计积分）':eventRankingEnabled(e)?'迟到 −1 分':'迟到（不扣分）'}</strong><span>{row.available?'已到场':'暂不排场'}</span>{active&&manager&&<div className="actions"><button type="button" className="ghost" disabled={ctx.busy} onClick={()=>ctx.open('撤销误标迟到','pointsPresence',{eventId:e.id,playerId:row.playerId,status:'clear-late'},[],undefined,'撤销迟到标记并恢复可排场状态；积分赛中的正式道友返还本次扣除的 1 积分，普通活动和来宾不计积分。已完成比分保持不变。')}>撤销误标</button></div>}</div>)}</div>}
-  {(session?.waiting??[]).map(row=><div className="points-waiting" key={row.matchId}><strong>{ctx.data.bookings.find(b=>b.id===ctx.data.matches.find(m=>m.id===row.matchId)?.courtId)?.name??'场地'} · 等待补位</strong><p className="hint">场下可上场人数不足，原对局已撤销且不计胜负。人员准备好后可重新补排。</p>{manager&&active&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open('重新补排','pointsReplace',{eventId:e.id,matchId:row.matchId,replacement:row.replacement},[choice('replacement','补排方式',[['group','重新安排整组'],['player','只替换迟到者']])],undefined,'重新检查同球馆可上场的道友及其他场地占用。不会再次扣分。')}>重新补排</button>}</div>)}
- </details>
+ {waiting.map(row=><section className="card points-waiting" key={row.matchId} role="status"><strong>{ctx.data.bookings.find(b=>b.id===ctx.data.matches.find(m=>m.id===row.matchId)?.courtId)?.name??'场地'} · 等待补位</strong><p className="hint">场下可上场人数不足，原对局已撤销且不计胜负。人员准备好后可重新补排。</p>{manager&&active&&<button type="button" className="secondary" disabled={ctx.busy} onClick={()=>ctx.open('重新补排','pointsReplace',{eventId:e.id,matchId:row.matchId,replacement:row.replacement},[choice('replacement','补排方式',[['group','重新安排整组'],['player','只替换迟到者']])],undefined,'重新检查同球馆可上场的道友及其他场地占用。不会再次扣分。')}>重新补排</button>}</section>)}
  </>;
 }

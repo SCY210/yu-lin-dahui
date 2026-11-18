@@ -119,7 +119,7 @@ test('with too few players at the start, planning waits for a signup or an arriv
  await startDuePointsSessions(cancelled.s,start+3*minute,apply);assert.equal(cancelled.s.rounds.length,count);
 });
 
-test('开始比赛: only confirmed players and organisers, never on live play, never publishes a draft, and plans first for an organiser',async()=>{
+test('开始比赛: only confirmed players and organisers, never publishes a draft, plans first for an organiser, and counts the organiser starting live play',async()=>{
  const {s,e,owner}=fixture();await startDuePointsSessions(s,start+1000,apply);
  const before=structuredClone(s);
  await assert.rejects(()=>apply(s,{id:'outsider',email:'',playerId:'nobody',role:'member'},'pointsPlay',{eventId:'e'},start+2000),/403/);assert.deepEqual(s,before);
@@ -131,8 +131,9 @@ test('开始比赛: only confirmed players and organisers, never on live play, n
  // A draft is never published by the button (AGENTS.md A7).
  const draft=fixture();await apply(draft.s,draft.owner,'planPoints',{eventId:'e',at:start,pointsMinutes:30,roundMinutes:15,seed:2,pairing:'rotate'},start-minute);
  const drafted=structuredClone(draft.s);await assert.rejects(()=>apply(draft.s,draft.owner,'pointsPlay',{eventId:'e'},start+minute),/草稿/);assert.deepEqual(draft.s,drafted);
- // Live play has its own 开始组队.
- const live=fixture();await apply(live.s,live.owner,'liveStart',{eventId:'e'},start);await assert.rejects(()=>apply(live.s,live.owner,'pointsPlay',{eventId:'e'},start+minute),/开始组队/);
+ // The organiser's 开始实时排场 already started the match, so 开始比赛 adds nothing.
+ const live=fixture();await apply(live.s,live.owner,'liveStart',{eventId:'e'},start);assert.ok(live.e.pointsSession?.playStartedAt!==undefined||live.s.events[0].pointsSession?.playStartedAt!==undefined);
+ const games=live.s.matches.length;await apply(live.s,live.owner,'pointsPlay',{eventId:'e'},start+minute);assert.equal(live.s.matches.length,games);
  void e;
 });
 

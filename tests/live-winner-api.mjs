@@ -15,7 +15,7 @@ const send=async(action,payload)=>{const body=await request(action,payload),r=aw
 try{
  const s=api.createSimulation(now).state;s.bookings=s.bookings.slice(0,1);const e=s.events[0];e.pointsChoice={votes:[],votingOpen:false,selectedMode:'fixed',teams:Array.from({length:6},(_,i)=>s.players.slice(i*2,i*2+2).map(p=>p.id))};await seedAccountNoticeFixture(s);await api.save(s,'seed',api.emptyState());await api.loadClubState();
  // The clock turns live play on; the first game waits for 开始组队 (docs/LIVE_PLAY.md).
- assert.equal((await api.load()).matches.length,0);await send('liveNext',{eventId:e.id,courtId:s.bookings[0].id});
+ assert.equal((await api.load()).matches.length,0);await send('pointsPlay',{eventId:e.id});
  let stored=await api.load(),first=stored.matches.find(m=>m.status==='playing'),held=[...first.a];
  now+=60000;await send('score',{matchId:first.id,a:21,b:19});await send('liveNext',{eventId:e.id,courtId:first.courtId});
  stored=await api.load();let second=stored.matches.find(m=>m.status==='playing');assert.ok([...first.a,...first.b].every(id=>![...second.a,...second.b].includes(id)),'everyone leaves; two waiting teams play');

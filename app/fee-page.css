@@ -1,0 +1,55 @@
+/* 费用页（app/fees.tsx, docs/FEE_PAGE.md）：三张卡片，不折叠：总览（状态、我的分摊、管理、转账、收款人）、每人分摊、账目。两个主题都生效，水墨主题的样式在 xiuxian-fx.css。 */
+.card.fee-main-summary{display:grid;gap:12px;margin:12px 0;padding:14px 16px}
+.fee-hero-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.fee-state{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.fee-state.is-pending{background:color-mix(in srgb,#b7791f 14%,var(--card));color:#8a5a12}
+.fee-state.is-confirmed{background:color-mix(in srgb,#26805e 14%,var(--card));color:#1f6b4d}
+.fee-total{font-size:13px;color:var(--muted-foreground);white-space:nowrap}
+.fee-main-summary .fee-my-amount{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;flex-wrap:wrap;margin:0}
+.fee-main-summary .fee-mine>span{font-size:14px;color:var(--muted-foreground)}
+.fee-main-summary .fee-mine>strong{font-size:30px;line-height:1.1;letter-spacing:-.5px}
+.fee-main-summary .fee-my-amount>.fee-paid-status{flex-basis:100%}
+.fee-main-summary .fee-my-friends{display:grid;gap:6px;margin:0;padding-top:8px;border-top:1px dashed var(--border)}
+.fee-main-summary .fee-my-friends .fee-my-amount>span small{display:inline;margin-left:6px;font-size:11px}
+.fee-main-summary .fee-my-friends .fee-my-amount>strong{font-size:16px}
+.fee-note{margin:0;font-size:13px;color:var(--muted-foreground)}
+.fee-main-summary .fee-unshared{margin:0;font-size:13px;line-height:1.6}
+.fee-main-summary .fee-manage-actions{display:flex;flex-wrap:wrap;gap:6px}
+.fee-main-summary .fee-manage-actions>button{min-height:40px;padding:6px 12px;font-size:13px}
+.fee-main-summary .fee-manage-actions>:is(.primary,.secondary){flex:1 1 40%}
+.fee-main-summary .fee-recipient{display:grid;gap:6px;padding-top:10px;border-top:1px solid var(--border)}
+.fee-main-summary .fee-recipient .hint{margin:0;font-size:13px}
+.fee-main-summary .fee-recipient>.actions{gap:6px}
+.fee-main-summary .fee-recipient>.actions>button{min-height:36px;padding:4px 10px;font-size:13px}
+.fee-recipient-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fee-recipient-row>span{flex:1 1 auto;font-size:14px}
+.fee-recipient-row>a,.fee-recipient-row>button{min-height:36px;padding:4px 10px;font-size:13px}
+.fee-rules{gap:8px;margin:0 0 8px;font-size:13px;color:var(--muted-foreground)}
+.fee-rules>button{flex:0 0 auto;min-height:36px;padding:4px 10px;white-space:nowrap}
+.fee-people .bill-row{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;padding:8px 0}
+.fee-people .bill-row>div{flex:1 1 0}
+.fee-people .bill-row>div>strong{display:block;font-size:14px}
+.fee-people .bill-row>div>small{font-size:12px}
+.fee-people .bill-row>strong{font-size:16px;white-space:nowrap}
+.fee-proxy-tag{display:inline!important;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--muted,#f1f1f4);font-size:11px;font-weight:500}
+/* 每人分摊和账目：标题一行写数量或合计，下面一行一项，用细线隔开。 */
+.card.fee-section{margin:12px 0;padding:12px 16px}
+.fee-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
+.fee-section-head h3{margin:0;font-size:16px}
+.fee-section-head>span{font-size:12px;color:var(--muted-foreground);text-align:right}
+.fee-people .bill-row,.fee-item{border-bottom:1px solid var(--border)}
+.fee-people .bill-row:last-child{border-bottom:0}
+.fee-people .bill-row>.fee-exempt-button{min-height:32px;padding:2px 8px;font-size:12px}
+.fee-proxy-tag.is-exempt{background:color-mix(in srgb,#b7791f 14%,var(--card));color:#8a5a12}
+.fee-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 0;border-left:0;border-right:0;border-top:0;border-radius:0;background:none;color:inherit;font:inherit;text-align:left}
+.fee-item.is-editable{cursor:pointer}
+.fee-item.is-editable>svg{flex:none;color:var(--muted-foreground)}
+.fee-item-main{flex:1 1 auto;min-width:0;display:grid;gap:2px}
+.fee-item-main>strong{font-size:14px}
+.fee-item-main>small{font-size:12px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.fee-item-amount{flex:none;font-weight:700}
+.fee-ledger .fee-rules{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 0}
+.fee-ledger .fee-add{display:flex;gap:6px;margin-top:8px}
+.fee-ledger .fee-add>button{flex:1 1 0;min-height:40px;font-size:13px}
+.fee-sheet-actions{display:grid;gap:8px}
+.fee-sheet-actions>button{min-height:44px;width:100%}

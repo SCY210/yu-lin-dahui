@@ -91,3 +91,16 @@ test('organizer can replace an opted-out published player with the available ben
  assert.ok(![...m.a,...m.b].includes(playerId));assert.ok([...m.a,...m.b].includes(bench));assert.equal(stoppedPendingMatches(s,e).length,0);
  await apply(s,owner,'start',{roundId:r.id,at:now,monthly:true,elo:true},now);assert.equal(m.status,'playing');assert.equal(matchingStopped(e,playerId),true);
 });
+
+test('上场意愿：普通道友只能改自己的，长老、宗主和副宗主可以改所有报名的人',async()=>{
+ const {s,e,owner,member}=fixture(),other=s.accounts[2];
+ await assert.rejects(apply(s,member,'pointsParticipation',{eventId:e.id,playerId:other.playerId,playing:false},now),/只能调整自己或代报名朋友的上场意愿/);
+ const elder={...s.accounts[3],simulationTester:true};s.accounts[3]=elder;
+ await apply(s,elder,'pointsParticipation',{eventId:e.id,playerId:other.playerId,playing:false},now);
+ assert.equal(matchingStopped(e,other.playerId!),true);
+ const deputy={...s.accounts[4],role:'admin' as const};s.accounts[4]=deputy;
+ await apply(s,deputy,'pointsParticipation',{eventId:e.id,playerId:other.playerId,playing:true},now);
+ assert.equal(matchingStopped(e,other.playerId!),false);
+ await apply(s,owner,'pointsParticipation',{eventId:e.id,playerId:member.playerId,playing:false},now);
+ assert.equal(matchingStopped(e,member.playerId!),true);
+});

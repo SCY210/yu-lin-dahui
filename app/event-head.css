@@ -1,0 +1,24 @@
+/* 活动详情页头部：第一行是返回、标题、管理；第二行把时间、球馆和标签排成一行，不重复标题里已有的日期和类型。两个主题都生效。 */
+body .shell .event-toolbar.event-head{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin:4px 0 12px}
+body .shell .event-head>.event-back{flex:0 0 auto;width:40px;height:40px;min-height:40px;padding:0;margin-left:-8px;border-radius:50%;justify-content:center}
+body .shell.app-compact .event-head>.event-heading{flex:1 1 0;min-width:0;margin:0}
+body .shell.app-compact .event-head .event-heading h1{margin:0;font-size:22px;line-height:1.3}
+/* 信息行占满整行，放不下时球馆名缩成省略号，不换行。 */
+body .shell .event-head>.event-head-meta{flex:1 1 100%;order:2;display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;padding-left:2px;font-size:13px;line-height:1.5;white-space:nowrap}
+body .shell .event-head-meta>*{flex:0 0 auto}
+body .shell .event-head-meta>.venue-heading-link{flex:0 1 auto;min-width:0;gap:3px;flex-wrap:nowrap;overflow:hidden}
+body .shell .event-head-meta .venue-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body .shell .event-head-meta>.venue-heading-link>svg{flex-shrink:0}
+html body .shell .event-head-meta>.badge.badge{font-size:11px;padding:1px 7px;line-height:1.6;margin:0}
+html body .shell .event-head-meta>.badge.points-match-badge.points-match-badge{font-size:11px;padding:1px 7px 1px 2px;gap:3px;letter-spacing:.02em}
+html body .shell .event-head-meta>.badge.points-match-badge svg{width:14px;height:14px}
+/* 「管理」收起时是右上角的小按钮；展开后占满一行，排在信息行下面。 */
+body .shell.app-compact .event-head>.event-manage{flex:0 0 auto;margin:0}
+body .shell.app-compact .event-head>.event-manage>summary{min-height:36px;padding:6px 10px;font-size:14px}
+body .shell.app-compact .event-head>.event-manage[open]{flex-basis:100%;order:3;margin-top:6px}
+body .shell.app-compact .event-head>.event-manage[open] .app-disclosure-content{max-width:none}
+body .shell .event-head+.event-note{margin:0 0 12px;color:var(--muted-foreground);font-size:14px;line-height:1.6}
+
+/* 接龙页顶部只留「添加场地 / 时段」：虚线描边的次要按钮，和各场地实心的「在此接龙」区分开。 */
+.ev-add-court{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:46px;margin:0 0 14px;border:1.5px dashed color-mix(in srgb,var(--primary) 55%,transparent);border-radius:12px;background:color-mix(in srgb,var(--primary) 6%,transparent);color:var(--primary);font-size:15px;font-weight:700}
+.ev-add-court:hover{background:color-mix(in srgb,var(--primary) 11%,transparent)}

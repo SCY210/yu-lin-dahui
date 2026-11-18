@@ -40,7 +40,7 @@ try{
   await act(()=>ui.update(React.createElement(SignupOccupancy,{e:projected.events[0],bookings:projected.bookings,registrations:projected.registrations,name:names})));
   assert.equal(signupCount(),Number(visible),creator+' / '+viewer);
   await act(()=>ui.update(React.createElement(Signup,{e:projected.events[0],ctx:{data:projected,name:names,busy:false,open(){},openProfile(){}},rules:projected.settings.rules})));
-  assert.match(text(ui.toJSON()),/场地接龙/,'other members retain normal signups');
+  assert.match(text(ui.toJSON()),/高峰/,'other members retain normal signups');
  }
  console.log('PASS court occupancy UI: real signup integration, per-court empty periods, accessible interactive rosters and updated signups');
 }finally{if(ui)await act(()=>ui.unmount());globalThis.window=prior.window;globalThis.document=prior.document;globalThis.IS_REACT_ACT_ENVIRONMENT=prior.act}

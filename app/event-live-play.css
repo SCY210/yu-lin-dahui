@@ -13,3 +13,16 @@
 .live-play-options .actions{gap:6px;flex-wrap:wrap}
 .live-play-options .actions>button{font-size:12px;padding:5px;min-height:44px}
 .live-bench-disclosure{min-width:0;border-bottom:1px solid var(--border)}
+/* 对局台（当前对局）：不折叠，顶上一条状态栏。进行中是醒目的深色栏和跳动的红点，未到开始时间是安静的浅色栏。 */
+.live-board-card{margin:10px 0;border:1px solid var(--border);border-radius:14px;background:var(--card);overflow:hidden;min-width:0}
+.live-board-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;font-size:15px}
+.live-board-state{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
+.live-board-card>:not(.live-board-head){margin-left:14px;margin-right:14px}
+.live-board-card>.hint:first-of-type{margin-top:10px}
+.live-board-card>.rest{padding-bottom:12px}
+.live-board-card.is-playing{border-color:#c0392b}
+.live-board-card.is-playing>.live-board-head{background:linear-gradient(90deg,#9f2a20,#c0392b);color:#fff}
+.live-board-card.is-waiting>.live-board-head,.live-board-card.is-ended>.live-board-head{background:var(--muted,#f1f1f4);color:var(--muted-foreground)}
+.live-board-dot{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 0 #fff9;animation:live-board-pulse 1.6s ease-out infinite}
+@keyframes live-board-pulse{0%{box-shadow:0 0 0 0 #ffffffa6}100%{box-shadow:0 0 0 8px #fff0}}
+@media(prefers-reduced-motion:reduce){.live-board-dot{animation:none}}

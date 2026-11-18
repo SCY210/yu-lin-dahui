@@ -7,7 +7,7 @@ import {eventFormat} from './match-format';
 import {automaticPlanInput} from './points-window';
 import {schedulingMode,pendingSchedulingIds,plannedPlayStarted} from './scheduling';
 import {pointsSession} from './points-attendance';
-import {livePresentIds,liveResting,liveAppearances} from './live-play';
+import {enableLivePlay,fillLiveCourts,livePresentIds,liveResting,liveAppearances} from './live-play';
 import {bookingAllowsPlayer} from './booking-signups';
 import {propose,validateRound} from './grouping';
 import {proposeFixed} from './fixed-partners';
@@ -88,8 +88,19 @@ export async function applyPointsSession(s:State,a:Account,action:string,input:u
    // 开始比赛 on a planned schedule (AGENTS.md C2): anyone signed up, the organiser or an administrator. The clock
    // plans and publishes at the start, and the first games wait for this. Pressing it again changes nothing.
    const mode=schedulingMode(work,e);
-   if(mode==='live')fail('本活动使用实时排场，请在场地上点“开始组队”');
    if(plannedPlayStarted(work,e))return true;
+   if(mode==='live'){
+    // 实时排场 has the same single 开始比赛: it fills every free court at once, and until it is pressed no court's
+    // 开始组队 starts a game, so bounty offers stay open until everyone's first game begins together (docs/BOUNTIES.md).
+    if(now<e.start)fail('活动尚未开始');
+    const event=work.events.find(x=>x.id===e.id)!;
+    if(!event.livePlay?.enabled)enableLivePlay(work,event);
+    if(event.livePlay?.paused)fail('实时排场已暂停，请先恢复自动排场');
+    fillLiveCourts(work,event,now,{allowSame:true});
+    if(!work.matches.some(m=>m.eventId===e.id&&m.status==='playing'))fail('目前没有完整可上场队伍，比赛尚未开始');
+    event.pointsSession??=pointsSession();event.pointsSession.startedAt??=now;event.pointsSession.playStartedAt=now;
+    break;
+   }
    const manager=canManageEvent(a,e)||canEnableEventRanking(work,a,e);
    const pending=()=>work.rounds.filter(r=>r.eventId===e.id&&!r.live&&['draft','published'].includes(r.status)).sort((x,y)=>x.start-y.start||(x.pointsSlot??0)-(y.pointsSlot??0));
    if(!pending().length){
