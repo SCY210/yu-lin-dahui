@@ -94,7 +94,8 @@ const schemas = {
     costOverride: z.object({ costId: pid, reason, segments: z.array(z.object({ start: time, end: time, cents })).min(1).max(100) }),
     bookingBearer: z.object({ bookingId: pid, bearer: z.enum(['members', 'subsidy']), reason }), deleteCost: z.object({ costId: pid, reason }), modes: z.object({ eventId: pid, courtMode: mode, ballMode: mode, reason }),
     exemption: z.object({ eventId: pid, playerId: pid, type: z.enum(['court', 'ball']), mode: z.enum(['none', 'redistribute', 'subsidy']), reason }),
-    feeRecipient: z.object({ eventId: pid, playerId: pid, name: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().min(5).max(40).regex(/^\+?[\d ()-]+$/, '电话号码只可包含数字、区号及常用分隔符').refine(v => v.replace(/\D/g, '').length >= 5 && v.replace(/\D/g, '').length <= 20, '请检查电话号码'), reason }),
+    // Either a member collects for everyone, or none: everyone pays the advancers directly (docs/FEE_PAGE.md).
+    feeRecipient: z.union([z.object({ eventId: pid, playerId: pid, name: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().min(5).max(40).regex(/^\+?[\d ()-]+$/, '电话号码只可包含数字、区号及常用分隔符').refine(v => v.replace(/\D/g, '').length >= 5 && v.replace(/\D/g, '').length <= 20, '请检查电话号码'), reason }), z.object({ eventId: pid, none: z.literal(true), reason })]),
     notifyFees: z.object({ eventId: pid, settlementId: pid, reason }),
     feePayeeRemove: z.object({ payeeId: pid, reason }),
     settle: z.object({ eventId: pid, confirmed: z.boolean(), reason }),
@@ -746,6 +747,7 @@ export async function apply(s: State, a: Account, action: string, input: unknown
         }
         case 'feeRecipient': {
             const p = command.payload;
+            if ('none' in p) { delete event(p.eventId).feeRecipient; break; }
             // The recipient is a member, so the transfers they pass on appear on their home page (docs/FEE_ADVANCES.md).
             const recipient = s.players.find(x => x.id === p.playerId && x.enabled && s.accounts.some(a => a.playerId === x.id)) ?? fail('请从有账号的球友中选择收款人');
             event(p.eventId).feeRecipient = { name: recipient.name, phone: p.phone, playerId: recipient.id };

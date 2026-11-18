@@ -79,6 +79,14 @@ try{
  await mount(Fees,{e:past,ctx});const payeeList=()=>ui.root.findByProps({'aria-label':'常用收款人'});
  assert.ok(text(payeeList()).includes('Fictional player 0 · +34 610 000 000'));assert.ok(!text(payeeList()).includes('Fictional player 1'),'other payees are folded');assert.ok(text(payeeList()).includes('其他收款人 · 2'));
  await expand('其他收款人');assert.ok(text(payeeList()).includes('Fictional player 1 · +34 611')&&text(payeeList()).includes('Fictional player 2 · +34 612'));
+ // 收款方式 (docs/FEE_PAGE.md): with a recipient 统一收款人 is chosen; switching back clears it. Without one 无统一收款人 is the
+ // default and the payee picker appears only after choosing 统一收款人.
+ const collect=label=>ui.root.findAll(n=>n.type==='button'&&n.props.role==='radio'&&text(n)===label)[0];
+ assert.equal(collect('统一收款人').props['aria-checked'],true);await act(()=>collect('无统一收款人').props.onClick());assert.deepEqual(actions.at(-1),['feeRecipient',{eventId:past.id,none:true,reason:'不用统一收款人'},false]);
+ const savedRecipient=past.feeRecipient;delete past.feeRecipient;await mount(Fees,{e:past,ctx});
+ assert.equal(collect('无统一收款人').props['aria-checked'],true,'no recipient is the default');assert.equal(ui.root.findAll(n=>n.props['aria-label']==='常用收款人').length,0,'the picker stays hidden');
+ await act(()=>collect('统一收款人').props.onClick());assert.equal(collect('统一收款人').props['aria-checked'],true);assert.equal(ui.root.findAll(n=>n.props['aria-label']==='常用收款人').length,1,'choosing 统一收款人 shows the picker');assert.ok(buttons().some(b=>text(b)==='新的收款人'));
+ past.feeRecipient=savedRecipient;await mount(Fees,{e:past,ctx});
  const copied=[],realNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator');Object.defineProperty(globalThis,'navigator',{value:{clipboard:{writeText:async t=>{copied.push(t)}}},configurable:true});
  try{const copyButton=buttons().find(b=>b.props['aria-label']==='复制电话号码');assert.ok(copyButton,'the copy button names the phone number');await act(()=>copyButton.props.onClick());assert.equal(copied.length,1);assert.ok(!/[^\d +()-]/.test(copied[0]),'only the phone number is copied: '+copied[0])}finally{if(realNavigator)Object.defineProperty(globalThis,'navigator',realNavigator);else delete globalThis.navigator}
  delete data.settings.feePayees;

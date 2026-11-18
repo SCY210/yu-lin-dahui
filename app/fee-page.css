@@ -53,3 +53,7 @@
 .fee-ledger .fee-add>button{flex:1 1 0;min-height:40px;font-size:13px}
 .fee-sheet-actions{display:grid;gap:8px}
 .fee-sheet-actions>button{min-height:44px;width:100%}
+/* 收款方式：二选一，默认「无统一收款人」；选「统一收款人」才出现收款人选择。 */
+.fee-collect-mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--foreground) 6%,transparent)}
+.fee-collect-option{min-height:38px;padding:4px 8px;border:0;border-radius:9px;background:transparent;color:var(--muted-foreground);font-size:14px;font-weight:600}
+.fee-collect-option.is-current{background:var(--card);color:var(--foreground);box-shadow:0 1px 3px rgba(0,0,0,.12)}
