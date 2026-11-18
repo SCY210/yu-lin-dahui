@@ -183,7 +183,10 @@ body .shell .decorated-title h1,body .shell .rv-title h1{position:relative;isola
  background:radial-gradient(circle at 50% 25%,#1f2620 0 1.6px,transparent 2px),radial-gradient(circle at 50% 75%,#f8f1e1 0 1.6px,transparent 2px),radial-gradient(circle at 50% 25%,#f8f1e1 0 5px,transparent 5.4px),radial-gradient(circle at 50% 75%,#1f2620 0 5px,transparent 5.4px),linear-gradient(90deg,#1f2620 50%,#f8f1e1 50%);
  transition:transform .7s cubic-bezier(.3,1.3,.5,1)}
 .scheduling-tokens:has(.scheduling-token:last-of-type.is-current) .scheduling-token:first-of-type::after{transform:rotate(180deg)}
-.scheduling-token:disabled:not(.is-current){opacity:.6}
+/* A dimmed token must not use opacity: it would make its own stacking layer, hiding the 太极 under the other token
+   (seen on an ended activity, where both tokens are disabled). The first token stays above the second. */
+.scheduling-token:first-of-type{z-index:1}
+.scheduling-token:disabled:not(.is-current){opacity:1;color:#a39478}
 .scheduling-token-seal{top:-10px;right:6px;padding:2px 3px;border-radius:2px;font-size:11px;font-weight:700;background:#a8382a;color:#fbf1e2;font-family:'Songti SC','STSong','SimSun',serif;box-shadow:0 0 0 1px #fbf7ed;transform:rotate(-8deg)}
 .scheduling-token:first-of-type .scheduling-token-seal{right:14px}
 .event-scheduling .match-player-filter.is-compact{border-color:#c9b48a;border-radius:999px;background:#f8f1e1;color:#7b4a2e}
