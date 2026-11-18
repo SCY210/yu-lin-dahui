@@ -57,3 +57,14 @@ test('收款人必须是有账号的球友',async()=>{
  for(const playerId of ['friend','missing'])await assert.rejects(()=>set(s,organizer,'e1',playerId,'600 111 222'),/有账号的球友/);
  assert.deepEqual(s,before);
 });
+
+test('收款方式可以改回无统一收款人：清除本场收款人，常用收款人保留；只有活动管理者可以改',async()=>{
+ const s=fixture();await set(s,organizer,'e1','p1','600 111 222');
+ const none=(a:Account)=>apply(s,a,'feeRecipient',{eventId:'e1',none:true,reason:''},now);
+ await assert.rejects(()=>none(other),/403/);
+ await none(organizer);
+ assert.equal(s.events.find(e=>e.id==='e1')!.feeRecipient,undefined);
+ assert.equal(s.settings.feePayees!.length,1,'the saved payee stays for next time');
+ await set(s,admin,'e1','p0','600 999 000');await none(admin);
+ assert.equal(s.events.find(e=>e.id==='e1')!.feeRecipient,undefined,'the owner and administrators can switch it too');
+});

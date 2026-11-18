@@ -17,15 +17,7 @@
 .booking-claims-line small{font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .booking-claims-line b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .booking-claims-line>li.is-pending b{color:color-mix(in srgb,var(--claim-pending) 75%,var(--foreground))}
-.booking-claims-legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;padding:0;list-style:none;font-size:11px;color:var(--muted-foreground)}
-.booking-claims-legend>li{display:flex;align-items:center;gap:5px}
-.booking-claims-legend>li::before{content:"";width:12px;height:12px;border-radius:3px;flex:none}
-.booking-claims-legend>li.is-pending::before{background:repeating-linear-gradient(135deg,var(--claim-pending) 0 3px,color-mix(in srgb,var(--claim-pending) 35%,transparent) 3px 6px)}
-.booking-claims-legend>li.is-registered::before{background:color-mix(in srgb,var(--claim-registered) 45%,transparent)}
-.booking-claims-legend>li.is-claimed::before{background:var(--claim-claimed)}
-.booking-claims .actions{display:flex;flex-wrap:wrap;gap:6px}
 .booking-claims button{font-size:12px;min-height:36px}
-.booking-claims-tip{margin:0;font-size:11px;color:var(--muted-foreground)}
 .booking-claim-facts{display:grid;gap:8px;margin:0}
 .booking-claim-facts>div{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
 .booking-claim-facts dt{min-width:4.5em;font-size:13px;color:var(--muted-foreground)}
@@ -35,3 +27,25 @@
 .booking-claim-state.is-registered{background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--foreground)}
 .booking-claim-state.is-claimed{background:color-mix(in srgb,#2e8b57 18%,transparent);color:color-mix(in srgb,#2e8b57 80%,var(--foreground))}
 .booking-claim-details .actions{display:flex;flex-wrap:wrap;gap:8px}
+/* 认领弹窗 (app/booking-claims.tsx ClaimRange): 大字时间段，下面整条场地时间，选中段在两个把手之间，别人已认领的部分是斜纹。 */
+.claim-range-pick{display:flex;align-items:baseline;justify-content:center;gap:10px;margin:6px 0 2px}
+.claim-range-pick>strong{font-size:34px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.claim-range-pick>span{font-size:14px;color:var(--muted-foreground)}
+.claim-range-track{position:relative;padding:8px 0;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none}
+.claim-range-bar{position:relative;height:46px;border-radius:10px;overflow:hidden;background:color-mix(in srgb,var(--foreground) 7%,transparent)}
+.claim-range-taken{position:absolute;top:0;bottom:0;display:flex;align-items:flex-end;padding:0 6px 4px;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--muted-foreground) 22%,transparent) 0 5px,transparent 5px 10px);overflow:hidden}
+.claim-range-taken>small{font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.claim-range-chosen{position:absolute;top:0;bottom:0;background:color-mix(in srgb,#2e8b57 30%,transparent);box-shadow:inset 0 0 0 2px #2e8b57;border-radius:8px;transition:left .08s ease,width .08s ease}
+.claim-range-chosen.is-clash{background:color-mix(in srgb,#c0392b 22%,transparent);box-shadow:inset 0 0 0 2px #c0392b}
+.claim-range-grip{position:absolute;top:2px;bottom:2px;width:14px;transform:translateX(-50%);border-radius:7px;border:2px solid var(--background);background:#2e8b57;box-shadow:0 1px 4px #0005;pointer-events:none;transition:left .08s ease}
+.claim-range-grip::before{content:"";position:absolute;inset:38% 4px;border-left:1px solid #fffc;border-right:1px solid #fffc}
+.claim-range-track>input.claim-range-handle{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.claim-range-track:focus-within .claim-range-grip{outline:3px solid color-mix(in srgb,#2e8b57 45%,transparent)}
+.claim-range-ticks{position:relative;height:16px;margin:0 0 6px;font-size:11px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.claim-range-ticks>span{position:absolute;transform:translateX(-50%)}
+.claim-range-ticks>span:first-child{transform:none}
+.claim-range-ticks>span:last-child{transform:translateX(-100%)}
+.claim-range-who{display:grid;gap:4px;font-size:13px;color:var(--muted-foreground)}
+.claim-range-clash{margin:0;font-size:13px}
+.claim-range-dialog .actions{display:flex}
+.claim-range-dialog .actions>button{flex:1;min-height:46px;font-size:16px}
