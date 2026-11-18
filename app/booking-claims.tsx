@@ -1,11 +1,12 @@
 'use client';
-import {useState} from 'react';
+import {useRef,useState,type PointerEvent} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {advancerAt,bookingParts} from '../lib/domain/booking-advancers';
 import {bookingClaimVersion} from '../lib/domain/booking-claims';
 import {canManageEvent} from '../lib/domain/permissions';
 import type {Booking,Event} from '../lib/domain/types';
 import type {SchedulingContext} from './event-scheduling';
+import AppSelect from './app-select';
 import {choice,dt,epoch,fmt,hm,type Form} from './form-fields';
 import './booking-claims.css';
 
@@ -40,14 +41,17 @@ type Segment={start:number;end:number;playerId?:string;state:ClaimState};
 const stateLabel:Record<ClaimState,string>={pending:'待认领',registered:'组织者登记',claimed:'已认领'};
 const hoursText=(h:number)=>(Number.isInteger(h)?h:h.toFixed(1))+' 小时';
 
-/** One court's booking timeline, shown open: each segment's colour is its claim state; claiming opens a dialog. */
-export default function BookingClaims({b,e,ctx}:{b:Booking;e:Event;ctx:Pick<SchedulingContext,'data'|'busy'|'open'|'name'|'readOnly'>}){
- const [chosen,setChosen]=useState<Segment|null>(null);
+/** One court's booking timeline, shown open: each segment's colour is its claim state (docs/BOOKING_CLAIMS.md). Tapping
+ * 待认领 time opens the claim dialog with a draggable time bar; tapping booked time shows who booked it and what this
+ * viewer may do. */
+export default function BookingClaims({b,e,ctx}:{b:Booking;e:Event;ctx:Pick<SchedulingContext,'data'|'busy'|'open'|'send'|'name'|'readOnly'>}){
+ const [chosen,setChosen]=useState<Segment|null>(null),[claiming,setClaiming]=useState<{start:number;end:number;correct:boolean;playerId?:string}|null>(null);
  const {data}=ctx,manager=canManageEvent(data.me,e),me=data.players.find(p=>p.id===data.me.playerId),settled=data.settlements.some(s=>s.eventId===e.id&&s.confirmed);
  if(e.deletedAt!==undefined||e.status==='cancelled'||ctx.readOnly)return null;
- const show=(form:Form)=>{setChosen(null);ctx.open(form.title,form.action,form.values,form.fields,form.convert,form.description)};
- const launch=(correct=false,range?:{start:number;end:number})=>show(bookingClaimForm(b,data.me.playerId,correct,data.players.filter(p=>p.enabled&&!p.guest).map(p=>[p.id,p.name]),range));
+ const members=data.players.filter(p=>p.enabled&&!p.guest).map(p=>[p.id,p.name]);
  const canClaim=!ctx.busy&&!!me?.enabled&&!me.guest&&!(e.status==='draft'&&!manager);
+ // A new claim starts on the tapped time, at most the usual two hours of one booking.
+ const claim=(x:{start:number;end:number},correct=false,playerId?:string)=>{setChosen(null);setClaiming({start:x.start,end:Math.min(x.end,x.start+2*3600000),correct,playerId})};
  const cuts=[...new Set([b.start,b.end,...bookingParts(b).map(p=>p.start),...(b.claims??[]).flatMap(c=>[c.start,c.end])])].filter(t=>t>=b.start&&t<=b.end).sort((a,b)=>a-b);
  const parts=bookingParts(b),claims=b.claims??[];
  // Neighbouring pieces with the same booker and state are one segment of the timeline.
@@ -59,15 +63,56 @@ export default function BookingClaims({b,e,ctx}:{b:Booking;e:Event;ctx:Pick<Sche
  }
  const pendingHours=segments.filter(x=>x.state==='pending').reduce((n,x)=>n+(x.end-x.start)/3600000,0);
  const who=(x:Segment)=>x.playerId?ctx.name(x.playerId):'待认领';
+ const claimable=(x:Segment)=>x.state==='pending'&&!settled&&canClaim;
  return <div className="booking-claims">
   <div className="booking-claims-head"><strong>约场认领</strong><span className={pendingHours?'is-pending':'is-done'}>{pendingHours?`还有 ${hoursText(pendingHours)}待认领`:segments.every(x=>x.state==='claimed')?'已全部认领':'已全部登记'}</span></div>
-  <ol className="booking-claims-line" aria-label={b.name+' 约场认领时间线'}>{segments.map(x=><li key={x.start} className={'is-'+x.state} style={{flexGrow:x.end-x.start}}><button type="button" title={`${hm(x.start)}–${hm(x.end)} ${who(x)} · ${stateLabel[x.state]}`} aria-label={`${hm(x.start)}到${hm(x.end)}，${who(x)}，${stateLabel[x.state]}，查看详情`} onClick={()=>setChosen(x)}><small>{hm(x.start)}–{hm(x.end)}</small><b>{who(x)}</b></button></li>)}</ol>
-  <p className="booking-claims-tip">点时间段可查看详情、认领或改回待认领。</p>
-  <ul className="booking-claims-legend" aria-label="颜色说明">{(['pending','registered','claimed'] as const).map(state=><li key={state} className={'is-'+state}>{stateLabel[state]}</li>)}</ul>
-  {settled?<p className="hint">费用已确认；如需纠正，请联系组织者从费用页调整并重新确认分摊。</p>:<div className="actions"><button type="button" className="secondary" disabled={ctx.busy||!me?.enabled||!!me.guest||e.status==='draft'&&!manager} onClick={()=>launch()}>认领我约的时间</button>{manager&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>launch(true)}>纠正约场人</button>}</div>}
+  <ol className="booking-claims-line" aria-label={b.name+' 约场认领时间线'}>{segments.map(x=><li key={x.start} className={'is-'+x.state} style={{flexGrow:x.end-x.start}}><button type="button" title={`${hm(x.start)}–${hm(x.end)} ${who(x)} · ${stateLabel[x.state]}`} aria-label={`${hm(x.start)}到${hm(x.end)}，${x.playerId?who(x)+'，':''}${stateLabel[x.state]}，${claimable(x)?'点按认领':'查看详情'}`} onClick={()=>claimable(x)?claim(x):setChosen(x)}><small>{hm(x.start)}–{hm(x.end)}</small><b>{claimable(x)?'点此认领':who(x)}</b></button></li>)}</ol>
   {chosen&&<SegmentDetails b={b} venue={b.venue??e.venue} x={chosen} who={who(chosen)} claimedAt={claims.find(c=>c.start<=chosen.start&&c.end>=chosen.end)?.at} mine={chosen.playerId===data.me.playerId} manager={manager} settled={settled} canClaim={canClaim} busy={ctx.busy} close={()=>setChosen(null)}
-   claim={()=>launch(false,chosen)} correct={()=>launch(true,chosen)} release={()=>show(bookingReleaseForm(b,chosen))}/>}
+   claim={()=>claim(chosen)} correct={()=>claim(chosen,true,chosen.playerId)} release={()=>{setChosen(null);const form=bookingReleaseForm(b,chosen);ctx.open(form.title,form.action,form.values,form.fields,form.convert,form.description)}}/>}
+  {claiming&&<ClaimRange b={b} initial={claiming} correct={claiming.correct} me={data.me.playerId} initialPlayer={claiming.playerId??data.me.playerId} members={members} manager={manager} busy={ctx.busy} name={ctx.name} close={()=>setClaiming(null)}
+   submit={(start,end,playerId)=>{const correct=claiming.correct||playerId!==data.me.playerId;setClaiming(null);ctx.send('bookingClaim',{bookingId:b.id,start,end,expected:bookingClaimVersion(b),correct,...(correct?{playerId}:{}),reason:''})}}/>}
  </div>;
+}
+
+const halfHour=1800000;
+/** The claim dialog: the court's whole booking as one bar, the chosen time on it between two grips, and the chosen time
+ * in large type above the bar. Dragging anywhere on the bar moves the nearest end by half hours; a tap moves it there.
+ * A claim lasts at least an hour (or the whole booking, if shorter). Time another member claimed is hatched and cannot
+ * be taken; organisers may choose another booker, which corrects the claim. */
+function ClaimRange({b,initial,correct,me,initialPlayer,members,manager,busy,name,close,submit}:{b:Booking;initial:{start:number;end:number};correct:boolean;me:string;initialPlayer:string;members:string[][];manager:boolean;busy:boolean;name:(id:string)=>string;close:()=>void;submit:(start:number,end:number,playerId:string)=>void}){
+ const cuts=[b.start];for(let t=b.start+halfHour;t<b.end;t+=halfHour)cuts.push(t);cuts.push(b.end);
+ const last=cuts.length-1,index=(t:number)=>cuts.reduce((best,c,i)=>Math.abs(c-t)<Math.abs(cuts[best]-t)?i:best,0);
+ const minSteps=b.end-b.start<3600000?last:cuts.findIndex(c=>c-b.start>=3600000);
+ const [range,setRange]=useState<[number,number]>(()=>{const a=Math.min(index(initial.start),last-minSteps);return [a,Math.max(index(initial.end),a+minSteps)]});
+ const [playerId,setPlayerId]=useState(initialPlayer);
+ const start=cuts[range[0]],end=cuts[range[1]],span=b.end-b.start,pct=(t:number)=>(t-b.start)/span*100;
+ const correcting=correct||playerId!==me,taken=(b.claims??[]).filter(c=>c.playerId!==playerId);
+ const clash=!correcting&&taken.some(c=>c.start<end&&c.end>start);
+ const setEdge=(edge:0|1,i:number)=>setRange(([a,z])=>edge===0?[Math.max(0,Math.min(i,z-minSteps)),z]:[a,Math.min(last,Math.max(i,a+minSteps))]);
+ const track=useRef<HTMLDivElement>(null),drag=useRef<{edge:0|1;x:number;moved:boolean}|null>(null);
+ const at=(x:number)=>{const r=track.current?.getBoundingClientRect();return r&&r.width?index(b.start+(x-r.left)/r.width*span):range[0]};
+ const nearest=(i:number):0|1=>i<=range[0]?0:i>=range[1]?1:i-range[0]<=range[1]-i?0:1;
+ const down=(ev:PointerEvent<HTMLDivElement>)=>{drag.current={edge:nearest(at(ev.clientX)),x:ev.clientX,moved:false};ev.currentTarget.setPointerCapture?.(ev.pointerId)};
+ const move=(ev:PointerEvent<HTMLDivElement>)=>{const d=drag.current;if(!d)return;if(!d.moved&&Math.abs(ev.clientX-d.x)<6)return;d.moved=true;ev.preventDefault();setEdge(d.edge,at(ev.clientX))};
+ const up=(ev:PointerEvent<HTMLDivElement>)=>{const d=drag.current;drag.current=null;if(d&&!d.moved)setEdge(d.edge,at(ev.clientX))};
+ const ticks=cuts.filter(t=>(t-b.start)%3600000===0);
+ return <Dialog open onOpenChange={next=>{if(!next)close()}}><DialogContent className="app-dialog claim-range-dialog" showCloseButton>
+  <DialogHeader><DialogTitle>{correct?'纠正约场人':'认领约场时间'} · {b.name}</DialogTitle><DialogDescription>{correct?'拖动两端选好时间，再选实际约场的球友。':'左右拖动两端，选出你实际约并垫付的时间。'}</DialogDescription></DialogHeader>
+  <div className="claim-range-pick" aria-live="polite"><strong>{hm(start)}–{hm(end)}</strong><span>{hoursText((end-start)/3600000)}</span></div>
+  <div ref={track} className="claim-range-track" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{drag.current=null}}>
+   <div className="claim-range-bar" aria-hidden="true">
+    {taken.map(c=>{const from=Math.max(b.start,c.start),to=Math.min(b.end,c.end);return <span key={c.start} className="claim-range-taken" style={{left:pct(from)+'%',width:(pct(to)-pct(from))+'%'}}><small>{name(c.playerId)}</small></span>})}
+    <span className={'claim-range-chosen'+(clash?' is-clash':'')} style={{left:pct(start)+'%',width:(pct(end)-pct(start))+'%'}}/>
+   </div>
+   {[start,end].map((t,k)=><span key={k} className="claim-range-grip" aria-hidden="true" style={{left:pct(t)+'%'}}/>)}
+   {/* Keyboard and screen-reader control of both ends; pointer input goes to the bar. */}
+   {([0,1] as const).map(edge=><input key={edge} type="range" className="claim-range-handle" min={0} max={last} step={1} value={range[edge]} aria-label={edge?'结束时间':'开始时间'} aria-valuetext={hm(cuts[range[edge]])} onChange={ev=>setEdge(edge,Number(ev.target.value))}/>)}
+  </div>
+  <div className="claim-range-ticks" aria-hidden="true">{ticks.map(t=><span key={t} style={{left:pct(t)+'%'}}>{hm(t).slice(0,2)}</span>)}</div>
+  {(correct||manager)&&<label className="claim-range-who"><span>约场人</span><AppSelect className="pick native-form-select" value={playerId} aria-label="约场人" onChange={ev=>setPlayerId(ev.target.value)}>{members.map(([id,n])=><option key={id} value={id}>{n}{id===me?'（我）':''}</option>)}</AppSelect></label>}
+  {clash&&<p className="warning claim-range-clash">选中的时间里有别人已认领的部分，请避开；认领错了请联系组织者纠正。</p>}
+  <div className="actions"><button type="button" className="primary" disabled={busy||clash||!playerId} onClick={()=>submit(start,end,playerId)}>{correcting?'保存约场人':'认领 '+hm(start)+'–'+hm(end)}</button></div>
+ </DialogContent></Dialog>;
 }
 
 /** What one timeline segment is and what this viewer may do with it. Members claim time nobody else has claimed and may
