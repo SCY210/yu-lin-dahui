@@ -3,7 +3,6 @@ import {z} from 'zod';
 import type {State,Event,Registration,Settlement,Bill} from './domain/types';
 import {feeContact,unpaidBills} from './domain/fee-payments';
 import {newlyOpenedSignups} from './push-contract';
-import {bountyTitles,drawnBounty} from './domain/bounties';
 import {duelGameOf} from './domain/duels';
 export const reminderKinds=['signup','registration','changes','matches','fees','awards','upcoming','bounty'] as const;
 export type ReminderKind=typeof reminderKinds[number];
@@ -78,12 +77,6 @@ export function remindersForChange(next:State,previous:State,actor:string,key:st
   // Its game has started: the four are called to the court, like the in-app popup (app/duel-alert.tsx).
   const game=duelGameOf(d,e,next.matches),was=game&&previous.matches.find(m=>m.id===game.id);
   if(game?.status==='playing'&&was?.status!=='playing'&&four.every(id=>d.accepted.includes(id))){const court=next.bookings.find(b=>b.id===game.courtId)?.name??'场地';add(e,'matches','duel-start:'+d.id,'天机战帖开战',`${name(d.a[0])} / ${name(d.a[1])} 对 ${name(d.b[0])} / ${name(d.b[1])} 在${court}斗法开场，道友速速登场！`,to(four),'rounds',{roundId:game.roundId});}
- }
- // A reissued bounty offer (bountyReissue): its member hears of it again, the same way as the first offer.
- for(const e of next.events)for(const r of e.bountyReissued??[]){
-  if(before.get(e.id)?.bountyReissued?.some(x=>x.playerId===r.playerId))continue;
-  const kind=drawnBounty(e.id,r.playerId),account=next.accounts.find(a=>a.playerId===r.playerId);
-  if(kind&&account)add(e,'bounty','reissue:'+r.playerId,'悬赏令',`天机阁为道友补发${bountyTitles[kind]}，可敢接下？`,[account.id],'overview',{playerId:r.playerId});
  }
  for(const bill of next.settlements){if(!bill.confirmed||previous.settlements.some(b=>b.id===bill.id&&b.confirmed))continue;result.push(...feeReminders(next,bill,now));}
  return result;

@@ -31,7 +31,7 @@ try{
  assert.equal(cards.length,3);
  assert.deepEqual(cards.map(t=>['1号场','2号场','10号场'].find(name=>t.includes(name)&&!(name==='1号场'&&t.includes('10号场')))),['1号场','2号场','10号场'],'courts stay in number order whether waiting or playing');
  assert.ok(cards[0].includes('等待下一局')&&cards[2].includes('等待下一局')&&!cards[1].includes('等待下一局'));
- assert.ok(text(ui.toJSON()).includes('再点“开始组队”安排下一局'),'the help text describes the button');
+ assert.ok(cards[0].includes('四人都下场，等得最久的先上'),'the waiting court explains who goes on next');
  const start=ui.root.findAllByType('button').find(b=>text(b.children)==='开始组队');await act(()=>start.props.onClick());
  assert.equal(sent.at(-1)[0],'liveNext');assert.equal(sent.at(-1)[1].courtId,s.bookings.find(b=>b.name==='1号场').id);
  const tiny=createSimulation(now).state;tiny.players=tiny.players.slice(0,4);tiny.accounts=tiny.accounts.slice(0,4);tiny.registrations=tiny.registrations.slice(0,4);tiny.bookings=tiny.bookings.slice(0,1);

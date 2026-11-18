@@ -25,7 +25,12 @@
 .bounty-offer-actions button{min-height:48px}
 
 /* The owner's and administrators' list of offers to reissue (app/bounty-card.tsx). */
-.bounty-reissue h3{display:flex;align-items:center;gap:6px;margin:0;font-size:15px}
-.bounty-reissue ul{display:grid;gap:6px;margin:8px 0 0;padding:0;list-style:none}
-.bounty-reissue li{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
-.bounty-reissue li>button{min-height:36px;padding:4px 12px;font-size:13px}
+
+/* 活动页的悬赏令默认折叠成一行：标题和状态，点开再看要求和接令按钮。 */
+.bounty-card.is-folded{display:block}
+.bounty-card.is-folded>summary{list-style:none;cursor:pointer}
+.bounty-card.is-folded>summary::-webkit-details-marker{display:none}
+.bounty-card.is-folded>summary .bounty-head::after{content:'展开';margin-left:4px;font-size:12px;color:var(--muted-foreground)}
+.bounty-card.is-folded[open]>summary .bounty-head::after{content:'收起'}
+.bounty-card.is-folded[open]>summary{margin-bottom:10px}
+.bounty-card.is-folded[open]{display:grid;gap:10px}

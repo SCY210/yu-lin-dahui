@@ -13,6 +13,9 @@ html.wuxia-theme{--xx-aura:#a8382a;--xx-aura-soft:#a8382a2e;--xx-gold:#b8935a;--
 @keyframes xx-spark{0%{opacity:1;transform:translate(0,0) scale(1.3)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
 @keyframes xx-page-forward{from{opacity:0;transform:translate3d(28px,0,0);filter:blur(3px)}}
 @keyframes xx-page-back{from{opacity:0;transform:translate3d(-28px,0,0);filter:blur(3px)}}
+@keyframes xx-brush{from{transform:scaleX(0);opacity:0}to{transform:none;opacity:1}}
+@keyframes xx-stamp{from{transform:rotate(-8deg) scale(1.8);opacity:0}to{transform:rotate(-8deg);opacity:.9}}
+@keyframes xx-live-dot{0%{box-shadow:0 0 0 0 #c0392ba6}100%{box-shadow:0 0 0 8px #c0392b00}}
 @keyframes xx-motes{to{background-position:20px -110px,90px -60px,160px -180px}}
 html.wuxia-theme{
 ::selection{background:color-mix(in srgb,var(--xx-gold) 38%,transparent)}
@@ -141,6 +144,7 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;z-ind
 .event-tabs button[data-state=active],.social-tabs button[data-state=active]{background:#fbf7ec;border-radius:3px}
 .score-reminder-bar{border-radius:5px;border-color:#cbb996}
 .shell button[aria-haspopup=dialog].rounded-full{margin:4px}
+.shell .rounds-guides>button[aria-haspopup=dialog].rounded-full{margin:3px}
 .ev-court-card>header{background:linear-gradient(180deg,#f3e9d3,transparent)}
 .venue-heading-link,.ev-court-card a,.venue-address,.legal-footer a{color:#7b4a2e}
 .venue-address{background:#f1e7d5;border-color:#d6c3a3;border-radius:3px}
@@ -151,11 +155,98 @@ body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:150px;z-ind
 .shell[data-nav=tab-forward]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-forward .28s cubic-bezier(.2,.8,.3,1) backwards}
 .shell[data-nav=tab-back]>[data-slot=tabs]~:not(.bottom-nav,.swipe-back){animation:xx-page-back .28s cubic-bezier(.2,.8,.3,1) backwards}
 
+/* 活动页和排名页标题：宋体重墨，身后一笔淡墨飞白自左向右刷开，底下一线金，右上角一方小朱印。 */
+body .shell .decorated-title h1,body .shell .rv-title h1{position:relative;isolation:isolate;padding:2px 28px 8px 12px;font-family:'Songti SC','STSong','KaiTi','STKaiti',serif;font-size:28px;font-weight:900;letter-spacing:.16em;color:#1d2420;text-shadow:0 1px 0 #fff8e6,0 0 12px color-mix(in srgb,var(--xx-gold) 40%,transparent)}
+.shell .decorated-title h1::before,.shell .rv-title h1::before{content:'';position:absolute;z-index:-1;left:-6px;right:4px;top:4%;bottom:0;background:url('/xiuxian/brush.svg') 0 50%/100% 100% no-repeat;transform-origin:0 50%;animation:xx-brush .8s cubic-bezier(.2,.8,.2,1) both}
+.shell .decorated-title h1::after,.shell .rv-title h1::after{content:'';position:absolute;right:0;top:-4px;width:21px;height:21px;background:url('/xiuxian/title-seal.svg') center/contain no-repeat;transform:rotate(-8deg);opacity:.9;animation:xx-stamp .45s .55s cubic-bezier(.3,1.6,.5,1) both}
+
+/* 「添加场地 / 时段」：一道横贯的金线，中间一枚朱砂印「＋」和朱砂字，不抢「在此接龙」的风头。 */
+.ev-add-court.ev-add-court{min-height:42px;gap:10px;border:0;border-radius:0;background:none;box-shadow:none;color:#8d3429;font-family:'Songti SC','STSong','SimSun',serif;font-size:15px;font-weight:800;letter-spacing:.12em}
+.ev-add-court.ev-add-court::before,.ev-add-court.ev-add-court::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--xx-gold) 70%,var(--xx-gold));transition:box-shadow .3s ease}
+.ev-add-court.ev-add-court::after{background:linear-gradient(270deg,transparent,var(--xx-gold) 70%,var(--xx-gold))}
+.ev-add-court.ev-add-court svg{flex:0 0 auto;width:22px;height:22px;padding:4px;border-radius:3px;background:#a8382a;color:#fbf1e2;box-shadow:0 0 0 2px #f6efe0,0 0 0 3px color-mix(in srgb,#a8382a 45%,transparent);transform:rotate(-6deg);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.ev-add-court.ev-add-court:hover,.ev-add-court.ev-add-court:focus-visible{background:none;text-shadow:0 0 12px color-mix(in srgb,var(--xx-gold) 55%,transparent)}
+.ev-add-court.ev-add-court:hover::before,.ev-add-court.ev-add-court:hover::after{box-shadow:0 0 6px var(--xx-gold)}
+.ev-add-court.ev-add-court:hover svg,.ev-add-court.ev-add-court:active svg{transform:rotate(0) scale(1.08)}
+
+/* 排场方式：一阴一阳两枚令牌，当前方式是墨底金字的阴面，另一枚是宣纸的阳面；中间一枚太极，换方式时转半圈。
+   推荐的令牌角上一方朱砂「荐」。 */
+.scheduling-strip{padding:6px 6px 6px 6px;border:1px solid var(--xx-gold-soft);border-radius:3px;background:url('/xiuxian/cloud-tile.svg') right -40px top -50px/180px 120px no-repeat,linear-gradient(180deg,#fbf6ea,#f3ead6);box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 28%,transparent)}
+.scheduling-tokens{gap:0}
+.scheduling-token{flex:0 1 auto;min-height:38px;padding:0 16px;border:1px solid #c9b48a;border-radius:0;background:#f8f1e1;color:#5d4a2e;font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.14em;transition:background-color .45s ease,color .45s ease,box-shadow .45s ease}
+.scheduling-token:first-of-type{border-radius:999px 0 0 999px;padding-right:18px}
+.scheduling-token:last-of-type{border-radius:0 999px 999px 0;padding-left:18px}
+.scheduling-token+.scheduling-token{border-left:0}
+.scheduling-token.is-current{border-color:#1f2620;background:radial-gradient(ellipse at 50% 0,#3a4136,#1f2620 70%);color:#e7cf96;box-shadow:inset 0 0 0 1px #d9c18a66,0 3px 10px #1f262040;text-shadow:0 0 8px #d9b8664d}
+.scheduling-token:not(.is-current):not(:disabled):hover{background:#fffaf0;color:#8d3429}
+.scheduling-token:first-of-type::after{content:'';position:absolute;z-index:1;top:50%;right:-11px;width:20px;height:20px;margin-top:-10px;border-radius:50%;box-shadow:0 0 0 1px var(--xx-gold),0 0 8px color-mix(in srgb,var(--xx-gold) 50%,transparent);
+ background:radial-gradient(circle at 50% 25%,#1f2620 0 1.6px,transparent 2px),radial-gradient(circle at 50% 75%,#f8f1e1 0 1.6px,transparent 2px),radial-gradient(circle at 50% 25%,#f8f1e1 0 5px,transparent 5.4px),radial-gradient(circle at 50% 75%,#1f2620 0 5px,transparent 5.4px),linear-gradient(90deg,#1f2620 50%,#f8f1e1 50%);
+ transition:transform .7s cubic-bezier(.3,1.3,.5,1)}
+.scheduling-tokens:has(.scheduling-token:last-of-type.is-current) .scheduling-token:first-of-type::after{transform:rotate(180deg)}
+.scheduling-token:disabled:not(.is-current){opacity:.6}
+.scheduling-token-seal{top:-10px;right:6px;padding:2px 3px;border-radius:2px;font-size:11px;font-weight:700;background:#a8382a;color:#fbf1e2;font-family:'Songti SC','STSong','SimSun',serif;box-shadow:0 0 0 1px #fbf7ed;transform:rotate(-8deg)}
+.scheduling-token:first-of-type .scheduling-token-seal{right:14px}
+.event-scheduling .match-player-filter.is-compact{border-color:#c9b48a;border-radius:999px;background:#f8f1e1;color:#7b4a2e}
+.event-scheduling .match-player-filter.is-compact.is-active{border-color:#8d3429;color:#8d3429;box-shadow:0 0 0 1px #8d342933}
+
+/* 赛程管理：一幅展开的卷轴，两端是乌木轴头，标题前一方朱砂小印。 */
+.schedule-scroll{margin:16px 10px 10px;padding:12px 14px;border:0;border-block:1px solid #c9b48a;border-radius:0;background:url('/xiuxian/cloud-tile.svg') right -30px top -40px/170px 110px no-repeat,linear-gradient(180deg,#fbf6ea,#f1e6cf);box-shadow:inset 0 3px 0 -1px #fbf6ea,inset 0 -3px 0 -1px #fbf6ea,0 4px 12px #3d34281a}
+.schedule-scroll::before,.schedule-scroll::after{content:'';position:absolute;top:-6px;bottom:-6px;width:9px;border-radius:5px;background:linear-gradient(90deg,#2a2119,#5a4532 45%,#2a2119);box-shadow:0 0 0 1px #b8935a66,0 2px 4px #0003}
+.schedule-scroll::before{left:-10px}.schedule-scroll::after{right:-10px}
+.schedule-scroll>header strong{font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.12em;color:#2e352a}
+.schedule-scroll>header strong::before{content:'';display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;border-radius:2px;background:#a8382a;box-shadow:0 0 0 1.5px #fbf6ea,0 0 0 2.5px #a8382a66;transform:rotate(45deg)}
+
+/* 对局台：顶上一块牌匾。进行中是墨底金字、朱砂灵光跳动；未到开始时间是宣纸底、虚线金边，静待开场。 */
+.live-board-card{border-radius:3px;border-color:var(--xx-gold-soft);background:url('/xiuxian/corner-bl.svg') 4px calc(100% - 4px)/34px 34px no-repeat,url('/xiuxian/corner-br.svg') calc(100% - 4px) calc(100% - 4px)/34px 34px no-repeat,linear-gradient(180deg,#fbf6ea,#f4ebd8);box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 28%,transparent)}
+.live-board-head{font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.14em}
+.live-board-card.is-playing{border-color:#1f2620}
+.live-board-card.is-playing>.live-board-head{background:radial-gradient(ellipse at 50% 0,#3a4136,#1f2620 75%);color:#e7cf96;box-shadow:inset 0 -1px 0 var(--xx-gold)}
+.live-board-card.is-waiting>.live-board-head,.live-board-card.is-ended>.live-board-head{background:transparent;color:#6f5a3a;border-bottom:1px dashed #c9b48a}
+.live-board-dot{background:#c0392b;animation-name:xx-live-dot}
+
+/* 轮次标签：宣纸小签，选中的一枚墨底金字。 */
+.round-tab{border-radius:3px;border-color:#c9b48a;background:#f8f1e1;color:#3a3326;font-family:'Songti SC','STSong','SimSun',serif}
+.round-tab.is-selected{border-color:#1f2620;background:radial-gradient(ellipse at 50% 0,#3a4136,#1f2620 75%);color:#e7cf96;box-shadow:inset 0 0 0 1px #d9c18a66}
+/* 各轮对局台：和实时排场的对局台同一套牌匾。草稿是淡墨斜纹，待录分是宣纸，进行中墨底金字，已结束青玉色。 */
+.round-board{border-radius:3px;border-color:var(--xx-gold-soft);background:url('/xiuxian/corner-bl.svg') 4px calc(100% - 4px)/34px 34px no-repeat,url('/xiuxian/corner-br.svg') calc(100% - 4px) calc(100% - 4px)/34px 34px no-repeat,linear-gradient(180deg,#fbf6ea,#f4ebd8);box-shadow:inset 0 0 0 3px #fbf7ec,inset 0 0 0 4px color-mix(in srgb,var(--xx-gold) 28%,transparent)}
+.round-board-head{background:transparent;border-bottom:1px dashed #c9b48a;color:#3a3326;font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.14em}
+.round-board-state{color:#7b6545;letter-spacing:.06em}
+.round-board.is-draft>.round-board-head{background:repeating-linear-gradient(135deg,#ece3cf 0 8px,transparent 8px 16px)}
+.round-board.is-playing{border-color:#1f2620}
+.round-board.is-playing>.round-board-head{background:radial-gradient(ellipse at 50% 0,#3a4136,#1f2620 75%);border-bottom:1px solid var(--xx-gold);color:#e7cf96}
+.round-board.is-playing .round-board-state{color:#e7cf96}
+.round-board.is-complete{border-color:#9cc7ad}
+.round-board.is-complete>.round-board-head{background:#e4efe4;border-bottom-color:#9cc7ad;color:#1f5a3d}
+.round-board.is-complete .round-board-state{color:#2f7a55}
+.round-board.is-tabbed{border:0;background:none;box-shadow:none}
+
+/* 费用页：总览卡是一张账册，状态像一枚印章，我的分摊用重墨大字。 */
+.fee-state{border-radius:2px;font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.06em}
+.fee-state.is-pending{background:#f3e3bd;color:#7b4a1e;box-shadow:inset 0 0 0 1px #d9b878}
+.fee-state.is-confirmed{background:#e1eddf;color:#1f5a3d;box-shadow:inset 0 0 0 1px #9cc7ad}
+.fee-main-summary .fee-mine>strong{font-family:'Songti SC','STSong','SimSun',serif;color:#8d3429}
+.fee-main-summary .fee-recipient{border-top-color:#d9c9a8}
+.fee-section-head h3{font-family:'Songti SC','STSong','SimSun',serif;letter-spacing:.12em;color:#2e352a}
+.fee-section-head h3::before{content:'';display:inline-block;width:8px;height:8px;margin:0 8px 2px 0;background:var(--xx-aura);transform:rotate(45deg)}
+.fee-people .bill-row,.fee-item{border-bottom:1px dashed #d9c9a8}
+.fee-item-amount,.fee-people .bill-row>strong{font-family:'Songti SC','STSong','SimSun',serif;color:#3a3326}
+.fee-item.is-editable:hover{background:#fffaf0}
+.fee-proxy-tag{border-radius:2px;background:#ece0c8;color:#765532}
+.fee-proxy-tag.is-exempt{background:#f3e3bd;color:#7b4a1e}
+
+/* 上场意愿：宣纸名牌，在排的描金，歇战的墨灰虚线。 */
+.participation-chip{border-color:#c9b48a;border-radius:3px;background:#f8f1e1;color:#3a3326}
+.participation-chip>svg{color:#2f7a55}
+.participation-chip.is-stopped{border-color:#cdbfa3;background:#ece5d6;color:#8a7d66}
+button.participation-chip:hover:not(:disabled){border-color:var(--xx-gold);box-shadow:0 0 0 1px var(--xx-gold-soft)}
+
 @media(prefers-reduced-motion:reduce){
  .card,.event-card,.match-card,.ts-product,.pp-card,.xx-taiji,.shell .home-heading::before{animation:none}
  body::before,.topbar .brand,.bottom-nav button.active::before,.shell .home-heading h1,.primary.primary:hover:not(:disabled),.primary.primary:focus-visible:not(:disabled){animation:none}
  .app-dialog.app-dialog,[data-slot=alert-dialog-content][data-slot=alert-dialog-content]{transition:none}
  .xx-touch-layer{display:none}
+ .scheduling-token,.scheduling-token:first-of-type::after{transition:none}
+ .shell .decorated-title h1::before,.shell .rv-title h1::before,.shell .decorated-title h1::after,.shell .rv-title h1::after{animation:none}
  .shell[data-nav]>*{animation:none!important}
  .event-card:hover{transform:none}
  .realm-progress-track>span::after,.rv-progress-track>span::after,.bond-bar>span::after{display:none}

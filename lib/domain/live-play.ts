@@ -1,6 +1,6 @@
 import {matchingStopped} from './matching-participation';
-import {awaitingArrival,clearFilledPointsWaiting} from './points-attendance';
-import {cancelPendingScheduling} from './scheduling';
+import {awaitingArrival,clearFilledPointsWaiting,pointsSession} from './points-attendance';
+import {cancelPendingScheduling,plannedPlayStarted} from './scheduling';
 import {z} from 'zod';
 import {parseDomainCommand} from './command-contract';
 import {liveActivityAvailable,liveAvailabilityTime} from './live-window';
@@ -289,6 +289,8 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
   // Like score entry: anyone signed up for the activity, its organiser or an administrator.
   if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或副宗主可以开始组队');
   if(!e.livePlay?.enabled||e.livePlay.paused||now<e.start)fail('实时排场未开启、已暂停或活动尚未开始');
+  // The first games start together with 开始比赛 (pointsPlay) or the organiser's 开始实时排场; until then no court starts alone.
+  if(!plannedPlayStarted(s,e))fail('请先点「开始比赛」，各片场同时开打第一局');
   const started=fillLiveCourts(s,e,now,{courtId:command.payload.courtId,allowSame:command.payload.allowSame});
   if(!started.length)fail('这片场地正在比赛，或可上场的人数不足，暂时无法组队');
   s.audits.push({id:crypto.randomUUID(),at:now,actor:a.id,action,reason:'录分后开始组队',changes:{eventId:e.id,courtId:command.payload.courtId,matchIds:started.map(m=>m.id)}});
@@ -307,6 +309,8 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  const config=configuration(e);
  if(command.action==='liveStart'){
   enableLivePlay(s,e);
+  // The organiser's 开始实时排场 is a start too: it counts as 开始比赛 for this activity.
+  e.pointsSession??=pointsSession();e.pointsSession.startedAt??=now;e.pointsSession.playStartedAt??=now;
  }else if(command.action==='livePause')config.paused=command.payload.paused;
  else if(command.action==='livePreference'){
   const p=command.payload;

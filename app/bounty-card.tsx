@@ -1,8 +1,8 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,type ReactNode} from 'react';
 import {ScrollText,CheckCircle2,XCircle} from 'lucide-react';
 import {bountyGoal,bountyTitles,type BountyKind} from '../lib/domain/bounties';
-import {myBounty,pendingBountyOffers,reissueCandidates,type ViewBounty} from '../lib/client/bounties';
+import {myBounty,pendingBountyOffers,type ViewBounty} from '../lib/client/bounties';
 import './bounty.css';
 
 type Offer={eventId:string;playerId:string;kind:BountyKind;coins:number;points:number;penalty:number;gamePoints?:15};
@@ -16,24 +16,26 @@ export function BountyScroll({kind,coins,points,penalty,gamePoints}:{kind:Bounty
   <dl><div><dt>功成之赏</dt><dd>{rewardText({coins,points})}</dd></div><div><dt>失手之罚</dt><dd>{penalty?`折损 ${penalty} 积分`:'无罚'}</dd></div></dl>
  </div>;
 }
-/** This member's bounty for one activity: an offer to answer, or the accepted bounty and, after the activity, its result. */
-export default function BountyCard({title,offer,accepted,busy,onRespond,onOpen}:{title?:string;offer?:Offer|null;accepted?:ViewBounty;busy?:boolean;onRespond?:(offer:Offer,accept:boolean)=>void;onOpen?:()=>void}){
- if(offer)return <section className="card bounty-card is-offer" aria-label="悬赏令">
-  <BountyHead kind={offer.kind} title={title} onOpen={onOpen} state="待接令"/>
+/** This member's bounty for one activity: an offer to answer, or the accepted bounty and, after the activity, its result.
+ * folded: the activity page shows it as one line with its state, opened on demand. */
+export default function BountyCard({title,offer,accepted,busy,onRespond,onOpen,folded=false}:{title?:string;offer?:Offer|null;accepted?:ViewBounty;busy?:boolean;onRespond?:(offer:Offer,accept:boolean)=>void;onOpen?:()=>void;folded?:boolean}){
+ const frame=(className:string,head:ReactNode,body:ReactNode,status=false)=>folded
+  ?<details className={className+' is-folded'} aria-label="悬赏令"><summary>{head}</summary>{body}</details>
+  :<section className={className} aria-label="悬赏令" role={status?'status':undefined}>{head}{body}</section>;
+ if(offer)return frame('card bounty-card is-offer',<BountyHead kind={offer.kind} title={title} onOpen={onOpen} state="待接令"/>,<>
   <BountyScroll {...offer}/>
   <p className="hint">接与不接，全凭道友本心，婉拒无罚；一言既出，不可更改。首局开战后此令自散。</p>
   <div className="actions"><button type="button" className="primary" disabled={busy} onClick={()=>onRespond?.(offer,true)}>接下此令</button><button type="button" className="ghost" disabled={busy} onClick={()=>onRespond?.(offer,false)}>婉拒</button></div>
- </section>;
+ </>);
  if(!accepted)return null;
  const done=accepted.outcome==='completed',failed=accepted.outcome==='failed',voided=accepted.outcome==='void';
- return <section className={'card bounty-card'+(done?' is-completed':failed?' is-failed':'')} aria-label="悬赏令" role="status">
-  <BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'功成':failed?'失手':voided?'已作废':'修行中'}/>
+ return frame('card bounty-card'+(done?' is-completed':failed?' is-failed':''),<BountyHead kind={accepted.kind} title={title} onOpen={onOpen} state={done?'功成':failed?'失手':voided?'已作废':'修行中'}/>,<>
   <BountyScroll {...accepted} penalty={voided?0:accepted.penalty}/>
   {done?<p className="bounty-result"><CheckCircle2 size={17} aria-hidden="true"/>悬赏功成！天机阁赐下 {rewardText(accepted)}。</p>
    :failed?<p className="bounty-result"><XCircle size={17} aria-hidden="true"/>此令未竟{accepted.penalty?`，折损 ${accepted.penalty} 积分`:''}。</p>
    :voided?<p className="bounty-result">本场没有符合修为差距的挑战机会，悬赏作废，不奖不罚；原悬赏扣分已撤销。</p>
    :<p className="hint">散场之后，天机阁自会清算；补录比分亦会重新清算。</p>}
- </section>;
+ </>,true);
 }
 function BountyHead({kind,title,state,onOpen}:{kind:BountyKind;title?:string;state:string;onOpen?:()=>void}){
  return <div className="bounty-head"><span className="bounty-seal" aria-hidden="true"><ScrollText size={20}/></span>
@@ -50,17 +52,7 @@ function useBountyClock(now?:number){
 }
 export function EventBounty({e,data,busy,respond,now:fixed}:{e:Parameters<typeof myBounty>[0]&{id:string};data:Parameters<typeof pendingBountyOffers>[0];busy?:boolean;respond:(offer:Offer,accept:boolean)=>void;now?:number}){
  const now=useBountyClock(fixed),offer=pendingBountyOffers(data,now).find(o=>o.eventId===e.id),accepted=myBounty(e,data.me.playerId);
- return <BountyCard offer={offer} accepted={accepted} busy={busy} onRespond={respond}/>;
-}
-/** For the owner and administrators: members who drew an offer and lost it unanswered, each with 补发 (bountyReissue,
- * docs/BOUNTIES.md). Nothing shows when there is nobody to reissue. */
-export function BountyReissue({e,data,name,busy,reissue,now:fixed}:{e:Parameters<typeof reissueCandidates>[1];data:Parameters<typeof reissueCandidates>[0];name:(id:string)=>string;busy?:boolean;reissue:(playerId:string,title:string)=>void;now?:number}){
- const now=useBountyClock(fixed),list=reissueCandidates(data,e,now);
- if(!list.length)return null;
- return <section className="card bounty-reissue" aria-label="补发悬赏令"><h3><ScrollText size={17} aria-hidden="true"/>悬赏令补发</h3>
-  <p className="hint">这些道友抽到了悬赏令，但在回应前第一局已开打，悬赏令随之失效。补发后由本人决定接下或婉拒。只能在活动进行中补发。</p>
-  <ul>{list.map(x=><li key={x.playerId}><span>{name(x.playerId)} · {bountyTitles[x.kind]}</span><button type="button" className="secondary" disabled={busy} onClick={()=>reissue(x.playerId,bountyTitles[x.kind])}>补发</button></li>)}</ul>
- </section>;
+ return <BountyCard offer={offer} accepted={accepted} busy={busy} onRespond={respond} folded/>;
 }
 /** Home: offers to answer, then accepted bounties of activities running or ended in the last day. */
 export function HomeBounties({data,busy,respond,onOpen,now:fixed}:{data:Parameters<typeof pendingBountyOffers>[0]&{events:{id:string;title:string;start:number;end:number}[]};busy?:boolean;respond:(offer:Offer,accept:boolean)=>void;onOpen:(eventId:string)=>void;now?:number}){

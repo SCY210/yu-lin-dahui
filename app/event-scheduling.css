@@ -1,14 +1,9 @@
 .scheduling-selector h2,.scheduling-controls h2{margin:0 0 10px;font-size:19px}.scheduling-options{display:flex;gap:8px;flex-wrap:wrap}.scheduling-options button{min-height:44px;white-space:normal}.scheduling-selector .hint{margin:12px 0 0}.scheduling-controls .row{flex-wrap:wrap}.scheduling-controls .actions{margin:8px 0}@media(max-width:600px){.scheduling-options{display:grid;grid-template-columns:1fr;width:100%}.scheduling-options button{width:100%}.scheduling-controls .actions>button{flex:1 1 160px}}
 
 .scheduling-options button[aria-pressed=true]{opacity:1}
-.scheduling-mode-select{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px}
-.scheduling-mode-select :is(select,.app-select-trigger){flex:1;min-width:0;max-width:260px;min-height:44px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit;font:inherit}
 .scheduling-selector.card,.scheduling-controls.card{padding:14px;margin:10px 0}
 .scheduling-selector h2,.scheduling-controls h2{font-size:16px;margin:0 0 7px}
 .scheduling-selector .hint,.scheduling-controls .hint{font-size:12px;line-height:1.5;margin:7px 0 0}
-.points-participation{padding:10px 0;min-width:0}
-.points-participation h3{font-size:15px;margin:0 0 5px}
-.points-participation>.hint{font-size:12px;line-height:1.5;margin:5px 0}
 .points-participation-row{padding:7px 0;gap:6px;border-bottom:1px solid var(--border);font-size:12px}
 .points-participation-row>strong{min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .points-participation-row>.badge{font-size:11px;padding:2px 5px}
@@ -17,10 +12,6 @@
 .completed-points-matches{margin-top:8px}
 @media(max-width:600px){.event-scheduling>.app-disclosure>.app-disclosure-content{padding:8px}.event-scheduling .scheduling-selector.card,.event-scheduling .scheduling-controls.card{padding:11px}.points-participation-row>strong{flex:1 1 80px}.scheduling-controls .actions{gap:6px}.scheduling-controls .actions>button{flex:1 1 110px;font-size:12px;padding:6px;min-height:44px}}
 .event-scheduling .scheduling-selector.card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:4px 8px;margin:6px 0}
-.scheduling-mode-select{gap:7px;white-space:nowrap;min-width:0}
-.scheduling-mode-select :is(select,.app-select-trigger){max-width:none;padding:5px 6px;font-size:12px}
-.scheduling-mode-info>summary{display:flex;align-items:center;min-height:44px;padding:3px;font-size:12px;white-space:nowrap}
-.scheduling-mode-info[open]{grid-column:1/-1}
 .scheduling-control-info>summary,.round-lineup-help>summary{min-height:32px;padding:4px 0;font-size:11px}
 .event-scheduling>.points-attendance.card{margin:0 0 6px;padding:4px 8px}
 .event-scheduling>.points-attendance .points-attendance-summary{gap:5px;font-size:13px}
@@ -50,18 +41,6 @@
 
 /* The recommended way of scheduling, highlighted above the selector for organisers (recommendedSchedulingMode). */
 /* The recommendation: one compact line; the why opens in a dialog (docs/COMPACT_MOBILE_LAYOUT.md). */
-.scheduling-advice{margin:6px 0;padding:6px 10px;border:1px solid var(--primary);border-radius:10px;background:var(--card);background:color-mix(in srgb,var(--primary) 7%,var(--card));color:var(--foreground)}
-.scheduling-advice.is-current{border-style:dashed;background:var(--card)}
-.scheduling-advice-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
-.scheduling-advice-row>svg{flex:none;color:var(--primary)}
-.scheduling-advice-row>strong{font-size:13px;color:var(--primary)}
-.scheduling-advice-row>.scheduling-advice-why{min-height:32px;margin-left:auto;padding:0 4px;border:0;background:none;color:var(--muted-foreground);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
-.scheduling-advice-row>.primary{min-height:36px;padding:4px 12px;font-size:13px}
-.scheduling-advice-fit{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0;padding:3px 8px;border-radius:8px;background:#fdf1ef;color:#a3291d;font-size:12px;font-weight:600}
-.scheduling-advice-fit>button{min-height:32px;margin-left:auto;padding:2px 10px;font-size:12px}
-.scheduling-advice-dialog .scheduling-advice-live{margin:0;font-weight:600}
-.scheduling-advice-dialog ul{margin:0;padding-left:18px;line-height:1.6;color:var(--muted-foreground)}
-.scheduling-advice-dialog ul>li{list-style:disc}
 /* Rounds not in progress: a horizontal strip of round tabs, one round shown below it (docs/COMPACT_MOBILE_LAYOUT.md). */
 .round-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin:10px 0 4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .round-tab{display:grid;justify-items:center;flex:0 0 auto;min-width:64px;min-height:44px;padding:5px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:inherit;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -73,7 +52,6 @@
 .round-tab.is-playing{border-color:#e7b3ac;background:#fdf1ef;color:#a3291d}
 .round-tab.is-playing small{color:#a3291d}
 .round-tab.is-playing small::before{content:'';display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:50%;background:#c0392b;vertical-align:middle;animation:round-live-dot 1.2s ease-in-out infinite}
-.round-tab.is-selected{box-shadow:0 0 0 2px currentColor;font-weight:800}
 .event-scheduling.is-ended .round-tab.is-playing{border-color:var(--border);background:var(--card);color:inherit}
 .event-scheduling.is-ended .round-tab.is-playing small{color:var(--muted-foreground)}
 .event-scheduling.is-ended .round-tab.is-playing small::before{display:none}
@@ -81,3 +59,57 @@
 /* When live scheduling serves better (lib/domain/scheduling.ts), and a note when this activity's numbers match. */
 /* 开始比赛: published planned games wait for a press (AGENTS.md C2). */
 .planned-play-start{display:flex;align-items:center;justify-content:space-between;gap:12px;border-left:4px solid var(--primary)}.planned-play-start>div{min-width:0}.planned-play-start strong{font-size:16px}.planned-play-start .hint{margin:4px 0 0}.planned-play-start button{flex-shrink:0}@media(max-width:600px){.planned-play-start{flex-direction:column;align-items:stretch}}
+
+/* 排场方式：每种方式一枚令牌，推荐的盖一方「荐」；筛选球友缩成右侧的小下拉。水墨主题的样式在 xiuxian-fx.css。 */
+.scheduling-strip{display:flex;align-items:center;gap:8px;margin:8px 0;min-width:0}
+.scheduling-tokens{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0}
+.scheduling-token{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:40px;padding:0 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--muted-foreground);font-size:14px;font-weight:600;white-space:nowrap}
+.scheduling-token.is-current{border-color:var(--primary);background:var(--primary);color:var(--primary-foreground,#fff)}
+.scheduling-token:disabled{opacity:1;cursor:default}
+.scheduling-token:disabled:not(.is-current){opacity:.45}
+.scheduling-token-seal{position:absolute;top:-8px;right:-4px;padding:2px 3px;border-radius:3px;background:#c0392b;color:#fff;font-size:10px;font-style:normal;line-height:1}
+.event-scheduling .match-player-filter.is-compact{flex:0 1 150px;display:flex;flex-direction:row;align-items:center;gap:2px;min-width:0;margin:0;padding-left:9px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--muted-foreground)}
+.event-scheduling .match-player-filter.is-compact.is-active{border-color:var(--primary);color:var(--primary)}
+.event-scheduling .match-player-filter.is-compact :is(select,.app-select-trigger){flex:1;width:auto;min-width:0;min-height:40px;padding:4px 8px 4px 2px;border:0;border-radius:999px;background:transparent;font-size:13px}
+.event-scheduling .match-player-filter.is-compact>svg{flex:none}
+.event-scheduling .match-player-filter.is-compact>:not(svg){flex:1 1 auto;min-width:0}
+/* 赛程管理（预排赛程 / 逐轮安排）：在各轮对局下面、上场意愿上面，只给能排场的人看。水墨主题画成一幅卷轴，样式在 xiuxian-fx.css。 */
+.schedule-scroll{position:relative;margin:14px 0 10px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.schedule-scroll>header{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px}
+.schedule-scroll>header .badge{font-size:11px;padding:1px 7px}
+.schedule-scroll-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px}
+.schedule-scroll-actions>button{min-height:42px;padding:6px 10px;font-size:13px;white-space:nowrap}
+.schedule-scroll-actions>button.primary{grid-column:1/-1}
+.schedule-scroll>.hint{margin:8px 0 0;font-size:12px;line-height:1.5}
+/* 轮次标签条：不显示滚动条，右边淡出提示还能往右滑；选中的轮次实心填色。 */
+.round-tabs{scrollbar-width:none;padding:3px 24px 4px 1px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.round-tabs::-webkit-scrollbar{display:none}
+.round-tab{transition:background-color .2s ease,color .2s ease,border-color .2s ease}
+.round-tab.is-selected{border-color:var(--primary);background:var(--primary);color:var(--primary-foreground,#fff);font-weight:800}
+.round-tab.is-selected small{color:inherit;opacity:.85}
+/* 对局台（各轮对局）：不折叠，顶上一条状态栏。草稿是斜纹，待录分是浅色，进行中醒目的红色并有跳动的红点，已结束是绿色。 */
+.round-board{margin:8px 0;border:1px solid var(--border);border-radius:12px;background:var(--card);overflow:hidden;min-width:0}
+.round-board-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;background:var(--muted,#f1f1f4);font-size:14px;line-height:1.4}
+.round-board-state{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap;color:var(--muted-foreground)}
+.round-board>:not(.round-board-head){margin-left:8px;margin-right:8px}
+.round-board>.round-board-head+*{margin-top:8px}
+.round-board>:last-child{margin-bottom:8px}
+.round-board .courts-grid{gap:8px}
+.round-board .rest{padding:8px 0}
+.round-board .rest strong{margin-bottom:6px;font-size:14px}
+.round-board.is-draft>.round-board-head{background:repeating-linear-gradient(135deg,var(--muted,#f1f1f4) 0 8px,var(--card) 8px 16px)}
+.round-board.is-playing{border-color:#c0392b}
+.round-board.is-playing>.round-board-head{background:linear-gradient(90deg,#9f2a20,#c0392b);color:#fff}
+.round-board.is-playing .round-board-state{color:#fff}
+.round-board.is-complete{border-color:#a9d6bd}
+.round-board.is-complete>.round-board-head{background:#eef8f2;color:#176346}
+.round-board.is-complete .round-board-state{color:#2f7a55}
+.event-scheduling.is-ended .round-board.is-playing{border-color:var(--border)}
+.event-scheduling.is-ended .round-board.is-playing>.round-board-head{background:var(--muted,#f1f1f4);color:inherit}
+.event-scheduling.is-ended .round-board.is-playing .round-board-state{color:var(--muted-foreground)}
+.event-scheduling.is-ended .round-board .live-board-dot{display:none}
+/* 标签条选中的那一轮：标签已经写明是第几轮，所以不再有顶栏和外框，对局卡直接排在标签下面。 */
+.round-board.is-tabbed{margin:6px 0;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible}
+.round-board.is-tabbed>:not(.round-board-head){margin-left:0;margin-right:0}
+.round-board.is-tabbed>:first-child{margin-top:0}
+.round-board.is-tabbed>.rest{padding:6px 2px}

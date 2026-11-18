@@ -10,3 +10,10 @@
 .points-arrival-alert .actions button{min-height:48px;font-size:16px}
 .points-arrival-alert .actions button svg{vertical-align:-3px}
 .points-attendance-summary>.points-attendance-missing{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--destructive) 14%,var(--card));color:var(--destructive);font-size:12px;font-weight:700}
+/* 顶部的迟到提示：每人一行，已到场和撤销误标按钮在右侧。 */
+.points-arrival-alert .points-late-list{display:grid;gap:4px;margin-top:6px}
+.points-arrival-alert .points-late-list>.row{flex-wrap:wrap;gap:6px 10px;padding:4px 0}
+.points-late-name{flex:1 1 140px;min-width:0;font-size:14px}
+.event-scheduling>.points-waiting.card{margin:0 0 8px;padding:10px 12px}
+body .shell.app-compact .feature-actions.rounds-guides{margin-top:18px;gap:4px}
+.rounds-guides>button{padding-inline:9px}

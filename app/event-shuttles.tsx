@@ -19,6 +19,8 @@ export default function EventShuttles({e,ctx}:{e:Event;ctx:any}){
  const votingOpen=!!plan?.votingOpen&&now<e.start&&['open','locked'].includes(e.status);
  const add=()=>open('添加候选球','shuttleOption',{eventId:e.id,name:'',note:''},[{key:'name',label:'品牌 / 型号'},{key:'note',label:'球速、价格或其他说明（可选）',optional:true}],undefined,'填入本次可用的球，道友可参考说明投票。');
  const confirm=(option:ShuttleOption)=>open('确认本次用球','shuttleConfirm',{eventId:e.id,optionId:option.id},[],undefined,`选用「${option.name}」后关闭投票并保留票数，道友会看到确认结果。`);
+ // Nothing to show members until a shuttle is proposed; organisers see the card to add one.
+ if(!options.length&&!selected&&!editable)return null;
  return <section className="card event-shuttles" aria-label="本次用球与投票">
   <div className="row"><h3>本次用球</h3>{editable&&<button type="button" className="secondary" disabled={busy||options.length>=12} onClick={add}><Plus size={17} aria-hidden="true"/>添加候选球</button>}</div>
   {selected?<div className="shuttle-selected"><span className="badge"><Check size={15} aria-hidden="true"/>已确认</span><strong>{selected.name}</strong>{selected.note&&<p>{selected.note}</p>}</div>:<p className="muted">{options.length?'等待创建者确认本次用球。':'尚未设置本次用球。'}</p>}
