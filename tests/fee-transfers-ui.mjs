@@ -20,14 +20,14 @@ const ctx=(me,payments=[])=>({data:{me:{playerId:me},payments},name:id=>names[id
 try{
  // The owner sees their two transfers first, can mark one, and sees the others folded away.
  await mount(FeeTransfers,{e,settlement,ctx:ctx('p0',[{eventId:'e',playerId:'p0',to:'p1',cents:720}]),manager:false});
- const all=text(ui.toJSON());assert.match(all,/已垫付：爱丽丝 €24\.00小波 €12\.00/);assert.match(all,/其他人的转账 · 1 笔 · 已转 0 笔/);
+ const all=text(ui.toJSON());assert.doesNotMatch(all,/已垫付/,'who advanced what is on the ledger, not repeated here');assert.match(all,/其他人的转账 · 1 笔 · 已转 0 笔/);
  assert.equal(button('撤销').length,1,'the marked transfer can be undone');
  const firstTransfer=ui.root.findAll(n=>n.props.className==='fee-transfer is-paid')[0];
  assert.equal(text(firstTransfer.findByProps({'data-side':'from'})),'我');
  assert.equal(text(firstTransfer.findByProps({'data-side':'to'})),'爱丽丝');
  const direction=firstTransfer.find(n=>n.type==='svg'&&n.props['aria-label']==='转给');
  assert.ok(direction.props.className.includes('fee-transfer-direction'));
- assert.match(text(firstTransfer.findByProps({className:'fee-transfer-amount'})),/应转金额€7\.20/);
+ assert.equal(text(firstTransfer.findByProps({className:'fee-transfer-amount'})),'€7.20','the amount sits beside the names');
  assert.equal(firstTransfer.findByProps({className:'fee-transfer-footer'}).findAllByType('button').length,1,'amount, status and action have their own footer');
  await act(()=>button('标记已转')[0].props.onClick());
  assert.deepEqual(actions.pop(),['feeTransferPaid',{eventId:'e',settlementId:'v1',from:'p0',to:'p2',paid:true,reason:'标记已转账'},false]);
@@ -36,19 +36,19 @@ try{
  assert.equal(button('确认已收到').length,2);
  await mount(FeeTransfers,{e,settlement,ctx:ctx('p1'),manager:false});
  assert.equal(button('确认已收到').length,1,'Alice only for the transfer to her');assert.equal(button('标记已转').length,0);
- // A collector is named with their phone.
  await mount(FeeTransfers,{e:{...e,feeRecipient:{name:'卡萝',phone:'+34 600',playerId:'p3'}},settlement:{...settlement,collector:'p3'},ctx:ctx('p0'),manager:false});
- assert.match(text(ui.toJSON()),/收款人 卡萝（\+34 600）/);
+ assert.doesNotMatch(text(ui.toJSON()),/统一转给|收款人 卡萝/,'the transfer rows name the recipient; no extra line repeats it');
  // Without one collector, each member sees the number of the people they transfer with, ready to copy.
  const withPhones=(me)=>{const c=ctx(me);c.data.players=[{id:'p1',profile:{phone:'600 111 111'}},{id:'p2',profile:{}}];return c};
  await mount(FeeTransfers,{e,settlement,ctx:withPhones('p0'),manager:false});
  const phoneRows=ui.root.findAll(n=>n.props.className==='fee-transfer-phone');assert.equal(phoneRows.length,2,'one per own transfer');
  assert.match(text(phoneRows[0]),/爱丽丝 的电话 600 111 111/);assert.equal(phoneRows[0].findAllByType('button').length,1);
- assert.match(text(phoneRows[1]),/小波 还没填电话号码/);
+ assert.match(text(phoneRows[1]),/小波 还没填电话/);
  assert.equal(ui.root.findAll(n=>n.props.className==='fee-transfer-others')[0].findAll(n=>n.props.className==='fee-transfer-phone').length,0,'no numbers on other people’s transfers');
  // A collector without a saved payee number shows their profile number.
  await mount(FeeTransfers,{e,settlement:{...settlement,collector:'p1'},ctx:withPhones('p0'),manager:false});
- assert.match(text(ui.toJSON()),/收款人 爱丽丝（600 111 111）/);
+ assert.match(text(ui.toJSON()),/爱丽丝 的电话 600 111 111/,'the payer sees the collector number on their own transfer');
+ await mount(FeeTransfers,{e:{...e,feeRecipient:{name:'爱丽丝',phone:'+34 699 000 000',playerId:'p1'}},settlement:{...settlement,collector:'p1'},ctx:withPhones('p0'),manager:false});assert.match(text(ui.toJSON()),/爱丽丝 的电话 \+34 699 000 000/,'the number given for the recipient comes first');
  // Home: the open transfers of this member, marked together.
  const players=Object.entries(names).map(([id,name])=>({id,name,ownerId:id}));
  await mount(HomeUnpaid,{settlements:[settlement],payments:[{eventId:'e',playerId:'p0',to:'p1',cents:720}],players,me:{id:'owner',playerId:'p0'},events:[e],onOpen:()=>{},onMarkTransfers:list=>actions.push(['home',list])});
