@@ -1,34 +1,28 @@
-.fee-transfers{display:grid;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);min-width:0}
-.fee-transfers h3{margin:0}
-.fee-transfer-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 16px}
-.fee-advances{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;font-size:13px}
-.fee-transfer-list{display:grid;gap:12px;min-width:0}
-.fee-transfer{display:grid;gap:14px;padding:16px;border:1px solid var(--border);border-radius:16px;min-width:0;background:var(--card);box-shadow:0 3px 14px color-mix(in srgb,var(--foreground) 4%,transparent)}
-.fee-transfer.is-paid{border-color:color-mix(in srgb,#1f7a3d 25%,var(--border))}
-.fee-transfer-people{display:grid;grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);align-items:center;gap:12px;min-width:0}
-.fee-transfer-people.from-me{grid-template-columns:minmax(44px,.45fr) 32px minmax(0,1fr)}
-.fee-transfer-people.to-me{grid-template-columns:minmax(0,1fr) 32px minmax(44px,.45fr)}
-.fee-transfer-person{display:flex;align-items:center;justify-content:center;min-width:0;min-height:46px;padding:8px 6px;font-size:16px;line-height:1.5;text-align:center;overflow-wrap:anywhere;word-break:normal}
-.fee-transfer-person.is-self{border-radius:10px;background:color-mix(in srgb,var(--primary) 7%,var(--card));color:var(--primary)}
-.fee-transfer-amount>span{font-size:12px;color:var(--muted-foreground)}
-.fee-transfer-direction{display:block;box-sizing:content-box;padding:6px;border-radius:50%;background:color-mix(in srgb,var(--primary) 7%,var(--card));color:var(--primary);flex-shrink:0}
-.fee-transfer-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:12px;border-top:1px solid var(--border)}
-.fee-transfer-amount{display:grid;gap:2px}.fee-transfer-amount>b{font-size:22px;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap}
-.fee-transfer-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto}
-.fee-transfer-actions>button{padding:8px 12px;min-height:44px;white-space:nowrap;border:1px solid color-mix(in srgb,var(--primary) 18%,var(--border));background:color-mix(in srgb,var(--primary) 5%,var(--card));color:var(--primary);font-weight:600}
+/* 转账 (app/fee-transfers.tsx, docs/FEE_PAGE.md): 每笔一行：谁转给谁、金额在右；自己的那笔多一行对方电话；最后是状态和一个按钮。 */
+.fee-transfers{display:grid;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);min-width:0}
+.fee-transfer-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fee-transfer-heading h3{margin:0;font-size:15px}
+.fee-transfer-heading>button{min-height:32px;padding:2px 8px;font-size:13px;gap:4px}
+.fee-transfer-list{display:grid;gap:8px;min-width:0}
+.fee-transfer{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;min-width:0;background:var(--card)}
+.fee-transfer.is-paid{background:color-mix(in srgb,#1f7a3d 5%,var(--card));border-color:color-mix(in srgb,#1f7a3d 22%,var(--border))}
+.fee-transfer-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.fee-transfer-people{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto}
+.fee-transfer-person{min-width:0;font-size:15px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fee-transfer-person.is-self{flex:none;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--primary) 10%,var(--card));color:var(--primary)}
+.fee-transfer-direction{flex:none;color:var(--muted-foreground)}
+.fee-transfer-amount{flex:none;font-size:20px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fee-transfer.is-paid .fee-transfer-amount{color:var(--muted-foreground)}
+.fee-transfer-phone{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:13px;min-width:0;color:var(--muted-foreground)}
+.fee-transfer-phone>svg{flex-shrink:0}
+.fee-transfer-phone b{color:var(--foreground);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fee-transfer-phone>button{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:2px 8px;font-size:13px}
+.fee-transfer-phone .hint{margin:0;font-size:13px}
+.fee-transfer-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fee-transfer-footer>button{min-height:38px;padding:4px 14px;white-space:nowrap;font-weight:600}
+.fee-advances{margin:0;font-size:12px;color:var(--muted-foreground)}
 .fee-transfer-others summary{cursor:pointer;font-size:13px;color:var(--muted-foreground)}
 .fee-transfer-others .fee-transfer-list{margin-top:6px}
 .fee-transfer-tabs{display:flex;gap:4px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--foreground) 6%,var(--card))}
-.fee-transfer-tabs button{flex:1;min-height:40px;border:0;border-radius:8px;background:none;color:var(--muted-foreground);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.fee-transfer-tabs button{flex:1;min-height:38px;border:0;border-radius:8px;background:none;color:var(--muted-foreground);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .fee-transfer-tabs button.is-selected{background:var(--card);color:var(--foreground);box-shadow:0 1px 3px #0002}
-@media(max-width:480px){
- .fee-transfer-people{gap:10px}
- .fee-transfer-person{padding:6px 2px;font-size:15px}
- .fee-transfer{padding:14px}
- .fee-transfer-actions>button{padding:8px 10px}
-}
-.fee-transfer-phone{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:14px;min-width:0}
-.fee-transfer-phone>svg{color:var(--primary);flex-shrink:0}
-.fee-transfer-phone b{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.fee-transfer-phone>button{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px 10px}
-.fee-transfer-phone .hint{margin:0;font-size:13px}

@@ -74,28 +74,30 @@ export default function BookingClaims({b,e,ctx}:{b:Booking;e:Event;ctx:Pick<Sche
  </div>;
 }
 
-const halfHour=1800000;
+const hour=3600000;
 /** The claim dialog: the court's whole booking as one bar, the chosen time on it between two grips, and the chosen time
- * in large type above the bar. Dragging anywhere on the bar moves the nearest end by half hours; a tap moves it there.
- * A claim lasts at least an hour (or the whole booking, if shorter). Time another member claimed is hatched and cannot
+ * in large type above the bar. Dragging anywhere on the bar moves the nearest end by whole hours from the court's start;
+ * a tap moves it there. A claim lasts at least an hour (or the whole booking, if shorter). Time another member claimed is hatched and cannot
  * be taken; organisers may choose another booker, which corrects the claim. */
 function ClaimRange({b,initial,correct,me,initialPlayer,members,manager,busy,name,close,submit}:{b:Booking;initial:{start:number;end:number};correct:boolean;me:string;initialPlayer:string;members:string[][];manager:boolean;busy:boolean;name:(id:string)=>string;close:()=>void;submit:(start:number,end:number,playerId:string)=>void}){
- const cuts=[b.start];for(let t=b.start+halfHour;t<b.end;t+=halfHour)cuts.push(t);cuts.push(b.end);
+ const cuts=[b.start];for(let t=b.start+hour;t<b.end;t+=hour)cuts.push(t);cuts.push(b.end);
  const last=cuts.length-1,index=(t:number)=>cuts.reduce((best,c,i)=>Math.abs(c-t)<Math.abs(cuts[best]-t)?i:best,0);
- const minSteps=b.end-b.start<3600000?last:cuts.findIndex(c=>c-b.start>=3600000);
- const [range,setRange]=useState<[number,number]>(()=>{const a=Math.min(index(initial.start),last-minSteps);return [a,Math.max(index(initial.end),a+minSteps)]});
+ // At least an hour; a booking shorter than that is claimed whole.
+ const ok=(a:number,z:number)=>z>a&&(cuts[z]-cuts[a]>=hour||a===0&&z===last);
+ const fit=(a:number,z:number,move:0|1):[number,number]=>{if(move===0){while(a>0&&!ok(a,z))a--}else{while(z<last&&!ok(a,z))z++}return [a,z]};
+ const [range,setRange]=useState<[number,number]>(()=>{const a=Math.min(index(initial.start),last-1),[x,z]=fit(a,Math.max(index(initial.end),a+1),1);return ok(x,z)?[x,z]:fit(x,z,0)});
  const [playerId,setPlayerId]=useState(initialPlayer);
  const start=cuts[range[0]],end=cuts[range[1]],span=b.end-b.start,pct=(t:number)=>(t-b.start)/span*100;
  const correcting=correct||playerId!==me,taken=(b.claims??[]).filter(c=>c.playerId!==playerId);
  const clash=!correcting&&taken.some(c=>c.start<end&&c.end>start);
- const setEdge=(edge:0|1,i:number)=>setRange(([a,z])=>edge===0?[Math.max(0,Math.min(i,z-minSteps)),z]:[a,Math.min(last,Math.max(i,a+minSteps))]);
+ const setEdge=(edge:0|1,i:number)=>setRange(([a,z])=>{const next=edge===0?fit(Math.max(0,Math.min(i,z-1)),z,0):fit(a,Math.min(last,Math.max(i,a+1)),1);return ok(...next)?next:[a,z]});
  const track=useRef<HTMLDivElement>(null),drag=useRef<{edge:0|1;x:number;moved:boolean}|null>(null);
  const at=(x:number)=>{const r=track.current?.getBoundingClientRect();return r&&r.width?index(b.start+(x-r.left)/r.width*span):range[0]};
  const nearest=(i:number):0|1=>i<=range[0]?0:i>=range[1]?1:i-range[0]<=range[1]-i?0:1;
  const down=(ev:PointerEvent<HTMLDivElement>)=>{drag.current={edge:nearest(at(ev.clientX)),x:ev.clientX,moved:false};ev.currentTarget.setPointerCapture?.(ev.pointerId)};
  const move=(ev:PointerEvent<HTMLDivElement>)=>{const d=drag.current;if(!d)return;if(!d.moved&&Math.abs(ev.clientX-d.x)<6)return;d.moved=true;ev.preventDefault();setEdge(d.edge,at(ev.clientX))};
  const up=(ev:PointerEvent<HTMLDivElement>)=>{const d=drag.current;drag.current=null;if(d&&!d.moved)setEdge(d.edge,at(ev.clientX))};
- const ticks=cuts.filter(t=>(t-b.start)%3600000===0);
+ const ticks=cuts.filter(t=>(t-b.start)%hour===0);
  return <Dialog open onOpenChange={next=>{if(!next)close()}}><DialogContent className="app-dialog claim-range-dialog" showCloseButton>
   <DialogHeader><DialogTitle>{correct?'纠正约场人':'认领约场时间'} · {b.name}</DialogTitle><DialogDescription>{correct?'拖动两端选好时间，再选实际约场的球友。':'左右拖动两端，选出你实际约并垫付的时间。'}</DialogDescription></DialogHeader>
   <div className="claim-range-pick" aria-live="polite"><strong>{hm(start)}–{hm(end)}</strong><span>{hoursText((end-start)/3600000)}</span></div>

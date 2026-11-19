@@ -17,10 +17,10 @@ try{
  // Booked time: the details offer 这段是我约的, which opens the claim dialog with the draggable time bar.
  await act(()=>segmentButtons()[0].props.onClick());assert.ok(dialogButtons().includes('这段是我约的'));await act(()=>dialog().findAllByType('button').find(x=>text(x.children)==='这段是我约的').props.onClick());
  assert.ok(dialog().findAll(n=>n.props.className==='claim-range-track').length===1,'the claim dialog shows the time bar');assert.match(pick(),/^\d\d:\d\d–\d\d:\d\d2 小时$/,'the chosen time is shown in large type: '+pick());
- assert.equal(handle('开始时间').props.value,0);assert.equal(handle('结束时间').props.value,4);assert.equal(handle('结束时间').props.max,12,'half-hour steps over the whole booking');
- await act(()=>handle('结束时间').props.onChange({target:{value:'7'}}));assert.ok(pick().endsWith('3.5 小时'));
- await act(()=>handle('结束时间').props.onChange({target:{value:'1'}}));assert.equal(handle('结束时间').props.value,2,'a claim lasts at least an hour');
- await act(()=>handle('结束时间').props.onChange({target:{value:'4'}}));assert.equal(dialog().findAll(n=>n.props['aria-label']==='约场人').length,0,'members claim only for themselves');
+ assert.equal(handle('开始时间').props.value,0);assert.equal(handle('结束时间').props.value,2);assert.equal(handle('结束时间').props.max,6,'whole-hour steps over the whole booking');
+ await act(()=>handle('结束时间').props.onChange({target:{value:'3'}}));assert.ok(pick().endsWith('3 小时'));
+ await act(()=>handle('结束时间').props.onChange({target:{value:'0'}}));assert.equal(handle('结束时间').props.value,1,'a claim lasts at least an hour');assert.ok(pick().endsWith('1 小时'));
+ await act(()=>handle('结束时间').props.onChange({target:{value:'2'}}));assert.equal(dialog().findAll(n=>n.props['aria-label']==='约场人').length,0,'members claim only for themselves');
  await act(()=>dialog().findAllByType('button').find(x=>text(x.children).startsWith('认领 ')).props.onClick());
  assert.equal(dialog(),undefined,'the dialog closes once the claim is sent');const [sa,sp]=sent.at(-1);assert.equal(sa,'bookingClaim');assert.deepEqual({...sp,expected:typeof sp.expected},{bookingId:'court',start:b.start,end:b.start+2*hour,expected:'string',correct:false,reason:''});
  // Organisers correct a booker from the details, choosing the time on the same bar and the member below it.
@@ -33,9 +33,9 @@ try{
  await act(()=>ui.update(React.createElement(BookingClaims,{b:open,e,ctx})));assert.deepEqual(segments(),[['is-pending',2*hour],['is-claimed',2*hour],['is-pending',2*hour]]);assert.ok(text(ui.toJSON()).includes('还有 4 小时待认领'));assert.ok(text(ui.toJSON()).includes('点此认领'));
  const fresh=bookingClaimForm(open,'p1');assert.equal(fresh.convert(fresh.values).start,b.start);
  data.me.id='member';await act(()=>ui.update(React.createElement(BookingClaims,{b:open,e,ctx})));
- await act(()=>segmentButtons()[2].props.onClick());assert.ok(dialog().findAll(n=>n.props.className==='claim-range-track').length===1,'tapping 待认领 time opens the claim dialog directly');assert.equal(handle('开始时间').props.value,8);assert.equal(handle('结束时间').props.value,12);
+ await act(()=>segmentButtons()[2].props.onClick());assert.ok(dialog().findAll(n=>n.props.className==='claim-range-track').length===1,'tapping 待认领 time opens the claim dialog directly');assert.equal(handle('开始时间').props.value,4);assert.equal(handle('结束时间').props.value,6);
  assert.equal(dialog().findAll(n=>n.props.className==='claim-range-taken').length,1,'time another member claimed is shown on the bar');
- await act(()=>handle('开始时间').props.onChange({target:{value:'6'}}));assert.ok(text(dialog().children).includes('别人已认领'));assert.ok(dialog().findAllByType('button').find(x=>text(x.children).startsWith('认领 ')).props.disabled,'cannot take time another member claimed');await act(()=>dialog().props.onOpenChange(false));
+ await act(()=>handle('开始时间').props.onChange({target:{value:'3'}}));assert.ok(text(dialog().children).includes('别人已认领'));assert.ok(dialog().findAllByType('button').find(x=>text(x.children).startsWith('认领 ')).props.disabled,'cannot take time another member claimed');await act(()=>dialog().props.onOpenChange(false));
  // Tapping booked time still shows it in full: a long name cut off in a short segment is readable here.
  data.me.id='creator';await act(()=>ui.update(React.createElement(BookingClaims,{b:open,e,ctx})));
  await act(()=>segmentButtons()[1].props.onClick());assert.ok(text(dialog().children).includes('组织者'));assert.ok(text(dialog().children).includes('已认领'));

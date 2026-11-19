@@ -1,10 +1,9 @@
 'use client';
-import Disclosure from './disclosure';
 import type {Bill,Booking,Cost} from '../lib/domain/types';
 import {canManageEvent} from '../lib/domain/permissions';
 import {plannedEpoch} from '../lib/time-planning';
 import {toast} from 'sonner';
-import {Plus,Copy,CheckCircle2,FileClock,Phone,Bell,ChevronRight} from 'lucide-react';
+import {Plus,Copy,CheckCircle2,FileClock,Phone,Bell,ChevronRight,UserRound,MoreHorizontal} from 'lucide-react';
 import {useState,type ReactNode} from 'react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {settlementFingerprint,settlementView} from '../lib/domain/settlement-state';
@@ -39,9 +38,38 @@ function FeeItem({title,actions,children}:{title:string;actions:{label:string;ru
    <div className="fee-sheet-actions">{actions.map(a=><button key={a.label} type="button" className={a.danger?'ghost danger':'secondary'} onClick={()=>{setShown(false);a.run()}}>{a.label}</button>)}</div>
   </DialogContent></Dialog></>;
 }
+/** 更多: the organiser's less frequent fee actions (withdraw a version, copy amounts, an ignored update) in one sheet, so
+ * the summary shows only the next step. */
+function FeeMore({actions}:{actions:{label:string;run:()=>void;danger?:boolean}[]}){
+ const [shown,setShown]=useState(false);
+ if(!actions.length)return null;
+ return <><button type="button" className="ghost fee-more" aria-haspopup="dialog" onClick={()=>setShown(true)}><MoreHorizontal size={16} aria-hidden="true"/>更多</button>
+  <Dialog open={shown} onOpenChange={setShown}><DialogContent className="app-dialog fee-item-sheet" showCloseButton><DialogHeader><DialogTitle>更多操作</DialogTitle><DialogDescription>费用分摊的其他操作。</DialogDescription></DialogHeader>
+   <div className="fee-sheet-actions">{actions.map(a=><button key={a.label} type="button" className={a.danger?'ghost danger':'secondary'} onClick={()=>{setShown(false);a.run()}}>{a.label}</button>)}</div>
+  </DialogContent></Dialog></>;
+}
+type Payee={id:string;name:string;phone:string;mine:boolean;playerId?:string;leader?:true};
+/** 选择收款人 (docs/FEE_PAGE.md): the saved payees in one list, the club owner and administrators first; tapping one makes
+ * them this activity's recipient. Whoever saved a payee, and administrators, can remove it. */
+function PayeePicker({payees,current,canRemove,busy,close,pick,remove,create}:{payees:Payee[];current?:{phone:string;playerId?:string};canRemove:(p:Payee)=>boolean;busy:boolean;close:()=>void;pick:(p:Payee)=>void;remove:(p:Payee)=>void;create:()=>void}){
+ const row=(p:Payee)=>{const on=current?.phone===p.phone&&current?.playerId===p.playerId;return <li key={p.id} className={'fee-payee-option'+(on?' is-current':'')}>
+  <button type="button" aria-pressed={on} disabled={busy||on} onClick={()=>pick(p)}><strong>{p.name}</strong><span>{p.phone}</span>{on&&<small>当前</small>}</button>
+  {canRemove(p)&&<button type="button" className="ghost fee-payee-remove" aria-label={'删除常用收款人 '+p.name} disabled={busy} onClick={()=>remove(p)}>×</button>}
+ </li>};
+ const leaders=payees.filter(p=>p.leader),others=payees.filter(p=>!p.leader);
+ return <Dialog open onOpenChange={next=>{if(!next)close()}}><DialogContent className="app-dialog fee-payee-picker" showCloseButton>
+  <DialogHeader><DialogTitle>选择收款人</DialogTitle><DialogDescription>大家都转给他，再由他转给约场、出球的人。</DialogDescription></DialogHeader>
+  {payees.length?<div className="fee-payee-groups" role="group" aria-label="常用收款人">
+   {leaders.length>0&&<ul className="fee-payee-options">{leaders.map(row)}</ul>}
+   {others.length>0&&<><small className="fee-payee-group-label">其他收款人</small><ul className="fee-payee-options">{others.map(row)}</ul></>}
+  </div>:<p className="hint">还没有常用收款人。</p>}
+  <div className="actions"><button type="button" className="secondary" disabled={busy} onClick={create}><Plus size={16}/>新的收款人</button></div>
+ </DialogContent></Dialog>;
+}
 export default function Fees({e:ev,ctx}:any){const {data,name,open,setDanger,regs}=ctx;const manager=canManageEvent(data.me,ev);const draft=data.drafts.find((x:any)=>x.eventId===ev.id);const versions=data.settlements.filter((x:any)=>x.eventId===ev.id).sort((a:any,b:any)=>b.version-a.version);const {latest,confirmed,changed,shown}=settlementView(draft,versions,manager);const displayConfirmed=!!latest&&(!manager||confirmed),awaitingEnd=Date.now()<ev.end&&(usesAutomaticAttendance(ev)||data.attendance.some((a:any)=>a.eventId===ev.id&&a.end===null));
 // 收款方式 (docs/FEE_PAGE.md): an organiser who chose 统一收款人 sees the payee picker before a recipient is saved.
 const [pickRecipient,setPickRecipient]=useState(false);
+const [payeePicker,setPayeePicker]=useState(false);
 const plannedPreview=manager&&!displayConfirmed&&awaitingEnd&&usesAutomaticAttendance(ev)&&!['ended','cancelled'].includes(ev.status);
 // Paid status belongs to the latest confirmed version; a manager's unconfirmed preview shows none.
 const payees:{id:string;name:string;phone:string;mine:boolean;playerId?:string;leader?:true}[]=data.settings.feePayees??[];
@@ -76,25 +104,36 @@ const modeName=(mode:string)=>modes.find(([k])=>k===mode)?.[1];
 return <>
 <section className={'card fee-main-summary '+(displayConfirmed?'is-confirmed':'is-pending')} id={'fee-main-'+ev.id} role="status" aria-live="polite">
  <header className="fee-hero-head"><span className={'fee-state '+(displayConfirmed?'is-confirmed':'is-pending')}>{displayConfirmed?<CheckCircle2 size={15} aria-hidden="true"/>:<FileClock size={15} aria-hidden="true"/>}{state}</span><span className="fee-total">{shown?.bills.length??0} 人 · 合计 {euro(shown?.total??0)}</span></header>
- {mine?<div className="fee-my-amount fee-mine"><span>我的分摊</span><strong>{euro(mine.total)}</strong>{paidStatus(mine)}</div>:!shown?.bills.length&&<p className="empty">还没有可分摊的费用</p>}
- {myFriends.length>0&&<div className="fee-my-friends">{myFriends.map((b:{playerId:string;total:number})=><div className="fee-my-amount" key={b.playerId}><span>{name(b.playerId)}<small>代报名</small></span><strong>{euro(b.total)}</strong>{paidStatus(b)}</div>)}</div>}
+ {/* With transfers, each one's status is on its own row below; the amounts here do not repeat it. */}
+ {mine?<div className="fee-my-amount fee-mine"><span>我的分摊</span><strong>{euro(mine.total)}</strong>{!latest?.transfers&&paidStatus(mine)}</div>:!shown?.bills.length&&<p className="empty">还没有可分摊的费用</p>}
+ {myFriends.length>0&&<div className="fee-my-friends">{myFriends.map((b:{playerId:string;total:number})=><div className="fee-my-amount" key={b.playerId}><span>{name(b.playerId)}<small>代报名</small></span><strong>{euro(b.total)}</strong>{!latest?.transfers&&paidStatus(b)}</div>)}</div>}
  {note&&<p className="fee-note">{note}</p>}
  {manager&&(shown?.unallocated??0)>0&&<p className="warning fee-unshared"><strong>{euro(shown?.unallocated??0)} 没人分摊</strong>：{unshared(shown!.detail).map(r=>r.name+' '+hm(r.start)+'–'+hm(r.end)).join('、')}。缩短场地时间或改为群补贴后才能确认。</p>}
- {manager&&<div className="actions fee-manage-actions">{!confirmed&&<button className="secondary" disabled={ctx.busy||!draft} onClick={()=>open('保存分摊草稿','settle',{eventId:ev.id,confirmed:false,reason:'保存费用分摊草稿'},[why])}>保存草稿</button>}<button className="primary" disabled={ctx.busy||confirmed||!draft||shown!.unallocated>0||awaitingEnd} onClick={()=>open('确认分摊结果','settle',{eventId:ev.id,confirmed:true,reason:'确认活动费用分摊'},[why],undefined,'核对费用、豁免及群补贴，保存每人的分摊金额。')}>{confirmed?<><CheckCircle2 size={17}/> 已确认</>:changed?'确认新的分摊':'确认分摊'}</button>{latest&&changed&&<button type="button" className="ghost" disabled={ctx.busy||!draft} onClick={()=>void ctx.action('feeUpdateIgnore',{eventId:ev.id,settlementId:latest.id,fingerprint:settlementFingerprint(draft),reason:'忽略这次费用更新'},false).catch(()=>{})}>忽略这次更新</button>}{latest&&draft?.ignoredUpdate&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>void ctx.action('feeUpdateIgnore',{eventId:ev.id,settlementId:latest.id,fingerprint:null,reason:'恢复费用更新提示'},false).catch(()=>{})}>查看被忽略的更新</button>}{latest&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>setDanger({action:'settleRevoke',payload:{eventId:ev.id,settlementId:latest.id},title:'撤回第 '+latest.version+' 版分摊',description:(versions.some((v:{confirmed:boolean;version:number})=>v.confirmed&&v.version<latest.version)?'撤回后，上一个确认的版本重新生效，球友按它付款。':'撤回后，本活动回到“分摊尚未确认”。')+'第 '+latest.version+' 版保留在记录里，已标记的付款不变。',reason:''})}>撤回第 {latest.version} 版</button>}{latest&&confirmed&&<button className="secondary" disabled={ctx.busy||unpaidCount===0} title={unpaidCount===0?'所有人都已标记付款':'再提醒一次还没标记付款的球友（6 小时内最多一次）'} onClick={()=>void ctx.action('notifyFees',{eventId:ev.id,settlementId:latest.id,reason:'提醒未付款的球友'},false).catch(()=>{})}><Bell size={16}/> {unpaidCount?'提醒未付款（'+unpaidCount+' 人）':'都已付款'}</button>}{latest&&<button className="ghost" onClick={async()=>{try{await navigator.clipboard.writeText(`${data.settings.name} · ${ev.title} · 费用分摊 第${latest.version}版\n总费用 ${euro(latest.total)}，群补贴 ${euro(latest.subsidy)}\n${latest.bills.map(b=>`${name(b.playerId)}：${euro(b.total)}`).join('\n')}`);toast.success('已复制分摊金额')}catch{toast.error('复制失败')}}}><Copy size={16}/> 复制分摊金额</button>}</div>}
+ {manager&&(()=>{
+  // One next step in view: confirm while there is something to confirm, otherwise remind the unpaid. The rest is in 更多.
+  const copyAmounts=async()=>{if(!latest)return;try{await navigator.clipboard.writeText(`${data.settings.name} · ${ev.title} · 费用分摊 第${latest.version}版\n总费用 ${euro(latest.total)}，群补贴 ${euro(latest.subsidy)}\n${latest.bills.map((b:Bill)=>`${name(b.playerId)}：${euro(b.total)}`).join('\n')}`);toast.success('已复制分摊金额')}catch{toast.error('复制失败')}};
+  const more=[
+   ...(latest&&changed?[{label:'忽略这次更新',run:()=>{if(draft)void ctx.action('feeUpdateIgnore',{eventId:ev.id,settlementId:latest.id,fingerprint:settlementFingerprint(draft),reason:'忽略这次费用更新'},false).catch(()=>{})}}]:[]),
+   ...(latest&&draft?.ignoredUpdate?[{label:'查看被忽略的更新',run:()=>void ctx.action('feeUpdateIgnore',{eventId:ev.id,settlementId:latest.id,fingerprint:null,reason:'恢复费用更新提示'},false).catch(()=>{})}]:[]),
+   ...(latest?[{label:'复制分摊金额',run:()=>void copyAmounts()},{label:'撤回第 '+latest.version+' 版',danger:true,run:()=>setDanger({action:'settleRevoke',payload:{eventId:ev.id,settlementId:latest.id},title:'撤回第 '+latest.version+' 版分摊',description:(versions.some((v:{confirmed:boolean;version:number})=>v.confirmed&&v.version<latest.version)?'撤回后，上一个确认的版本重新生效，球友按它付款。':'撤回后，本活动回到“分摊尚未确认”。')+'第 '+latest.version+' 版保留在记录里，已标记的付款不变。',reason:''})}]:[]),
+  ];
+  return <div className="actions fee-manage-actions">
+   {!confirmed&&<button className="secondary" disabled={ctx.busy||!draft} onClick={()=>open('保存分摊草稿','settle',{eventId:ev.id,confirmed:false,reason:'保存费用分摊草稿'},[why])}>保存草稿</button>}
+   {!confirmed&&<button className="primary" disabled={ctx.busy||!draft||shown!.unallocated>0||awaitingEnd} onClick={()=>open('确认分摊结果','settle',{eventId:ev.id,confirmed:true,reason:'确认活动费用分摊'},[why],undefined,'核对费用、豁免及群补贴，保存每人的分摊金额。')}>{changed?'确认新的分摊':'确认分摊'}</button>}
+   {latest&&confirmed&&(unpaidCount?<button className="secondary" disabled={ctx.busy} title="再提醒一次还没标记付款的球友（6 小时内最多一次）" onClick={()=>void ctx.action('notifyFees',{eventId:ev.id,settlementId:latest.id,reason:'提醒未付款的球友'},false).catch(()=>{})}><Bell size={16}/> 提醒未付款（{unpaidCount} 人）</button>:<span className="fee-all-paid"><CheckCircle2 size={16} aria-hidden="true"/>全部已付款</span>)}
+   <FeeMore actions={more}/>
+  </div>;
+ })()}
  {statusOn&&latest?.transfers&&<FeeTransfers e={ev} settlement={latest} ctx={ctx} manager={manager}/>}
- {(ev.feeRecipient||manager)&&<section className="fee-recipient">
+ {(manager||ev.feeRecipient&&!(statusOn&&latest?.transfers))&&<section className="fee-recipient">
   {manager&&<div className="fee-collect-mode" role="radiogroup" aria-label="收款方式">{([[false,'无统一收款人'],[true,'统一收款人']] as const).map(([on,label])=>{const current=on===(!!ev.feeRecipient||pickRecipient);return <button type="button" role="radio" key={label} aria-checked={current} className={'fee-collect-option'+(current?' is-current':'')} disabled={ctx.busy} onClick={()=>{if(current)return;setPickRecipient(on);if(!on&&ev.feeRecipient)void ctx.action('feeRecipient',{eventId:ev.id,none:true,reason:'不用统一收款人'},false).catch(()=>{})}}>{label}</button>})}</div>}
-  {ev.feeRecipient?<div className="fee-recipient-row"><span>收款人 <strong>{ev.feeRecipient.name}</strong></span><a className="secondary" href={'tel:'+ev.feeRecipient.phone.replace(/[^+\d]/g,'')}><Phone size={16}/>{ev.feeRecipient.phone}</a><button className="ghost" aria-label="复制电话号码" title="复制电话号码" onClick={async()=>{try{await navigator.clipboard.writeText(ev.feeRecipient.phone);toast.success('电话号码已复制')}catch{toast.error('复制失败，请手动复制号码')}}}><Copy size={16}/>复制</button></div>
-  :!pickRecipient&&<p className="hint">大家直接转给约场、出球的人{latest?.transfers?'，按上面的转账结算付款':''}。</p>}
-  {manager&&(ev.feeRecipient||pickRecipient)&&<>
-  {!ev.feeRecipient&&<p className="hint">选一位球友：大家都转给他，再由他转给约场、出球的人。</p>}
-  {manager&&payees.length>0&&(()=>{
-// Only the club owner and administrators are regular payees; anyone else used before stays folded below them.
-const usable=payees.filter(p=>p.playerId&&members.some(([id])=>id===p.playerId)),others=usable.filter(p=>!p.leader);
-const row=(p:typeof payees[number])=>{const current=ev.feeRecipient?.phone===p.phone&&ev.feeRecipient?.playerId===p.playerId;return <span className="fee-payee" key={p.id}><button type="button" className={current?'secondary':'ghost'} aria-pressed={current} disabled={ctx.busy||current} onClick={()=>void ctx.action('feeRecipient',{eventId:ev.id,playerId:p.playerId,phone:p.phone,reason:'使用常用收款人'},false).catch(()=>{})}>{p.name} · {p.phone}</button>{(p.mine||data.me.role==='admin')&&<button type="button" className="ghost fee-payee-remove" aria-label={'删除常用收款人 '+p.name} disabled={ctx.busy} onClick={()=>void ctx.action('feePayeeRemove',{payeeId:p.id,reason:'删除常用收款人'},false).catch(()=>{})}>×</button>}</span>};
-return <div className="fee-payees" role="group" aria-label="常用收款人"><small>常用收款人，点一下即可使用：</small><div className="fee-payee-list">{usable.filter(p=>p.leader).map(row)}</div>{others.length>0&&<Disclosure key={ev.id} className="fee-payee-others" label={'其他收款人 · '+others.length} defaultOpen={others.some(p=>ev.feeRecipient?.phone===p.phone&&ev.feeRecipient?.playerId===p.playerId)}><div className="fee-payee-list">{others.map(row)}</div></Disclosure>}</div>})()}
-  <div className="actions"><button className="ghost" disabled={ctx.busy} onClick={()=>open('新的收款人','feeRecipient',{eventId:ev.id,playerId:ev.feeRecipient?.playerId??'',phone:ev.feeRecipient?.phone??'',reason:'设置活动收款信息'},[choice('playerId','收款人（群里的球友）',members),{key:'phone',label:'电话号码（可带区号）',type:'tel'},why],undefined,'大家转给收款人，再由他转给约场和出球的人。保存后存为常用收款人。')}>新的收款人</button></div>
-  </>}
+  {ev.feeRecipient?<div className="fee-recipient-card"><div className="fee-recipient-who"><small>收款人</small><strong>{ev.feeRecipient.name}</strong>{manager&&<button type="button" className="ghost fee-recipient-change" disabled={ctx.busy} onClick={()=>setPayeePicker(true)}>更换</button>}</div>{!(statusOn&&latest?.transfers)&&<div className="fee-recipient-phone"><a className="secondary" href={'tel:'+ev.feeRecipient.phone.replace(/[^+\d]/g,'')}><Phone size={16}/>{ev.feeRecipient.phone}</a><button className="ghost" aria-label="复制电话号码" title="复制电话号码" onClick={async()=>{try{await navigator.clipboard.writeText(ev.feeRecipient.phone);toast.success('电话号码已复制')}catch{toast.error('复制失败，请手动复制号码')}}}><Copy size={16}/>复制</button></div>}</div>
+  :manager&&pickRecipient?<button type="button" className="fee-recipient-pick" disabled={ctx.busy} onClick={()=>setPayeePicker(true)}><UserRound size={18} aria-hidden="true"/>选择收款人</button>
+  :<p className="hint">大家直接转给约场、出球的人{latest?.transfers?'，按上面的转账结算付款':''}。</p>}
+  {manager&&payeePicker&&<PayeePicker payees={payees.filter(p=>p.playerId&&members.some(([id])=>id===p.playerId))} current={ev.feeRecipient} canRemove={p=>p.mine||data.me.role==='admin'} busy={ctx.busy} close={()=>setPayeePicker(false)}
+   pick={p=>{setPayeePicker(false);void ctx.action('feeRecipient',{eventId:ev.id,playerId:p.playerId,phone:p.phone,reason:'使用常用收款人'},false).catch(()=>{})}}
+   remove={p=>void ctx.action('feePayeeRemove',{payeeId:p.id,reason:'删除常用收款人'},false).catch(()=>{})}
+   create={()=>{setPayeePicker(false);open('新的收款人','feeRecipient',{eventId:ev.id,playerId:ev.feeRecipient?.playerId??'',phone:ev.feeRecipient?.phone??'',reason:'设置活动收款信息'},[choice('playerId','收款人（群里的球友）',members),{key:'phone',label:'电话号码（可带区号）',type:'tel'},why],undefined,'大家转给收款人，再由他转给约场和出球的人。保存后存为常用收款人。')}}/>}
  </section>}
 </section>
 {shown&&shown.bills.length>0&&<section className="card fee-section fee-people" aria-label="每人分摊"><header className="fee-section-head"><h3>每人分摊</h3><span>{shown.bills.length} 人</span></header>{shown.bills.map(bill)}</section>}
