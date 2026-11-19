@@ -27,27 +27,30 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
  const target=payTransfer(transfers,payments,e.id,me);
  const mine=transfers.filter(t=>t.from===me||t.to===me),others=transfers.filter(t=>t.from!==me&&t.to!==me);
  // Members see the numbers of the people they transfer with (lib/club-view.ts phonePeers), so they can pay directly.
- const phoneOf=(id:string)=>data.players?.find(p=>p.id===id)?.profile?.phone?.trim()??'';
- const collectorPhone=settlement.collector?(e.feeRecipient?.playerId===settlement.collector?e.feeRecipient.phone:'')||phoneOf(settlement.collector):'';
+ // The collector is reached at the number given when they were made recipient, else their profile number.
+ const phoneOf=(id:string)=>(id===settlement.collector&&e.feeRecipient?.playerId===id?e.feeRecipient.phone.trim():'')||(data.players?.find(p=>p.id===id)?.profile?.phone?.trim()??'');
  const copyPhone=async(phone:string)=>{try{await navigator.clipboard.writeText(phone);toast.success('已复制电话号码')}catch{toast.error('复制失败')}};
+ // One transfer, compact: who to whom with the amount beside it, the other side's phone when it is one's own, then its
+ // status and the one action this viewer may take.
  const row=(t:Transfer)=>{const paid=done(t),can=t.from===me||t.to===me||manager;return <div className={'fee-transfer'+(paid?' is-paid':'')} key={t.from+'>'+t.to} id={t===target?payRowId(e.id):undefined}>
-  <div className={'fee-transfer-people'+(t.from===me?' from-me':t.to===me?' to-me':'')}>
-   <strong className={'fee-transfer-person'+(t.from===me?' is-self':'')} data-side="from" title={name(t.from)}>{t.from===me?'我':name(t.from)}</strong>
-   <ArrowRight className="fee-transfer-direction" size={20} aria-label="转给"/>
-   <strong className={'fee-transfer-person'+(t.to===me?' is-self':'')} data-side="to" title={name(t.to)}>{t.to===me?'我':name(t.to)}</strong>
+  <div className="fee-transfer-top">
+   <div className={'fee-transfer-people'+(t.from===me?' from-me':t.to===me?' to-me':'')}>
+    <strong className={'fee-transfer-person'+(t.from===me?' is-self':'')} data-side="from" title={name(t.from)}>{t.from===me?'我':name(t.from)}</strong>
+    <ArrowRight className="fee-transfer-direction" size={16} aria-label="转给"/>
+    <strong className={'fee-transfer-person'+(t.to===me?' is-self':'')} data-side="to" title={name(t.to)}>{t.to===me?'我':name(t.to)}</strong>
+   </div>
+   <b className="fee-transfer-amount">{euro(t.cents)}</b>
   </div>
-  {(t.from===me||t.to===me)&&(()=>{const other=t.from===me?t.to:t.from,phone=phoneOf(other);return <div className="fee-transfer-phone">{phone?<><Phone size={15} aria-hidden="true"/><span>{name(other)} 的电话 <b>{phone}</b></span><button type="button" className="ghost" onClick={()=>void copyPhone(phone)}><Copy size={14} aria-hidden="true"/> 复制</button></>:<span className="hint">{name(other)} 还没填电话号码，可以在群里问一下。</span>}</div>})()}
-  <div className="fee-transfer-footer"><div className="fee-transfer-amount"><span>应转金额</span><b>{euro(t.cents)}</b></div><div className="fee-transfer-actions">
+  {(t.from===me||t.to===me)&&(()=>{const other=t.from===me?t.to:t.from,phone=phoneOf(other);return <div className="fee-transfer-phone">{phone?<><Phone size={14} aria-hidden="true"/><span>{name(other)} 的电话 <b>{phone}</b></span><button type="button" className="ghost" onClick={()=>void copyPhone(phone)}><Copy size={14} aria-hidden="true"/> 复制</button></>:<span className="hint">{name(other)} 还没填电话</span>}</div>})()}
+  <div className="fee-transfer-footer">
    <span className={'fee-status '+(paid?'is-paid':'is-unpaid')}>{paid?'已转':'待转'}</span>
-   {can&&<button type="button" className="ghost" disabled={ctx.busy} onClick={()=>mark(t,!paid)}>{paid?'撤销':t.to===me?'确认已收到':'标记已转'}</button>}
-  </div></div>
+   {can&&<button type="button" className={paid?'ghost':'secondary'} disabled={ctx.busy} onClick={()=>mark(t,!paid)}>{paid?'撤销':t.to===me?'确认已收到':'标记已转'}</button>}
+  </div>
  </div>};
  const copy=async()=>{try{await navigator.clipboard.writeText(`${e.title} · 转账结算 第${settlement.version}版\n${transfers.map(t=>`${name(t.from)} → ${name(t.to)}：${euro(t.cents)}`).join('\n')}`);toast.success('已复制转账明细')}catch{toast.error('复制失败')}};
- return <section className="fee-transfers">
-  <div className="fee-transfer-heading"><h3>转账结算</h3><button type="button" className="ghost" onClick={()=>void copy()}><Copy size={16} aria-hidden="true"/> 复制转账明细</button></div>
-  <p className="hint">{settlement.collector?`大家把分摊转给收款人 ${name(settlement.collector)}${collectorPhone?'（'+collectorPhone+'）':''}，${name(settlement.collector)} 再把垫付的钱转给约场、出球的人。`:'约场、出球的人已经垫付，按下面的转账结清，转账笔数已尽量少。'}垫付人自己的分摊已从垫付里扣除。</p>
-  {(settlement.advances?.length??0)>0&&<p className="fee-advances">已垫付：{settlement.advances!.map(a=><span key={a.playerId}>{a.playerId===me?'我':name(a.playerId)} {euro(a.paid??a.cents)}</span>)}</p>}
-  {(()=>{const extra=(settlement.advances??[]).reduce((n,a)=>n+a.cents-(a.paid??a.cents),0);return extra?<p className="hint">大家的分摊按人取整到分，合计{extra>0?'多收':'少收'} {euro(Math.abs(extra))}，已按垫付金额{extra>0?'摊给':'由'}垫付人{extra>0?'':'分担'}。</p>:null})()}
+ const advances=settlement.advances??[],extra=advances.reduce((n,a)=>n+a.cents-(a.paid??a.cents),0);
+ return <section className="fee-transfers" aria-label="转账结算">
+  <div className="fee-transfer-heading"><h3>转账</h3><button type="button" className="ghost" onClick={()=>void copy()}><Copy size={14} aria-hidden="true"/> 复制明细</button></div>
   {mine.length>0&&<div className="fee-transfer-list" aria-label="和我有关的转账">{(()=>{
    // A collector's long list: once some transfers are done, two tabs keep the open ones in view instead of one long
    // mixed list. A short list stays as it is.
@@ -56,6 +59,8 @@ export default function FeeTransfers({e,settlement,ctx,manager}:{e:{id:string;ti
    return <><div className="fee-transfer-tabs" role="tablist" aria-label="我的转账">{(['open','done'] as const).map(k=><button type="button" role="tab" key={k} aria-selected={tab===k} className={tab===k?'is-selected':''} onClick={()=>setTab(k)}>{k==='open'?'待处理 '+open.length:'已完成 '+closed.length}</button>)}</div>{(tab==='open'?open:closed).map(row)}</>;
   })()}</div>}
   {!mine.length&&<p className="hint">你没有需要转出或收取的钱。</p>}
+  {/* Who advanced what is on each ledger item; only the organisers see how rounding was settled. */}
+  {manager&&extra!==0&&<p className="fee-advances">取整{extra>0?'多收':'少收'} {euro(Math.abs(extra))}，已按垫付金额{extra>0?'摊给':'由'}垫付人{extra>0?'':'分担'}。</p>}
   {others.length>0&&<details className="fee-transfer-others"><summary>其他人的转账 · {others.length} 笔 · 已转 {others.filter(done).length} 笔</summary><div className="fee-transfer-list">{others.map(row)}</div></details>}
  </section>;
 }

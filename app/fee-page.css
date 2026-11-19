@@ -21,9 +21,6 @@
 .fee-main-summary .fee-recipient .hint{margin:0;font-size:13px}
 .fee-main-summary .fee-recipient>.actions{gap:6px}
 .fee-main-summary .fee-recipient>.actions>button{min-height:36px;padding:4px 10px;font-size:13px}
-.fee-recipient-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.fee-recipient-row>span{flex:1 1 auto;font-size:14px}
-.fee-recipient-row>a,.fee-recipient-row>button{min-height:36px;padding:4px 10px;font-size:13px}
 .fee-rules{gap:8px;margin:0 0 8px;font-size:13px;color:var(--muted-foreground)}
 .fee-rules>button{flex:0 0 auto;min-height:36px;padding:4px 10px;white-space:nowrap}
 .fee-people .bill-row{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;padding:8px 0}
@@ -60,3 +57,36 @@
 .fee-collect-mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--foreground) 6%,transparent)}
 .fee-collect-option{min-height:38px;padding:4px 8px;border:0;border-radius:9px;background:transparent;color:var(--muted-foreground);font-size:14px;font-weight:600}
 .fee-collect-option.is-current{background:var(--card);color:var(--foreground);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* 选中的收款人：一张高亮卡片，名字大字；还没选时同一位置是「选择收款人」按钮，点开弹窗选人。 */
+.fee-recipient-card{display:grid;gap:8px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--primary) 9%,var(--card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 45%,transparent)}
+.fee-recipient-who{display:flex;align-items:baseline;gap:10px;min-width:0}
+.fee-recipient-who>small{flex:none;font-size:13px;color:var(--muted-foreground)}
+.fee-recipient-who>strong{flex:1 1 auto;min-width:0;font-size:22px;line-height:1.25;color:var(--primary);overflow-wrap:anywhere}
+.fee-recipient-who>.fee-recipient-change{flex:none;min-height:32px;padding:2px 10px;font-size:13px}
+.fee-recipient-phone{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fee-recipient-phone>a,.fee-recipient-phone>button{min-height:38px;padding:4px 12px;font-size:15px}
+.fee-recipient-phone>a{font-variant-numeric:tabular-nums}
+.fee-recipient-pick{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border:1.5px dashed color-mix(in srgb,var(--primary) 55%,transparent);border-radius:12px;background:color-mix(in srgb,var(--primary) 6%,transparent);color:var(--primary);font-size:15px;font-weight:700}
+.fee-payee-groups{display:grid;gap:8px;max-height:min(55vh,420px);overflow-y:auto}
+.fee-payee-group-label{font-size:12px;color:var(--muted-foreground)}
+.fee-payee-options{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.fee-payee-option{display:flex;align-items:center;gap:6px}
+.fee-payee-option>button:first-child{flex:1 1 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 10px;min-width:0;min-height:50px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);text-align:left}
+.fee-payee-option>button:first-child>strong{grid-column:1;font-size:16px;overflow-wrap:anywhere}
+.fee-payee-option>button:first-child>span{grid-column:1;font-size:13px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.fee-payee-option>button:first-child>small{grid-column:2;grid-row:1/span 2;font-size:12px;font-weight:700;color:var(--primary)}
+.fee-payee-option.is-current>button:first-child{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 9%,var(--card))}
+.fee-payee-option>.fee-payee-remove{flex:none;min-width:40px;min-height:40px;padding:0}
+.fee-payee-picker .actions>button{width:100%;min-height:44px;justify-content:center}
+/* 我的分摊：左边是标签和付款状态，右边是大号金额，不再单独占一行放状态。 */
+.fee-main-summary .fee-my-amount.fee-mine{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"label amount" "status amount";align-items:center;gap:4px 12px}
+.fee-main-summary .fee-mine>span{grid-area:label}
+.fee-main-summary .fee-mine>strong{grid-area:amount}
+.fee-main-summary .fee-mine>.fee-paid-status{grid-area:status;flex-basis:auto}
+.fee-main-summary .fee-mine>.fee-paid-status>button{min-height:32px;padding:2px 10px;font-size:13px}
+/* 管理：只留下一步要做的（确认或提醒未付款），其余收进「更多」。 */
+.fee-main-summary .fee-manage-actions{display:flex;align-items:center;gap:8px}
+.fee-main-summary .fee-manage-actions>.primary,.fee-main-summary .fee-manage-actions>.secondary{flex:1 1 0;white-space:nowrap}
+.fee-main-summary .fee-manage-actions>.fee-more{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:4px 10px;font-size:14px}
+.fee-all-paid{flex:1 1 auto;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#1f7a3d}
+
