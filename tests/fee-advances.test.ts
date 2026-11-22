@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {collectorRepayment,playerSettled,planTransfers,openTransfers} from '../lib/domain/fee-transfers';
+import {collectorRepayment,minTransfer,playerSettled,planTransfers,openTransfers} from '../lib/domain/fee-transfers';
 import {unpaidBills} from '../lib/domain/fee-payments';
 import {calculateSettlement} from '../lib/domain/money';
 import {sameSettlement} from '../lib/domain/settlement-state';
@@ -33,10 +33,12 @@ test('advancers are repaid their advance minus their own share, and the friend o
  assert.deepEqual(v.bills.map(b=>[b.playerId,b.total]),[['friend',840],['p0',840],['p1',840],['p2',840],['p3',840]]);
  assert.deepEqual(v.advances,[{playerId:'p1',cents:2400},{playerId:'p2',cents:1200},{playerId:'p3',cents:600}]);
  // Alice is owed 24 − 8.40 − 8.40 (her friend) = 7.20; Bob 12 − 8.40 = 3.60; Carol owes 2.40, the owner 8.40.
- assert.deepEqual(v.transfers,[{from:'p0',to:'p1',cents:720},{from:'p0',to:'p2',cents:120},{from:'p3',to:'p2',cents:240}]);
+ // Nobody transfers twice (2026-11-22): the owner pays Alice all 8.40 and Alice passes the 1.20 above her 7.20 on to Bob.
+ assert.deepEqual(v.transfers,[{from:'p0',to:'p1',cents:840},{from:'p3',to:'p2',cents:240},{from:'p1',to:'p2',cents:120}]);
  assert.ok(!v.transfers!.some(t=>t.from==='friend'||t.from===t.to),'only members transfer, never to themselves');
- for(const id of ['p1','p2'])assert.ok(playerSettled(s.payments,v,id),'an advancer covering their share is shown as paid at once');
- assert.deepEqual(unpaidBills(s,v).map(b=>b.playerId).sort(),['p0','p3']);
+ assert.ok(playerSettled(s.payments,v,'p2'),'an advancer covering their share is shown as paid at once');
+ assert.ok(!playerSettled(s.payments,v,'p1'),'until she passes the 1.20 on, Alice still has a transfer to make');
+ assert.deepEqual(unpaidBills(s,v).map(b=>b.playerId).sort(),['p0','p1','p3']);
 });
 
 test('with a member collecting, everyone pays the collector and the collector repays the advancers',async()=>{
@@ -72,11 +74,12 @@ test('each transfer is marked by its payer, receiver or an organiser; nobody els
  await assert.rejects(()=>mark(alice,'p3','p2'),/403/);
  await assert.rejects(()=>apply(s,carol,'feePaid',{eventId:e.id,settlementId:v.id,playerId:'p3',paid:true,reason:''},after),/标记每一笔转账/);
  await mark(carol,'p3','p2');assert.ok(playerSettled(s.payments,v,'p3'));
- await mark(alice,'p0','p1');assert.ok(!playerSettled(s.payments,v,'p0'),'the owner still owes Bob');
- await mark(bob,'p0','p2');assert.ok(playerSettled(s.payments,v,'p0'),'the receiver can confirm a transfer');
+ await mark(alice,'p0','p1');assert.ok(playerSettled(s.payments,v,'p0'),'the receiver can confirm a transfer');
+ assert.ok(!playerSettled(s.payments,v,'p1'),'Alice still passes 1.20 on to Bob');
+ await mark(bob,'p1','p2');assert.ok(playerSettled(s.payments,v,'p1'));
  assert.deepEqual(openTransfers(s.payments,v),[]);
  await assert.rejects(()=>apply(s,owner,'notifyFees',{eventId:e.id,settlementId:v.id,reason:'提醒'},after+2*hour),/都已标记付款/);
- await mark(bob,'p0','p2',false);assert.deepEqual(openTransfers(s.payments,v),[{from:'p0',to:'p2',cents:120}]);
+ await mark(bob,'p1','p2',false);assert.deepEqual(openTransfers(s.payments,v),[{from:'p1',to:'p2',cents:120}]);
 });
 
 test('new activities may leave courts 待认领 but confirm only once every advancer is known; older ones keep the old way',async()=>{
@@ -108,7 +111,11 @@ test('transfer planning balances exactly and needs at most one transfer fewer th
    const plan=planTransfers(bills,advances,subsidy,people[0],collector)!,net=new Map<string,number>();
    for(const t of plan){assert.ok(t.cents>0&&t.from!==t.to);net.set(t.from,(net.get(t.from)??0)-t.cents);net.set(t.to,(net.get(t.to)??0)+t.cents)}
    for(const id of people){const expected=(advances.find(a=>a.playerId===id)?.cents??0)-(bills.find(b=>b.playerId===id)!.total)-(id===people[0]?subsidy:0);assert.equal(net.get(id)??0,expected,'round '+round)}
-   if(!collector)assert.ok(plan.length<=people.length-1);
+   if(collector)continue;
+   assert.ok(plan.length<=people.length-1);
+   assert.equal(new Set(plan.map(t=>t.from)).size,plan.length,'without a collector nobody transfers twice, round '+round);
+   const owing=people.map(id=>(advances.find(a=>a.playerId===id)?.cents??0)-(bills.find(b=>b.playerId===id)!.total)-(id===people[0]?subsidy:0));
+   if(owing.some(c=>c<=-minTransfer))assert.ok(plan.every(t=>t.cents>=minTransfer),'no transfer below 0.50, round '+round);
   }
  }
 });
@@ -144,3 +151,19 @@ test('a confirmed split keeps its amounts and paid marks when only the rounding 
  await apply(s,owner,'feeAdvance',{eventId:e.id,itemId:s.costs[0].id,advancedBy:'p0',reason:''},after);
  assert.ok(!sameSettlement(calculateSettlement(s,e,after),old),'changing an advancer needs a new version');
 });
+
+test('without a collector nobody transfers twice and no transfer is below 0.50 (2026-11-22)',()=>{
+ const plan=(nets:Record<string,number>)=>planTransfers(Object.entries(nets).map(([playerId,c])=>({playerId,total:c<0?-c:0})),Object.entries(nets).filter(([,c])=>c>0).map(([playerId,cents])=>({playerId,cents})),0,null)!;
+ assert.equal(minTransfer,50);
+ // Three owe 10 each, two advancers are owed 15 each: each payer pays one advancer whole; one advancer passes 5 on.
+ assert.deepEqual(plan({a:-1000,b:-1000,c:-1000,x:1500,y:1500}),[{from:'a',to:'x',cents:1000},{from:'b',to:'y',cents:1000},{from:'c',to:'x',cents:1000},{from:'x',to:'y',cents:500}]);
+ // Payers who exactly fill an advancer pay only them, with nothing passed on.
+ assert.deepEqual(plan({a:-900,b:-600,c:-300,x:900,y:900}),[{from:'a',to:'x',cents:900},{from:'b',to:'y',cents:600},{from:'c',to:'y',cents:300}]);
+ // An advancer owed 0.20 is paid a whole debt and passes the rest on, instead of receiving 0.20.
+ assert.deepEqual(plan({a:-1000,b:-1020,x:20,y:2000}),[{from:'b',to:'y',cents:1020},{from:'a',to:'x',cents:1000},{from:'x',to:'y',cents:980}]);
+ // A member owing 0.30 collects another member's payment and passes it on with their 0.30.
+ assert.deepEqual(plan({a:-30,b:-1000,c:2030,d:-1000}),[{from:'b',to:'a',cents:1000},{from:'d',to:'c',cents:1000},{from:'a',to:'c',cents:1030}]);
+ // When everything owed is below 0.50 a small transfer cannot be avoided.
+ assert.deepEqual(plan({a:-30,x:30}),[{from:'a',to:'x',cents:30}]);
+});
+

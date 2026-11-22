@@ -60,7 +60,8 @@ export function feeAdvances(items:AdvanceItem[],detail:Line[],unallocated:number
 }
 
 /** Who transfers how much to whom. With a collector, everyone who owes pays the collector and the collector repays every
- * advancer. Without one, debts are matched to advancers largest first, so there are at most n-1 transfers. */
+ * advancer. Without one, see `settleDirect`: each person makes at most one transfer, none below `minTransfer` when
+ * that can be avoided, and there are at most n-1 transfers. */
 export function planTransfers(bills:{playerId:string;total:number}[],advances:Advance[],subsidy:number,ownerPlayerId:string|null,collector?:string):Transfer[]|null{
  const net=new Map<string,number>(),change=(id:string,cents:number)=>net.set(id,(net.get(id)??0)+cents);
  for(const b of bills)change(b.playerId,-b.total);
@@ -75,17 +76,73 @@ export function planTransfers(bills:{playerId:string;total:number}[],advances:Ad
   }
   return transfers;
  }
- const order=(rows:[string,number][])=>rows.sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
- const debtors=order([...net].filter(([,c])=>c<0).map(([id,c])=>[id,-c])),creditors=order([...net].filter(([,c])=>c>0));
- let i=0,j=0;
- while(i<debtors.length&&j<creditors.length){
-  const cents=Math.min(debtors[i][1],creditors[j][1]);
-  transfers.push({from:debtors[i][0],to:creditors[j][0],cents});
-  debtors[i][1]-=cents;creditors[j][1]-=cents;
-  if(!debtors[i][1])i++;
-  if(!creditors[j][1])j++;
- }
- return transfers;
+ return settleDirect(net);
+}
+
+/** The smallest transfer a split without a collector asks for (2026-11-22, the club owner): 0.50 euro. */
+export const minTransfer=50;
+type Plan={transfers:Transfer[];cost:number[]};
+/** Transfers without a collector (docs/FEE_ADVANCES.md). The club owner asked (2026-11-22) that no transfer be below
+ * 0.50 euro and that nobody transfer more than once. Each person who owes therefore pays the whole amount to one
+ * advancer. An advancer who receives more than they advanced passes the rest on in one transfer to another advancer,
+ * and one who receives less is paid the rest by them. Who pays whom is searched for, in this order: fewest transfers
+ * below 0.50, fewest members who pass on someone else's money while owing themselves (only to avoid a tiny transfer:
+ * someone who owes 0.30 collects another member's payment and passes it on with their 0.30), fewest transfers, then
+ * the least money moved. The search is deterministic, so the server and the app agree. */
+function settleDirect(net:Map<string,number>):Transfer[]{
+ const by=(a:{id:string;cents:number},b:{id:string;cents:number})=>b.cents-a.cents||a.id.localeCompare(b.id);
+ const debtors=[...net].filter(([,c])=>c<0).map(([id,c])=>({id,cents:-c})).sort(by);
+ const creditors=[...net].filter(([,c])=>c>0).map(([id,c])=>({id,cents:c})).sort(by);
+ if(!debtors.length||!creditors.length)return [];
+ const k=creditors.length,d=debtors.length;
+ // parent[i]: whom debtor i pays; below k an advancer, from k on another debtor who passes it on.
+ const plan=(parent:number[]):Plan|null=>{
+  const carried=debtors.map(x=>x.cents),received=creditors.map(()=>0);
+  for(let i=0;i<d;i++){
+   let at=parent[i],steps=0;
+   while(at>=k){if(at-k===i||++steps>d)return null;carried[at-k]+=debtors[i].cents;at=parent[at-k]}
+   received[at]+=debtors[i].cents;
+  }
+  const transfers:Transfer[]=debtors.map((x,i)=>({from:x.id,to:parent[i]<k?creditors[parent[i]].id:debtors[parent[i]-k].id,cents:carried[i]}));
+  const relays=new Set(parent.filter(p=>p>=k)).size;
+  // Advancers who received too much or too little settle among themselves: an exact pair in one transfer, the rest
+  // along one chain (the most over-paid first, the most under-paid last), so each passes money on at most once.
+  const left=creditors.map((x,c)=>({id:x.id,cents:received[c]-x.cents})).filter(x=>x.cents);
+  const over=left.filter(x=>x.cents>0).sort(by),under=left.filter(x=>x.cents<0).map(x=>({id:x.id,cents:-x.cents})).sort(by);
+  for(const o of [...over]){
+   const u=under.findIndex(x=>x.cents===o.cents);if(u<0)continue;
+   transfers.push({from:o.id,to:under[u].id,cents:o.cents});over.splice(over.indexOf(o),1);under.splice(u,1);
+  }
+  const chain=[...over,...under.reverse()];let flow=0;
+  for(let i=0;i+1<chain.length;i++){
+   flow+=i<over.length?chain[i].cents:-chain[i].cents;
+   transfers.push({from:chain[i].id,to:chain[i+1].id,cents:flow});
+  }
+  return {transfers,cost:[transfers.filter(t=>t.cents<minTransfer).length,relays,transfers.length,transfers.reduce((n,t)=>n+t.cents,0)]};
+ };
+ const better=(a:Plan,b:Plan)=>{for(let i=0;i<a.cost.length;i++)if(a.cost[i]!==b.cost[i])return a.cost[i]<b.cost[i];return false};
+ // Start from filling the advancer with the most still to receive, largest debt first, then improve one move at a
+ // time: pay someone else, or swap whom two members pay.
+ const start=(order:number[])=>{
+  const parent=new Array<number>(d).fill(0),need=creditors.map(x=>x.cents);
+  for(const i of order){let c=0;for(let j=1;j<k;j++)if(need[j]>need[c])c=j;parent[i]=c;need[c]-=debtors[i].cents}
+  return parent;
+ };
+ const improve=(parent:number[])=>{
+  let best=plan(parent)!;
+  for(let pass=0;pass<200;pass++){
+   const moves:number[][]=[];
+   for(let i=0;i<d;i++)for(let t=0;t<k+d;t++)if(t!==parent[i]&&t!==k+i){const next=[...parent];next[i]=t;moves.push(next)}
+   for(let i=0;i<d;i++)for(let j=i+1;j<d;j++)if(parent[i]!==parent[j]){const next=[...parent];next[i]=parent[j];next[j]=parent[i];moves.push(next)}
+   let found:{parent:number[];plan:Plan}|null=null;
+   for(const next of moves){const p=plan(next);if(p&&better(p,found?.plan??best))found={parent:next,plan:p}}
+   if(!found)break;
+   parent=found.parent;best=found.plan;
+  }
+  return best;
+ };
+ const ids=debtors.map((_,i)=>i),plans=[improve(start(ids)),improve(start([...ids].reverse()))];
+ return (better(plans[1],plans[0])?plans[1]:plans[0]).transfers;
 }
 
 type Paid=Pick<Payment,'eventId'|'playerId'|'cents'>&{to?:string};
