@@ -66,6 +66,19 @@ export function enableLivePlay(s:State,e:Event){
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }
+/** 连打上限 (docs/LIVE_PLAY.md): at most this many live games in a row while others can take the place. */
+export const maxLiveStraight=2;
+/** Whether a player's latest `count` live games of this activity were played straight, each starting with no game of
+ * the activity started without them since the one before ended, and no game has started without them since the last. */
+export function playedStraight(s:Pick<State,'matches'>,eventId:string,playerId:string,count:number){
+ const all=s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status));
+ const mine=all.filter(m=>[...m.a,...m.b].includes(playerId)&&(!m.noShow?.length||m.noShow.includes(playerId))).sort((a,b)=>b.start!-a.start!);
+ if(mine.length<count||mine[0].status==='playing')return false;
+ const restedBetween=(from:number,to:number)=>all.some(m=>m.start!>=from&&m.start!<to&&![...m.a,...m.b].includes(playerId));
+ if(restedBetween(mine[0].end??mine[0].start!,Infinity))return false;
+ for(let i=0;i+1<count;i++)if(restedBetween(mine[i+1].end??mine[i+1].start!,mine[i].start!))return false;
+ return true;
+}
 /** splits: the team splits allowed by hidden pairing odds (lib/domain/pairing-odds.ts); all three when omitted. */
 function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number,female:(id:string)=>boolean,splits?:string[][][]){
  const size=eventFormat(e)==='singles'?1:2;
@@ -163,7 +176,15 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
   // The order is a preference, not an eligibility lock. When short, any available player can fill the court,
   // including the ones who have just finished.
   const ready=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
-  const pool=released.size?ready.filter(id=>!released.has(id)):ready;
+  const allowed=released.size?ready.filter(id=>!released.has(id)):ready;
+  // 连打上限 (the club, November 2026): whoever played their last two games straight, with no game started without them
+  // since, rests this one whenever the others can fill the court (for fixed partners: two whole teams).
+  // A 锁组 rests together, so the two keep coming back on court as a pair.
+  const straight=(id:string)=>playedStraight(s,e.id,id,maxLiveStraight),lockedTo=doubles?lockedPartners(e,allowed):new Map<string,string>();
+  const rested=allowed.filter(id=>!straight(id)&&!(lockedTo.has(id)&&straight(lockedTo.get(id)!)));
+  const fixedTeams=eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'?(e.pointsChoice.teams??[]):undefined;
+  const enough=fixedTeams?fixedTeams.filter(team=>team.length===2&&team.every(id=>rested.includes(id))).length>=2:rested.length>=courtPlayers(e);
+  const pool=enough?rested:allowed;
   const locks=doubles?lockedPartners(e,pool):new Map<string,string>();
   // Swaps for strength, variety or broken blocks keep the queue: nobody left on the bench may have waited more than one
   // game longer than a waiting player chosen, and someone already passed over once since their last game is not passed
@@ -245,9 +266,12 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
      if(ids.includes(candidate)||lastGame.get(candidate)===block||locks.has(ids[i])||locks.has(candidate))continue;
      const option=[...ids];option[i]=candidate;
      const split=pair(s,e,option,history,rating,female,lockSplits(option,locks)),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
-     if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
+     // Gender protection and no 实力碾压 come first (the club, November 2026), then a fair queue, games, balance.
+     const guard=(c:typeof split.cost)=>[c.mismatches,c.crush] as const,[gm,gc]=guard(split.cost),[bm,bc]=best?guard(best.cost):[Infinity,Infinity];
+     if(!best||(gm!==bm?gm<bm:gc!==bc?gc<bc:unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
     }
-    if(!best)break;chosen=best;
+    // Breaking the block never adds a gender mismatch or a 实力碾压: then the block stays.
+    if(!best||best.cost.mismatches>chosen.cost.mismatches||best.cost.mismatches===chosen.cost.mismatches&&best.cost.crush>chosen.cost.crush)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
    if(odds&&![...chosen.a,...chosen.b].some(id=>[...chosen.a,...chosen.b].includes(locks.get(id)!))){

@@ -153,6 +153,8 @@ When an activity has ended, planned games of published rounds that never started
 | 预排，改前 | 75 | 0 | 8 | 12.8 |
 | 预排，改后 | 77 | 0 | 5 | 13.8 |
 
+同日又加了实时排场的连打上限（连打两局后，场下有人能顶上就先休息一局，[实时排场](LIVE_PLAY.md)）：同一模拟里最长连打从 6 局降到 4 局，连打三局以上从 89 次降到 25 次，代价是两人最多同场局数从 6 升到 8。剩下的长连打出现在场下人数凑不满一片场的时候。打散「一局三人回来」时也改为先看性别保护和不碾压。
+
 局数差距不变。模拟里的分差比真实那晚小：真实那晚还有球友手动换人，模拟没有。预排单打的分差是两个人之间的差，避免碾压后要等别的场地打完的场次从 55% 增加到 76%（`tests/planned-rotation.test.ts`）；两片场十人的预排，为了避免碾压，64 局里最多有一局会带回一局三人。
 
 测试：`tests/fair-scheduling.test.ts`（比较顺序、碾压线、同场次数）、`tests/live-overtime.test.ts` 和 `tests/live-play-api.mjs`（换人与加时权限）。
