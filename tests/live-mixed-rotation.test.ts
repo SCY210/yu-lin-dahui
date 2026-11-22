@@ -161,11 +161,15 @@ test('朋友按报名性别参与角色记录，混双对混双的一局会结�
  assert.equal(history.liveMixedRepeats([a,b],[c,d]),0);
 });
 
-test('分差接近时临时搭档概率不能取消已找到的角色轮换',()=>{
- const f=fixture(closeSplits),[a,b,c,d]=f.ids;
- f.s.settings.pairingOdds=[{eventId:f.e.id,defaults:[{players:[a],targets:[b],percent:100}],conditions:[]}];
- past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);
- const m=next(f);assert.ok(m);assert.notEqual(mixedMan(f,m),a);
+test('分差接近时 1%–99% 的临时搭档概率不能取消已找到的角色轮换，0% 和 100% 必定执行',()=>{
+ for(const percent of [99,100]){
+  const f=fixture(closeSplits),[a,b,c,d]=f.ids;
+  f.s.settings.pairingOdds=[{eventId:f.e.id,defaults:[{players:[a],targets:[b],percent}],conditions:[]}];
+  past(f,[a,b],[c,d],now-120000);past(f,[a,b],[c,d]);
+  const m=next(f);assert.ok(m);
+  if(percent===100)assert.ok([m.a,m.b].some(t=>t.includes(a)&&t.includes(b)),'100%: partners even against the rotation');
+  else assert.notEqual(mixedMan(f,m),a);
+ }
 });
 
 test('预排保持原有匹配机制，不启用实时角色限制',()=>{

@@ -1,4 +1,4 @@
-import {keepsLocks,lockCounts,lockedPartners,pickFour} from './locked-pairs';
+import {keepsLocks,lockCounts,lockedPartners,lockSplits,pickFour} from './locked-pairs';
 import {duelFour,schedulableDuels} from './duels';
 import {matchingStopped} from './matching-participation';
 import {awaitingArrival} from './points-attendance';
@@ -10,7 +10,7 @@ import {bookingAllowsPlayer} from './booking-signups';
 import {attendanceForEvent,usesAutomaticAttendance} from './attendance';
 import {fail,type State,type Event,type Match} from './types';
 import {eventFormat,teamSize,isPractice} from './match-format';
-import {eventPairingOdds,oddsRandom,oddsSplits} from './pairing-odds';
+import {eventPairingOdds,hasMustWish,oddsRandom,oddsSplits} from './pairing-odds';
 export function readyIds(s:State,eventId:string,at:number,duration=0){const e=s.events.find(e=>e.id===eventId);if(!e)return [];const automatic=usesAutomaticAttendance(e);return [...new Set(attendanceForEvent(s,e).filter(a=>a.start<=at&&(automatic?(a.end??e.end)>at&&(a.end??e.end)>=at+duration*60000:a.end===null)&&a.state==='ready').map(a=>a.playerId))].filter(id=>!awaitingArrival(e,id)&&!e.noShowHold?.includes(id)&&!matchingStopped(e,id)&&(!automatic||s.registrations.some(r=>r.eventId===eventId&&r.playerId===id&&r.status==='confirmed'))&&s.players.some(p=>p.id===id&&p.enabled)&&!s.matches.some(m=>m.status==='playing'&&[...m.a,...m.b].includes(id)))}
 /** A player may play at most this many rounds of an activity in a row (docs/MATCH_GROUPING.md). */
 export const maxConsecutiveRounds=3;
@@ -137,11 +137,13 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  if(odds){
   const draw=oddsRandom(seed);
   for(let offset=fixed?4:0;offset<best.length;offset+=4){
-   const four=best.slice(offset,offset+4);if(four.some(id=>four.includes(partner.get(id)!)))continue;
-   const options=oddsSplits(odds,best.slice(offset,offset+4),draw).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
+   // 锁组 and a placed 天机战帖 (both in `partner`) stay together: the draw only chooses among the splits keeping them.
+   const four=best.slice(offset,offset+4);
+   const options=oddsSplits(odds,four,draw,lockSplits(four,partner)).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
    const drawn=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x),was=penalty(best),now=penalty(drawn);
-   // As in live play, a draw never adds a gender mismatch or a 实力碾压 the search had avoided.
-   if(now.mismatches<was.mismatches||now.mismatches===was.mismatches&&now.crush<=was.crush)best=drawn;
+   // A rule at 0% or 100% always holds (hasMustWish, docs/PAIRING_ODDS.md). Any other draw, as in live play, never adds a
+   // gender mismatch or a 实力碾压 the search had avoided.
+   if(hasMustWish(odds,four)||now.mismatches<was.mismatches||now.mismatches===was.mismatches&&now.crush<=was.crush)best=drawn;
   }
   bestCost=penalty(best);
  }
