@@ -5,7 +5,9 @@ import {bountyPointAdjustments} from './bounties';
 import {duelPointAdjustments} from './duels';
 import {eventRankingEnabled} from './event-ranking';
 import {pointGrants,ratingAdjustments} from './point-grants';
-import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,type RealmLedger} from './realm-rating';
+import {realmLedger,replayRealmScores,isRatedMatch,realmPolicy,expectedScore,kFactor,roundDelta,type RealmLedger} from './realm-rating';
+import {guestRatings} from './guests';
+import {settledMatchFilter} from './event-lifecycle';
 import {gameFacts} from './game-facts';
 import {defaultRules,month,type State,type Rules,type Match} from './types';
 import {quarterMonths} from '../ranking-quarter';
@@ -26,8 +28,32 @@ export const strengthAlgorithm='realm-elo-v3';
 export function replayRating(s:Pick<State,'players'|'matches'|'events'|'accounts'|'audits'|'ratingChanges'>,now=Date.now()){
  const {rows,games}=replayRealmScores(s,m=>isRatedMatch(m,now),()=>true,realmPolicy.doubles,now,ratingAdjustments(s));
  for(const p of s.players){const r=rows.get(p.id)!;p.rating=r.score;p.ratedGames=r.games}
+ // A friend's grouping strength follows their results through the running activity (the club, November 2026), from
+ // the level picked for them; once the activity is over they start again at that level. Members' 修为 is unchanged.
+ for(const [id,score] of guestNightRatings(s,games,now)){const p=s.players.find(x=>x.id===id);if(p)p.rating=score}
  const changes=games.map(g=>({id:g.matchId+':'+g.gameIndex+':'+g.playerId,matchId:g.matchId,playerId:g.playerId,before:g.before,after:g.after,delta:g.delta,algorithm:strengthAlgorithm,k:g.k}));
  s.ratingChanges=changes;return changes;
+}
+/** 来宾当晚水平: each friend's grouping strength after the rated games of activities still running, starting from their
+ * level at each game and moving by the same Elo step as a new member (K 32, team averages). Members' scores are taken
+ * from the replay at each game. Only grouping reads it; friends never enter 修为 or any board. */
+export function guestNightRatings(s:Pick<State,'players'|'matches'|'events'|'accounts'>,games:{matchId:string;gameIndex:number;playerId:string;before:number}[],now:number){
+ const guests=guestRatings(s),settled=settledMatchFilter(s,now),result=new Map<string,number>();
+ if(!guests.size)return result;
+ const before=new Map(games.map(g=>[g.matchId+':'+g.gameIndex+':'+g.playerId,g.before]));
+ const changed=new Map(s.players.filter(p=>guests.has(p.id)).map(p=>[p.id,Math.max(-Infinity,...(p.guestLevels??[]).map(x=>x.at))]));
+ // As in the 修为 replay, practice activities (no ranking) do not count.
+ const practice=new Set(s.events.filter(e=>!eventRankingEnabled(e)).map(e=>e.id));
+ const ordered=s.matches.filter(m=>!settled(m)&&!practice.has(m.eventId)&&isRatedMatch(m,now)&&[...m.a,...m.b].some(id=>guests.has(id))).sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id));
+ for(const m of ordered)for(const g of gameFacts(m)){
+  const at=m.start??m.end??now,score=(id:string)=>guests.has(id)?(at>=(changed.get(id)??-Infinity)?result.get(id):undefined)??guests.get(id)!(at):before.get(m.id+':'+g.index+':'+id)??s.players.find(p=>p.id===id)?.rating??1000;
+  const average=(ids:string[])=>ids.reduce((n,id)=>n+score(id),0)/ids.length,a=average(m.a),b=average(m.b);
+  const moves=new Map<string,number>();
+  // A level set during the activity starts the friend again from it: only their games after the change move it.
+  for(const [team,own,other] of [[m.a,a,b],[m.b,b,a]] as const)for(const id of team)if(guests.has(id)&&at>=(changed.get(id)??-Infinity))moves.set(id,roundDelta(kFactor(0)*((g.winner===(team===m.a?'a':'b')?1:0)-expectedScore(own,other))));
+  for(const [id,delta] of moves)result.set(id,score(id)+delta);
+ }
+ return result;
 }
 /** One-time switch of the grouping strength to 修为 (realm-elo-v2: doubles only; realm-elo-v3: the full 修为). */
 export function mergeStrengthRating(s:State,now=Date.now()){

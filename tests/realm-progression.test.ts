@@ -216,3 +216,10 @@ test('一次性合并隐藏分组实力：球友实力改为修为，写入版�
  assert.equal(mergeStrengthRating(s,now+1),null);
  const fresh=fixture();assert.equal(mergeStrengthRating(fresh,now),null,'an uninitialised club is left alone');
 });
+
+test('起始水平：开账号时选的水平就是新道友的起始修为，3 个月重置仍回到 1000',()=>{
+ const s=fixture();s.players[0].startScore=700;s.matches=[match('m1')];
+ const snapshot=realmSnapshot(s,now).get('A')!;
+ assert.ok(snapshot.score>700&&snapshot.score<800,'A starts at 700 and wins once: '+snapshot.score);
+ replayRating(s,now);assert.equal(s.players[0].rating,snapshot.score,'grouping uses the same score');
+});

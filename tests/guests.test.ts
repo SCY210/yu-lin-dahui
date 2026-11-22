@@ -92,3 +92,12 @@ test('scoped guests are recognised without account metadata and their level hist
  assert.equal(guestLevelAt(guest,9),1000);assert.equal(guestLevelAt(guest,15),850);assert.equal(guestLevelAt(guest,25),1300);
  assert.ok(guestIds({players:s.players}).has(guest.id));
 });
+
+test('a friend\'s grouping strength follows their results through the running activity and starts again afterwards',()=>{
+ // The club, November 2026: a friend whose level was picked too low no longer stays the weak one all evening.
+ const s=fixture();s.matches.push(game('w1',['p1','g'],['p2','p3'],start),game('w2',['p2','g'],['p1','p3'],start+3600000));
+ replayRating(s,start+2*3600000);const g=()=>s.players.find(p=>p.id==='g')!.rating;
+ assert.ok(g()>1000,'two wins raise the friend\'s grouping strength during the activity: '+g());
+ assert.equal((realmLedger(s,start+2*3600000).byPlayer.get('g')??[]).length,0,'still no rated games or 修为 for the friend');
+ replayRating(s,start+5*3600000);assert.equal(g(),1000,'after the activity the friend is back at the picked level');
+});

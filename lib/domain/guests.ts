@@ -1,7 +1,8 @@
 import type {Account,Player,State} from './types';
 
-/** Levels a registrant can pick for a friend they bring. The level is a fixed rating: it balances teams and is the
- * strength members are rated against, but a friend never gains or loses rating or season points. Each is named after
+/** Levels a registrant can pick for a friend they bring, also a new member's starting 修为 (startScore). The level is
+ * the strength members are rated against; a friend never gains or loses 修为 or season points, and only their grouping
+ * strength follows their results through a running activity (guestNightRatings, lib/domain/ranking.ts). Each is named after
  * the realm its rating falls in (lib/domain/realm-rating.ts) with the plain wording kept (docs/GUEST_FRIENDS.md). */
 export const guestLevels=[[700,'炼气 · 萌新'],[850,'筑基 · 刚入门'],[1000,'金丹 · 一般'],[1150,'元婴 · 较强'],[1300,'化神 · 很强']] as const;
 export const defaultGuestLevel=1000;

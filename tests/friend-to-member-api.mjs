@@ -53,5 +53,10 @@ try{
  const again=await create(requestId);assert.equal(again.status,200);assert.equal((await again.json()).duplicate,true,'a retry creates nothing more');
  assert.equal((await api.load()).accounts.length,after.accounts.length);
  const twice=await post({action:'createAccount',name:'Aqing',username:'aqing2',password,requestId:crypto.randomUUID(),playerId:'friend-1'});assert.equal(twice.status,409,'the member cannot be claimed twice');
- console.log('PASS friend to member API: administrator only, one member from every record of the friend, rated history, audit, login, retry and second claim refused');
+ assert.equal(member.startScore,1150,'the member’s 修为 starts from the friend’s level');
+ // 起始水平 (docs/REALM_PROGRESSION.md): a new member's starting 修为 is one of the guest levels.
+ const invalid=await post({action:'createAccount',name:'Fictional newcomer',username:'newcomer0',password,requestId:crypto.randomUUID(),level:999});assert.equal(invalid.status,400,'only the listed levels');
+ const newcomer=await post({action:'createAccount',name:'Fictional newcomer',username:'newcomer1',password,requestId:crypto.randomUUID(),level:700});assert.equal(newcomer.status,200,await newcomer.clone().text());
+ const created=(await api.load()).players.find(p=>p.name==='Fictional newcomer');assert.equal(created.startScore,700);assert.equal(created.rating,700);
+ console.log('PASS friend to member API: administrator only, one member from every record of the friend, rated history, audit, login, retry, second claim refused and the starting level of a new member');
 }finally{database.close?.()}

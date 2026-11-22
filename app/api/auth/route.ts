@@ -4,7 +4,7 @@ import { cleanExpiredRateLimits, consumeRateLimit, loginRateKey, rateLimitId, tr
 import { assertPlayerMutable } from '../../../lib/domain/ownership';
 import { convertFriendToMember } from '../../../lib/domain/guest-conversion';
 import { assertAccountManageable, canManageMembers } from '../../../lib/domain/member-managers';
-import { isGuest } from '../../../lib/domain/guests';
+import { guestLevelValues, isGuest } from '../../../lib/domain/guests';
 import { DomainError } from '../../../lib/domain/types';
 import { newUsername as username, changeUsernameInput } from '../../../lib/username-policy';
 import { changeLoginUsername, loginAccountMetadata } from '../../../lib/username-change';
@@ -225,7 +225,8 @@ export async function POST(req: Request) {
             }
         }
         if (action === 'createAccount') {
-            const p = z.object({ name: z.string().trim().min(1).max(150), username, password, requestId: z.string().uuid(), playerId: z.string().optional(), accountId: z.string().optional() }).parse(input);
+            // level: the new member's starting 修为 (docs/REALM_PROGRESSION.md), one of the guest levels; 1000 when omitted.
+            const p = z.object({ name: z.string().trim().min(1).max(150), username, password, requestId: z.string().uuid(), playerId: z.string().optional(), accountId: z.string().optional(), level: z.number().int().refine(v => guestLevelValues.includes(v), '请选择有效的起始水平').optional() }).parse(input);
             if (p.accountId && p.playerId)
                 return denied('请只选择账号或球友档案中的一种绑定方式', 400);
             const key = actor.id + ':createAccount:' + p.requestId, newId = 'account:' + crypto.randomUUID(), newPlayerId = crypto.randomUUID();
@@ -263,7 +264,7 @@ export async function POST(req: Request) {
                 let converted: ReturnType<typeof convertFriendToMember> | undefined;
                 if (friend) {
                     try {
-                        converted = convertFriendToMember(s, playerId, accountId, p.name, Date.now());
+                        converted = convertFriendToMember(s, playerId, accountId, p.name, Date.now(), p.level);
                     }
                     catch (e) {
                         if (e instanceof DomainError)
@@ -279,7 +280,7 @@ export async function POST(req: Request) {
                             player.ownerId = accountId;
                     }
                     else
-                        s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '副宗主创建球友账号' });
+                        s.players.push({ id: playerId, ownerId: accountId, name: p.name, initialRating: p.level ?? 1000, rating: p.level ?? 1000, ratedGames: 0, enabled: true, ratingReason: '副宗主创建球友账号', ...(p.level && p.level !== 1000 ? { startScore: p.level } : {}) });
                 }
                 s.audits.push({ id: crypto.randomUUID(), at: Date.now(), actor: user.userId, action: 'createLoginAccount', reason: existing ? '为原账号开通登录' : converted ? '临时来宾转为正式道友' : player ? '为已有球友档案创建登录' : '副宗主创建普通道友账号', changes: { accountId, playerId: converted?.playerId ?? playerId, username: p.username, ...(converted ? { formerGuests: converted.before, mergedPlayerIds: converted.merged, hiddenDuplicateIds: converted.left, startLevel: converted.level } : {}) } });
                 try {
