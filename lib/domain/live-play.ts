@@ -12,6 +12,7 @@ import {balanceCost,compareBalance,compareLiveDoublesBalance,compareLiveDoublesP
 import {doublesTypeMismatch,genderMismatches} from './gender-balance';
 import {matchHistory} from './match-history';
 import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions';
+import {isClubOwner} from './ownership';
 import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
@@ -65,6 +66,19 @@ export function enableLivePlay(s:State,e:Event){
 function configuration(e:Event):LivePlay{
  return e.livePlay??={enabled:false,paused:false,preferences:[],completions:[],rest:[]};
 }
+/** 连打上限 (docs/LIVE_PLAY.md): at most this many live games in a row while others can take the place. */
+export const maxLiveStraight=2;
+/** Whether a player's latest `count` live games of this activity were played straight, each starting with no game of
+ * the activity started without them since the one before ended, and no game has started without them since the last. */
+export function playedStraight(s:Pick<State,'matches'>,eventId:string,playerId:string,count:number){
+ const all=s.matches.filter(m=>m.eventId===eventId&&m.start!==null&&['playing','complete','forfeit'].includes(m.status));
+ const mine=all.filter(m=>[...m.a,...m.b].includes(playerId)&&(!m.noShow?.length||m.noShow.includes(playerId))).sort((a,b)=>b.start!-a.start!);
+ if(mine.length<count||mine[0].status==='playing')return false;
+ const restedBetween=(from:number,to:number)=>all.some(m=>m.start!>=from&&m.start!<to&&![...m.a,...m.b].includes(playerId));
+ if(restedBetween(mine[0].end??mine[0].start!,Infinity))return false;
+ for(let i=0;i+1<count;i++)if(restedBetween(mine[i+1].end??mine[i+1].start!,mine[i].start!))return false;
+ return true;
+}
 /** splits: the team splits allowed by hidden pairing odds (lib/domain/pairing-odds.ts); all three when omitted. */
 function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistory>,rating:(id:string)=>number,female:(id:string)=>boolean,splits?:string[][][]){
  const size=eventFormat(e)==='singles'?1:2;
@@ -72,7 +86,7 @@ function pair(s:State,e:Event,ids:string[],history:ReturnType<typeof matchHistor
  const cost=(order:string[])=>{
   const a=order.slice(0,size),b=order.slice(size);
   const mean=(t:string[])=>t.reduce((n,id)=>n+rating(id),0)/size;
-  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female),newbieExposure(order,rating,female));
+  return balanceCost([Math.abs(mean(a)-mean(b))],history.variety(a,b),size===2?genderMismatches(s,a,b,rating):0,history.rematches(a,b),size===2?history.cohorts(order):0,size===2?history.partnerPenalty(a,b):0,0,0,0,size===2?history.liveMixedRepeats(a,b):0,doublesTypeMismatch(a,b,female),newbieExposure(order,rating,female),history.together(order));
  };
  const [first,...others]=splits?splits.map(split=>split.flat()):size===2?[ids,[ids[0],ids[2],ids[1],ids[3]],[ids[0],ids[3],ids[1],ids[2]]]:[ids];
  let best=first,bestCost=cost(first);
@@ -162,7 +176,15 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
   // The order is a preference, not an eligibility lock. When short, any available player can fill the court,
   // including the ones who have just finished.
   const ready=present.filter(id=>!busy.has(id)&&!liveResting(e,id,venue)&&bookingAllowsPlayer(s,e.id,court.id,id,at,at+1)).sort(order);
-  const pool=released.size?ready.filter(id=>!released.has(id)):ready;
+  const allowed=released.size?ready.filter(id=>!released.has(id)):ready;
+  // 连打上限 (the club, November 2026): whoever played their last two games straight, with no game started without them
+  // since, rests this one whenever the others can fill the court (for fixed partners: two whole teams).
+  // A 锁组 rests together, so the two keep coming back on court as a pair.
+  const straight=(id:string)=>playedStraight(s,e.id,id,maxLiveStraight),lockedTo=doubles?lockedPartners(e,allowed):new Map<string,string>();
+  const rested=allowed.filter(id=>!straight(id)&&!(lockedTo.has(id)&&straight(lockedTo.get(id)!)));
+  const fixedTeams=eventFormat(e)==='doubles'&&e.pointsChoice?.selectedMode==='fixed'?(e.pointsChoice.teams??[]):undefined;
+  const enough=fixedTeams?fixedTeams.filter(team=>team.length===2&&team.every(id=>rested.includes(id))).length>=2:rested.length>=courtPlayers(e);
+  const pool=enough?rested:allowed;
   const locks=doubles?lockedPartners(e,pool):new Map<string,string>();
   // Swaps for strength, variety or broken blocks keep the queue: nobody left on the bench may have waited more than one
   // game longer than a waiting player chosen, and someone already passed over once since their last game is not passed
@@ -184,7 +206,7 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
     const cost=(ts:string[][])=>{
      const [a,b]=ts;
      const gap=Math.abs(a.reduce((sum,id)=>sum+rating(id),0)-b.reduce((sum,id)=>sum+rating(id),0))/2;
-     return balanceCost([gap],history.variety(a,b,0),genderMismatches(s,a,b,rating),history.rematches(a,b),history.cohorts(ts.flat()),0,0,0,0,history.liveMixedRepeats(a,b),doublesTypeMismatch(a,b,female),newbieExposure(ts.flat(),rating,female));
+     return balanceCost([gap],history.variety(a,b,0),genderMismatches(s,a,b,rating),history.rematches(a,b),history.cohorts(ts.flat()),0,0,0,0,history.liveMixedRepeats(a,b),doublesTypeMismatch(a,b,female),newbieExposure(ts.flat(),rating,female),history.together(ts.flat()));
     };
     let bestCost=cost(chosen);
     for(let pass=0;pass<2;pass++)for(let i=0;i<2;i++)for(const candidate of candidates.slice(0,16)){
@@ -219,6 +241,18 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
     ids[i]=candidate;if(!fairCut(ids))continue;const next=pair(s,e,ids,history,rating,female,lockSplits(ids,locks));
     if(compare(next.cost,chosen.cost)<0)chosen=next;
    }
+   // 实力碾压 (docs/LIVE_PLAY.md): when no fair swap avoids a gap above CRUSH_GAP, the queue gives way by one more game:
+   // a candidate who waited up to two games less (instead of one) may come in, and the bench may wait one game longer
+   // than usual. Only a swap that makes the crush smaller is taken; game counts stay as even as before.
+   if(chosen.cost.crush>0){
+    const looseTurn=(a:string,b:string)=>justFinished.has(a)===justFinished.has(b)&&Math.abs(waited(a)-waited(b))<=2&&owed(b)>=owed(a)-1.5;
+    const looseCut=(ids:string[])=>{const lowest=lowestWait(ids);return lowest===Infinity||pool.every(id=>ids.includes(id)||justFinished.has(id)||waited(id)<=lowest+(passed.has(id)?1:2))};
+    for(let pass=0;pass<2&&chosen.cost.crush>0;pass++)for(let i=0;i<courtPlayers(e);i++)for(const candidate of pool.slice(0,16)){
+     const ids=[...chosen.a,...chosen.b],replaced=ids[i];if(ids.includes(candidate)||locks.has(replaced)||locks.has(candidate)||!looseTurn(replaced,candidate))continue;
+     ids[i]=candidate;if(!looseCut(ids))continue;const next=pair(s,e,ids,history,rating,female,lockSplits(ids,locks));
+     if(next.cost.mismatches<=chosen.cost.mismatches&&next.cost.crush<chosen.cost.crush)chosen=next;
+    }
+   }
    // Everyone leaves after each game, so a whole game could come back on court as one block and the same people
    // would only swap partners. Break up three or four from one earlier game by bringing in others (just-finished
    // players included): first those who would not get ahead in games, then the best balance.
@@ -232,9 +266,12 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
      if(ids.includes(candidate)||lastGame.get(candidate)===block||locks.has(ids[i])||locks.has(candidate))continue;
      const option=[...ids];option[i]=candidate;
      const split=pair(s,e,option,history,rating,female,lockSplits(option,locks)),ahead=Math.max(0,Math.round(owed(ids[i])-owed(candidate))),unfair=!fairCut(option);
-     if(!best||(unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
+     // Gender protection and no 实力碾压 come first (the club, November 2026), then a fair queue, games, balance.
+     const guard=(c:typeof split.cost)=>[c.mismatches,c.crush] as const,[gm,gc]=guard(split.cost),[bm,bc]=best?guard(best.cost):[Infinity,Infinity];
+     if(!best||(gm!==bm?gm<bm:gc!==bc?gc<bc:unfair!==bestUnfair?!unfair:ahead!==bestAhead?ahead<bestAhead:compare(split.cost,best.cost)<0)){best=split;bestAhead=ahead;bestUnfair=unfair}
     }
-    if(!best)break;chosen=best;
+    // Breaking the block never adds a gender mismatch or a 实力碾压: then the block stays.
+    if(!best||best.cost.mismatches>chosen.cost.mismatches||best.cost.mismatches===chosen.cost.mismatches&&best.cost.crush>chosen.cost.crush)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
    if(odds){
@@ -290,6 +327,8 @@ export async function applyLivePlay(s:State,a:Account,action:string,input:unknow
  if(command.action==='liveNext'){
   // Like score entry: anyone signed up for the activity, its organiser or an administrator.
   if(!manager&&!canRecordScore(s,a,e))fail('403: 只有本活动已接龙的球友、创建者或副宗主可以开始组队');
+  // After the scheduled end only the organisers may start overtime games (docs/LIVE_PLAY.md).
+  if(now>=e.end&&!manager&&a.simulationTester!==true&&!isClubOwner(s,a))fail('403: 活动已结束，只有宗主、副宗主、长老或活动创建者可以加时开新局');
   if(!e.livePlay?.enabled||e.livePlay.paused||now<e.start)fail('实时排场未开启、已暂停或活动尚未开始');
   // The first games start together with 开始比赛 (pointsPlay) or the organiser's 开始实时排场; until then no court starts alone.
   if(!plannedPlayStarted(s,e))fail('请先点「开始比赛」，各片场同时开打第一局');

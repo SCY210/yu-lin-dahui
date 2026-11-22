@@ -210,9 +210,16 @@ test('赛季积分：胜3负−1，赢修为高50/150以上的对手另加1/2分
 
 test('一次性合并隐藏分组实力：球友实力改为修为，写入版本并幂等',()=>{
  const s=fixture();s.settings.initialized=true;s.players[0].initialRating=1400;s.players[0].rating=1400;s.matches=[match('m1')];
- const audit=mergeStrengthRating(s,now)!;assert.equal(audit.version,'realm-elo-v2');assert.equal(s.settings.strengthVersion,'realm-elo-v2');
+ const audit=mergeStrengthRating(s,now)!;assert.equal(audit.version,'realm-elo-v3');assert.equal(s.settings.strengthVersion,'realm-elo-v3');
  assert.deepEqual(audit.players.find(p=>p.playerId==='A'),{playerId:'A',before:1400,after:1016});assert.deepEqual(s.players.map(p=>p.rating),[1016,1016,984,984]);
  assert.deepEqual(s.ratingChanges.map(c=>c.id),['m1:0:A','m1:0:B','m1:0:C','m1:0:D']);
  assert.equal(mergeStrengthRating(s,now+1),null);
  const fresh=fixture();assert.equal(mergeStrengthRating(fresh,now),null,'an uninitialised club is left alone');
+});
+
+test('起始水平：开账号时选的水平就是新道友的起始修为，3 个月重置仍回到 1000',()=>{
+ const s=fixture();s.players[0].startScore=700;s.matches=[match('m1')];
+ const snapshot=realmSnapshot(s,now).get('A')!;
+ assert.ok(snapshot.score>700&&snapshot.score<800,'A starts at 700 and wins once: '+snapshot.score);
+ replayRating(s,now);assert.equal(s.players[0].rating,snapshot.score,'grouping uses the same score');
 });

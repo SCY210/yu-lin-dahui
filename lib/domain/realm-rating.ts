@@ -90,11 +90,12 @@ export function gameChanges(a:Rated[],b:Rated[],winner:'a'|'b',doubles:DoublesEx
  * at the start score with placement and the novice K again; otherwise the score never resets.
  * adjustments: the owner's 修为 grants, applied at their time (realm settles at once; they never count as games). */
 export function replayRealmScores(s:Pick<State,'players'|'matches'>&Partial<Pick<State,'events'|'accounts'>>,include:(m:Match)=>boolean,settled:(m:Match)=>boolean=()=>true,doubles:DoublesExpectation=realmPolicy.doubles,now?:number,adjustments:RatingAdjustment[]=[],onChange?:(change:RealmChange)=>void){
- const fresh=():Row=>({score:realmPolicy.start,games:0,wins:0,losses:0,held:rawRealmIndex(realmPolicy.start),last:null});
+ const fresh=(score:number=realmPolicy.start):Row=>({score,games:0,wins:0,losses:0,held:rawRealmIndex(score),last:null});
  const reset=(playerId:string,row:Row)=>{const before=row.score,at=inactivityDeadline(row.last!);Object.assign(row,fresh());onChange?.({kind:'reset',playerId,at,before,after:row.score,delta:row.score-before})};
  // Friends brought by members keep their fixed level: members are rated against it, the friend never changes.
  const guests=guestRatings(s);
- const rows=new Map<string,Row>(s.players.map(p=>[p.id,guests.has(p.id)?{...fresh(),score:guests.get(p.id)!(now),held:rawRealmIndex(guests.get(p.id)!(now))}:fresh()])),seen=new Set<string>(),games:RatedGame[]=[];
+ // A member starts at the level picked for them (startScore), else 1000; a restart after a long break is at 1000.
+ const rows=new Map<string,Row>(s.players.map(p=>[p.id,guests.has(p.id)?{...fresh(),score:guests.get(p.id)!(now),held:rawRealmIndex(guests.get(p.id)!(now))}:fresh(p.startScore??realmPolicy.start)])),seen=new Set<string>(),games:RatedGame[]=[];
  const practice=new Set(s.events?.filter(e=>!eventRankingEnabled(e)).map(e=>e.id)??[]);
  const ordered=[...s.matches].sort((a,b)=>(a.end??Infinity)-(b.end??Infinity)||a.id.localeCompare(b.id)).filter(m=>{if(practice.has(m.eventId)||seen.has(m.id)||!include(m))return false;if(![...m.a,...m.b].every(id=>rows.has(id)))return false;seen.add(m.id);return true});
  // Realms settle once per activity: the last included match of an activity is its checkpoint.

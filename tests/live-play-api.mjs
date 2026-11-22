@@ -15,7 +15,7 @@ function statement(query,parameters=[]){return {query,parameters,bind(...args){r
 fixture.env.DB={prepare:statement,async batch(list){sql.exec('BEGIN');try{const values=list.map(s=>/^SELECT/i.test(s.query.trim())?{results:sql.prepare(s.query).all(...s.parameters)}:{meta:{changes:Number(sql.prepare(s.query).run(...s.parameters).changes)},results:[]});sql.exec('COMMIT');return values}catch(e){sql.exec('ROLLBACK');throw e}}};
 const api=await import(pathToFileURL(resolve('.test-output/live-api.mjs')).href);
 try{
- const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.rankedEventsVersion='admins-v1';s.settings.strengthVersion='realm-elo-v2';
+ const empty=api.emptyState(),s=api.emptyState(),now=Date.now();s.settings.initialized=true;s.settings.ownerAccountId='owner';s.settings.progressionVersion='weekly-v2';s.settings.realmVersion='elo-v1';s.settings.rankingVersion='signed-v1';s.settings.scoringPolicy='all-ranked-v1';s.settings.rankedEventsVersion='admins-v1';s.settings.strengthVersion='realm-elo-v3';
  s.accounts=Array.from({length:9},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member':'admin',playerId:'p'+i}));s.players=s.accounts.map(a=>({id:a.playerId,name:a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  const event={id:'live-event',creatorId:'owner',title:'Fictional live play',schedulingMode:'live',start:now-3600000,end:now+3600000,venue:'Fictional venue',address:'',capacity:8,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',courtMode:'equal',ballMode:'equal',attendanceMode:'automatic'};s.events.push(event);s.bookings.push({id:'court',eventId:event.id,name:'Court 1',start:event.start,end:event.end,pricing:'total',cents:1000});
  s.registrations=s.players.slice(0,8).map((p,i)=>({id:'reg'+i,eventId:event.id,playerId:p.id,sequence:i,status:'confirmed',arrival:event.start,departure:event.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}}));await seedAccountNoticeFixture(s);await api.save(s,'seed',empty);
@@ -62,7 +62,9 @@ try{
  const liveSnapshot=state=>state.matches.filter(m=>m.eventId===event.id&&m.status==='playing').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((a,b)=>a.id.localeCompare(b.id));
  const swapPayload={eventId:event.id,p1:overtimeMatch.a[0],p2:overtimeMatch.b[0],expectedLineup:liveSnapshot(stored)};
  user('member8');assert.equal((await post(await request('liveSwap',{...swapPayload,role:'admin'}))).status,403,'stored outsider identity cannot forge a swap');
- user('member4');const swapWrite=await request('liveSwap',swapPayload),swapBefore=await api.load(),swapBatch=fixture.env.DB.batch;
+ // Only 宗主, 副宗主, 长老 and the creator swap live players (docs/LIVE_PLAY.md); a confirmed member is refused.
+ user('member4');assert.equal((await post(await request('liveSwap',swapPayload))).status,403,'a confirmed member may not swap');
+ user('owner');const swapWrite=await request('liveSwap',swapPayload),swapBefore=await api.load(),swapBatch=fixture.env.DB.batch;
  fixture.env.DB.batch=async list=>{if(!list[0].query.startsWith('INSERT INTO commits'))return swapBatch(list);sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw Error('injected swap rollback')}finally{sql.exec('ROLLBACK')}};
  assert.equal((await post(swapWrite)).status,503);fixture.env.DB.batch=swapBatch;assert.deepEqual(await api.load(),swapBefore);
  assert.equal((await post(swapWrite)).status,200);assert.equal((await post(swapWrite)).status,200);stored=await api.load();

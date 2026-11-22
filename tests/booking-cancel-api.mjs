@@ -18,7 +18,7 @@ const database=sqliteD1();fixture.env.DB=database.db;
 const api=await import(pathToFileURL(resolve('.test-output/booking-cancel-api.mjs')).href);
 try{
  const s=api.emptyState(),now=Date.now(),hour=3600000,start=Math.ceil((now+3*86400000)/1800000)*1800000,middle=start+hour,end=start+2*hour;
- Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
+ Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v3'});
  s.accounts=['owner','creator','outsider','admin'].map((id,i)=>({id,playerId:'p'+i,role:id==='owner'||id==='admin'?'admin':'member',email:''}));
  s.players=s.accounts.map(a=>({id:a.playerId,ownerId:a.id,name:'Fictional '+a.id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:''}));
  s.events=[{id:'event',creatorId:'creator',title:'Fictional court cancellation',start,end,venue:'Fictional venue',address:'',capacity:8,status:'open',signupDeadline:start-2*hour,cancelDeadline:start-24*hour,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'},{id:'owned-other',creatorId:'outsider',title:'Other activity',start,end,venue:'Other venue',address:'',capacity:8,status:'open',signupDeadline:start-2*hour,cancelDeadline:start-24*hour,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval'}];

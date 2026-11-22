@@ -8,7 +8,7 @@ import {fail,type State} from './types';
  * other records (signups, games, rounds, votes, fees) is pointed at it. The member's rating is then replayed from the
  * friend's last level, so their past games count as a member's. The audit log keeps the old records verbatim. The new
  * account is added here, before the replay, so the member is no longer treated as a guest; it gets the kept record. */
-export function convertFriendToMember(s:State,playerId:string,accountId:string,name:string,now:number){
+export function convertFriendToMember(s:State,playerId:string,accountId:string,name:string,now:number,startScore?:number){
  const all=friendRecords(s,playerId);
  const activities=(id:string)=>new Set([
   ...all.filter(r=>r.id===id&&r.guestEventId).map(r=>r.guestEventId!),
@@ -60,7 +60,10 @@ export function convertFriendToMember(s:State,playerId:string,accountId:string,n
  s.players=s.players.filter(p=>!removed.has(p.id));
  for(const r of left)r.guestHidden=true;
  s.accounts.push({id:accountId,email:'',role:'member',playerId:target.id});
- Object.assign(target,{ownerId:accountId,name,initialRating:level,rating:level,ratingReason:'临时来宾转为正式道友'});
+ // The new member's 修为 starts at the level picked when the account was opened, by default the friend's latest level.
+ const start=startScore??level;
+ Object.assign(target,{ownerId:accountId,name,initialRating:start,rating:start,ratingReason:'临时来宾转为正式道友'});
+ if(start===1000)delete target.startScore;else target.startScore=start;
  delete target.guestEventId;delete target.guestFriendId;delete target.guestHidden;delete target.guestLevels;
  replayRating(s,now);
  return {playerId:target.id,before,level,merged:others.map(r=>r.id),left:left.map(r=>r.id)};

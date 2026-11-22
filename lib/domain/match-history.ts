@@ -8,7 +8,7 @@ const maxLiveMixedRun=2;
 
 /** Index once per scheduling operation, rather than scanning matches per candidate. */
 export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,startedOnly=false,female?:(id:string)=>boolean){
- const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),lastPartner=new Map<string,string>(),lastGame=new Map<string,number>();let games=0;
+ const matches=new Map<string,number>(),groups=new Map<string,number>(),partners=new Map<string,number>(),opponents=new Map<string,number>(),shared=new Map<string,number>(),lastPartner=new Map<string,string>(),lastGame=new Map<string,number>();let games=0;
  const starts=new Map(s.rounds.map(r=>[r.id,r.start]));
  const mixedRuns=new Map<string,number>();
  // Track the role, not a particular partner or opponent. Resting never resets an individual's run.
@@ -27,6 +27,7 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
    lastPartner.set(team[0],team[1]);lastPartner.set(team[1],team[0]);
   }
   for(const a of m.a)for(const b of m.b){const key=pairKey(a,b);opponents.set(key,(opponents.get(key)??0)+1)}
+  const all=[...m.a,...m.b];for(let i=0;i<all.length;i++)for(let j=i+1;j<all.length;j++){const key=pairKey(all[i],all[j]);shared.set(key,(shared.get(key)??0)+1)}
  };
  const history=s.matches.filter(m=>m.eventId===eventId&&!['draft','cancelled'].includes(m.status)&&!m.noShow?.length&&(!startedOnly||m.start!==null));
  history.sort((a,b)=>(a.start??starts.get(a.roundId)??0)-(b.start??starts.get(b.roundId)??0)||a.id.localeCompare(b.id)).forEach(add);
@@ -43,6 +44,8 @@ export function matchHistory(s:Pick<State,'matches'|'rounds'>,eventId:string,sta
   liveMixedRepeats:(a:string[],b:string[])=>{const man=mixedMan(a,b);return man===undefined?0:Math.max(0,(mixedRuns.get(man)??0)+1-maxLiveMixedRun)},
   rematches:(a:string[],b:string[])=>matches.get(matchupKey(a,b))??0,
   cohorts:(ids:string[])=>groups.get(teamKey(ids))??0,
+  /** 同一批人: earlier games of this activity shared by each two of these players, as partners or opponents, summed. */
+  together:(ids:string[])=>{let n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)n+=shared.get(pairKey(ids[i],ids[j]))??0;return n},
   /** 1 when three or more of these players come straight from one game together: a block that would only swap partners
    * (docs/LIVE_PLAY.md, breaking up blocks). */
   blocks:(ids:string[])=>{const seen=new Map<number,number>();for(const id of ids){const g=lastGame.get(id);if(g!==undefined)seen.set(g,(seen.get(g)??0)+1)}return [...seen.values()].some(n=>n>=3)?1:0},

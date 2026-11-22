@@ -3,7 +3,7 @@ import {emptyState,type Event,type Match,type Registration,type State} from '../
 export const coinEpoch=Date.UTC(2035,0,3,12);
 export function coinFixture():State{
  const s=emptyState();
- Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
+ Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v3'});
  s.accounts=Array.from({length:8},(_,i)=>({id:i?'member'+i:'owner',email:'',role:i?'member' as const:'admin' as const,playerId:'p'+i}));
  s.players=s.accounts.map(a=>({id:a.playerId,name:'Fictional '+a.id,ownerId:a.id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''}));
  return s;

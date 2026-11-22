@@ -24,7 +24,7 @@ const post=async(action,payload,requestId=crypto.randomUUID())=>api.POST(new Req
 let renderer;const oldAct=globalThis.IS_REACT_ACT_ENVIRONMENT;globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const text=n=>typeof n==='string'?n:Array.isArray(n)?n.map(text).join(''):n?.children?.map(text).join('')??'';
 try{
- const s=api.emptyState(),empty=structuredClone(s);s.settings={...s.settings,initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v2'};
+ const s=api.emptyState(),empty=structuredClone(s);s.settings={...s.settings,initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',strengthVersion:'realm-elo-v3'};
  for(let i=0;i<4;i++){const id=i?'member'+i:'owner';s.accounts.push({id,email:'',role:i?'member':'admin',playerId:'p'+i});s.players.push({id:'p'+i,name:id,ownerId:id,initialRating:1000,rating:1000,ratedGames:0,enabled:true,ratingReason:''})}
  const start=now-7200000;s.events.push({id:'event',creatorId:'owner',title:'Fictional streak activity',start,end:now+3600000,capacity:4,venue:'Fixture',address:'',signupDeadline:start,cancelDeadline:start,note:'',status:'live',attendanceMode:'manual',courtMode:'equal',ballMode:'equal'});
  for(let i=0;i<4;i++){const at=start+i*600000;s.rounds.push({id:'round'+i,eventId:'event',start:at,duration:10,status:'complete',eligible:['p0','p1','p2','p3'],rest:[],seed:1});s.matches.push({id:'match'+i,eventId:'event',roundId:'round'+i,courtId:'court',a:['p0','p1'],b:['p2','p3'],status:'complete',start:at,end:at+300000,scoreA:21,scoreB:10,games:[{a:21,b:10}],monthly:true,elo:true,locked:false,enteredBy:'owner'})}

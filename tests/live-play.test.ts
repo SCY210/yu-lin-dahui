@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {apply} from '../lib/domain/commands';
-import {liveAppearances,liveResting,liveWinStreaks} from '../lib/domain/live-play';
+import {liveAppearances,liveResting,liveWinStreaks,playedStraight} from '../lib/domain/live-play';
 import {matchupKey} from '../lib/domain/match-history';
 import {emptyState,type Event} from '../lib/domain/types';
 
@@ -279,9 +279,11 @@ test('fixed partners rotate as whole teams, win runs carry across games, and vol
   const next=active(s)[0];assert.ok([next.a,next.b].every(team=>e.pointsChoice!.teams!.some(t=>t.every(id=>team.includes(id)))));
  }
  assert.ok(wins>=3,'the held team keeps getting turns: '+wins);assert.ok(held.every(id=>liveWinStreaks(s,e).get(id)===wins),'every game the held team played it won');assert.deepEqual(e.livePlay!.rest,[]);
- await apply(s,owner,'livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:true},now+250000);
- for(let i=0;i<3&&!participants(active(s)[0]).has(held[0]);i++)await score(s,active(s)[0].id,now+260000+i*10000);
- await score(s,active(s)[0].id,now+300000);assert.ok(liveResting(e,held[0]));assert.ok(!participants(active(s)[0]).has(held[0]));
+ // Later than the six games above (scored up to now+360000), so every score ends after its game started.
+ await apply(s,owner,'livePreference',{eventId:e.id,playerId:held[0],avoidConsecutive:true},now+400000);
+ // The 连打上限 may rest the held team for a game first, so allow a few more games for it to come back on court.
+ for(let i=0;i<6&&!participants(active(s)[0]).has(held[0]);i++)await score(s,active(s)[0].id,now+410000+i*10000);
+ await score(s,active(s)[0].id,now+500000);assert.ok(liveResting(e,held[0]));assert.ok(!participants(active(s)[0]).has(held[0]));
 });
 
 test('late arrivals wait from their arrival and get their share of games, not more',async()=>{
@@ -317,4 +319,26 @@ test('one court with thirteen players and late arrivals: swaps never skip the sa
  }
  // Nine wait for each game: two or three games' wait, at most one more for a swap, never more.
  assert.ok(worst<=4,'longest wait in games: '+worst);
+});
+
+test('连打上限：连打两局的人在场下有人能顶上时先休息一局，人不够时照常上',async()=>{
+ const {s,e,owner}=fixture(6,1);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ await score(s,active(s)[0].id,now+600000);
+ const second=active(s)[0],first=s.matches.find(m=>m.id!==second.id)!;
+ const straight=[...second.a,...second.b].filter(id=>[...first.a,...first.b].includes(id));
+ assert.equal(straight.length,2,'two players are on court for the second game in a row');
+ for(const id of straight)assert.ok(!playedStraight(s,e.id,id,2),'still playing: not yet a finished run');
+ // Make the fair queue prefer them: an earlier live round they alone were present for raises the games they are owed.
+ s.rounds.push({id:'extra-share',eventId:e.id,start:now-60000,duration:0,status:'complete',eligible:straight,rest:[],seed:0,live:true});
+ await apply(s,s.accounts[1],'score',{matchId:second.id,a:21,b:19,reason:'本局结束'},now+1200000);
+ for(const id of straight)assert.ok(playedStraight(s,e.id,id,2),'two games straight, nobody else started since');
+ await nextGame(s,second.courtId,now+1200000);
+ const third=active(s)[0];
+ assert.ok(straight.every(id=>![...third.a,...third.b].includes(id)),'the four others can fill the court, so both rest: '+[...third.a,...third.b].join());
+ assert.ok(straight.every(id=>!playedStraight(s,e.id,id,2)),'a game started without them: rested');
+});
+
+test('连打上限只在有人能顶上时生效：五人一片场仍然开局',async()=>{
+ const {s,e,owner}=fixture(5,1);await apply(s,owner,'liveStart',{eventId:e.id},now);
+ for(let i=1;i<=4;i++){await score(s,active(s)[0].id,now+i*600000);assert.equal(active(s).length,1,'game '+(i+1)+' starts with whoever is there')}
 });

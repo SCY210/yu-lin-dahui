@@ -11,7 +11,7 @@ A doubles match counts one **mismatch** for each woman on a team that faces a pa
 
 A mixed pair (one man, one woman) facing a pair of women counts one mismatch when the man is more than `mixedManGapPoints` (50) above the average of the three women (requested by the club in November 2026; previously this line-up was always allowed). A man at most 50 above that average, or weaker, may play it.
 
-Two men and two women of similar level are therefore always split into two mixed pairs. The rating is the grouping rating (the doubles-only long-term rating).
+Two men and two women of similar level are therefore always split into two mixed pairs. The rating is the grouping rating, which since 2026-11-22 is the realm score itself (doubles and singles alike).
 
 - Only players with the profile gender `female` are protected. Everyone else (male, other, undisclosed or unset) counts as a man for this rule.
 - Friends brought to one activity have no profile. They must give a gender (male or female) when they are signed up, stored as `guestGender`; the registrant, the activity organiser or an administrator can correct it later (`guestGender` command). Friends added before this rule have none and count as men until it is filled in; the friends list on the activity points them out.

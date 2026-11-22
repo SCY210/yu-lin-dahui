@@ -31,7 +31,7 @@ test('a friend who joins becomes one member with all their records, and is rated
  assert.deepEqual(result.merged,[first.id]);
  assert.equal(s.players.some(p=>p.id===first.id),false,'the older record is merged away');
  const member=s.players.find(p=>p.id===second.id)!;
- assert.equal(member.name,'Aqing');assert.equal(member.ownerId,'account:aq');assert.equal(member.initialRating,1150,'starts from the friend’s level');
+ assert.equal(member.name,'Aqing');assert.equal(member.ownerId,'account:aq');assert.equal(member.initialRating,1150,'starts from the friend’s level');assert.equal(member.startScore,1150,'the 修为 replay starts there too (startScore), not at 1000');
  assert.equal(member.guestEventId,undefined);assert.equal(member.guestLevels,undefined);assert.equal(member.guestGender,'female','gender is kept for pairing');
  assert.equal(isGuest(s,second.id),false,'no longer a guest');
  assert.ok(s.accounts.some(a=>a.id==='account:aq'&&a.playerId===second.id));
@@ -61,3 +61,10 @@ test('a friend signed up twice for one activity is refused until the duplicate i
  assert.equal(s.registrations.filter(r=>r.playerId===second.id&&r.status!=='cancelled').length,2);
  assert.ok(s.accounts.some(a=>a.id==='account:aq'&&a.playerId===second.id));
 });
+
+test('a level picked when the friend account is opened replaces the level they had as a friend',async()=>{
+ const {s,second}=await fixture();
+ convertFriendToMember(s,second.id,'account:aq','Aqing',later,700);
+ assert.equal(s.players.find(p=>p.id===second.id)!.startScore,700);
+});
+

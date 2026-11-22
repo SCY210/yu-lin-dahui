@@ -23,7 +23,7 @@ const swap=(s,p1,p2)=>({roundId:'round',p1,p2,expectedLineup:lineup(s)});
 const reject=async(action,payload,status=400)=>{const before=await api.load(),r=await post(action,payload);assert.equal(r.status,status,JSON.stringify(await r.json()));assert.deepEqual(await api.load(),before)};
 const accept=async(action,payload,options)=>{const r=await post(action,payload,options);assert.equal(r.status,200,JSON.stringify(await r.json()));return api.load()};
 try{
- const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v2'});
+ const s=api.emptyState();Object.assign(s.settings,{initialized:true,ownerAccountId:'owner',progressionVersion:'weekly-v2',realmVersion:'elo-v1',rankingVersion:'signed-v1',scoringPolicy:'all-ranked-v1',rankedEventsVersion:'admins-v1',strengthVersion:'realm-elo-v3'});
  s.accounts=Array.from({length:12},(_,i)=>({id:i===0?'owner':'member'+i,playerId:'p'+i,role:i===0?'admin':'member',email:''}));
  s.players=Array.from({length:13},(_,i)=>({id:'p'+i,name:i===12?'Fictional guest':'Player '+i,ownerId:i===12?'owner':s.accounts[i].id,enabled:true,initialRating:1000,rating:1000,ratedGames:0,ratingReason:'',...(i===12?{guestEventId:'event'}:{})}));
  const e={ranked:true,id:'event',creatorId:'member9',title:'Fictional activity',start,end:start+7200000,status:'open',venue:'Venue',address:'',capacity:16,signupDeadline:start,cancelDeadline:start-86400000,note:'',attendanceMode:'automatic',courtMode:'interval',ballMode:'interval',schedulingMode:'planned'};

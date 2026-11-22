@@ -47,7 +47,7 @@ async function login(id) {
 try {
   const state = api.emptyState();
   const previous = structuredClone(state);
-  state.settings = { ...state.settings, initialized: true, ownerAccountId: 'owner', progressionVersion: 'weekly-v2', realmVersion: 'elo-v1', rankingVersion: 'signed-v1', scoringPolicy: 'all-ranked-v1', strengthVersion: 'realm-elo-v2' };
+  state.settings = { ...state.settings, initialized: true, ownerAccountId: 'owner', progressionVersion: 'weekly-v2', realmVersion: 'elo-v1', rankingVersion: 'signed-v1', scoringPolicy: 'all-ranked-v1', strengthVersion: 'realm-elo-v3' };
   for (const id of ['owner', 'a', 'b']) {
     state.accounts.push({ id, email: '', playerId: `player-${id}`, role: id === 'owner' ? 'admin' : 'member' });
     state.players.push({ id: `player-${id}`, ownerId: id, name: id, initialRating: 1000, rating: 1000, ratedGames: 0, enabled: true, ratingReason: '' });

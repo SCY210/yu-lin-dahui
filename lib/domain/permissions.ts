@@ -36,9 +36,15 @@ export function canRecordScore(s:Pick<State,'registrations'>,a:Pick<Account,'id'
   (r.bookingSignups?r.bookingSignups.some(row=>['confirmed','waitlist'].includes(row.status)):['confirmed','waitlist'].includes(r.status)));
 }
 
-/** Two-person live swaps are shared with the event's confirmed accounts. Proxy
- * guests and waitlisting do not grant their registrant additional authority. */
-export function canSwapLivePlayers(s:Pick<State,'registrations'|'players'>,a:Pick<Account,'id'|'role'|'playerId'>,event:Event){
+/** 交换上场人员 in live play: only 宗主, 副宗主, 长老 and the activity's creator (November 2026: members swapping
+ * themselves produced lopsided games, docs/LIVE_PLAY.md). */
+export function canSwapLivePlayers(a:Pick<Account,'id'|'role'|'simulationTester'>&{isOwner?:boolean},event:Event){
+ if(event.deletedAt!==undefined||isPractice(event)||event.tournament||['draft','cancelled'].includes(event.status))return false;
+ return canManageEvent(a,event)||a.simulationTester===true;
+}
+/** Reporting a late player is shared with the event's confirmed accounts. Proxy guests and waitlisting do not grant
+ * their registrant additional authority. */
+export function canReportLate(s:Pick<State,'registrations'|'players'>,a:Pick<Account,'id'|'role'|'playerId'>,event:Event){
  if(event.deletedAt!==undefined||isPractice(event)||event.tournament||['draft','cancelled'].includes(event.status))return false;
  if(canManageEvent(a,event))return true;
  return s.players.some(p=>p.id===a.playerId&&p.enabled)&&s.registrations.some(r=>r.eventId===event.id&&r.playerId===a.playerId&&r.status==='confirmed'&&(!r.bookingSignups||r.bookingSignups.some(slot=>slot.status==='confirmed')));
@@ -68,11 +74,11 @@ export function authorizeEventAction(s:State,a:Account,action:string,p:Record<st
  if(action==='score'||action==='liveNext'||action==='pointsPlay'){
   if(!canRecordScore(s,a,event)&&!(action==='score'&&isMatchReferee(a,event,p.matchId)))fail(action==='score'?'403: 只有本活动已接龙的球友、创建者或副宗主可以录入比分':action==='liveNext'?'403: 只有本活动已接龙的球友、创建者或副宗主可以开始组队':'403: 只有本活动已接龙的球友、创建者或副宗主可以开始比赛');
  }else if(action==='liveSwap'){
-  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或副宗主可以交换上场人员');
+  if(!canSwapLivePlayers({...a,isOwner:isClubOwner(s,a)},event))fail('403: 只有宗主、副宗主、长老或活动创建者可以交换上场人员');
  }else if(action==='pointsLate'){
   // Anyone confirmed for the activity may report a late player on any current match (the command also requires them
   // to be in their signup time now), not just the others in that match; only organisers may mark themselves.
-  if(!canSwapLivePlayers(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或副宗主可以报告迟到');
+  if(!canReportLate(s,a,event))fail('403: 只有本活动正式接龙的球友、创建者或副宗主可以报告迟到');
   if(!canManageEvent(a,event)&&a.playerId===p.playerId)fail('403: 不能给自己报告迟到，请让场上球友或组织者操作');
  }else if(action==='pointsParticipation'){
   const player=s.players.find(x=>x.id===p.playerId);
