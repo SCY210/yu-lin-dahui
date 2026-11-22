@@ -30,7 +30,8 @@ test('two singles players can start, score and correct without notes; rest is re
  await apply(s,s.accounts[1],'score',{matchId:first.id,a:19,b:21,reason:''},now+2000);assert.equal(s.matches.length,1);assert.equal(s.audits.at(-1)!.reason,'常规修改');
  await apply(s,owner,'liveReady',{eventId:e.id,playerId:'p0'},now+3000);assert.equal(s.matches.length,1,'the court waits for 开始组队');
  await apply(s,s.accounts[1],'liveNext',{eventId:e.id,courtId:first.courtId,allowSame:true},now+3000);assert.equal(s.matches.length,2);assert.equal(s.matches[1].status,'playing');
- assert.ok(s.players.every(p=>p.rating===1000),'Singles must not change doubles matchmaking Elo');
+ // Since 2026-11-22 the grouping strength is the 修为 score itself, so a rated singles game moves it (docs/REALM_PROGRESSION.md).
+ assert.ok(s.players.some(p=>p.rating!==1000),'singles move the grouping strength');assert.equal(s.players.reduce((n,p)=>n+p.rating,0),1000*s.players.length,'a singles game moves both players by the same amount');
 });
 test('independent singles courts never double-book a player and keep appearances balanced',async()=>{
  const {s,e,owner}=await fixture('singles',6,2);await apply(s,owner,'liveStart',{eventId:e.id},now);

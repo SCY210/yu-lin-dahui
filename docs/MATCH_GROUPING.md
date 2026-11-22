@@ -133,6 +133,8 @@ When an activity has ended, planned games of published rounds that never started
 - 60 局里有 11 局平均分差超过 60、5 局超过 100，多数有最弱的两位球友：实时排场按队列定下四人后只能在四人里分队。
 - 有两人在 15 局里同场 8 局：原来只罚完全相同的四人和一局三人回来，不罚两个人总在一起。
 
+排场用的实力分也和显示的修为统一成一个分数：此前只回放双打，现在双打、单打和群主的修为调整都计入；境界的降级缓冲只影响显示的境界名字，排场按分数本身（[修为与境界](REALM_PROGRESSION.md)）。
+
 于是比较顺序改为（`compareBalance`、`compareLiveDoublesPriority`，`lib/domain/match-balance.ts`）：
 
 1. 谁上场仍先按轮次公平决定（局数差不多）。

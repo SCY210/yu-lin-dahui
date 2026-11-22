@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {emptyState,type Account,type Match} from '../lib/domain/types';
 import {annualLeaderboard,isDoublesMatch,isSinglesMatch,leaderboard,quarterlyLeaderboard,replayRating,singlesAnnualLeaderboard,singlesLeaderboard,singlesQuarterlyLeaderboard} from '../lib/domain/ranking';
 import {projectClubState} from '../lib/club-view';
+import {realmSnapshot} from '../lib/domain/realm-rating';
 import {apply} from '../lib/domain/commands';
 import {ClubNavigation,type NavigationPort} from '../lib/client/club-navigation';
 
@@ -93,11 +94,14 @@ test('宗主手动积分只计入综合榜，不进入单打榜',async()=>{
  assert.deepEqual(singles.map(r=>[r.playerId,r.points,r.manualPoints]),[['A',3,0],['B',-1,0]]);
 });
 
-test('单打不改变分组实力：分组实力只回放双打小局，重算不会因单打报错',()=>{
+test('分组实力就是修为：单打和双打都计入，与显示的修为分数相同',()=>{
+ // One score (the club, November 2026): grouping replays the same rated games as the shown 修为, singles included.
  const s=fixture();s.matches.push(match('s1','2026-10-06T13:00:00Z',['A'],['B']));
- assert.deepEqual(replayRating(s,now),[]);assert.ok(s.players.every(p=>p.rating===1000&&p.ratedGames===0));
+ assert.deepEqual(replayRating(s,now).map(c=>[c.playerId,c.delta]),[['A',16],['B',-16]]);assert.equal(s.players.find(p=>p.id==='A')!.rating,1016);
  s.matches.push(match('d1','2026-10-06T14:00:00Z',['A','B'],['C','D']));
- assert.deepEqual(replayRating(s,now).map(c=>[c.playerId,c.delta]),[['A',16],['B',16],['C',-16],['D',-16]]);assert.equal(s.players.find(p=>p.id==='A')!.rating,1016);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,1);
+ assert.deepEqual(replayRating(s,now).slice(2).map(c=>[c.playerId,c.delta]),[['A',16],['B',16],['C',-16],['D',-16]]);
+ assert.equal(s.players.find(p=>p.id==='A')!.rating,1032);assert.equal(s.players.find(p=>p.id==='A')!.ratedGames,2);
+ assert.equal(realmSnapshot(s,now).get('A')!.score,1032,'the same score as the shown 修为');
 });
 
 test('群组投影提供季度与年度单打榜，普通球友看不到实力分',()=>{

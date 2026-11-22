@@ -7,7 +7,7 @@ import {clubViewValidUntil} from '../lib/club-read-cache';
 import {projectClubState} from '../lib/club-view';
 const last=Date.parse('2026-01-31T10:00:00.123Z'),due=Date.parse('2026-04-30T10:00:00.123Z');
 function fixture(){
- const s=emptyState();s.settings.initialized=true;s.settings.strengthVersion='realm-elo-v2';s.settings.ownerAccountId='a';
+ const s=emptyState();s.settings.initialized=true;s.settings.strengthVersion='realm-elo-v3';s.settings.ownerAccountId='a';
  for(const id of ['a','b','c','d']){s.accounts.push({id,email:'',role:'member',playerId:id});s.players.push({id,ownerId:id,name:id,enabled:true,initialRating:1000,rating:1500,ratedGames:30,ratingReason:''})}
  const m:Match={id:'old',eventId:'old-event',roundId:'old-round',courtId:'old-court',a:['a','b'],b:['c','d'],status:'complete',start:last-60000,end:last,scoreA:21,scoreB:19,games:[{a:21,b:19}],monthly:true,elo:true,locked:false,enteredBy:'a'};s.matches.push(m);return s;
 }
