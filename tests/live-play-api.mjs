@@ -62,7 +62,9 @@ try{
  const liveSnapshot=state=>state.matches.filter(m=>m.eventId===event.id&&m.status==='playing').map(m=>({id:m.id,a:[...m.a],b:[...m.b]})).sort((a,b)=>a.id.localeCompare(b.id));
  const swapPayload={eventId:event.id,p1:overtimeMatch.a[0],p2:overtimeMatch.b[0],expectedLineup:liveSnapshot(stored)};
  user('member8');assert.equal((await post(await request('liveSwap',{...swapPayload,role:'admin'}))).status,403,'stored outsider identity cannot forge a swap');
- user('member4');const swapWrite=await request('liveSwap',swapPayload),swapBefore=await api.load(),swapBatch=fixture.env.DB.batch;
+ // Only 宗主, 副宗主, 长老 and the creator swap live players (docs/LIVE_PLAY.md); a confirmed member is refused.
+ user('member4');assert.equal((await post(await request('liveSwap',swapPayload))).status,403,'a confirmed member may not swap');
+ user('owner');const swapWrite=await request('liveSwap',swapPayload),swapBefore=await api.load(),swapBatch=fixture.env.DB.batch;
  fixture.env.DB.batch=async list=>{if(!list[0].query.startsWith('INSERT INTO commits'))return swapBatch(list);sql.exec('BEGIN');try{const q=list[0];sql.prepare(q.query).run(...q.parameters);throw Error('injected swap rollback')}finally{sql.exec('ROLLBACK')}};
  assert.equal((await post(swapWrite)).status,503);fixture.env.DB.batch=swapBatch;assert.deepEqual(await api.load(),swapBefore);
  assert.equal((await post(swapWrite)).status,200);assert.equal((await post(swapWrite)).status,200);stored=await api.load();

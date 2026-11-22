@@ -124,3 +124,34 @@ When an attendance or court phase ends, its unstarted planned games are skipped 
 ## Unplayed planned games are removed at the end
 
 When an activity has ended, planned games of published rounds that never started and have no score are deleted, and a round left empty goes with them (`deleteUnplayedPlanned` in `lib/domain/planned-cleanup.ts`, run by the read-time maintenance in `lib/club-maintenance.ts` and recorded in the audit log as `deleteUnplayedPlanned`). Games that started stay, so their score can still be entered. Overtime rounds and live rounds are left alone, and tournaments are not affected. `tests/planned-cleanup.test.ts` checks it.
+
+## 实力碾压、同一批人和萌新的先后（2026-11-22）
+
+群主要求：大家打的局数差不多，尽量和大部分人都打过、不总是同一批人，不出现实力碾压；高手对高手、萌新对萌新只在其他条件满足后才考虑。检查 11 月 21 日的实时排场（18 人、最多三片场、60 局）发现：
+
+- 有人看到的「元婴加化神对金丹加元婴」（平均分差 172）不是系统排的：系统排的是两位元婴对金丹加化神，分差 25；是一位球友在活动结束五小时后点了开始组队，又把自己换到另一边。现在只有宗主、副宗主、长老和活动创建者能交换上场人员，活动结束后也只有他们能开加时局（[实时排场](LIVE_PLAY.md)）。
+- 60 局里有 11 局平均分差超过 60、5 局超过 100，多数有最弱的两位球友：实时排场按队列定下四人后只能在四人里分队。
+- 有两人在 15 局里同场 8 局：原来只罚完全相同的四人和一局三人回来，不罚两个人总在一起。
+
+于是比较顺序改为（`compareBalance`、`compareLiveDoublesPriority`，`lib/domain/match-balance.ts`）：
+
+1. 谁上场仍先按轮次公平决定（局数差不多）。
+2. 性别保护。
+3. 实力碾压：两队平均修为分差超过 80 分（`CRUSH_GAP`）的部分，所有场地相加，越少越好；只要有不碾压的分法就不用碾压的。预排还会跨场换人来避免碾压；实时排场在公平范围内换不掉时，可以让步一局（[实时排场](LIVE_PLAY.md)）。预排的临时搭档概率抽签也不能造成碾压。
+4. 重打、重复四人组、一局三人回来、场地等待、重复搭档、超出 40 分的分差，以及同一批人：同场的每两人在本活动已经同场过几局，每局记 8 分（`TOGETHER_COST`，`matchHistory().together`）。
+5. 总分差、搭档和对手多样性。
+6. 最后才是萌新避让（[萌新避让](NEWBIE_GROUPING.md)）。
+
+按 11 月 21 日的名单和实力做的模拟（虚构球友，三片场其中一片只有两小时，三位晚到，16 个种子，每次 4 小时，同一套随机数比较改前改后）：
+
+| 方式 | 最大平均分差 | 超过 80 分的局 | 两人最多同场局数 | 每人平均见过的人 |
+| --- | --- | --- | --- | --- |
+| 实时，改前 | 103 | 1 | 8 | 12.8 |
+| 实时，改后 | 62 | 0 | 6 | 12.7 |
+| 预排，改前 | 75 | 0 | 8 | 12.8 |
+| 预排，改后 | 77 | 0 | 5 | 13.8 |
+
+局数差距不变。模拟里的分差比真实那晚小：真实那晚还有球友手动换人，模拟没有。预排单打的分差是两个人之间的差，避免碾压后要等别的场地打完的场次从 55% 增加到 76%（`tests/planned-rotation.test.ts`）；两片场十人的预排，为了避免碾压，64 局里最多有一局会带回一局三人。
+
+测试：`tests/fair-scheduling.test.ts`（比较顺序、碾压线、同场次数）、`tests/live-overtime.test.ts` 和 `tests/live-play-api.mjs`（换人与加时权限）。
+

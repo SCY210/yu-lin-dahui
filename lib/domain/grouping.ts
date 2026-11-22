@@ -75,7 +75,7 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
   if(partner.size&&!keepsLocks(list,partner,required)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
   // A placed 天机战帖 keeps its four on one court, so its two teams face each other.
   if(placedDuels.some(d=>new Set(d.map(id=>Math.floor(list.indexOf(id)/4))).size!==1)){const broken=balanceCost([Infinity],Infinity);costCache.set(key,broken);return broken}
-  let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0,courtWaits=0,blocks=0,recent=0,newbie=0;const gaps:number[]=[];
+  let variety=0,mismatches=0,rematches=0,cohorts=0,partners=0,courtWaits=0,blocks=0,recent=0,newbie=0,together=0;const gaps:number[]=[];
   for(let i=0;i<list.length;i+=4){
    const a=list.slice(i,i+2),b=list.slice(i+2,i+4);
    mismatches+=genderMismatches(s,a,b,rating);newbie+=newbieExposure([...a,...b],rating,female);
@@ -86,11 +86,11 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
     if(['mentor','carry'].includes(e.identityMode??''))variety-=Math.abs(rating(team[0])-rating(team[1]))*.6;
    }
    // As in live rotation: a block from one game counts like a repeated foursome, and repeated partners cost strength.
-   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b]);blocks+=history.blocks([...a,...b]);partners+=history.partnerPenalty(a,b);if(courts.length>1)recent+=history.recentPartners(a,b);
+   rematches+=history.rematches(a,b);cohorts+=history.cohorts([...a,...b]);blocks+=history.blocks([...a,...b]);together+=history.together([...a,...b]);partners+=history.partnerPenalty(a,b);if(courts.length>1)recent+=history.recentPartners(a,b);
    if(courts.length>1){const here=courtKey(courts[i/4].id);if([...a,...b].some(id=>previousCourt.has(id)&&previousCourt.get(id)!==here))courtWaits++}
    variety+=history.variety(a,b,e.playMode==='koc'?1800:350);
   }
-  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts,partners,courtWaits,blocks,recent,0,0,newbie);costCache.set(key,result);return result;
+  const result=balanceCost(gaps,variety,mismatches,rematches,cohorts,partners,courtWaits,blocks,recent,0,0,newbie,together);costCache.set(key,result);return result;
  };
  // Check all three pairings on each court, including the unchanged one.
  // Arena holders keep their team. Fair-turn selection and venue rules stay upstream.
@@ -139,7 +139,9 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
   for(let offset=fixed?4:0;offset<best.length;offset+=4){
    const four=best.slice(offset,offset+4);if(four.some(id=>four.includes(partner.get(id)!)))continue;
    const options=oddsSplits(odds,best.slice(offset,offset+4),draw).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
-   best=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x);
+   const drawn=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x),was=penalty(best),now=penalty(drawn);
+   // As in live play, a draw never adds a gender mismatch or a 实力碾压 the search had avoided.
+   if(now.mismatches<was.mismatches||now.mismatches===was.mismatches&&now.crush<=was.crush)best=drawn;
   }
   bestCost=penalty(best);
  }
@@ -172,7 +174,7 @@ function proposeSingles(s:State,e:Event,at:number,duration:number,seed:number){
  const previousRound=s.rounds.filter(r=>r.eventId===e.id&&!r.live&&r.status!=='cancelled'&&r.start<at).sort((x,y)=>y.start-x.start)[0];
  const previousCourt=new Map<string,string>();
  if(previousRound)for(const m of s.matches)if(m.roundId===previousRound.id&&m.status!=='cancelled')for(const id of [...m.a,...m.b])previousCourt.set(id,courtKey(m.courtId));
- const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0,courtWaits=0,newbie=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));newbie+=newbieExposure([a,b],rating);repeats+=history.rematches([a],[b]);if(courts.length>1){const here=courtKey(courts[i/2].id);if([a,b].some(id=>previousCourt.has(id)&&previousCourt.get(id)!==here))courtWaits++}}return balanceCost(gaps,repeats*75,0,repeats,0,0,courtWaits,0,0,0,0,newbie)};
+ const penalty=(list:string[])=>{const gaps:number[]=[];let repeats=0,courtWaits=0,newbie=0,together=0;for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];if(!canUse(i/2,a)||!canUse(i/2,b))return balanceCost([Infinity],Infinity);gaps.push(Math.abs(rating(a)-rating(b)));newbie+=newbieExposure([a,b],rating);repeats+=history.rematches([a],[b]);together+=history.together([a,b]);if(courts.length>1){const here=courtKey(courts[i/2].id);if([a,b].some(id=>previousCourt.has(id)&&previousCourt.get(id)!==here))courtWaits++}}return balanceCost(gaps,repeats*75,0,repeats,0,0,courtWaits,0,0,0,0,newbie,together)};
  let best=[...selected],cost=penalty(best),rng=seed>>>0;const rand=()=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng/4294967296};
  const interchangeable=(a:string,b:string)=>sameTurn(debts.get(a)!,debts.get(b)!,tired.has(a),tired.has(b));
  for(let n=0;n<180;n++){const next=[...best],i=Math.floor(rand()*next.length),j=Math.floor(rand()*next.length);const bench=rand()<.5?eligible.filter(id=>!next.includes(id)&&interchangeable(id,next[i])):[];if(bench.length)next[i]=bench[Math.floor(rand()*bench.length)];else [next[i],next[j]]=[next[j],next[i]];const nextCost=penalty(next);if(compareBalance(nextCost,cost)<0){best=next;cost=nextCost}}

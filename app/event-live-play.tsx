@@ -20,7 +20,7 @@ import {matchIncludesPlayer} from '../lib/client/match-player-filter';
 export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const {data,send,busy}=ctx,[now,setNow]=useState(Date.now),[selected,setSelected]=useState<{playerId:string;lineup:string}|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),3000);return()=>clearInterval(timer)},[]);
- const manager=!ctx.readOnly&&canScheduleEvent(data.me,e),lineupEditor=!ctx.readOnly&&canSwapLivePlayers(data,data.me,e),config=e.livePlay;
+ const manager=!ctx.readOnly&&canScheduleEvent(data.me,e),lineupEditor=!ctx.readOnly&&canSwapLivePlayers(data.me,e),config=e.livePlay;
  const eventMatches:Match[]=data.matches.filter((m:Match)=>m.eventId===e.id);
  const playerId:string=ctx.matchPlayerId??'';
  const current=eventMatches.filter(m=>m.status==='playing');
@@ -50,9 +50,10 @@ export default function EventLivePlay({e,ctx}:{e:Event;ctx:any}){
  const swappableBench=bench.filter(id=>!liveResting(e,id));
  const onCourt=(id:string)=>current.some(m=>[...m.a,...m.b].includes(id)&&editableLiveLineup(e,data.rounds.find((r:Round)=>r.id===m.roundId),m));
  const currentSelected=changeable&&selected&&selected.lineup===lineup&&(onCourt(selected.playerId)||swappableBench.includes(selected.playerId))?selected:null;
- // 开始组队 on a court that is waiting (liveNext): anyone signed up, the organiser or an administrator. When only the
- // players of the last game here are available, the button keeps them on purpose instead.
- const scorer=!ctx.readOnly&&active&&hasStarted&&!!config?.enabled&&!config.paused&&(manager||canRecordScore(data,data.me,e));
+ // 开始组队 on a court that is waiting (liveNext): anyone signed up, the organiser or an administrator; after the scheduled
+ // end only the organisers (overtime). When only the players of the last game here are available, the button keeps them
+ // on purpose instead.
+ const scorer=!ctx.readOnly&&active&&hasStarted&&!!config?.enabled&&!config.paused&&(lineupEditor||now<e.end&&canRecordScore(data,data.me,e));
  const nextGame=(b:State['bookings'][number])=>{
   const same=(m:Match)=>{const c=data.bookings.find((x:State['bookings'][number])=>x.id===m.courtId);return c?.name===b.name&&(c.venue??e.venue)===(b.venue??e.venue)};
   const last=eventMatches.filter(m=>same(m)&&m.start!==null&&['complete','forfeit','cancelled'].includes(m.status)).sort((x,y)=>(y.end??y.start!)-(x.end??x.start!))[0];

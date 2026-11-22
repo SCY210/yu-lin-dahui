@@ -32,7 +32,9 @@ for(const status of ['open','ended'] as const)test('manual live play starts afte
  await apply(s,member,'score',{matchId:first.id,a:21,b:19,reason:'Fixture overtime score'},end+2*minute);
  assert.equal(first.end,end+2*minute,'overtime scores keep their real completion time');
  assert.equal(s.matches.filter(m=>m.status==='playing').length,0,'the ended activity never refills on a background read');
- await apply(s,member,'liveNext',{eventId:e.id,courtId:'court'},end+3*minute);
+ // After the end a member may still score, but only the organisers start overtime games.
+ await assert.rejects(()=>apply(s,member,'liveNext',{eventId:e.id,courtId:'court'},end+3*minute),/只有宗主、副宗主、长老或活动创建者可以加时/);
+ await apply(s,owner,'liveNext',{eventId:e.id,courtId:'court'},end+3*minute);
  assert.equal(s.matches.filter(m=>m.status==='playing').length,1);assert.equal(s.matches.at(-1)!.start,end+3*minute);
  assert.deepEqual({event:[e.start,e.end],bookings:s.bookings,registrations:s.registrations},times);
 });
@@ -45,17 +47,18 @@ test('overtime retains only the final attendance phase and cannot pull an earlie
  assert.equal(s.matches.length,1);assert.equal(s.matches[0].courtId,'court');
 });
 
-test('confirmed members swap the live lineup after time expires, with stale, scored, waitlist and outsider protection',async()=>{
+test('organisers swap the live lineup after time expires, with stale and scored protection; members and outsiders may not',async()=>{
  const {s,e,owner,member}=fixture();await apply(s,owner,'liveStart',{eventId:e.id},end+minute);
  const m=s.matches[0],p1=m.a[0],p2=livePresentIds(s,e,end+minute).find(id=>![...m.a,...m.b].includes(id))!;
  const payload={eventId:e.id,p1,p2,expectedLineup:liveLineupSnapshot(s,e.id)},before=structuredClone(s);
- assert.equal(canSwapLivePlayers(s,member,e),true);
- for(const a of [s.accounts[7],s.accounts[8]]){assert.equal(canSwapLivePlayers(s,a,e),false);await assert.rejects(()=>apply(s,a,'liveSwap',{...payload,role:'admin'},end+minute),/403/);assert.deepEqual(s,before)}
- await apply(s,member,'liveSwap',payload,end+minute);assert.ok(m.a.includes(p2));assert.ok(!m.a.includes(p1));
- const swapped=structuredClone(s);await assert.rejects(()=>apply(s,member,'liveSwap',payload,end+minute),/409/);assert.deepEqual(s,swapped);
+ // Only 宗主, 副宗主, 长老 and the creator swap (docs/LIVE_PLAY.md): a confirmed member no longer may.
+ assert.equal(canSwapLivePlayers(member,e),false);await assert.rejects(()=>apply(s,member,'liveSwap',payload,end+minute),/403/);assert.deepEqual(s,before);
+ for(const a of [s.accounts[7],s.accounts[8]]){assert.equal(canSwapLivePlayers(a,e),false);await assert.rejects(()=>apply(s,a,'liveSwap',{...payload,role:'admin'},end+minute),/403/);assert.deepEqual(s,before)}
+ assert.equal(canSwapLivePlayers({...member,simulationTester:true},e),true,'长老 may swap');
+ await apply(s,owner,'liveSwap',payload,end+minute);assert.ok(m.a.includes(p2));assert.ok(!m.a.includes(p1));
+ const swapped=structuredClone(s);await assert.rejects(()=>apply(s,owner,'liveSwap',payload,end+minute),/409/);assert.deepEqual(s,swapped);
  m.games=[{a:5,b:3}];const scored=structuredClone(s);
- await assert.rejects(()=>apply(s,member,'liveSwap',{eventId:e.id,p1:p2,p2:p1,expectedLineup:liveLineupSnapshot(s,e.id)},end+minute),/已录分/);assert.deepEqual(s,scored);
- s.registrations[1].status='cancelled';assert.equal(canSwapLivePlayers(s,member,e),false);
+ await assert.rejects(()=>apply(s,owner,'liveSwap',{eventId:e.id,p1:p2,p2:p1,expectedLineup:liveLineupSnapshot(s,e.id)},end+minute),/已录分/);assert.deepEqual(s,scored);
 });
 
 test('before-start, draft, cancelled and deleted activities still refuse manual live scheduling',async()=>{

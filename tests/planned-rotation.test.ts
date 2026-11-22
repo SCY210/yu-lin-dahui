@@ -19,8 +19,11 @@ function fixture(){
  return {s,e};
 }
 
-test('planned rounds follow live rotation: no block from one game and hardly any immediate partner repeat',async()=>{
+test('planned rounds follow live rotation: hardly any block from one game and hardly any immediate partner repeat',async()=>{
  // The partner cost is soft, as in live rotation: a large strength gap may still keep a pair together now and then.
+ // Avoiding a 实力碾压 (a gap above 80, docs/MATCH_GROUPING.md) comes first, so with ratings 800-1400 on two courts a
+ // block of three from one game may come back once in 64 games when every other line-up crushes someone.
+ let blocks=0;
  for(const seed of [1,2,3,4]){
   const {s,e}=fixture();
   await apply(s,s.accounts[0],'planPoints',{eventId:e.id,at:now,pointsMinutes:240,roundMinutes:15,seed,pairing:'rotate'},now-1);
@@ -31,7 +34,7 @@ test('planned rounds follow live rotation: no block from one game and hardly any
    const matches=s.matches.filter(m=>m.roundId===r.id&&m.status!=='cancelled');
    for(const m of matches){
     const ids=[...m.a,...m.b],from=ids.map(id=>lastGame.get(id)).filter(Boolean);
-    assert.ok(!from.some(g=>from.filter(x=>x===g).length>=3),'seed '+seed+': three players straight from one game');
+    if(from.some(g=>from.filter(x=>x===g).length>=3))blocks++;
     for(const team of [m.a,m.b])if(lastPartner.get(team[0])===team[1])repeats++;
    }
    for(const m of matches){for(const id of [...m.a,...m.b]){lastGame.set(id,m.id);games.set(id,(games.get(id)??0)+1)}for(const team of [m.a,m.b]){lastPartner.set(team[0],team[1]);lastPartner.set(team[1],team[0])}}
@@ -39,11 +42,14 @@ test('planned rounds follow live rotation: no block from one game and hardly any
   assert.ok(repeats<=2,'seed '+seed+': '+repeats+' immediate partner repeats in 32 games');
   const counts=[...games.values()];assert.ok(Math.max(...counts)-Math.min(...counts)<=1,'games stay even');
  }
+ assert.ok(blocks<=1,blocks+' games took three players straight from one game');
 });
 
 test('planned singles on three courts mostly keep each court independent of the others',async()=>{
  // Eight players, six play and two rest: where possible each court's next pair comes from its own previous game and
  // the players who rested, so fewer courts wait for another court still playing (55% of court-games here, 74% without).
+ // Since November 2026 a singles gap above 80 is a 实力碾压 and is avoided first; with ratings 800-1400 that costs court
+ // independence: about as many courts wait as when courts are ignored (76% here).
  let waits=0,total=0;
  for(const seed of [1,2,3,4]){
   const {s,e}=fixture();e.matchFormat='singles';
@@ -57,5 +63,5 @@ test('planned singles on three courts mostly keep each court independent of the 
    court.clear();for(const [id,c] of next)court.set(id,c);
   }
  }
- assert.ok(waits/total<=.65,'courts waiting for another court: '+(waits/total*100).toFixed(0)+'%');
+  assert.ok(waits/total<=.8,'courts waiting for another court: '+(waits/total*100).toFixed(0)+'%');
 });
