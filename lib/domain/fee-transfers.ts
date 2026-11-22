@@ -60,8 +60,8 @@ export function feeAdvances(items:AdvanceItem[],detail:Line[],unallocated:number
 }
 
 /** Who transfers how much to whom. With a collector, everyone who owes pays the collector and the collector repays every
- * advancer. Without one, see `settleDirect`: each person makes at most one transfer, none below `minTransfer` when
- * that can be avoided, and there are at most n-1 transfers. */
+ * advancer. Without one, see `settleDirect`: advancers owed money only receive, members who owe transfer once where
+ * possible, and no transfer is below `minTransfer` when that can be avoided. */
 export function planTransfers(bills:{playerId:string;total:number}[],advances:Advance[],subsidy:number,ownerPlayerId:string|null,collector?:string):Transfer[]|null{
  const net=new Map<string,number>(),change=(id:string,cents:number)=>net.set(id,(net.get(id)??0)+cents);
  for(const b of bills)change(b.playerId,-b.total);
@@ -83,12 +83,14 @@ export function planTransfers(bills:{playerId:string;total:number}[],advances:Ad
 export const minTransfer=50;
 type Plan={transfers:Transfer[];cost:number[]};
 /** Transfers without a collector (docs/FEE_ADVANCES.md). The club owner asked (2026-11-22) that no transfer be below
- * 0.50 euro and that nobody transfer more than once. Each person who owes therefore pays the whole amount to one
- * advancer. An advancer who receives more than they advanced passes the rest on in one transfer to another advancer,
- * and one who receives less is paid the rest by them. Who pays whom is searched for, in this order: fewest transfers
- * below 0.50, fewest members who pass on someone else's money while owing themselves (only to avoid a tiny transfer:
- * someone who owes 0.30 collects another member's payment and passes it on with their 0.30), fewest transfers, then
- * the least money moved. The search is deterministic, so the server and the app agree. */
+ * 0.50 euro and that each member transfer only once where possible, but never at the cost of an advancer transferring:
+ * an advancer whose advance covers their share only receives. So each member who owes pays one advancer, and only
+ * when the amounts do not fit does a member split their payment between advancers. Who pays whom is searched for, in
+ * this order: fewest transfers below 0.50, fewest extra transfers by members who split their payment, fewest members
+ * who pass on someone else's money (only to avoid a tiny transfer: someone who owes 0.30 collects another member's
+ * payment and passes it on with their 0.30), fewest transfers, then the least money moved. An advancer owed less than
+ * 0.50 in total is necessarily paid in one small transfer. The search is deterministic, so the server and the app
+ * agree. */
 function settleDirect(net:Map<string,number>):Transfer[]{
  const by=(a:{id:string;cents:number},b:{id:string;cents:number})=>b.cents-a.cents||a.id.localeCompare(b.id);
  const debtors=[...net].filter(([,c])=>c<0).map(([id,c])=>({id,cents:-c})).sort(by);
@@ -103,22 +105,26 @@ function settleDirect(net:Map<string,number>):Transfer[]{
    while(at>=k){if(at-k===i||++steps>d)return null;carried[at-k]+=debtors[i].cents;at=parent[at-k]}
    received[at]+=debtors[i].cents;
   }
-  const transfers:Transfer[]=debtors.map((x,i)=>({from:x.id,to:parent[i]<k?creditors[parent[i]].id:debtors[parent[i]-k].id,cents:carried[i]}));
-  const relays=new Set(parent.filter(p=>p>=k)).size;
-  // Advancers who received too much or too little settle among themselves: an exact pair in one transfer, the rest
-  // along one chain (the most over-paid first, the most under-paid last), so each passes money on at most once.
-  const left=creditors.map((x,c)=>({id:x.id,cents:received[c]-x.cents})).filter(x=>x.cents);
-  const over=left.filter(x=>x.cents>0).sort(by),under=left.filter(x=>x.cents<0).map(x=>({id:x.id,cents:-x.cents})).sort(by);
-  for(const o of [...over]){
-   const u=under.findIndex(x=>x.cents===o.cents);if(u<0)continue;
-   transfers.push({from:o.id,to:under[u].id,cents:o.cents});over.splice(over.indexOf(o),1);under.splice(u,1);
+  // pay[i]: what debtor i sends to each receiver. An advancer paid too much has the excess redirected by the members
+  // paying them, largest payment first, to the advancers paid too little: those members split their payment.
+  const pay=debtors.map((_,i)=>new Map<number,number>([[parent[i],carried[i]]]));
+  const under=creditors.map((x,c)=>({c,cents:x.cents-received[c]})).filter(x=>x.cents>0);
+  for(let c=0;c<k;c++){
+   let excess=received[c]-creditors[c].cents;
+   const payers=debtors.map((_,i)=>i).filter(i=>parent[i]===c).sort((x,y)=>carried[y]-carried[x]||x-y);
+   for(const i of payers){
+    while(excess>0&&(pay[i].get(c)??0)>0){
+     const u=under.find(x=>x.cents>0)!,cents=Math.min(excess,u.cents,pay[i].get(c)!);
+     pay[i].set(c,pay[i].get(c)!-cents);pay[i].set(u.c,(pay[i].get(u.c)??0)+cents);
+     excess-=cents;u.cents-=cents;
+    }
+    if(!excess)break;
+   }
   }
-  const chain=[...over,...under.reverse()];let flow=0;
-  for(let i=0;i+1<chain.length;i++){
-   flow+=i<over.length?chain[i].cents:-chain[i].cents;
-   transfers.push({from:chain[i].id,to:chain[i+1].id,cents:flow});
-  }
-  return {transfers,cost:[transfers.filter(t=>t.cents<minTransfer).length,relays,transfers.length,transfers.reduce((n,t)=>n+t.cents,0)]};
+  const transfers:Transfer[]=[];
+  debtors.forEach((x,i)=>{for(const [to,cents] of pay[i])if(cents>0)transfers.push({from:x.id,to:to<k?creditors[to].id:debtors[to-k].id,cents})});
+  const relays=new Set(parent.filter(p=>p>=k)).size,extra=transfers.length-new Set(transfers.map(t=>t.from)).size;
+  return {transfers,cost:[transfers.filter(t=>t.cents<minTransfer).length,extra,relays,transfers.length,transfers.reduce((n,t)=>n+t.cents,0)]};
  };
  const better=(a:Plan,b:Plan)=>{for(let i=0;i<a.cost.length;i++)if(a.cost[i]!==b.cost[i])return a.cost[i]<b.cost[i];return false};
  // Start from filling the advancer with the most still to receive, largest debt first, then improve one move at a
