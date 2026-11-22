@@ -78,9 +78,9 @@ test('only the owner and administrators set and receive the odds',async()=>{
  assert.equal(s.settings.pairingOdds,undefined,'clearing every rule removes the entry');
 });
 
-test('实时搭档概率在 40 分容差内生效，不能扩大明显分差',async()=>{
+test('实时搭档概率：0% 和 100% 必定执行，其他概率在 40 分容差内生效、不能扩大明显分差',async()=>{
  const now=Date.parse('2026-10-10T15:00:00Z');
- for(const ratingStep of [20,200])for(const percent of [0,100]){
+ for(const ratingStep of [20,200])for(const percent of [0,80,100]){
   const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
   const e:Event={id:'event',creatorId:'owner',title:'虚构实时活动',start:now-3600000,end:now+3*3600000,venue:'球馆',address:'',capacity:4,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal'};
   s.events.push(e);
@@ -95,6 +95,40 @@ test('实时搭档概率在 40 分容差内生效，不能扩大明显分差',as
   await apply(s,s.accounts[0],'pairingOdds',{eventId:e.id,defaults:[{players:['p0'],targets:['p1'],percent}],conditions:[]},now);
   await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);
   const m=s.matches.find(m=>m.status==='playing')!;
-  assert.equal(partners(m,'p0','p1'),percent===100&&ratingStep===20,`修为梯度 ${ratingStep}，搭档概率 ${percent}%`);
+  // 100% always makes them partners, 0% never; 80% only while the gap stays within the 40-point tolerance.
+  if(percent===80){if(ratingStep===200)assert.equal(partners(m,'p0','p1'),false,'80% 不扩大明显分差')}
+  else assert.equal(partners(m,'p0','p1'),percent===100,`修为梯度 ${ratingStep}，搭档概率 ${percent}%`);
  }
+});
+
+test('0% 压过修为平衡；0% 和 100% 在两种排场都让位于锁组，不冲突时锁组和概率同时满足',async()=>{
+ const now=Date.parse('2026-10-10T15:00:00Z');
+ const live=async(percent:number,lock?:[string,string],x='p0',y='p1')=>{
+  const s=emptyState();s.settings.initialized=true;s.settings.ownerAccountId='owner';
+  const e:Event={id:'event',creatorId:'owner',title:'虚构实时活动',start:now-3600000,end:now+3*3600000,venue:'球馆',address:'',capacity:4,signupDeadline:now,cancelDeadline:now-86400000,note:'',status:'open',attendanceMode:'automatic',courtMode:'equal',ballMode:'equal',...(lock?{lockedPairs:[lock]}:{})};
+  s.events.push(e);
+  for(let i=0;i<4;i++){
+   const id='p'+i,accountId=i?'member'+i:'owner';
+   s.players.push({id,name:'Fictional '+i,ownerId:accountId,initialRating:1000+i*200,rating:1000+i*200,ratedGames:0,enabled:true,ratingReason:''});
+   s.accounts.push({id:accountId,email:'',role:i?'member':'admin',playerId:id});
+   s.registrations.push({id:'reg'+i,eventId:e.id,playerId:id,sequence:i,status:'confirmed',arrival:e.start,departure:e.end,note:'',cancelRequested:false,courtExempt:{mode:'none',reason:''},ballExempt:{mode:'none',reason:''}});
+  }
+  s.bookings.push({id:'court',eventId:e.id,name:'场地',start:e.start,end:e.end,pricing:'total',cents:1000});
+  await apply(s,s.accounts[0],'pairingOdds',{eventId:e.id,defaults:[{players:[x],targets:[y],percent}],conditions:[]},now);
+  await apply(s,s.accounts[0],'liveStart',{eventId:e.id},now);
+  return s.matches.find(m=>m.status==='playing')!;
+ };
+ // Balance alone pairs the strongest with the weakest (p0+p3): 0% between them still keeps them apart.
+ assert.ok(!partners(await live(0,undefined,'p0','p3'),'p0','p3'));
+ // 锁组 p2+p3 leaves p0+p1 as the other team: 100% holds with it, although the split is badly unbalanced.
+ assert.ok(partners(await live(100,['p2','p3']),'p0','p1'));assert.ok(partners(await live(100,['p2','p3']),'p2','p3'));
+ // 锁组 p0+p1 conflicts with 0%: the lock wins.
+ assert.ok(partners(await live(0,['p0','p1']),'p0','p1'));
+ // Planned: the same two rules.
+ const {s,e,ids:[x,y,z,w],admin}=court();e.lockedPairs=[[z,w]];
+ await apply(s,admin,'pairingOdds',{eventId:e.id,defaults:[{players:[x],targets:[y],percent:100}],conditions:[]},base-3600000);
+ for(let seed=1;seed<=20;seed++){const c=propose(s,e,e.start,15,seed).courts[0];assert.ok(partners(c,x,y)&&partners(c,z,w),'seed '+seed)}
+ e.lockedPairs=[[x,y]];
+ await apply(s,admin,'pairingOdds',{eventId:e.id,defaults:[{players:[x],targets:[y],percent:0}],conditions:[]},base-3600000);
+ for(let seed=1;seed<=20;seed++)assert.ok(partners(propose(s,e,e.start,15,seed).courts[0],x,y),'锁组优先 seed '+seed);
 });

@@ -1,4 +1,4 @@
-import {keepsLocks,lockCounts,lockedPartners,pickFour} from './locked-pairs';
+import {keepsLocks,lockCounts,lockedPartners,lockSplits,pickFour} from './locked-pairs';
 import {duelFour,schedulableDuels} from './duels';
 import {matchingStopped} from './matching-participation';
 import {awaitingArrival} from './points-attendance';
@@ -137,8 +137,9 @@ export function propose(s:State,e:Event,at:number,duration:number,seed:number){i
  if(odds){
   const draw=oddsRandom(seed);
   for(let offset=fixed?4:0;offset<best.length;offset+=4){
-   const four=best.slice(offset,offset+4);if(four.some(id=>four.includes(partner.get(id)!)))continue;
-   const options=oddsSplits(odds,best.slice(offset,offset+4),draw).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
+   // 锁组 and a placed 天机战帖 (both in `partner`) stay together: the draw only chooses among the splits keeping them.
+   const four=best.slice(offset,offset+4);
+   const options=oddsSplits(odds,four,draw,lockSplits(four,partner)).map(split=>{const next=[...best];next.splice(offset,4,...split.flat());return next});
    best=options.reduce((x,y)=>compareBalance(penalty(y),penalty(x))<0?y:x);
   }
   bestCost=penalty(best);

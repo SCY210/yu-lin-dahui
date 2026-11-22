@@ -61,11 +61,18 @@ export function courtWishes(odds:PairingOdds|undefined,four:string[]){
  return wishes;
 }
 
+/** A rule at 0% or 100% is a must (owner's instruction, 2026-11-21): when the two share a court they are always
+ * opponents or always partners, in planned and live scheduling alike, even if balance would split them otherwise. Only
+ * 锁组, 天机战帖 and fixed partners, which the organiser or the players set for this activity, come first. */
+export const mustPercent=(percent:number)=>percent===0||percent===100;
+export function hasMustWish(odds:PairingOdds|undefined,four:string[]){return courtWishes(odds,four).some(w=>mustPercent(w.percent))}
+
 /** The ways these four may split into two teams once the odds are drawn: each rule in turn keeps the splits where the
- * two are partners (with its chance) or opponents, unless no split is left. With no rule all three splits remain. */
-export function oddsSplits(odds:PairingOdds|undefined,four:string[],rand:()=>number){
+ * two are partners (with its chance) or opponents, unless no split is left. With no rule all three splits remain;
+ * `start` narrows them first (the splits that keep 锁组 or a 天机战帖 together), so those always win. */
+export function oddsSplits(odds:PairingOdds|undefined,four:string[],rand:()=>number,start?:string[][][]){
  const [a,b,c,d]=four;
- let splits=[[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]];
+ let splits=start??[[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]];
  for(const w of courtWishes(odds,four)){
   const together=rand()*100<w.percent;
   const next=splits.filter(split=>split.some(team=>team.includes(w.x)&&team.includes(w.y))===together);

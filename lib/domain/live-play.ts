@@ -15,7 +15,7 @@ import {authorizeEventAction,canManageEvent,canRecordScore} from './permissions'
 import {canEnableEventRanking} from './event-ranking';
 import {decorateMatch} from './play';
 import {markRanked} from './all-ranked';
-import {eventPairingOdds,oddsRandom,oddsSplits} from './pairing-odds';
+import {eventPairingOdds,hasMustWish,oddsRandom,oddsSplits} from './pairing-odds';
 import {eventFormat,courtPlayers,isPractice} from './match-format';
 import {fail,month,type State,type Event,type Account,type Match,type LivePlay} from './types';
 
@@ -237,10 +237,12 @@ export function fillLiveCourts(s:State,e:Event,now:number,next:{courtId?:string;
     if(!best)break;chosen=best;
    }
    const odds=eventFormat(e)==='doubles'?eventPairingOdds(s,e.id):undefined;
-   if(odds&&![...chosen.a,...chosen.b].some(id=>[...chosen.a,...chosen.b].includes(locks.get(id)!))){
-    const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,female,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0))));
-    // The draw respects protection, balance, doubles category and rotation.
-    if(compareLiveDoublesPriority(drawn.cost,chosen.cost)<=0)chosen=drawn;
+   if(odds){
+    // 锁组 in these four are kept: the draw only chooses among the splits that keep them together.
+    const four=[...chosen.a,...chosen.b],drawn=pair(s,e,four,history,rating,female,oddsSplits(odds,four,oddsRandom(Math.floor(now/1000)+started.length*7919+[...court.id].reduce((n,c)=>n*31+c.charCodeAt(0)|0,0)),lockSplits(four,locks)));
+    // A rule at 0% or 100% always holds (hasMustWish). Any other draw respects protection, balance, doubles category
+    // and rotation, and gives way when it would make them worse.
+    if(hasMustWish(odds,four)||compareLiveDoublesPriority(drawn.cost,chosen.cost)<=0)chosen=drawn;
    }
    teams={a:chosen.a,b:chosen.b};
   }
