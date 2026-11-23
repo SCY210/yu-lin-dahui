@@ -60,7 +60,8 @@ export function feeAdvances(items:AdvanceItem[],detail:Line[],unallocated:number
 }
 
 /** Who transfers how much to whom. With a collector, everyone who owes pays the collector and the collector repays every
- * advancer. Without one, debts are matched to advancers largest first, so there are at most n-1 transfers. */
+ * advancer. Without one, see `settleDirect`: advancers owed money only receive, members who owe transfer once where
+ * possible, and no transfer is below `minTransfer` when that can be avoided. */
 export function planTransfers(bills:{playerId:string;total:number}[],advances:Advance[],subsidy:number,ownerPlayerId:string|null,collector?:string):Transfer[]|null{
  const net=new Map<string,number>(),change=(id:string,cents:number)=>net.set(id,(net.get(id)??0)+cents);
  for(const b of bills)change(b.playerId,-b.total);
@@ -75,17 +76,79 @@ export function planTransfers(bills:{playerId:string;total:number}[],advances:Ad
   }
   return transfers;
  }
- const order=(rows:[string,number][])=>rows.sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
- const debtors=order([...net].filter(([,c])=>c<0).map(([id,c])=>[id,-c])),creditors=order([...net].filter(([,c])=>c>0));
- let i=0,j=0;
- while(i<debtors.length&&j<creditors.length){
-  const cents=Math.min(debtors[i][1],creditors[j][1]);
-  transfers.push({from:debtors[i][0],to:creditors[j][0],cents});
-  debtors[i][1]-=cents;creditors[j][1]-=cents;
-  if(!debtors[i][1])i++;
-  if(!creditors[j][1])j++;
- }
- return transfers;
+ return settleDirect(net);
+}
+
+/** The smallest transfer a split without a collector asks for (2026-11-22, the club owner): 0.50 euro. */
+export const minTransfer=50;
+type Plan={transfers:Transfer[];cost:number[]};
+/** Transfers without a collector (docs/FEE_ADVANCES.md). The club owner asked (2026-11-22) that no transfer be below
+ * 0.50 euro and that each member transfer only once where possible, but never at the cost of an advancer transferring:
+ * an advancer whose advance covers their share only receives. So each member who owes pays one advancer, and only
+ * when the amounts do not fit does a member split their payment between advancers. Who pays whom is searched for, in
+ * this order: fewest transfers below 0.50, fewest extra transfers by members who split their payment, fewest members
+ * who pass on someone else's money (only to avoid a tiny transfer: someone who owes 0.30 collects another member's
+ * payment and passes it on with their 0.30), fewest transfers, then the least money moved. An advancer owed less than
+ * 0.50 in total is necessarily paid in one small transfer. The search is deterministic, so the server and the app
+ * agree. */
+function settleDirect(net:Map<string,number>):Transfer[]{
+ const by=(a:{id:string;cents:number},b:{id:string;cents:number})=>b.cents-a.cents||a.id.localeCompare(b.id);
+ const debtors=[...net].filter(([,c])=>c<0).map(([id,c])=>({id,cents:-c})).sort(by);
+ const creditors=[...net].filter(([,c])=>c>0).map(([id,c])=>({id,cents:c})).sort(by);
+ if(!debtors.length||!creditors.length)return [];
+ const k=creditors.length,d=debtors.length;
+ // parent[i]: whom debtor i pays; below k an advancer, from k on another debtor who passes it on.
+ const plan=(parent:number[]):Plan|null=>{
+  const carried=debtors.map(x=>x.cents),received=creditors.map(()=>0);
+  for(let i=0;i<d;i++){
+   let at=parent[i],steps=0;
+   while(at>=k){if(at-k===i||++steps>d)return null;carried[at-k]+=debtors[i].cents;at=parent[at-k]}
+   received[at]+=debtors[i].cents;
+  }
+  // pay[i]: what debtor i sends to each receiver. An advancer paid too much has the excess redirected by the members
+  // paying them, largest payment first, to the advancers paid too little: those members split their payment.
+  const pay=debtors.map((_,i)=>new Map<number,number>([[parent[i],carried[i]]]));
+  const under=creditors.map((x,c)=>({c,cents:x.cents-received[c]})).filter(x=>x.cents>0);
+  for(let c=0;c<k;c++){
+   let excess=received[c]-creditors[c].cents;
+   const payers=debtors.map((_,i)=>i).filter(i=>parent[i]===c).sort((x,y)=>carried[y]-carried[x]||x-y);
+   for(const i of payers){
+    while(excess>0&&(pay[i].get(c)??0)>0){
+     const u=under.find(x=>x.cents>0)!,cents=Math.min(excess,u.cents,pay[i].get(c)!);
+     pay[i].set(c,pay[i].get(c)!-cents);pay[i].set(u.c,(pay[i].get(u.c)??0)+cents);
+     excess-=cents;u.cents-=cents;
+    }
+    if(!excess)break;
+   }
+  }
+  const transfers:Transfer[]=[];
+  debtors.forEach((x,i)=>{for(const [to,cents] of pay[i])if(cents>0)transfers.push({from:x.id,to:to<k?creditors[to].id:debtors[to-k].id,cents})});
+  const relays=new Set(parent.filter(p=>p>=k)).size,extra=transfers.length-new Set(transfers.map(t=>t.from)).size;
+  return {transfers,cost:[transfers.filter(t=>t.cents<minTransfer).length,extra,relays,transfers.length,transfers.reduce((n,t)=>n+t.cents,0)]};
+ };
+ const better=(a:Plan,b:Plan)=>{for(let i=0;i<a.cost.length;i++)if(a.cost[i]!==b.cost[i])return a.cost[i]<b.cost[i];return false};
+ // Start from filling the advancer with the most still to receive, largest debt first, then improve one move at a
+ // time: pay someone else, or swap whom two members pay.
+ const start=(order:number[])=>{
+  const parent=new Array<number>(d).fill(0),need=creditors.map(x=>x.cents);
+  for(const i of order){let c=0;for(let j=1;j<k;j++)if(need[j]>need[c])c=j;parent[i]=c;need[c]-=debtors[i].cents}
+  return parent;
+ };
+ const improve=(parent:number[])=>{
+  let best=plan(parent)!;
+  for(let pass=0;pass<200;pass++){
+   const moves:number[][]=[];
+   for(let i=0;i<d;i++)for(let t=0;t<k+d;t++)if(t!==parent[i]&&t!==k+i){const next=[...parent];next[i]=t;moves.push(next)}
+   for(let i=0;i<d;i++)for(let j=i+1;j<d;j++)if(parent[i]!==parent[j]){const next=[...parent];next[i]=parent[j];next[j]=parent[i];moves.push(next)}
+   let found:{parent:number[];plan:Plan}|null=null;
+   for(const next of moves){const p=plan(next);if(p&&better(p,found?.plan??best))found={parent:next,plan:p}}
+   if(!found)break;
+   parent=found.parent;best=found.plan;
+  }
+  return best;
+ };
+ const ids=debtors.map((_,i)=>i),plans=[improve(start(ids)),improve(start([...ids].reverse()))];
+ return (better(plans[1],plans[0])?plans[1]:plans[0]).transfers;
 }
 
 type Paid=Pick<Payment,'eventId'|'playerId'|'cents'>&{to?:string};
